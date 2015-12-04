@@ -1,9 +1,9 @@
-linetools
-=========
+pyigm
+=====
 
-This is a package for the analysis of 1d astronomical spectra,
-especially quasar and galaxy spectra.
+This is a package for the analysis of the Intergalactic Medium
 
 Primary Builders include:
-Neil Crighton
 J. Xavier Prochaska
+Joseph F. Hennawi
+Michele Fumagalli
