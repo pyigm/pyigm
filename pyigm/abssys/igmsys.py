@@ -47,6 +47,25 @@ class IGMSystem(AbsSystem):
         return 'DLA'
 
 
+class HISystem(AbsSystem):
+    """Class for HI Lyman Absorption Line System
+    """
+    def __init__(self, radec, zabs, vlim, **kwargs):
+        IGMSystem.__init__(self, 'HI', radec, zabs, vlim, **kwargs)
+
+    def chk_component(self,component):
+        """Require components are only of HI
+        """
+        # Require HI
+        test = (component.Zion[0] == 1) & (component.Zion[1] == 1)
+        if not test:
+            warnings.warn('Input component must be HI')
+        return test
+
+    def print_abs_type(self):
+        """"Return a string representing the type of vehicle this is."""
+        return 'HI'
+
 class AbsSubSystem(object):
     """
     Sub system.  Most frequently used in LLS
