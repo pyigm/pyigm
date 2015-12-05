@@ -14,11 +14,11 @@ from linetools.spectralline import AbsLine
 from linetools.analysis import absline as ltaa
 from linetools.lists.linelist import LineList
 from linetools.isgm.abscomponent import AbsComponent
-from linetools.isgm.abssurvey import AbslineSurvey
 from linetools.abund import ions as ltai
 
 from pyigm.abssys.igmsys import IGMSystem, AbsSubSystem
 from pyigm.abssys import utils as igmau
+from pyigm.abssys.igmsurvey import IGMSurvey
 
 class LLSSystem(IGMSystem):
     """
@@ -419,7 +419,7 @@ class LLSSystem(IGMSystem):
         """Return a string representing the type of vehicle this is."""
         return 'LLS'
 
-class LLSSurvey(AbslineSurvey):
+class LLSSurvey(IGMSurvey):
     """
     An LLS Survey class
     """
@@ -470,7 +470,7 @@ class LLSSurvey(AbslineSurvey):
         return lls_survey
 
     def __init__(self, **kwargs):
-        AbslineSurvey.__init__(self, 'LLS', **kwargs)
+        IGMSurvey.__init__(self, 'LLS', **kwargs)
 
     def cut_nhi_quality(self, sig_cut=0.4):
         """ Cut the LLS on NHI quality.
