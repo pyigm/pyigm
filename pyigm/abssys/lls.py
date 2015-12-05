@@ -1,4 +1,4 @@
-""" Subclasses for LLS AbsSystem and AbsSurvey
+""" Subclasses for LLS IGMSystem and IGMSurvey
 """
 
 from __future__ import print_function, absolute_import, division, unicode_literals
@@ -14,11 +14,11 @@ from linetools.spectralline import AbsLine
 from linetools.analysis import absline as ltaa
 from linetools.lists.linelist import LineList
 from linetools.isgm.abscomponent import AbsComponent
-from linetools.isgm import utils as ltiu
 from linetools.isgm.abssurvey import AbslineSurvey
 from linetools.abund import ions as ltai
 
-from pyigm.abssys.igmsys import IGMSystem
+from pyigm.abssys.igmsys import IGMSystem, AbsSubSystem
+from pyigm.abssys import utils as igmau
 
 class LLSSystem(IGMSystem):
     """
@@ -51,9 +51,9 @@ class LLSSystem(IGMSystem):
         if tree is None:
             tree = ''
         # Read datfile
-        datdict = ltiu.read_dat_file(tree+dat_file)
+        datdict = igmau.read_dat_file(tree+dat_file)
         # Parse
-        coord, zabs, name, NHI, sigNHI, clm_fil = ltiu.parse_datdict(datdict)
+        coord, zabs, name, NHI, sigNHI, clm_fil = igmau.parse_datdict(datdict)
         kwargs['NHI'] = NHI
         kwargs['sig_NHI'] = sigNHI
         # Generate with type
@@ -88,7 +88,7 @@ class LLSSystem(IGMSystem):
         NHI= : float, required despite being a keyword
           log10 of HI column density
         **kwargs : keywords
-          passed to AbsSystem.__init__
+          passed to IGMSystem.__init__
         """
         # NHI
         try:
@@ -101,7 +101,7 @@ class LLSSystem(IGMSystem):
         if vlim is None:
             vlim = [-500.,500.]*u.km/u.s
         # Generate with type
-        AbsSystem.__init__(self, 'LLS', radec, zabs, vlim, NHI=NHI, **kwargs)
+        IGMSystem.__init__(self, 'LLS', radec, zabs, vlim, NHI=NHI, **kwargs)
 
         # Set tau_LL
         self.tau_LL = (10.**self.NHI)*6.3391597e-18  # Should replace with photocross
@@ -221,23 +221,27 @@ class LLSSystem(IGMSystem):
             for lbl in self.subsys.keys():
                 clm_fil = self.tree+self.subsys[lbl]._datdict['clm_file']
                 # Parse .clm file
-                self.subsys[lbl]._clmdict = ltiu.read_clmfile(clm_fil, linelist=linelist)
+                self.subsys[lbl]._clmdict = igmau.read_clmfile(clm_fil, linelist=linelist)
                 # Build components from lines
-                components = ltiu.build_components_from_abslines(abslines, clmdict=self.subsys[lbl]._clmdict, coord=self.coord)
+                components = igmau.build_components_from_abslines([], clmdict=self.subsys[lbl]._clmdict, coord=self.coord)
                 # Update z, vlim
                 if update_zvlim:
+                    vmin,vmax = 9999., -9999.
+                    for component in components:
+                        vmin = min(vmin, component.vlim[0].value)
+                        vmax = max(vmax, component.vlim[1].value)
                     self.subsys[lbl].zabs = self.subsys[lbl]._clmdict['zsys']
                     self.subsys[lbl].vlim = [vmin, vmax]*u.km/u.s
                 # Read .ion file and fill in components
                 ion_fil = self.tree+self.subsys[lbl]._clmdict['ion_fil']
-                self.subsys[lbl]._indiv_ionclms = ltiu.read_ion_file(ion_fil, components)
+                self.subsys[lbl]._indiv_ionclms = igmau.read_ion_file(ion_fil, components)
                 # Parse .all file
                 all_file = ion_fil.split('.ion')[0]+'.all'
                 self.subsys[lbl].all_file=all_file #MF: useful to have
-                _ = ltiu.read_all_file(all_file, components=components)
+                _ = igmau.read_all_file(all_file, components=components)
                 # Build table
-                self.subsys[lbl]._ionN = ltiu.iontable_from_components(components,ztbl=self.subsys[lbl].zabs)
-                # Add to AbsSystem
+                self.subsys[lbl]._ionN = igmau.iontable_from_components(components,ztbl=self.subsys[lbl].zabs)
+                # Add to IGMSystem
                 for comp in components:
                     self.add_component(comp)
 

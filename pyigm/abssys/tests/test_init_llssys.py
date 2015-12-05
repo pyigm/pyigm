@@ -6,7 +6,7 @@ import numpy as np
 import os, pdb
 from astropy import units as u
 
-from pyigm.systems.lls import LLSSystem
+from pyigm.abssys.lls import LLSSystem
 
 '''
 def data_path(filename):
@@ -42,5 +42,5 @@ def test_parse_ion():
     datfil = 'Data/UM184.z2929.dat'
     lls = LLSSystem.from_datfile(datfil, tree=os.getenv('LLSTREE'))
     #    
-    lls.get_ions(use_clmfile=True)
+    lls.get_ions(use_Nfile=True)
     assert len(lls._ionN) == 13
