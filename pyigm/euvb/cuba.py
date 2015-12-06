@@ -21,17 +21,17 @@ class CUBA(object):
 
     JXP on 13 Oct 2015
 
-    Attributes:
-    -----------
-    fits_path: str, optional
+    Attributes
+    ----------
+    fits_path : str, optional
       Path to the FITS data files for COS-Halos
-    z: ndarray
+    z : ndarray
       Array of z values from CUBA file
-    energy: Quantity array
+    energy : Quantity array
       Array of energy values, sorted (eV); converted from wave
-    wave: Quantity array
+    wave : Quantity array
       Array of wavelength values (reverse order) from CUBA file
-    Jnu: Quantity 2D array [energy,z]
+    Jnu : Quantity 2D array [energy,z]
       Array of Jnu values from CUBA file
     """
     # Initialize with a .dat file
@@ -86,7 +86,7 @@ class CUBA(object):
         self.Jnu = Jnu * u.erg/u.s/u.cm**2
 
     def phi(self, zval, min_energy=None):
-        '''Calculate photon flux from a given minimum energy
+        """Calculate photon flux from a given minimum energy
 
         Parameters:
         ----------
@@ -95,7 +95,7 @@ class CUBA(object):
         min_energy : Quantity or Quantity array, optional
           Minimum energy for the calculation
           Default -- 1Ryd
-        '''
+        """
         # Init
         Ryd = const.Ryd.to('eV', equivalencies=u.spectral())
         E_MAX = 1e10*Ryd
