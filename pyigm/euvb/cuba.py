@@ -12,9 +12,7 @@ from scipy.interpolate import interp1d
 from astropy import units as u
 from astropy import constants as const
 
-from xastropy.xutils import xdebug as xdb
-
-# Path for xastropy
+# Path
 pyigm_path = imp.find_module('pyigm')[1]
 
 class CUBA(object):
