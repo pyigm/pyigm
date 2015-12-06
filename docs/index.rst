@@ -27,6 +27,7 @@ Contents:
 .. toctree::
    :maxdepth: 1
 
+   CUBA <cuba>
    IGMSystem <igmsys>
    IGMSurvey <igmsurvey>
 
@@ -34,7 +35,6 @@ Contents:
    To be added:
 
    fN
-   CUBA
 
 **Methods and Scripts**
 
