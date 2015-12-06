@@ -33,6 +33,8 @@ class IGMSystem(AbsSystem):
         """
         # Generate with type
         AbsSystem.__init__(self, abstype, radec, zabs, vlim, **kwargs)
+        # Init
+        self.ZH = 0.
 
     # Output
     def __repr__(self):

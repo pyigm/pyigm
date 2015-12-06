@@ -9,7 +9,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 import numpy as np
 
-from pyigm.igmsys import IGMSystem
+from pyigm.abssys.igmsys import IGMSystem
 
 import pdb
 
