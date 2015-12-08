@@ -315,7 +315,7 @@ class LLSSystem(IGMSystem):
         energy = wv_rest.to(u.eV, equivalencies=u.spectral())
 
         # Get photo_cross and calculate tau
-        tau_LL = (10.**self.NHI / u.cm**2) * ltaa.photo_cross(1,1,energy)
+        tau_LL = (10.**self.NHI / u.cm**2) * ltaa.photo_cross(1, 1, energy)
 
         # Check for lines
         if 'lls_lines' not in self.__dict__.keys():
