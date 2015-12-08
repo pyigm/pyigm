@@ -14,16 +14,17 @@ from astropy import constants as const
 
 from linetools.analysis import absline as ltaa
 
+from pyigm import utils as pyigmu
+
 from xastropy.xutils import xdebug as xdb
 #from xastropy.stats import mcmc
-#from xastropy.igm import igm_utils as igmu
 #from xastropy.atomic import ionization as xai
 
 # Path for pyigm
 pyigm_path = imp.find_module('pyigm')[1]
 
 
-class fNModel(object):
+class FNModel(object):
     """A Class for f(N,X) models
 
     Attributes
@@ -44,8 +45,8 @@ class fNModel(object):
           Power law for dN/dX, not dN/dz (1.5)
     """
     @classmethod
-    def default_model(cls, recalc=False, pckl_fil=None, use_mcmc=False, write=False):
-        """ Pass back a default fN_model from Prochaska+13
+    def default_model(cls, use_mcmc=False):
+        """ Pass back a default fN_model from Prochaska+14
 
         Tested against XIDL code by JXP on 09 Nov 2014
 
@@ -58,38 +59,27 @@ class fNModel(object):
         write : boolean, optional (False)
           Write out the model
         """
-        if pckl_fil == None:
-            pckl_fil = pyigm_path+'/data/fN/fN_model_P13.p'
+        if use_mcmc:
+            # MCMC Analysis (might put these on a website)
+            chain_file = (os.environ.get('DROPBOX_DIR')+
+                        'IGM/fN/MCMC/mcmc_spline_k13r13o13n12_8.fits.gz')
+            outp = mcmc.chain_stats(chain_file)
 
-        if recalc:
-            if use_mcmc:
-                # MCMC Analysis (might put these on a website)
-                chain_file = (os.environ.get('DROPBOX_DIR')+
-                            'IGM/fN/MCMC/mcmc_spline_k13r13o13n12_8.fits.gz')
-                outp = mcmc.chain_stats(chain_file)
-
-                # Build a model
-                NHI_pivots = [12., 15., 17.0, 18.0, 20.0, 21., 21.5, 22.]
-                fN_model = cls('Hspline', zmnx=(0.5,3.0),
-                                pivots=NHI_pivots, param=outp['best_p'])
-            else:
-                # Input the f(N) at z=2.4
-                fN_file = (os.environ.get('DROPBOX_DIR')+
-                            'IGM/fN/fN_spline_z24.fits.gz')
-                hdu = fits.open(fN_file)
-                fN_data = hdu[1].data
-                # Instantiate
-                fN_model = cls('Hspline', zmnx=(0.5,3.0),
-                                pivots=np.array(fN_data['LGN']).flatten(),
-                                param=np.array(fN_data['FN']).flatten())
-            # Write
-            if write:
-                print('default_model: Writing {:s}'.format(pckl_fil))
-                pickle.dump(fN_model, open( pckl_fil, "wb"), -1)
+            # Build a model
+            NHI_pivots = [12., 15., 17.0, 18.0, 20.0, 21., 21.5, 22.]
+            fN_model = cls('Hspline', zmnx=(0.5,3.0),
+                            pivots=NHI_pivots, param=outp['best_p'])
         else:
-            print('Loading f(N) model from {:s}'.format(pckl_fil))
-            fN_model = pickle.load(open(pckl_fil, "rb"))
-
+            # Input the f(N) at z=2.4 from Prochaska+13
+            fN_file = (pyigm_path+'/data/fN/fN_spline_z24.fits.gz')
+            print('Using P14 spline values to generate a default model')
+            print('Loading: {:s}'.format(fN_file))
+            hdu = fits.open(fN_file)
+            fN_data = hdu[1].data
+            # Instantiate
+            fN_model = cls('Hspline', zmnx=(0.5, 3.0),
+                            pivots=np.array(fN_data['LGN']).flatten(),
+                            param=np.array(fN_data['FN']).flatten())
         # Return
         return fN_model
 
@@ -397,7 +387,7 @@ class fNModel(object):
                                                    (1+zcuts[1]) )**gamma[ii-2] *
                                                     ((1+z_val[izcut]) / (1+zcuts[2]) )**gamma[ii-1] )
             # dX/dz
-            dXdz = igmu.cosm_xz(z_val, cosmo=cosmo, flg=1) 
+            dXdz = pyigmu.cosm_xz(z_val, cosmo=cosmo, flg_return=1)
 
             # Final steps
             if flg_1D == 1: # 
@@ -495,7 +485,7 @@ class fNModel(object):
         teff_LL = np.zeros(N_eval)
 
         # dXdz
-        dXdz = igmu.cosm_xz(zval, cosmo=cosmo, flg=1) 
+        dXdz = pyigmu.cosm_xz(zval, cosmo=cosmo, flg_return=1)
 
         # Evaluate f(N,X)
         velo = (zval-zem)/(1+zem) * (const.c.cgs.value/1e5)  # Kludge for eval [km/s]
@@ -618,7 +608,7 @@ if __name__ == '__main__':
         fN_model = fNModel('Gamma')
         NHI = [12.,14.,17.,21.]
         z = 2.5
-        dXdz = igmu.cosm_xz(z, flg=1) 
+        dXdz = pyigmu.cosm_xz(z, flg_return=1)
         # From Akio
           # 12 1.2e-9
           # 14 4.9e-13

@@ -8,3 +8,5 @@ ipython nbconvert examples/IGMSurvey_examples.ipynb --to rst
 ipython nbconvert examples/LLSSystem_examples.ipynb --to rst
 ipython nbconvert examples/LLSSurvey_examples.ipynb --to rst
 ipython nbconvert examples/DLASystem_examples.ipynb --to rst
+
+ipython nbconvert examples/fN_examples.ipynb --to rst

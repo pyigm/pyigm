@@ -28,13 +28,12 @@ Contents:
    :maxdepth: 1
 
    CUBA <cuba>
+   fN <fn>
    IGMSystem <igmsys>
    IGMSurvey <igmsurvey>
 
 ..
    To be added:
-
-   fN
 
 **Methods and Scripts**
 
