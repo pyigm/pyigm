@@ -39,14 +39,6 @@ def test_lx():
     np.testing.assert_allclose(lX, 0.36298679339713974)
 
 
-def test_teff():
-    fN_default = FNModel.default_model()
-    zval,teff_LL = fN_default.teff_ll(0.5, 2.45)
-    #
-    np.testing.assert_allclose(zval[0], 0.5)
-    np.testing.assert_allclose(teff_LL[0], 1.8176161746504436)
-
-
 def test_mfp():
     fN_default = FNModel.default_model()
     z=2.44

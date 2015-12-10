@@ -20,6 +20,13 @@ def data_path(filename):
     return os.path.join(data_dir, filename)
 '''
 
+def test_teff():
+    fN_default = FNModel.default_model()
+    zval,teff_LL = pyteff.lyman_limit(fN_default, 0.5, 2.45)
+    #
+    np.testing.assert_allclose(zval[0], 0.5)
+    np.testing.assert_allclose(teff_LL[0], 1.8176161746504436)
+
 def test_lya():
     # f(N)
     fN_model = FNModel.default_model()

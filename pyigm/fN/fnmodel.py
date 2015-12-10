@@ -14,6 +14,7 @@ from astropy import constants as const
 
 
 from pyigm import utils as pyigmu
+from pyigm.fN import tau_eff as pyteff
 
 from xastropy.xutils import xdebug as xdb
 
@@ -434,7 +435,7 @@ class FNModel(object):
             cosmo = cosmology.core.FlatLambdaCDM(70., 0.3)
 
         # Calculate teff
-        zval, teff_LL = self.teff_ll(zmin, zem, N_eval=neval, cosmo=cosmo)
+        zval, teff_LL = pyteff.lyman_limit(self, zmin, zem, N_eval=neval, cosmo=cosmo)
 
         # Find tau=1
         imn = np.argmin( np.fabs(teff_LL-1.) )
