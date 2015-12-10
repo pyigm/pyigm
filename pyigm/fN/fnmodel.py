@@ -14,7 +14,6 @@ from astropy import constants as const
 
 
 from pyigm import utils as pyigmu
-from pyigm.fN import tau_eff as pyteff
 
 from xastropy.xutils import xdebug as xdb
 
@@ -427,24 +426,24 @@ class FNModel(object):
           Mean free path from zem (physical Mpc)
         """
         # Imports
-        from astropy import constants as const
-        from astropy import cosmology 
+        from pyigm.fN import tau_eff as pyteff
+        from astropy import cosmology
 
         # Cosmology
-        if cosmo == None:
+        if cosmo is None:
             cosmo = cosmology.core.FlatLambdaCDM(70., 0.3)
 
         # Calculate teff
         zval, teff_LL = pyteff.lyman_limit(self, zmin, zem, N_eval=neval, cosmo=cosmo)
 
         # Find tau=1
-        imn = np.argmin( np.fabs(teff_LL-1.) )
+        imn = np.argmin(np.fabs(teff_LL-1.))
         if np.fabs(teff_LL[imn]-1.) > 0.02:
             raise ValueError('fN.model.mfp: teff_LL too far from unity')
 
         # MFP
-        mfp = np.fabs( cosmo.lookback_distance(zval[imn]) -
-                        cosmo.lookback_distance(zem) )  # Mpc
+        mfp = np.fabs(cosmo.lookback_distance(zval[imn]) -
+                        cosmo.lookback_distance(zem))  # Mpc
         # Return
         return mfp
 
