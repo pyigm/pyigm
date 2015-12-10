@@ -3,7 +3,7 @@
 from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
-import os, pickle, imp
+import os, imp
 from scipy import interpolate as scii
 import pdb
 
@@ -12,13 +12,10 @@ from astropy.utils.misc import isiterable
 from astropy import units as u
 from astropy import constants as const
 
-from linetools.analysis import absline as ltaa
 
 from pyigm import utils as pyigmu
 
 from xastropy.xutils import xdebug as xdb
-#from xastropy.stats import mcmc
-#from xastropy.atomic import ionization as xai
 
 # Path for pyigm
 pyigm_path = imp.find_module('pyigm')[1]
@@ -450,71 +447,6 @@ class FNModel(object):
         # Return
         return mfp
 
-    def teff_ll(self, z912, zem, N_eval=5000, cosmo=None, debug=False):
-        """ Calculate teff_LL
-
-        Effective opacity from LL absorption at z912 from zem
-
-        Parameters
-        ----------
-        z912 : float
-          Redshift for evaluation
-        zem : float
-          Redshift of source
-        cosmo : astropy.cosmology, optional
-          Cosmological model to adopt (as needed)
-        N_eval : int, optional
-          Discretization parameter (5000)
-        debug : bool, optional
-
-        Returns
-        -------
-        zval : array
-        teff_LL : array
-          z values and Effective opacity from LL absorption from z912 to zem
-        """
-        # NHI array
-        lgNval = 11.5 + 10.5*np.arange(N_eval)/(N_eval-1.)  #; This is base 10 [Max at 22]
-        dlgN = lgNval[1]-lgNval[0]
-        Nval = 10.**lgNval
-
-        # z array
-        zval = z912 + (zem-z912)*np.arange(N_eval)/(N_eval-1.)
-        dz = np.fabs(zval[1]-zval[0])
-
-        teff_LL = np.zeros(N_eval)
-
-        # dXdz
-        dXdz = pyigmu.cosm_xz(zval, cosmo=cosmo, flg_return=1)
-
-        # Evaluate f(N,X)
-        velo = (zval-zem)/(1+zem) * (const.c.cgs.value/1e5)  # Kludge for eval [km/s]
-
-        log_fnX = self.evaluate(lgNval, zem, vel_array=velo)
-        log_fnz = log_fnX + np.outer(np.ones(N_eval), np.log10(dXdz))
-
-        # Evaluate tau(z,N)
-        teff_engy = (const.Ryd.to(u.eV, equivalencies=u.spectral()) /
-                     ((1+zval)/(1+zem)) )
-        sigma_z = ltaa.photo_cross(1, 1, teff_engy)
-        tau_zN = np.outer(Nval, sigma_z)
-
-        # Integrand
-        intg = 10.**(log_fnz) * (1. - np.exp(-1.*tau_zN))
-
-        # Sum
-        sumz_first = False
-        if sumz_first == False:
-            #; Sum in N first
-            N_summed = np.sum(intg * np.outer(Nval, np.ones(N_eval)),  0) * dlgN * np.log(10.)
-            # Sum in z
-            teff_LL = (np.cumsum(N_summed[::-1]))[::-1] * dz 
-
-        # Debug
-        if debug == True:
-            pdb.set_trace()
-        # Return
-        return zval, teff_LL
 
     ##
     # Output
