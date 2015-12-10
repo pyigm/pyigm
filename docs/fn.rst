@@ -76,8 +76,8 @@ Easily evaluated with::
 
    lX = fN_default.calculate_lox(z, Nmin, Nmax)
 
-tau_eff
--------
+tau_eff^LL
+----------
 
 Calculate the effective optical depth to Lyman limit photons
 
@@ -86,7 +86,8 @@ Calculate the effective optical depth to Lyman limit photons
 
 Easily evaluated over across a redshift interval::
 
-   zval,teff_LL = fN_default.teff_ll(zmin, zmax)
+   from pyigm.fN import tau_eff as pyteff
+   zval,teff_LL = pyteff.lyman_limit(fN_default, 0.5, 2.45)
 
 MFP
 ---
