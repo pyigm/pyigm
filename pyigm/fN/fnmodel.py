@@ -15,7 +15,6 @@ from astropy import constants as const
 
 from pyigm import utils as pyigmu
 
-from xastropy.xutils import xdebug as xdb
 
 # Path for pyigm
 pyigm_path = imp.find_module('pyigm')[1]
