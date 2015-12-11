@@ -23,6 +23,7 @@ from linetools.spectralline import AbsLine
 from linetools.analysis import absline as ltaa
 from linetools.isgm.abscomponent import AbsComponent
 
+
 def chk_components(components, chk_match=False, chk_A_none=False, toler=0.2*u.arcsec):
     """ Performs checks on a list of components
 
