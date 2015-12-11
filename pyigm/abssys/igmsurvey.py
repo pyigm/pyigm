@@ -12,11 +12,11 @@ import pdb
 from astropy.io import ascii 
 from astropy import units as u
 from astropy.table import QTable, Column, Table
-from astropy.units.quantity import Quantity
 
 from linetools.spectra import io as lsio
 
 from pyigm.abssys.igmsys import IGMSystem
+from pyigm.utils import lst_to_array
 
 
 class IGMSurvey(object):
@@ -338,26 +338,5 @@ def set_igmclass(abstype):
         return IGMSystem
 
 
-def lst_to_array(lst, mask=None):
-    """ Simple method to convert a list to an array
 
-    Allows for a list of Quantity objects
-
-    Parameters
-    ----------
-    lst : list
-      Should be number or Quantities
-    mask : boolean array, optional
-
-    Returns
-    -------
-    array or Quantity array
-
-    """
-    if mask is None:
-        mask = np.array([True]*len(lst))
-    if isinstance(lst[0], Quantity):
-        return Quantity(lst)[mask]
-    else:
-        return np.array(lst)[mask]
 

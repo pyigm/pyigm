@@ -5,6 +5,7 @@ import pdb
 
 from astropy import constants as const
 from astropy import units as u
+from astropy.units.quantity import Quantity
 
 def cosm_xz(z, cosmo=None, flg_return=0):
     """ Calculates X(z) -- absorption path length or dXdz
@@ -134,3 +135,26 @@ def mk_ew_lyman_spline(bval, ew_fil=None, chk=False):
     print('Writing {:s}'.format(ew_fil))
     with open(ew_fil, 'w') as yamlf:
         yamlf.write(yaml.dump(outp))
+
+def lst_to_array(lst, mask=None):
+    """ Simple method to convert a list to an array
+
+    Allows for a list of Quantity objects
+
+    Parameters
+    ----------
+    lst : list
+      Should be number or Quantities
+    mask : boolean array, optional
+
+    Returns
+    -------
+    array or Quantity array
+
+    """
+    if mask is None:
+        mask = np.array([True]*len(lst))
+    if isinstance(lst[0], Quantity):
+        return Quantity(lst)[mask]
+    else:
+        return np.array(lst)[mask]
