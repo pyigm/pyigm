@@ -20,6 +20,7 @@ Contents:
    :maxdepth: 1
 
    install
+   misc
    api
 
 **Core classes**
