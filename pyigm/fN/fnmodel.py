@@ -450,8 +450,7 @@ class FNModel(object):
     ##
     # Output
     def __repr__(self):
-        return ('[%s: %s zmnx=(%g,%g)]' %
-                (self.__class__.__name__,
-                 self.mtype, self.zmnx[0], self.zmnx[1]))
+        return ('<{:s}: {:s} zmnx=({:g},{:g})>'.format(
+                self.__class__.__name__, self.mtype, self.zmnx[0], self.zmnx[1]))
 
 
