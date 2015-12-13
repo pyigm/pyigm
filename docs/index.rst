@@ -28,6 +28,7 @@ Contents:
    :maxdepth: 1
 
    CUBA <cuba>
+   IGMGalaxyField <igmfield>
    fN <fn>
    IGMSystem <igmsys>
    IGMSurvey <igmsurvey>

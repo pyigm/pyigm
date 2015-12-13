@@ -3,6 +3,9 @@
 from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
+import warnings
+import pdb
+
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy import constants as const
@@ -17,10 +20,11 @@ class IgmGalaxyField(object):
     ----------
     radec : tuple or SkyCoord
         (RA,DEC) in deg or astropy.coordinate
+    name : str, optional
     """
 
     # Initialize 
-    def __init__(self, radec, name=None, cosmo=None, verbose=False):
+    def __init__(self, radec, name='', cosmo=None, verbose=False):
         # coord
         if isinstance(radec, (tuple)):
             self.coord = SkyCoord(ra=radec[0], dec=radec[1])
@@ -44,14 +48,16 @@ class IgmGalaxyField(object):
         self.observing = None
         self.selection = None
 
-    def calc_rhoimpact(self,obj):
-        """Calculate impact parameter from field RA/DEC for a set of objects
+    def calc_rhoimpact(self, obj, los_coord=None):
+        """Calculate impact parameter from LOS RA/DEC for a set of objects
 
         Parameters
         ----------
         obj : Table
           (can be anything that takes 'RA','DEC' and 'Z')
           Sources for calculation
+        los_radec : SkyCoord, optional
+          Defaults to field RA/DEC
 
         Returns
         -------
@@ -59,16 +65,18 @@ class IgmGalaxyField(object):
         rho : Quantity (array usually)
           Impact parameter(s) in kpc
         """
+        if los_coord is None:
+            los_coord = self.coord
         # Coord
         o_coord = SkyCoord(ra=obj['RA']*u.deg, dec=obj['DEC']*u.deg)
-        ang_sep = o_coord.separation(self.coord).to('arcmin')
+        ang_sep = o_coord.separation(los_coord).to('arcmin')
         # Cosmology
         kpc_amin = self.cosmo.kpc_comoving_per_arcmin(obj['Z'] ) # kpc per arcmin
         rho = ang_sep * kpc_amin / (1+obj['Z']) # Physical
         # Return
         return rho
 
-    def get_associated_galaxies(self,z,R=300*u.kpc,dv_tol=500*u.km/u.s):
+    def get_associated_galaxies(self, z, los_coord=None, R=300*u.kpc, dv_tol=500*u.km/u.s):
         """Return a Table of associated galaxies for a given redshift and separation
 
         Parameters
@@ -79,6 +87,8 @@ class IgmGalaxyField(object):
           Radius of impact parameter for association [300kpc]
         dv_tol : Quantity
           Velocity window for association [500km/s]
+        los_coord : SkyCoord, optional
+          Line-of-sight coordinates
 
         Returns
         -------
@@ -87,6 +97,9 @@ class IgmGalaxyField(object):
         rho : Quantity
           Impact parameters [kpc]
         """
+        # los_radec
+        if los_coord is None:
+            los_coord = self.coord
         # Cut on z first
         dv_gal = const.c.to('km/s') * (self.galaxies['Z']-z)/(1+z)  # Approximate
         gdz = np.where(np.abs(dv_gal)<dv_tol)[0]
@@ -94,7 +107,7 @@ class IgmGalaxyField(object):
             return None
         #
         gdz_gal = self.galaxies[gdz]
-        rho = self.calc_rhoimpact(gdz_gal)  # Could add this to Table
+        rho = self.calc_rhoimpact(gdz_gal, los_coord)  # Could add this to Table
         #
         gd_rho = np.where(rho < R)[0]
         if len(gd_rho) == 0:
@@ -103,7 +116,7 @@ class IgmGalaxyField(object):
         return gdz_gal[gd_rho], rho[gd_rho]
 
     def get_observed(self, theta, subtab=None):
-        """Generate a Table of observed targets within an angular offset
+        """Generate a Table of observed targets within an angular offset of field center
 
         Parameters
         ----------
@@ -136,8 +149,10 @@ class IgmGalaxyField(object):
         # Generate mask
         tmsk = np.array([False]*len(subtab))
         # Grab those with a MASK_NAME
-        have_mask = np.where(subtab['MASK_NAME'].mask is False)[0]
+        have_mask = np.where(~subtab['MASK_NAME'].mask)[0]
         if len(have_mask) == 0:
+            warnings.warn("No sources with a MASK_NAME")
+            pdb.set_trace()
             return None
         # Get unique mask values
         all_masks = subtab['MASK_NAME'][have_mask]
@@ -179,7 +194,7 @@ class IgmGalaxyField(object):
         subtab = self.targets[gdsep]
         tmsk = np.array([True]*len(subtab))
         # Grab observed (short cut!)
-        obs_tab, odict = self.get_observed(theta, subtab=subtab)
+        obs_tab, odict, _ = self.get_observed(theta, subtab=subtab)
         # Remove those
         for kk, row in enumerate(subtab):
             if row['TARG_RA'] in obs_tab['TARG_RA']: # Could use DEC too
