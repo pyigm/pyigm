@@ -17,96 +17,76 @@ Notebooks
 Overview
 ========
 
-This Class is designed to enable f(N) calculations in the IGM.
-While the authors have reservations on the validity of f(N)
-as a description of the IGM, it still offers good value for
-a number of calculations.
+This Class is designed to enable analysis between galaxies and
+absorbers in a chosen field.  In particular, cross-correlation
+analysis.  Although, in many ways this is the starting point for
+essentially any analysis of galaxies with the IGM.
 
-
-The FNModel Class may take several forms as described below.
-
-========= ======================================================= ============
-Type      Description                                             Reference
-========= ======================================================= ============
-Hspline   Hermite spline which is constrained to monotonically    `Prochaska+14 <http://adsabs.harvard.edu/abs/2014MNRAS.438..476P>`_
-          decrease
-Gamma     Power-law + exponential                                 `Inoue+14 <http://adsabs.harvard.edu/abs/2014MNRAS.442.1805I>`_
-========= ======================================================= ============
 
 Instantiation
 =============
 
+Instantiation only requires the field coordinates, presumebly near the center.::
 
-Here are some examples of instantiation::
+    field = ('PG1407+265',212.349634*u.deg,26.3058650*u.deg)
+    lfield = igmf.IgmGalaxyField((field[1],field[2]), name=field[0], verbose=True)
 
-    from pyigm.fN.fnmodel import FNModel
-    # P14 HSpline
-    fN_P14 = FNModel('Hspline', zmnx=(2.,5.))
-    # I14
-    fN_I14 = FNModel('Gamma')
-
-
-And the default model is currently the P14 formulation::
-
-   fN_default = FNModel.default_model()
 
 
 Attributes/Properties
 =====================
 
-========   ============== ============================================
-Variable   Type           Description
-========   ============== ============================================
-zmnx       tuple          min/max redshift for using this model to evaluate f(N)
-========   ============== ============================================
+=========  ================= ============================================
+Variable   Type              Description
+=========  ================= ============================================
+name       str               Given name for the field
+cosmo      astropy.cosmology Given name for the field
+igm        ??                A means of conveniently storing IGM system info
+targets    astropy.Table     Table of target info
+galaxies   astropy.Table     Table of galaxy info
+observing  astropy.Table     Table of info on observing the galaxies
+selection  ??                Object to enable calculation of the galaxy selection function
+=========  ================= ============================================
 
 Methods
 =======
 
-l(X)
-----
+Impact Parameter
+----------------
 
-Calculate :math:`\ell(X)`, the incidence of absorption per absorption
-path length :math:`dX` in a given interval of column density:
+Calculate :math:`\rho`, the physical, projected impact parameter from
+a given object to the line-of-sight (LOS) coordinate.  By defualt, the
+LOS is assumed to be the field coordinate.::
 
-.. math::
-   \ell(X) = \int_{N_{\rm min}}^{N_{\rm max}} f(N,X) \, dN
+   rho = lfield.calc_rhoimpact(obj)
 
-Easily evaluated with::
+Observed Galaxies
+-----------------
 
-   lX = fN_default.calculate_lox(z, Nmin, Nmax)
+Generate a table of the observed galaxies in the field
+within a given angular radius of the field coord.::
 
-tau_eff^LL
-----------
+   targ, dates, idx = lfield.get_observed(5.*u.arcmin)
 
-Calculate the effective optical depth to Lyman limit photons
+Unobserved Galaxies
+-------------------
 
-.. math::
-   \tau_{\rm eff}^{\rm LL}(z_{912},z_\mathrm{q}) = \int_{z_{912}}^{z_q} \int_0^\infty f(N_{\rm HI},z) \, [1 - \exp[-N_{\rm HI} \sigma_{\rm ph}(z')]] \, dN_{\rm HI} dz'
+Generate a table of the unobserved galaxies in the field
+within a given angular radius of the field coord.::
 
-Easily evaluated over across a redshift interval::
+   need_targ = lfield.get_unobserved(5.*u.arcmin)
 
-   from pyigm.fN import tau_eff as pyteff
-   zval,teff_LL = pyteff.lyman_limit(fN_default, 0.5, 2.45)
+Associated Galaxies
+-------------------
 
-MFP
----
+Generate a table of the galaxies "associated" to a given LOS.::
 
-Evaluate the mean free path to ionizing photons at a given redshift::
+   close_gal, rho = lfield.get_associated_galaxies(0.13, R=300*u.kpc)
 
-   mfp = fN_default.mfp(z)
+Mask Date
+---------
 
-rho HI
-------
+Returns a list of the date(s) when a given mask was observed.::
 
-Evaluate the mass density in HI atoms at a specific redshift, integrating
-over a :math:`N_{\rm HI}` interval:
+   dates = lfield.get_mask_obsdate('PG1407_may_mid2')
 
-.. math::
-   \rho_{\rm HI} = \frac{m_p H_0}{c} \int_{N_{\rm min}}^{N_{\rm max}} f(N_{\rm HI},X) \, N_{\rm HI} \, dN_{\rm HI}
-
-As such::
-
-   rho_HI = fN_default.calculate_rhoHI(z, (Nmin, Nmax))
-
-Most useful for DLA calculations.
