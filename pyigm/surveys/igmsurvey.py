@@ -13,6 +13,7 @@ from astropy.io import ascii
 from astropy import units as u
 from astropy.table import QTable, Column, Table
 from astropy.units.quantity import Quantity
+from astropy.coordinates import SkyCoord
 
 from linetools.spectra import io as lsio
 
@@ -73,7 +74,7 @@ class IGMSurvey(object):
 
         Parameters
         ----------
-        summ_fits : str
+        summ_fits : str or Table or QTable
           Summary FITS file
         **kwargs : dict
           passed to __init__
@@ -81,13 +82,16 @@ class IGMSurvey(object):
         # Init
         slf = cls(**kwargs)
         # Read
-        systems = QTable.read(summ_fits)
+        if isinstance(summ_fits, Table):
+            systems = summ_fits
+        else:
+            systems = QTable.read(summ_fits)
         nsys = len(systems)
         # Dict
         kdict = dict(NHI=['NHI', 'logNHI'],
-                     sig_NHI=['sig(logNHI)'],
+                     sig_NHI=['sig(logNHI)', 'SIGNHI'],
                      name=['Name'], vlim=['vlim'],
-                     zabs=['Z_LLS'], zem=['Z_QSO'],
+                     zabs=['Z_LLS', 'ZABS'], zem=['Z_QSO', 'QSO_ZEM'],
                      RA=['RA'], Dec=['DEC', 'Dec'])
         # Parse the Table
         inputs = {}
@@ -209,7 +213,13 @@ class IGMSurvey(object):
         try:
             lst = [getattr(abs_sys, k) for abs_sys in self._abs_sys]
         except ValueError:
-            raise ValueError
+            raise ValueError("Attribute does not exist")
+        # Special cases
+        if k == 'coord':
+            ra = [coord.ra for coord in lst]
+            dec = [coord.dec for coord in lst]
+            lst = SkyCoord(ra=ra, dec=dec)
+            return lst[self.mask]
         # Recast as an array
         return lst_to_array(lst, mask=self.mask)
 

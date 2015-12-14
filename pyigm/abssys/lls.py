@@ -3,7 +3,6 @@
 
 from __future__ import print_function, absolute_import, division, unicode_literals
 
-import os, imp, glob
 import numpy as np
 import warnings
 
@@ -18,7 +17,6 @@ from linetools.abund import ions as ltai
 
 from pyigm.abssys.igmsys import IGMSystem, AbsSubSystem
 from pyigm.abssys import utils as igmau
-from pyigm.abssys.igmsurvey import IGMSurvey
 
 class LLSSystem(IGMSystem):
     """
@@ -419,86 +417,6 @@ class LLSSystem(IGMSystem):
         """Return a string representing the type of vehicle this is."""
         return 'LLS'
 
-class LLSSurvey(IGMSurvey):
-    """
-    An LLS Survey class
-    """
-
-    @classmethod
-    def load_HDLLS(cls):
-        """ Default sample of LLS (HD-LLS, DR1)
-
-        Return
-        ------
-        lls_survey
-        """
-        import urllib2
-        import imp
-        lt_path = imp.find_module('linetools')[1]
-        # Pull from Internet (as necessary)
-        summ_fil = glob.glob(lt_path+"/data/LLS/HD-LLS_DR1.fits")
-        if len(summ_fil) > 0:
-            summ_fil = summ_fil[0]
-        else:
-            url = 'http://www.ucolick.org/~xavier/HD-LLS/DR1/HD-LLS_DR1.fits'
-            print('LLSSurvey: Grabbing summary file from {:s}'.format(url))
-            f = urllib2.urlopen(url)
-            summ_fil = lt_path+"/data/HD-LLS_DR1.fits"
-            with open(summ_fil, "wb") as code:
-                code.write(f.read())
-
-        # Ions
-        ions_fil = glob.glob(lt_path+"/data/LLS/HD-LLS_ions.json")
-        if len(ions_fil) > 0:
-            ions_fil = ions_fil[0]
-        else:
-            url = 'http://www.ucolick.org/~xavier/HD-LLS/DR1/HD-LLS_ions.json'
-            print('LLSSurvey: Grabbing JSON ion file from {:s}'.format(url))
-            f = urllib2.urlopen(url)
-            ions_fil = lt_path+"/data/HD-LLS_ions.json"
-            with open(ions_fil, "wb") as code:
-                code.write(f.read())
-
-        # Read
-        lls_survey = cls.from_sfits(summ_fil)
-        # Load ions
-        lls_survey.fill_ions(jfile=ions_fil)
-        # Set data path (may be None)
-        for lls in lls_survey._abs_sys:
-            lls.spec_path = os.getenv('HDLLS_DATA')
-
-        return lls_survey
-
-    def __init__(self, **kwargs):
-        IGMSurvey.__init__(self, 'LLS', **kwargs)
-
-    def cut_nhi_quality(self, sig_cut=0.4):
-        """ Cut the LLS on NHI quality.
-
-        Could put this in Absline_Survey
-
-        Parameters
-        ----------
-        sig_cut : float, optional
-            Limit to include as quality
-
-        Returns
-        -------
-        gdNHI : ndarray
-        bdNHI : ndarray
-            Indices for those LLS that are good/bad
-            gdNHI is a numpy array of indices
-            bdNHI is a boolean array
-        """
-        # Cut
-        gdNHI = np.where( (self.sigNHI[:, 0] < sig_cut)
-                        & (self.sigNHI[:, 1] < sig_cut))[0]
-        # Mask
-        bdNHI = (self.NHI == self.NHI)
-        bdNHI[gdNHI] = False
-
-        # Return
-        return gdNHI, bdNHI
 
 def tau_multi_lls(wave, all_lls, **kwargs):
     """Calculate opacities on an input observed wavelength grid
