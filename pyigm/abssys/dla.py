@@ -8,7 +8,7 @@ import pdb
 from astropy import units as u
 
 from pyigm.abssys.igmsys import IGMSystem
-from pyigm.abssys.igmsurvey import IGMSurvey
+from pyigm.surveys.igmsurvey import IGMSurvey
 from pyigm.abssys import utils as igmau
 
 class DLASystem(IGMSystem):

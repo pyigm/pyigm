@@ -1,7 +1,7 @@
 """ Class for LLS Surveys
 """
 import numpy as np
-import os, imp, glob
+import imp, glob
 import pdb
 import urllib2
 

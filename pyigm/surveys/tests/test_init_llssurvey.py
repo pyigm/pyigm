@@ -6,7 +6,7 @@ import numpy as np
 import glob, os, imp, pdb
 import pytest
 
-from pyigm.abssys.lls import LLSSurvey
+from pyigm.surveys.llssurvey import LLSSurvey
 
 lt_path = imp.find_module('linetools')[1]
 
