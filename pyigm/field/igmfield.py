@@ -147,7 +147,8 @@ class IgmGalaxyField(object):
         Returns
         -------
         obs_targ : Table
-          Sub-table of targets that have been observed within this radius
+          Sub-table of targets that have been observed within theta (if given)
+          and/or within subtab (if given)
         obs_dates : List
           List of observing dates [eventually might add to Table]
         indices : array
@@ -202,7 +203,7 @@ class IgmGalaxyField(object):
         Returns
         -------
         unobs_targ : Table
-          Sub-table of targets that have been observed within this radius
+          Sub-table of targets that have been not been observed within theta (if given)
         """
         if (self.targets is None) or (self.observing is None):
             raise ValueError('IgmGalaxyField: Need to fill the target and/or observing table first!')
