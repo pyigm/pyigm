@@ -7,9 +7,6 @@ import os, pdb
 import pytest
 from astropy import units as u
 
-from xastropy.igm import tau_eff as xit
-from xastropy.igm.fN import model as xifm
-
 from pyigm.fN.fnmodel import FNModel
 from pyigm.fN import tau_eff as pyteff
 from linetools.spectralline import AbsLine
