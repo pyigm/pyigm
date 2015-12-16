@@ -14,11 +14,7 @@ def data_path(filename):
     return os.path.join(data_dir, filename)
 
 
-def test_init():
-    # Class
-    fN_P13 = FNModel('Hspline', zmnx=(2.,5.))
-    # Mtype
-    assert fN_P13.mtype == 'Hspline'
+def test_init_I14():
     # Class
     fN_I14 = FNModel('Gamma')
     # Mtype
@@ -45,7 +41,7 @@ def test_mfp():
     mfp = fN_default.mfp(z)
     # Test
     assert mfp.unit == u.Mpc
-    np.testing.assert_allclose(mfp.value, 257.51256475922037)
+    np.testing.assert_allclose(mfp.value, 257.53517867221353)
 
 
 def test_rhoHI():

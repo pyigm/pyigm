@@ -125,8 +125,7 @@ def lyman_limit(fN_model, z912, zem, N_eval=5000, cosmo=None, debug=False):
 
 
 def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
-                  EW_spline=None, bval=24., fNz=False, cosmo=None, debug=False,
-                  cumul=None, verbose=False):
+                  bval=24., cosmo=None, debug=False, cumul=None, verbose=False):
     """ tau effective from HI Lyman series absorption
 
     Parameters
@@ -135,15 +134,16 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
         Observed wavelength (Ang)
     zem : float
         Emission redshift of the source [sets which Lyman lines are included]
-    bva : float
+    fN_model : FNModel
+    NHI_MIN : float, optional
+         -- Minimum log HI column for integration [default = 11.5]
+    NHI_MAX : float, optional
+         -- Maximum log HI column for integration [default = 22.0]
+    N_eval : int, optional
+      Number of NHI evaluations
+    bval : float
          -- Characteristics Doppler parameter for the Lya forest
          -- [Options: 24, 35 km/s]
-    NHI_MIN : float
-         -- Minimum log HI column for integration [default = 11.5]
-    NHI_MAX : float
-         -- Maximum log HI column for integration [default = 22.0]
-    fNz : Boolean (False)
-         -- Inputs f(N,z) instead of f(N,X)
     cosmo : astropy.cosmology (None)
          -- Cosmological model to adopt (as needed)
     cumul : List of cumulative sums
@@ -165,13 +165,12 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
         Lambda = Lambda * u.AA # Ang
 
     # Read in EW spline (if needed)
-    if EW_spline == None:
-        if int(bval) == 24:
-            EW_FIL = pyigm_path+'/data/fN/EW_SPLINE_b24.yml'
-            with open(EW_FIL, 'r') as infile:
-                EW_spline = yaml.load(infile)  # dict from mk_ew_lyman_spline
-        else:
-            raise ValueError('tau_eff: Not ready for this bvalue %g' % bval)
+    if int(bval) == 24:
+        EW_FIL = pyigm_path+'/data/fN/EW_SPLINE_b24.yml'
+        with open(EW_FIL, 'r') as infile:
+            EW_spline = yaml.load(infile)  # dict from mk_ew_lyman_spline
+    else:
+        raise ValueError('tau_eff: Not ready for this bvalue %g' % bval)
 
     # Lines
     HI = LineList('HI')
@@ -204,14 +203,9 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
             teff_lyman[qq] = 0.
             continue
         # Cosmology
-        if fNz is False:
-            if cosmo not in locals():
-                cosmo = FlatLambdaCDM(H0=70, Om0=0.3) # Vanilla
-            #dxdz = (np.fabs(xigmu.cosm_xz(zeval-0.1, cosmo=cosmo)-
-            #            xigmu.cosm_xz(zeval+0.1,cosmo=cosmo)) / 0.2 )
-            #xdb.set_trace()
-            dxdz = pyigmu.cosm_xz(zeval,cosmo=cosmo,flg_return=1)
-        else: dxdz = 1. # Code is using f(N,z)
+        if cosmo not in locals():
+            cosmo = FlatLambdaCDM(H0=70, Om0=0.3) # Vanilla
+            dxdz = pyigmu.cosm_xz(zeval, cosmo=cosmo, flg_return=1)
 
         # Get EW values (could pack these all together)
         idx = np.where(EW_spline['wrest']*u.AA == line)[0]
