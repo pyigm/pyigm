@@ -16,7 +16,6 @@ from astropy import cosmology
 
 from pyigm import utils as pyigmu
 
-
 # Path for pyigm
 pyigm_path = imp.find_module('pyigm')[1]
 
