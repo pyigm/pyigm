@@ -97,7 +97,7 @@ def lyman_limit(fN_model, z912, zem, N_eval=5000, cosmo=None, debug=False):
     # Evaluate f(N,X)
     velo = (zval-zem)/(1+zem) * (const.c.cgs.value/1e5)  # Kludge for eval [km/s]
 
-    log_fnX = fN_model.evaluate(lgNval, zem, vel_array=velo)
+    log_fnX = fN_model.evaluate(lgNval, zem, cosmo=cosmo, vel_array=velo)
     log_fnz = log_fnX + np.outer(np.ones(N_eval), np.log10(dXdz))
 
     # Evaluate tau(z,N)
@@ -217,7 +217,7 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
         dz = ((restEW*u.AA) * (1+zeval) / line).value
 
         # Evaluate f(N,X) at zeval
-        log_fnX = fN_model.evaluate(lgNval,zeval).flatten()
+        log_fnX = fN_model.evaluate(lgNval, zeval, cosmo=cosmo).flatten()
 
         # Sum
         intgrnd = 10.**(log_fnX) * dxdz * dz * Nval

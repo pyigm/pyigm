@@ -158,10 +158,10 @@ class FNModel(object):
             self.model = scii.PchipInterpolator(self.pivots, self.param['sply'])
         elif self.mtype == 'Gamma':
             if len(parm) == 4: # A,beta for LAF and A,beta for DLA
-                self.param[2][0] = parm[0]
-                self.param[2][1] = parm[1]
-                self.param[3][0] = parm[2]
-                self.param[3][1] = parm[3]
+                self.param['LAF']['Aval'] = parm[0]
+                self.param['LAF']['beta'] = parm[1]
+                self.param['DLA']['Aval'] = parm[2]
+                self.param['DLA']['beta'] = parm[3]
             else:
                 raise ValueError('fN/model: Not ready for {:d} parameters'.format(
                     len(parm)))
