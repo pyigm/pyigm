@@ -19,6 +19,72 @@ class LLSSurvey(IGMSurvey):
     """
 
     @classmethod
+    def load_HST_ACS(cls):
+        """ Load the LLS survey using HST/ACS by O'Meara et al. 2013, ApJ, 765, 137
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        lls_survey : IGMSurvey
+        """
+        # LLS File
+        lls_fil = pyigm_path+'/data/LLS/HST/lls_acs_stat_LLS.fits.gz'
+        lls = QTable.read(lls_fil)
+
+        # Rename some columns?
+        lls.rename_column('QSO_RA', 'RA')
+        lls.rename_column('QSO_DEC', 'DEC')
+
+        # Read
+        lls_survey = cls.from_sfits(lls)
+        lls_survey.ref = 'HST-ACS'
+
+        # QSOs file
+        qsos_fil = pyigm_path+'/data/LLS/HST/lls_acs_qsos_sn1020.fits.gz'
+        qsos = QTable.read(qsos_fil)
+        lls_survey.sightlines = qsos
+
+        # Return
+        print('HST-ACS: Loaded')
+        return lls_survey
+
+    @classmethod
+    def load_HST_WFC3(cls):
+        """ Load the LLS survey using HST/WFC3
+
+        by O'Meara et al. 2013, ApJ, 765, 137
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        lls_survey : IGMSurvey
+        """
+        # LLS File
+        lls_fil = pyigm_path+'/data/LLS/HST/lls_wfc3_stat_LLS.fits.gz'
+        lls = QTable.read(lls_fil)
+
+        # Rename some columns?
+        lls.rename_column('QSO_RA', 'RA')
+        lls.rename_column('QSO_DEC', 'DEC')
+
+        # Read
+        lls_survey = cls.from_sfits(lls)
+        lls_survey.ref = 'HST-WFC3'
+
+        # QSOs file
+        qsos_fil = pyigm_path+'/data/LLS/HST/lls_wfc3_qsos_sn1020.fits.gz'
+        qsos = QTable.read(qsos_fil)
+        lls_survey.sightlines = qsos
+
+        # Return
+        print('HST-WFC3: Loaded')
+        return lls_survey
+
+    @classmethod
     def load_HDLLS(cls, grab_spectra=False):
         """ Default sample of LLS (HD-LLS, DR1)
 
