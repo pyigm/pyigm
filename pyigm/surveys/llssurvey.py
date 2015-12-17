@@ -5,7 +5,7 @@ import imp, glob
 import pdb
 import urllib2
 
-from astropy.table import QTable
+from astropy.table import QTable, Column, Table
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 
@@ -92,8 +92,6 @@ class LLSSurvey(IGMSurvey):
     def load_SDSS_DR7(cls, sample='stat'):
         """ Load the LLS from the SDSS-DR7 survey (Prochaska+10, ApJ, 718, 391)
 
-        Quick and dirty port of XIDL codes..
-
         Parameters
         ----------
         sample : str, optional
@@ -105,8 +103,7 @@ class LLSSurvey(IGMSurvey):
 
         Returns
         -------
-        lls : Table
-          Table of SDSS LLS
+        lls_survey : IGMSurvey
 
         """
         # LLS File
@@ -130,10 +127,6 @@ class LLSSurvey(IGMSurvey):
         lls_survey = cls.from_sfits(lls)
         lls_survey.ref = 'SDSS-DR7'
 
-        # All?
-        if sample == 'all':
-            return lls_survey
-
         # QSOs file
         qsos_fil = pyigm_path+'/data/LLS/SDSS/lls_dr7_qsos_sn2050.fits.gz'
         if len(glob.glob(qsos_fil)) == 0:
@@ -146,6 +139,12 @@ class LLSSurvey(IGMSurvey):
         else:
             print('SDSS-DR7: Loading QSOs file {:s}'.format(qsos_fil))
         qsos = QTable.read(qsos_fil)
+        lls_survey.sightlines = qsos
+
+        # All?
+        if sample == 'all':
+            return lls_survey
+
 
         # Stat
         # z_em cut
@@ -162,6 +161,66 @@ class LLSSurvey(IGMSurvey):
             lls_survey.mask = ~mask
         # Return
         print('SDSS-DR7: Loaded')
+        return lls_survey
+
+    @classmethod
+    def load_mage_z3(cls, sample='all'):
+        """ Load the LLS table from the z~3 MagE survey
+
+        (Fumagalli et al. 2013, ApJ, 775, 78)
+
+        Parameters
+        ----------
+        sample : str
+          Survey sample
+            * all -- All
+            * non-color -- Restricts to quasars that were *not* color-selected
+            * color -- Restricts to quasars that were color-selected
+
+        Returns
+        -------
+        lls_survey : IGMSurvey
+          Includes all quasars observed in the survey
+          And all the LLS
+
+        """
+        # LLS File
+        survey_fil = pyigm_path+'/data/LLS/HD-LLS/fumagalli13_apj775_78_tab1+2.fits'
+        tab = Table.read(survey_fil)
+
+        # Rename some columns
+        tab.rename_column('RAJ2000', 'RA')
+        tab['RA'].unit = u.deg
+        tab.rename_column('DEJ2000', 'DEC')
+        tab['DEC'].unit = u.deg
+        tab.rename_column('zqso', 'Z_QSO')
+        tab.rename_column('zlls', 'Z_LLS')
+        tab.rename_column('zend', 'Z_START')  # F13 was opposite of POW10
+        tab.rename_column('zstart', 'Z_END')  # F13 was opposite of POW10
+
+        # Cut table
+        if sample == 'all':
+            pass
+        elif sample == 'non-color':
+            NC = np.array([True if row['n_Name'][0] == 'N' else False for row in tab])
+            tab = tab[NC]
+        elif sample == 'color':
+            Clr = [True if row['n_Name'][0] == 'C' else False for row in tab]
+            tab = tab[Clr]
+
+        # Good LLS
+        lls = tab['Z_LLS'] >= tab['Z_START']
+        lls_tab = QTable(tab[lls])
+        nlls = np.sum(lls)
+        # Set NHI to 17.8 (tau>=2)
+        lls_tab.add_column(Column([17.8]*nlls, name='NHI'))
+        lls_tab.add_column(Column([99.9]*nlls, name='SIGNHI'))
+
+        # Generate survey
+        lls_survey = cls.from_sfits(lls_tab)
+        lls_survey.ref = 'z3_MagE'
+        lls_survey.sightlines = tab
+
         return lls_survey
 
 
