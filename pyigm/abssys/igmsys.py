@@ -28,13 +28,13 @@ class IGMSystem(AbsSystem):
     **kwargs : keywords
       passed to AbsSystem.__init__
     """
-    def __init__(self, abstype, radec, zabs, vlim, **kwargs):
+    def __init__(self, abstype, radec, zabs, vlim, ZH=0., **kwargs):
         """Standard init
         """
         # Generate with type
         AbsSystem.__init__(self, abstype, radec, zabs, vlim, **kwargs)
         # Init
-        self.ZH = 0.
+        self.ZH = ZH
 
     # Output
     def __repr__(self):
@@ -91,6 +91,7 @@ class AbsSubSystem(object):
         self.zabs = zabs
         self.vlim = vlim
         self.lbl = lbl
+        self._ionN = None
 
     def print_abs_type(self):
         """"Return a string representing the type of vehicle this is."""

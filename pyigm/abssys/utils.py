@@ -465,6 +465,60 @@ def read_ion_file(ion_fil, components, lines=None, linelist=None, tol=0.05*u.AA)
     # Return
     return table
 
+def sum_ionN(tbl1, tbl2):
+    """ Sum two ion column density tables
+
+    Parameters
+    ----------
+    tbl1 : Table
+    tbl2 : Table
+
+    Returns
+    -------
+    sum_tbl : Table
+
+    """
+    # Instantiate and use data form original as starting point
+    sum_tbl = tbl1.copy()
+
+    # Loop through other
+    for row in tbl2:
+        # New?
+        Zion = (row['Z'], row['ion'])
+        try:
+            sdict = sum_tbl[Zion]
+        except KeyError:
+            # Add in the new row
+            sum_tbl.add_row(row)
+        else:
+            idx = np.where((sum_tbl['Z'] == Zion[0]) &
+                           (sum_tbl['ion'] == Zion[1]))[0][0]
+            # Clm
+            logN, siglogN = ltaa.sum_logN(sdict, row)
+            sum_tbl['logN'][idx] = logN
+            # Error
+            sum_tbl['sig_logN'][idx] = siglogN
+            # Flag
+            flags = [sdict['flg_clm'], row['flg_clm']]
+            if 2 in flags:   # At least one saturated
+                flag = 2
+            elif 1 in flags: # None saturated; at least one detection
+                flag = 1
+            else:            # Both upper limits
+                flag = 3
+            sum_tbl['flg_N'][idx] = flag
+            # Instrument (assuming binary flag)
+            if 'flg_inst' in sdict.keys():
+                binflg = [0]*10
+                for jj in range(10):
+                    if (row['flg_inst'] % 2**(jj+1)) >= 2**jj:
+                        binflg[jj] = 1
+                    if (sdict['flg_inst'] % 2**(jj+1)) >= 2**jj:
+                        binflg[jj] = 1
+                sum_tbl['flg_inst'][idx] = int(np.sum(
+                    [2**kk for kk,ibinf in enumerate(binflg) if ibinf==1]))
+    # Return
+    return sum_tbl
 
 def synthesize_components(components, zcomp=None, vbuff=0*u.km/u.s):
     """Synthesize a list of components into one
