@@ -228,7 +228,7 @@ class FNModel(object):
             lgfNX = np.zeros((neval2, nz))
             lX2 = np.zeros(nz)
             for ii in range(nz):
-                lgfNX[:, ii] = self.evaluate(lgNHI2, z[ii]).flatten()
+                lgfNX[:, ii] = self.evaluate(lgNHI2, z[ii], cosmo=cosmo).flatten()
                 lX2[ii] = np.sum(10.**(lgfNX[:, ii]+lgNHI2)) * dlgN * np.log(10.)
             lX = lX + lX2
 
