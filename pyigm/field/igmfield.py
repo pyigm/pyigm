@@ -7,6 +7,7 @@ import warnings
 import pdb
 
 from astropy import units as u
+from astropy.units import Quantity
 from astropy.coordinates import SkyCoord
 from astropy import constants as const
 
@@ -24,7 +25,7 @@ class IgmGalaxyField(object):
     """
 
     # Initialize 
-    def __init__(self, radec, name='', cosmo=None, verbose=False):
+    def __init__(self, radec, name=None, cosmo=None, verbose=False):
         # coord
         if isinstance(radec, (tuple)):
             self.coord = SkyCoord(ra=radec[0], dec=radec[1])
@@ -32,13 +33,16 @@ class IgmGalaxyField(object):
             self.coord = radec
 
         # Field
-        self.name = name
+        if name is None:
+            self.name = 'IGMFIELD_J{:s}{:s}'.format(
+                    self.coord.ra.to_string(unit=u.hour, pad=True),
+                    self.coord.dec.to_string(pad=True, alwayssign=True))
 
         # Cosmology
         if cosmo is None:
-            from astropy.cosmology import WMAP9 as cosmo
+            from astropy.cosmology import Planck15 as cosmo
             if verbose is True:
-                print('IgmGalxyField: Using WMAP9 cosmology')
+                print('IgmGalxyField: Using Planck15 cosmology')
         self.cosmo = cosmo
 
         # Init
@@ -48,14 +52,16 @@ class IgmGalaxyField(object):
         self.observing = None
         self.selection = None
 
-    def calc_rhoimpact(self, obj, los_coord=None):
+    def calc_rhoimpact(self, obj, comoving=True, los_coord=None):
         """Calculate impact parameter from LOS RA/DEC for a set of objects
 
         Parameters
         ----------
         obj : Table
-          (can be anything that takes 'RA','DEC' and 'Z')
+          (can be anything that takes 'Z', and 'RA','DEC' in degrees)
           Sources for calculation
+        comoving : bool, optional
+           If True then comoving, else physical
         los_radec : SkyCoord, optional
           Defaults to field RA/DEC
 
@@ -68,11 +74,21 @@ class IgmGalaxyField(object):
         if los_coord is None:
             los_coord = self.coord
         # Coord
-        o_coord = SkyCoord(ra=obj['RA']*u.deg, dec=obj['DEC']*u.deg)
+        if isinstance(obj['RA'], Quantity):
+            ora = obj['RA']
+            odec = obj['DEC']
+        else:
+            ora = obj['RA']*u.deg
+            odec = obj['DEC']*u.deg
+
+        o_coord = SkyCoord(ra=ora, dec=odec)
         ang_sep = o_coord.separation(los_coord).to('arcmin')
-        # Cosmology
-        kpc_amin = self.cosmo.kpc_comoving_per_arcmin(obj['Z'] ) # kpc per arcmin
-        rho = ang_sep * kpc_amin / (1+obj['Z']) # Physical
+        # Cosmology (kpc per arcmin)
+        if comoving:
+            kpc_amin = self.cosmo.kpc_comoving_per_arcmin(obj['Z'])
+        else:
+            kpc_amin = self.cosmo.kpc_proper_per_arcmin(obj['Z'])
+        rho = ang_sep * kpc_amin
         # Return
         return rho
 
@@ -115,38 +131,46 @@ class IgmGalaxyField(object):
         # Return
         return gdz_gal[gd_rho], rho[gd_rho]
 
-    def get_observed(self, theta, subtab=None):
-        """Generate a Table of observed targets within an angular offset of field center
+    def get_observed(self, theta=None, subtab=None):
+        """Generate a Table of observed targets
+
+        Optionally to an angular distance from field center
 
         Parameters
         ----------
-        theta : Quantity or Angle
+        theta : Quantity or Angle, optional
           Angular radius
+        subtab : Table, optional
+          User may input a table for processing
+          theta is ignored
 
         Returns
         -------
         obs_targ : Table
-          Sub-table of targets that have been observed within this radius
+          Sub-table of targets that have been observed within theta (if given)
+          and/or within subtab (if given)
         obs_dates : List
           List of observing dates [eventually might add to Table]
         indices : array
-          Indices from the main table
+          Indices from the target table
         """
         if (self.targets is None) or (self.observing is None):
             raise ValueError('IgmGalaxyField: Need to fill the target and/or observing table first!')
         if subtab is None:
-            # Trim on angular cut first
-            targ_coord = SkyCoord(ra=self.targets['TARG_RA']*u.deg,
-                dec=self.targets['TARG_DEC']*u.deg)
-            sep = self.coord.separation(targ_coord)
-            gdsep = np.where(sep < theta)[0]
-            if len(gdsep) == 0:
-                return None
-            # Set all to False to start
-            subtab = self.targets[gdsep]
+            if theta is None:
+                subtab = self.targets
+            else:
+                # Trim on angular cut first
+                targ_coord = SkyCoord(ra=self.targets['TARG_RA']*u.deg,
+                    dec=self.targets['TARG_DEC']*u.deg)
+                sep = self.coord.separation(targ_coord)
+                gdsep = np.where(sep < theta)[0]
+                if len(gdsep) == 0:
+                    return None
+                subtab = self.targets[gdsep]
         else:
             gdsep = np.arange(len(subtab)) # For indexing below
-        # Generate mask
+        # Generate mask (set all to False; True is masked in numpy)
         tmsk = np.array([False]*len(subtab))
         # Grab those with a MASK_NAME
         have_mask = np.where(~subtab['MASK_NAME'].mask)[0]
@@ -168,30 +192,33 @@ class IgmGalaxyField(object):
         # Finish
         return subtab[tmsk], obs_dict, gdsep[tmsk]
 
-    def get_unobserved(self,theta):
-        """Generate a Table of observed targets within an angular offset
+    def get_unobserved(self, theta=None):
+        """Generate a Table of unobserved targets within an angular distance
 
         Parameters
         ----------
-        theta : Quantity
-          Angular radius
+        theta : Quantity, optional
+          Angular distance
 
         Returns
         -------
         unobs_targ : Table
-          Sub-table of targets that have been observed within this radius
+          Sub-table of targets that have been not been observed within theta (if given)
         """
         if (self.targets is None) or (self.observing is None):
             raise ValueError('IgmGalaxyField: Need to fill the target and/or observing table first!')
         # Trim on angular cut first
-        targ_coord = SkyCoord(ra=self.targets['TARG_RA']*u.deg,
-            dec=self.targets['TARG_DEC']*u.deg)
-        sep = self.coord.separation(targ_coord)
-        gdsep = np.where(sep < theta)[0]
-        if len(gdsep) == 0:
-            return None
-        # Set all to False to start
-        subtab = self.targets[gdsep]
+        if theta is None:
+            targ_coord = SkyCoord(ra=self.targets['TARG_RA']*u.deg,
+                dec=self.targets['TARG_DEC']*u.deg)
+            sep = self.coord.separation(targ_coord)
+            gdsep = np.where(sep < theta)[0]
+            if len(gdsep) == 0:
+                return None
+            # Set all to False to start
+            subtab = self.targets[gdsep]
+        else:
+            subtab = self.targets
         tmsk = np.array([True]*len(subtab))
         # Grab observed (short cut!)
         obs_tab, odict, _ = self.get_observed(theta, subtab=subtab)
@@ -228,7 +255,7 @@ class IgmGalaxyField(object):
 
     #    
     def __repr__(self):
-        return ('[{:s}: {:s} {:s} {:s}]'.format(
+        return ('<{:s}: {:s} {:s} {:s}>'.format(
                 self.__class__.__name__,
                  self.name,
                  self.coord.ra.to_string(unit=u.hour, sep=':', pad=True),

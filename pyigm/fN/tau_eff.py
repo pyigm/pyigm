@@ -9,7 +9,7 @@ from scipy import interpolate
 
 from astropy import constants as const
 from astropy import units as u
-from astropy.cosmology import FlatLambdaCDM
+from astropy.cosmology import FlatLambdaCDM, Planck15
 
 from linetools.analysis import absline as ltaa
 from linetools.lists.linelist import LineList
@@ -18,6 +18,40 @@ from pyigm.fN.fnmodel import FNModel
 from pyigm import utils as pyigmu
 
 pyigm_path = imp.find_module('pyigm')[1]
+
+def DM(z, cosmo=None):
+    """ Dispersion Measure from the IGM
+
+    Simple assumption of fully ionized, non-clumpy IGM
+
+    Parameters
+    ----------
+    z : float
+      Redshift
+    cosmo : astropy.cosmology, optional
+
+    Returns
+    -------
+    DM : float
+      IGM dispersion measure
+    """
+    from scipy.integrate import quad
+    if cosmo is None:
+        cosmo = Planck15
+        print('Using a Planck15 cosmology with H0={:g} and Om={:g} and Ob={:g}'.format(
+            cosmo.H0, cosmo.Om0, cosmo.Ob0))
+    # Check for Ob0
+    if cosmo.Ob0 is None:
+        raise IOError('Need to set Ob0 in the cosmology')
+    # Calculate
+    def integrand(x):
+        return (1+x) / np.sqrt(cosmo.Om0*(1+x)**3 + (1-cosmo.Om0))
+    integral = quad(integrand, 0, z)
+    # DM
+    DM, _ = (3 * const.c * cosmo.H0 * cosmo.Ob0 / (8*np.pi*const.G*const.m_p)) * integral
+    # Return
+    return DM.to('pc/cm**3')
+
 
 def lyman_limit(fN_model, z912, zem, N_eval=5000, cosmo=None, debug=False):
     """ Calculate teff_LL
@@ -63,7 +97,7 @@ def lyman_limit(fN_model, z912, zem, N_eval=5000, cosmo=None, debug=False):
     # Evaluate f(N,X)
     velo = (zval-zem)/(1+zem) * (const.c.cgs.value/1e5)  # Kludge for eval [km/s]
 
-    log_fnX = fN_model.evaluate(lgNval, zem, vel_array=velo)
+    log_fnX = fN_model.evaluate(lgNval, zem, cosmo=cosmo, vel_array=velo)
     log_fnz = log_fnX + np.outer(np.ones(N_eval), np.log10(dXdz))
 
     # Evaluate tau(z,N)
@@ -91,8 +125,7 @@ def lyman_limit(fN_model, z912, zem, N_eval=5000, cosmo=None, debug=False):
 
 
 def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
-                  EW_spline=None, bval=24., fNz=False, cosmo=None, debug=False,
-                  cumul=None, verbose=False):
+                  bval=24., cosmo=None, debug=False, cumul=None, verbose=False):
     """ tau effective from HI Lyman series absorption
 
     Parameters
@@ -101,15 +134,16 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
         Observed wavelength (Ang)
     zem : float
         Emission redshift of the source [sets which Lyman lines are included]
-    bva : float
+    fN_model : FNModel
+    NHI_MIN : float, optional
+         -- Minimum log HI column for integration [default = 11.5]
+    NHI_MAX : float, optional
+         -- Maximum log HI column for integration [default = 22.0]
+    N_eval : int, optional
+      Number of NHI evaluations
+    bval : float
          -- Characteristics Doppler parameter for the Lya forest
          -- [Options: 24, 35 km/s]
-    NHI_MIN : float
-         -- Minimum log HI column for integration [default = 11.5]
-    NHI_MAX : float
-         -- Maximum log HI column for integration [default = 22.0]
-    fNz : Boolean (False)
-         -- Inputs f(N,z) instead of f(N,X)
     cosmo : astropy.cosmology (None)
          -- Cosmological model to adopt (as needed)
     cumul : List of cumulative sums
@@ -131,13 +165,12 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
         Lambda = Lambda * u.AA # Ang
 
     # Read in EW spline (if needed)
-    if EW_spline == None:
-        if int(bval) == 24:
-            EW_FIL = pyigm_path+'/data/fN/EW_SPLINE_b24.yml'
-            with open(EW_FIL, 'r') as infile:
-                EW_spline = yaml.load(infile)  # dict from mk_ew_lyman_spline
-        else:
-            raise ValueError('tau_eff: Not ready for this bvalue %g' % bval)
+    if int(bval) == 24:
+        EW_FIL = pyigm_path+'/data/fN/EW_SPLINE_b24.yml'
+        with open(EW_FIL, 'r') as infile:
+            EW_spline = yaml.load(infile)  # dict from mk_ew_lyman_spline
+    else:
+        raise ValueError('tau_eff: Not ready for this bvalue %g' % bval)
 
     # Lines
     HI = LineList('HI')
@@ -170,14 +203,9 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
             teff_lyman[qq] = 0.
             continue
         # Cosmology
-        if fNz is False:
-            if cosmo not in locals():
-                cosmo = FlatLambdaCDM(H0=70, Om0=0.3) # Vanilla
-            #dxdz = (np.fabs(xigmu.cosm_xz(zeval-0.1, cosmo=cosmo)-
-            #            xigmu.cosm_xz(zeval+0.1,cosmo=cosmo)) / 0.2 )
-            #xdb.set_trace()
-            dxdz = pyigmu.cosm_xz(zeval,cosmo=cosmo,flg_return=1)
-        else: dxdz = 1. # Code is using f(N,z)
+        if cosmo not in locals():
+            cosmo = FlatLambdaCDM(H0=70, Om0=0.3) # Vanilla
+            dxdz = pyigmu.cosm_xz(zeval, cosmo=cosmo, flg_return=1)
 
         # Get EW values (could pack these all together)
         idx = np.where(EW_spline['wrest']*u.AA == line)[0]
@@ -189,7 +217,7 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
         dz = ((restEW*u.AA) * (1+zeval) / line).value
 
         # Evaluate f(N,X) at zeval
-        log_fnX = fN_model.evaluate(lgNval,zeval).flatten()
+        log_fnX = fN_model.evaluate(lgNval, zeval, cosmo=cosmo).flatten()
 
         # Sum
         intgrnd = 10.**(log_fnX) * dxdz * dz * Nval
