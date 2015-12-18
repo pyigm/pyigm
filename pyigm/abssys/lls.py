@@ -7,13 +7,11 @@ import numpy as np
 import warnings
 
 from astropy import units as u
-from astropy.table import Table, Column
 
 from linetools.spectralline import AbsLine
 from linetools.analysis import absline as ltaa
 from linetools.lists.linelist import LineList
 from linetools.isgm.abscomponent import AbsComponent
-from linetools.abund import ions as ltai
 
 from pyigm.abssys.igmsys import IGMSystem, AbsSubSystem
 from pyigm.abssys import utils as igmau
@@ -379,7 +377,7 @@ class LLSSystem(IGMSystem):
 
     # Output
     def __repr__(self):
-        return ('[{:s}: {:s} {:s}, zabs={:g}, logNHI={:g}, tau_LL={:g}, [Z/H]={:g} dex]'.format(
+        return ('<{:s}: {:s} {:s}, zabs={:g}, logNHI={:g}, tau_LL={:g}, [Z/H]={:g} dex>'.format(
                 self.__class__.__name__,
                  self.coord.ra.to_string(unit=u.hour,sep=':',pad=True),
                  self.coord.dec.to_string(sep=':',pad=True,alwayssign=True),
@@ -389,48 +387,6 @@ class LLSSystem(IGMSystem):
         """Return a string representing the type of vehicle this is."""
         return 'LLS'
 
-def dict_to_ions(idict):
-    """  Manipulate dict into an ion astropy Table
-
-    Parameters
-    ----------
-    idict : dict
-
-    Returns
-    -------
-    table : astropy.Table
-
-    """
-    #  Could probably use add_row or dict instantiation
-    table = None
-    for ion in idict.keys():
-        Zion = ltai.name_ion(ion)
-        if table is None:
-            tkeys = idict[ion].keys()
-            lst = [[idict[ion][tkey]] for tkey in tkeys]
-            table = Table(lst, names=tkeys)
-            # Extra columns
-            if 'Z' not in tkeys:
-                table.add_column(Column([Zion[0]], name='Z'))
-                table.add_column(Column([Zion[1]], name='ion'))
-        else:
-            tdict = idict[ion]
-            tkeys = idict[ion].keys()
-            if 'Z' not in tkeys:
-                tdict['Z'] = Zion[0]
-                tdict['ion'] = Zion[1]
-            # Add
-            table.add_row(tdict)
-    # Finish
-    try:  # Historical keys
-        table.rename_column('clm', 'logN')
-    except:
-        pass
-    else:
-        table.rename_column('sig_clm', 'sig_logN')
-        table.rename_column('flg_clm', 'flag_N')
-    # Return
-    return table
 
 def tau_multi_lls(wave, all_lls, **kwargs):
     """Calculate opacities on an input observed wavelength grid

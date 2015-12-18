@@ -13,15 +13,58 @@ import pdb
 import numpy as np
 from collections import OrderedDict
 
-from astropy import constants as const
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-from astropy.table import QTable
 from astropy.io import ascii
+from astropy.table import Table, Column
 
+from linetools.abund import ions as ltai
 from linetools.spectralline import AbsLine
 from linetools.analysis import absline as ltaa
-from linetools.isgm.abscomponent import AbsComponent
+
+
+def dict_to_ions(idict):
+    """  Manipulate dict into an ion astropy Table
+
+    Parameters
+    ----------
+    idict : dict
+
+    Returns
+    -------
+    table : astropy.Table
+
+    """
+    #  Could probably use add_row or dict instantiation
+    table = None
+    for ion in idict.keys():
+        Zion = ltai.name_ion(ion)
+        if table is None:
+            tkeys = idict[ion].keys()
+            lst = [[idict[ion][tkey]] for tkey in tkeys]
+            table = Table(lst, names=tkeys)
+            # Extra columns
+            if 'Z' not in tkeys:
+                table.add_column(Column([Zion[0]], name='Z'))
+                table.add_column(Column([Zion[1]], name='ion'))
+        else:
+            tdict = idict[ion]
+            tkeys = idict[ion].keys()
+            if 'Z' not in tkeys:
+                tdict['Z'] = Zion[0]
+                tdict['ion'] = Zion[1]
+            # Add
+            table.add_row(tdict)
+    # Finish
+    try:  # Historical keys
+        table.rename_column('clm', 'logN')
+    except:
+        pass
+    else:
+        table.rename_column('sig_clm', 'sig_logN')
+        table.rename_column('flg_clm', 'flag_N')
+    # Return
+    return table
 
 
 def parse_datdict(datdict):
@@ -302,6 +345,7 @@ def read_ion_file(ion_fil, components, lines=None, linelist=None, tol=0.05*u.AA)
     # Return
     return table
 
+
 def sum_ionN(tbl1, tbl2):
     """ Sum two ion column density tables
 
@@ -319,41 +363,41 @@ def sum_ionN(tbl1, tbl2):
     sum_tbl = tbl1.copy()
 
     # Loop through other
-    for row in tbl2:
+    for row2 in tbl2:
         # New?
-        Zion = (row['Z'], row['ion'])
+        Zion = (row2['Z'], row2['ion'])
         try:
-            sdict = sum_tbl[Zion]
+            row1 = sum_tbl[(sum_tbl['Z'] == Zion[0])&(sum_tbl['ion'] == Zion[1])]
         except KeyError:
             # Add in the new row
-            sum_tbl.add_row(row)
+            sum_tbl.add_row(row2)
         else:
             idx = np.where((sum_tbl['Z'] == Zion[0]) &
                            (sum_tbl['ion'] == Zion[1]))[0][0]
             # Clm
-            logN, siglogN = ltaa.sum_logN(sdict, row)
+            flagN, logN, siglogN = ltaa.sum_logN(row1, row2)
             sum_tbl['logN'][idx] = logN
             # Error
             sum_tbl['sig_logN'][idx] = siglogN
             # Flag
-            flags = [sdict['flg_clm'], row['flg_clm']]
+            flags = [row1['flag_N'], row2['flag_N']]
             if 2 in flags:   # At least one saturated
                 flag = 2
             elif 1 in flags: # None saturated; at least one detection
                 flag = 1
             else:            # Both upper limits
                 flag = 3
-            sum_tbl['flg_N'][idx] = flag
+            sum_tbl['flag_N'][idx] = flag
             # Instrument (assuming binary flag)
-            if 'flg_inst' in sdict.keys():
+            if 'flg_inst' in row1.keys():
                 binflg = [0]*10
                 for jj in range(10):
-                    if (row['flg_inst'] % 2**(jj+1)) >= 2**jj:
+                    if (row2['flg_inst'] % 2**(jj+1)) >= 2**jj:
                         binflg[jj] = 1
-                    if (sdict['flg_inst'] % 2**(jj+1)) >= 2**jj:
+                    if (row1['flg_inst'] % 2**(jj+1)) >= 2**jj:
                         binflg[jj] = 1
                 sum_tbl['flg_inst'][idx] = int(np.sum(
-                    [2**kk for kk,ibinf in enumerate(binflg) if ibinf==1]))
+                    [2**kk for kk, ibinf in enumerate(binflg) if ibinf==1]))
     # Return
     return sum_tbl
 

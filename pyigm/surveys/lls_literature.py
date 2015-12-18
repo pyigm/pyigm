@@ -23,10 +23,12 @@ from astropy import units as u
 
 from linetools.lists.linelist import LineList
 from linetools.spectralline import AbsLine
+from linetools.abund import ions as ltai
+from linetools.analysis import absline as ltaa
 
 from pyigm.abssys.igmsys import AbsSubSystem
+from pyigm.abssys import utils as pyiau
 from pyigm.abssys.lls import LLSSystem
-from pyigm.abssys import lls import as pylls
 
 pyigm_path = imp.find_module('pyigm')[1]
 
@@ -46,10 +48,9 @@ def zonak2004():
     Adopting their M/H
     """
     # Setup
-    radec = 'J163428.9897+703132.422'  # SIMBAD
-    #radec = xor.stod1('J163428.9897+703132.422')  # SIMBAD
+    radec = '163428.9897+703132.422'  # SIMBAD
     lls = LLSSystem(name='PG1634+706_z1.041', radec=radec, zem=1.337,
-        zabs=1.0414, vlim=[-200., 30.]*u.km/u.s, NHI=17.23, ZH=-1.4,
+        zabs=1.0414, vlim=[-250., 100.]*u.km/u.s, NHI=17.23, ZH=-1.4,
         sig_NHI=np.array([0.15,0.15]))
     # SubSystems
     lls.nsub = 2
@@ -58,20 +59,20 @@ def zonak2004():
         SiIII={'clm': log_sum([12.5,12.5,12.8,12.7]), 'sig_clm': 0.25, 'flg_clm': 1},
         SiIV={'clm': log_sum([10.9,10.8,11.2,11.1]), 'sig_clm': 0.15, 'flg_clm': 1} )
     lls.subsys['A'] = AbsSubSystem(lls, 1.0414, [-80, 100]*u.km/u.s, 'A')
-    lls.subsys['A']._ionN =  pylls.dict_to_ions(adict)
+    lls.subsys['A']._ionN = pyiau.dict_to_ions(adict)
 
     bdict = dict(SiIII={'clm': log_sum([11.8,12.8,12.4]), 'sig_clm': 0.15, 'flg_clm': 1},
         SiIV={'clm': log_sum([11.2,12.2,11.8]), 'sig_clm': 0.15, 'flg_clm': 1} )
     lls.subsys['B'] = AbsSubSystem(lls, 1.0414, [-240, -80]*u.km/u.s, 'B')
-    lls.subsys['B']._ionN =  pylls.dict_to_ions(bdict)
+    lls.subsys['B']._ionN = pyiau.dict_to_ions(bdict)
     # Total
-    lls._ionN = lls.subsys['A']._ionclms.sum(lls.subsys['B']._ionclms)
+    lls._ionN = pyiau.sum_ionN(lls.subsys['A']._ionN, lls.subsys['B']._ionN)
     lls.Refs.append('Zon04')
     # Return
     return lls
 
 def jenkins2005():
-    '''Jenkins, E. et al. 2005, ApJ, 2005, 623, 767
+    """Jenkins, E. et al. 2005, ApJ, 2005, 623, 767
     PHL 1811
     HST/STIS, FUSE
     Metals parsed from Table 1
@@ -79,9 +80,9 @@ def jenkins2005():
       Had to input error on columns by hand (JXP)
     Total NHI from Lyman series. see Fig 3
     M/H from O/H
-    '''
+    """
     # Grab ASCII file from ApJ
-    tab_fil = xa_path+"/data/LLS/jenkins2005.tb1.ascii"
+    tab_fil = pyigm_path+"/data/LLS/Literature/jenkins2005.tb1.ascii"
     chk_fil = glob.glob(tab_fil)
     if len(chk_fil) > 0:
         tab_fil = chk_fil[0]
@@ -92,10 +93,11 @@ def jenkins2005():
         with open(tab_fil, "wb") as code:
             code.write(f.read())
     # Setup
-    radec = xor.stod1('J215501.5152-092224.688') # SIMBAD
-    lls = LLSSystem(name='PHL1811_z0.081', RA=radec[0], Dec=radec[1], zem=0.192,
-        zabs=0.080923, vlim=[-100., 100.]*u.km/u.s, NHI=17.98, MH=-0.19,
-        sigNHI=np.array([0.05,0.05])) 
+    radec = '215501.5152-092224.688'  # SIMBAD
+    lls = LLSSystem(name='PHL1811_z0.081', radec=radec, zem=0.192,
+        zabs=0.080923, vlim=[-100., 100.]*u.km/u.s, NHI=17.98, ZH=-0.19,
+        sig_NHI=np.array([0.05,0.05]))
+    lls.lines = []  # Probably not used
 
     # AbsLines
     ism = LineList('ISM')
@@ -125,14 +127,14 @@ def jenkins2005():
         if (len(isplit[0].strip()) > 0) & (isplit[0][0] not in ['1','2']):
             ionc = isplit[0].strip()
             try:
-                Zion = xai.name_ion(ionc)
+                Zion = ltai.name_ion(ionc)
             except KeyError:
-                xdb.set_trace()
+                pdb.set_trace()
         # Generate the Line
         try:
             newline = AbsLine(float(isplit[2+ioff])*u.AA,linelist=ism, closest=True)
         except ValueError:
-            xdb.set_trace()
+            pdb.set_trace()
         newline.attrib['z'] = lls.zabs
         # Spectrum
         newline.analy['datafile'] = 'STIS' if 'S' in isplit[1] else 'FUSE'
@@ -140,45 +142,46 @@ def jenkins2005():
         try:
             EWvals = isplit[4+ioff].split(' ')
         except IndexError:
-            xdb.set_trace()
+            pdb.set_trace()
         newline.attrib['EW'] = float(EWvals[0])*u.AA/1e3
-        newline.attrib['EWsig'] = float(EWvals[2])*u.AA/1e3
-        newline.attrib['flgEW'] = 1
+        newline.attrib['sig_EW'] = float(EWvals[2])*u.AA/1e3
+        newline.attrib['flag_EW'] = 1
         if len(isplit) < (5+ioff+1):
             continue
         # Colm?
         #xdb.set_trace()
+        newline.attrib['sig_logN'] = 0.
         if (len(isplit[5+ioff].strip()) > 0) & (isplit[5+ioff].strip() != '\\ldots'):
             if isplit[5+ioff][0] == '\\':
                 ipos = isplit[5+ioff].find(' ')
-                newline.attrib['N'] = float(isplit[5+ioff][ipos+1:])
-                newline.attrib['flagN'] = 2
+                newline.attrib['logN'] = float(isplit[5+ioff][ipos+1:])
+                newline.attrib['flag_N'] = 2
             elif isplit[5+ioff][0] == '<':
                 ipos = 0
-                newline.attrib['N'] = float(isplit[5+ioff][ipos+1:])
-                newline.attrib['flagN'] = 3
+                newline.attrib['logN'] = float(isplit[5+ioff][ipos+1:])
+                newline.attrib['flag_N'] = 3
             elif isplit[5+ioff][0] == '1':
                 try:
-                    newline.attrib['N'] = float(isplit[5+ioff][0:5])
+                    newline.attrib['logN'] = float(isplit[5+ioff][0:5])
                 except ValueError:
-                    xdb.set_trace()
-                newline.attrib['flagN'] = 1
+                    pdb.set_trace()
+                newline.attrib['flag_N'] = 1
                 try:
-                    newline.attrib['Nsig'] = Nsig[ionc]
+                    newline.attrib['sig_logN'] = Nsig[ionc]
                 except KeyError:
                     print('No error for {:s}'.format(ionc))
             else:
                 raise ValueError('Bad character')
             # ion_dict
-            ion_dict[ionc] = dict(clm=newline.attrib['N'], sig_clm=newline.attrib['Nsig'],
-                flg_clm=newline.attrib['flagN'], Z=Zion[0], ion=Zion[1])  
+            ion_dict[ionc] = dict(clm=newline.attrib['logN'], sig_clm=newline.attrib['sig_logN'],
+                flg_clm=newline.attrib['flag_N'], Z=Zion[0], ion=Zion[1])
         # Append
         lls.lines.append(newline)
     # Fix NI, OI
     ion_dict['O I']['clm'] = 14.47
     ion_dict['O I']['sig_clm'] = 0.05
     ion_dict['N I']['flg_clm'] = 3
-    lls._ionclms = IonClms(idict=ion_dict)
+    lls._ionN = pyiau.dict_to_ions(ion_dict)
 
     lls.Refs.append('Jen05')
     # Return
@@ -193,7 +196,8 @@ def tripp2005():
     M/H from O/H
     '''
     # Grab ASCII files from ApJ
-    tab_fils = [xa_path+"/data/LLS/tripp2005.tb3.ascii", xa_path+"/data/LLS/tripp2005.tb2.ascii"]
+    tab_fils = [pyigm_path+"/data/LLS/tripp2005.tb3.ascii",
+                pyigm_path+"/data/LLS/tripp2005.tb2.ascii"]
     urls = ['http://iopscience.iop.org/0004-637X/619/2/714/fulltext/60797.tb3.txt',
         'http://iopscience.iop.org/0004-637X/619/2/714/fulltext/60797.tb2.txt']
     for jj,tab_fil in enumerate(tab_fils):
@@ -207,12 +211,11 @@ def tripp2005():
             with open(tab_fil, "wb") as code:
                 code.write(f.read())
     # Setup
-    radec = xor.stod1('J121920.9320+063838.476') # SIMBAD
-    lls = LLSSystem(name='PG1216+069_z0.006', RA=radec[0], Dec=radec[1], zem=0.3313,
-        zabs=0.00632, vlim=[-100., 100.]*u.km/u.s, NHI=19.32, MH=-1.6,
-        sigNHI=np.array([0.03,0.03])) 
-    #lls.mk_subsys(2) 
- 
+    radec = '121920.9320+063838.476'  # SIMBAD
+    lls = LLSSystem(name='PG1216+069_z0.006', radec=radec, zem=0.3313,
+        zabs=0.00632, vlim=[-100., 100.]*u.km/u.s, NHI=19.32, ZH=-1.6,
+        sig_NHI=np.array([0.03, 0.03]))
+
     # Columns
     # Start with Table 3 (VPFIT)
     with open(tab_fils[0],'r') as f:
@@ -228,21 +231,23 @@ def tripp2005():
             ipos = isplit[0].find('1')
             ionc = isplit[0][0:ipos-1].strip()
             try:
-                Zion = xai.name_ion(ionc)
+                Zion = ltai.name_ion(ionc)
             except KeyError:
-                xdb.set_trace()
+                pdb.set_trace()
             flg = 1
         # Column
         csplit = isplit[3].split(' ')
         clm = float(csplit[0])
         sig = float(csplit[2])
         if flg == 1:
-            ion_dict[ionc] = dict(clm=clm, sig_clm=sig, flg_clm=1, Z=Zion[0],ion=Zion[1])
-        else: # Add it in
-            tmp_dict = dict(clm=clm, sig_clm=sig, flg_clm=1, Z=Zion[0],ion=Zion[1])
-            logN, siglogN = xiai.sum_logN(ion_dict[ionc], tmp_dict)
-            ion_dict[ionc]['clm'] = logN
-            ion_dict[ionc]['sig_clm'] = siglogN
+            ion_dict[ionc] = dict(logN=clm, sig_logN=sig, flag_N=1,
+                                  Z=Zion[0], ion=Zion[1])
+        else:  # Add it in
+            tmp_dict = dict(logN=clm, sig_logN=sig, flag_N=1, Z=Zion[0],
+                            ion=Zion[1])
+            flagN, logN, siglogN = ltaa.sum_logN(ion_dict[ionc], tmp_dict)
+            ion_dict[ionc]['logN'] = logN
+            ion_dict[ionc]['sig_logN'] = siglogN
     ions = ion_dict.keys()
 
     # Now Table 2 for the extras
@@ -258,31 +263,31 @@ def tripp2005():
         if (len(ionc) == 0) or (ionc in ions):
             continue
         #
-        Zion = xai.name_ion(ionc)
-        ion_dict[ionc] = dict(Z=Zion[0], ion=Zion[1], sig_clm=0.)
+        Zion = ltai.name_ion(ionc)
+        ion_dict[ionc] = dict(Z=Zion[0], ion=Zion[1], sig_logN=0.)
         if isplit[4][0] == '<':
-            ion_dict[ionc]['clm'] = float(isplit[4][1:])
-            ion_dict[ionc]['flg_clm'] = 3
+            ion_dict[ionc]['logN'] = float(isplit[4][1:])
+            ion_dict[ionc]['flag_N'] = 3
         else:
             raise ValueError('Should not get here')
 
 
     # Finish
-    lls._ionclms = IonClms(idict=ion_dict)
+    lls._ionN = pyiau.dict_to_ions(ion_dict)
     lls.Refs.append('Tri05')
     return lls
 
 def peroux06a():
-    '''Peroux, C. et al. 2006a, MNRAS, 372, 369
+    """Peroux, C. et al. 2006a, MNRAS, 372, 369
     SDSS J0134+0051
     One of her sample
     Metal columns taken by JXP from Table 2 (no online data)
     Total NHI from damping wings
-    ''' 
+    """
     # Setup
-    radec = xor.stod1('J013405.75+005109.4') # SDSS Name
-    lls = LLSSystem(name='SDSSJ0134+0051_z0.842', RA=radec[0], Dec=radec[1], zem=1.522,
-        zabs=0.842, vlim=[-150., 150.]*u.km/u.s, NHI=19.93, sigNHI=np.array([0.15,0.15]))
+    radec = '013405.75+005109.4'  # SDSS Name
+    lls = LLSSystem(name='SDSSJ0134+0051_z0.842', radec=radec, zem=1.522,
+        zabs=0.842, vlim=[-150., 150.]*u.km/u.s, NHI=19.93, sig_NHI=np.array([0.15,0.15]))
     #  Table 2
     ion_dict = {}
     N = np.sum(np.array([5.56,12.6,13.7,23.5,61.4,39.8,6,9.14])*1e10)
@@ -299,23 +304,24 @@ def peroux06a():
     # Not including MnII.  Appears as a detection but also given as a limit..
 
     # Finish
-    lls._ionclms = IonClms(idict=ion_dict)
+    lls._ionN = pyiau.dict_to_ions(ion_dict)
     lls.Refs.append('Prx06a')
     return lls
  
 def peroux06b():
-    '''Peroux, C. et al. 2006b, A&A, 450, 53
+    """Peroux, C. et al. 2006b, A&A, 450, 53
     SDSS J1323-0021
     Metal rich
     Metal columns copied by JXP from Table 1 
     Total NHI from damping wings
-    ''' 
+    """
     # Setup
-    radec = xor.stod1('J132323.78-002155.2') # SDSS Name
-    lls = LLSSystem(name='SDSSJ1323-0021_z0.716', RA=radec[0], Dec=radec[1], zem=1.390,
-        zabs=0.716, vlim=[-200., 200.]*u.km/u.s, NHI=20.21, sigNHI=np.array([0.20,0.20]))
+    radec = '132323.78-002155.2'  # SDSS Name
+    lls = LLSSystem(name='SDSSJ1323-0021_z0.716', radec=radec, zem=1.390,
+        zabs=0.716, vlim=[-200., 200.]*u.km/u.s, NHI=20.21,
+                    sig_NHI=np.array([0.20,0.20]))
     # Parse table file
-    tab_fil = xa_path+"/data/LLS/peroux06b.tb1.ascii"
+    tab_fil = pyigm_path+"/data/LLS/Literature/peroux06b.tb1.ascii"
     with open(tab_fil,'r') as f:
         flines = f.readlines()
     ion_dict = {}
@@ -325,7 +331,7 @@ def peroux06b():
             # Grab ions and init
             ions = isplit[3:10]
             for ion in ions:
-                Zion = xai.name_ion(ion)
+                Zion = ltai.name_ion(ion)
                 ion_dict[ion] = dict(clm=0., sig_clm=0.,flg_clm=1,Z=Zion[0],ion=Zion[1])
             continue
         # Column or sigma?
@@ -359,40 +365,42 @@ def peroux06b():
         else:
             ion_dict[ion]['sig_clm'] = sig/N/np.log(10)
     # Finish
-    lls._ionclms = IonClms(idict=ion_dict)
+    lls._ionN = pyiau.dict_to_ions(ion_dict)
     lls.Refs.append('Prx06b')
     return lls
 
 def meiring06():
-    '''Meiring et al. 2006, MNRAS, 370, 43
+    """Meiring et al. 2006, MNRAS, 370, 43
     Q1107+0003 
     Taken from Table 4 by JXP
     NHI from RTN06 (damping wings)
     RA/DEC from STIS header
-    ''' 
+    """
     # Setup
-    lls = LLSSystem(name='SDSSJ1107+0003_z0.954', RA=166.90273*u.deg, 
-        Dec=0.05795000*u.deg, zem=1.726,
-        zabs=0.9542, vlim=[-300., 300.]*u.km/u.s, NHI=20.26, sigNHI=np.array([0.14,0.09]))
+    lls = LLSSystem(name='SDSSJ1107+0003_z0.954', radec=(166.90273*u.deg,
+                                                         0.05795000*u.deg),
+                    zem=1.726, zabs=0.9542,
+                    vlim=[-300., 300.]*u.km/u.s, NHI=20.26,
+                    sig_NHI=np.array([0.14,0.09]))
     #  Meiring06, Table 4
     ion_dict = {}
     ion_dict['Zn II'] = dict(clm=12.08, sig_clm=0.,flg_clm=3,Z=30,ion=2)
     ion_dict['Ti II'] = dict(clm=13.01, sig_clm=0.,flg_clm=3,Z=22,ion=2)
     ion_dict['Cr II'] = dict(clm=12.76, sig_clm=0.,flg_clm=3,Z=24,ion=2)
     # Finish
-    lls._ionclms = IonClms(idict=ion_dict)
+    lls._ionN = pyiau.dict_to_ions(ion_dict)
     lls.Refs.append('Mei06')
     return lls
 
 def meiring07():
-    '''Meiring et al. 2007, MNRAS, 376, 557
+    """Meiring et al. 2007, MNRAS, 376, 557
     SLLS with Magellan
     Abundances from Table 11 from astro-ph (LateX) by JXP [AODM]
     RA/DEC from Table 1
-    ''' 
+    """
     all_lls = []
     # Table 1
-    tab_fil = xa_path+"/data/LLS/meiring07.tb1.ascii"
+    tab_fil = pyigm_path+"/data/LLS/Literature/meiring07.tb1.ascii"
     with open(tab_fil,'r') as f:
         flines1 = f.readlines()
     # Grab RA/DEC
@@ -402,18 +410,23 @@ def meiring07():
             continue
         # Parse
         isplit = iline.split('&')
-        #xdb.set_trace()
-        radec = xor.stod1((isplit[2],isplit[3]))
+        if '-' not in isplit[3]:
+            sgn = '+'
+        else:
+            sgn = ''
+        radec = isplit[2].strip()+sgn+isplit[3].strip()
+        radec = radec.replace(':','')
         # zem
         if isplit[0].strip() != 'Q0826-2230':
             zem = float(isplit[5].strip())
         else:
             zem = 0.911
         # Save
-        qso_dict[isplit[0].strip()] = dict(RA=radec[0],Dec=radec[1],zem=zem)
+        qso_dict[isplit[0].strip()] = dict(radec=radec, zem=zem,
+                                           vlim=[-500.,500]*u.km/u.s)
     # Abundances (AODM)
     # Table 11
-    tab_fil = xa_path+"/data/LLS/meiring07.tb11.ascii"
+    tab_fil = pyigm_path+"/data/LLS/Literature/meiring07.tb11.ascii"
     with open(tab_fil,'r') as f:
         flines11 = f.readlines()
     #
@@ -433,7 +446,7 @@ def meiring07():
                 ip2 = is2[2].find('}')
                 ionc = is2[1][2:].strip()+' '+is2[2][0:ip2].strip()
                 # Zion
-                Zion = xai.name_ion(ionc)
+                Zion = ltai.name_ion(ionc)
                 # Append
                 ioncs.append(ionc)
                 Zions.append(Zion)
@@ -450,7 +463,7 @@ def meiring07():
             qso_dict[qso]['NHI'] = float(is2[0:5])
             #if qso_dict[qso]['NHI'] >= 20.3:
             #    print('Uh oh.  DLA')
-            qso_dict[qso]['sigNHI'] = np.array([float(is2[10:])]*2)
+            qso_dict[qso]['sig_NHI'] = np.array([float(is2[10:])]*2)
             # Generate LLS
             lls = LLSSystem(**qso_dict[qso])
             continue
@@ -472,7 +485,7 @@ def meiring07():
                     ion_dict[ioncs[kk]]['clm'] = float(is2[0:5])
                     ion_dict[ioncs[kk]]['sig_clm'] = float(is2[10:])
             # Finish
-            lls._ionclms = IonClms(idict=ion_dict)
+            lls._ionN = pyiau.dict_to_ions(ion_dict)
             lls.Refs.append('Mei07')
             all_lls.append(lls)
 
@@ -528,7 +541,7 @@ def meiring08():
                 #ip2 = is2[2].find('}')
                 ionc = iis.strip()
                 # Zion
-                Zion = xai.name_ion(ionc)
+                Zion = ltai.name_ion(ionc)
                 # Append
                 ioncs.append(ionc)
                 Zions.append(Zion)
@@ -651,7 +664,7 @@ def meiring09():
                 #ip2 = is2[2].find('}')
                 ionc = iis.strip()
                 # Zion
-                Zion = xai.name_ion(ionc)
+                Zion = ltai.name_ion(ionc)
                 # Append
                 ioncs.append(ionc)
                 Zions.append(Zion)
@@ -745,7 +758,7 @@ def dessauges09():
         # ADOM Columns
         ion_dict = {}
         for kk,ion in enumerate(['Fe II','Zn II']):
-            Zion = xai.name_ion(ion)
+            Zion = ltai.name_ion(ion)
             is2 = isplit[7+kk].strip()
             if is2[0:2] == '$>':
                 ion_dict[ion] = dict(sig_clm=0.,flg_clm=2,Z=Zion[0],ion=Zion[1])
@@ -820,7 +833,7 @@ def tumlinson11():
         else:
             if is2[2] != gdl:
                 continue
-        Zion = xai.name_ion(ion)
+        Zion = ltai.name_ion(ion)
         ion_dict[ion] = dict(clm=0., sig_clm=0., flg_clm=0, Z=Zion[0],ion=Zion[1])
         # Combine components [could replace with SubSystems some day]
         for iis in isplit[1:-1]:
@@ -936,7 +949,7 @@ def battisti12():
         while (isplit[0][ipos] not in ['I','V']):
             ipos -= 1
         ion = isplit[0][0:ipos+1+len(isplit[0])]
-        Zion = xai.name_ion(ion)
+        Zion = ltai.name_ion(ion)
         # Loop on systems
         for kk,iis in enumerate(isplit[1:-1]):
             if iis.strip()[0] == '.':
