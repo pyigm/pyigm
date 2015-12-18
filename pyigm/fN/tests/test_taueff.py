@@ -3,13 +3,11 @@
 # TEST_UNICODE_LITERALS
 
 import numpy as np
-import os, pdb
-import pytest
-from astropy import units as u
+
+import astropy.units as u
 
 from pyigm.fN.fnmodel import FNModel
 from pyigm.fN import tau_eff as pyteff
-from linetools.spectralline import AbsLine
 
 '''
 def data_path(filename):
@@ -64,3 +62,8 @@ def test_parallel():
     np.testing.assert_allclose(ateff[-3:],
                                np.array([0.23440858789182742,
                                 0.20263221240650739, 0.21927057420866358]))
+
+def test_DM():
+    DM = pyteff.DM(1.)
+    assert DM.unit == u.pc/u.cm**3
+    np.testing.assert_allclose(DM.value, 1235.8727960316237)

@@ -11,11 +11,10 @@ from astropy.io import fits
 from astropy.utils.misc import isiterable
 from astropy import units as u
 from astropy import constants as const
+from astropy import cosmology
 
 
 from pyigm import utils as pyigmu
-
-#from xastropy.xutils import xdebug as xdb
 
 # Path for pyigm
 pyigm_path = imp.find_module('pyigm')[1]
@@ -34,8 +33,10 @@ class FNModel(object):
       Redshift range where this model applies (zmin,zmax)
     pivots : array
           log NHI values for the pivots
-    param : ndarray
-      Parameter array
+    param : dict
+      Parameter dict
+        * Spline points for the Hspline
+        * Amplitudes, power-laws, etc. for Gamma
     zpivot : float, optional
           Pivot for redshift evolution (2.4)
     gamma : float, optional
@@ -67,7 +68,7 @@ class FNModel(object):
             fN_model = cls('Hspline', zmnx=(0.5,3.0),
                             pivots=NHI_pivots, param=outp['best_p'])
         else:
-            # Input the f(N) at z=2.4 from Prochaska+13
+            # Input the f(N) at z=2.4 from Prochaska+14
             fN_file = (pyigm_path+'/data/fN/fN_spline_z24.fits.gz')
             print('Using P14 spline values to generate a default model')
             print('Loading: {:s}'.format(fN_file))
@@ -76,41 +77,67 @@ class FNModel(object):
             # Instantiate
             fN_model = cls('Hspline', zmnx=(0.5, 3.0),
                             pivots=np.array(fN_data['LGN']).flatten(),
-                            param=np.array(fN_data['FN']).flatten())
+                            param=dict(sply=np.array(fN_data['FN']).flatten()))
         # Return
         return fN_model
 
     def __init__(self, mtype, zmnx=(0., 0.), pivots=None, param=None,
                  zpivot=2.4, gamma=1.5):
+        """
+        Parameters
+        ----------
+        mtype : str
+          Type of model.  Gamma or Hspline
+        zmnx : tuple, optional
+          Redshift range for evaluation
+        pivots : ndarray, optional
+          NHI values for the Hspline model
+        param : dict, optional
+          Parameters of the model.  Format depends on model
+        zpivot : float, optional
+          Pivot redshift for (1+z)^gamma redshift evolution
+        gamma : float, optional
+          Power-law exponent for (1+z)^gamma redshift evolution
+
+        Returns
+        -------
+        FNModel
+
+        """
+        if mtype not in ['Gamma', 'Hspline']:
+            raise IOError("Invalid mtype")
         self.mtype = mtype  # Should probably check the choice
 
-        # Inoue+14
-        if mtype == 'Gamma':
-            zmnx = (0., 10.)
-            param = [ [12., 23., 21., 28.], # Common
-                      [1.75828e8, 9.62288e-4],             # Bi values
-                      [500, 1.7, 1.2, 4.7, 0.2, 2.7, 4.5], # LAF
-                      [1.1, 0.9, 2.0, 1.0, 2.0] ] # DLA
-        self.zmnx = zmnx  
-
         # Pivots
-        if pivots is None: 
+        if pivots is None:
             self.pivots = np.zeros(2)
-        else: 
+        else:
             self.pivots = pivots
         self.npivot = len(self.pivots)
 
         # Param
         if param is None:
-            self.param = np.zeros(self.npivot)
+            self.param = {}
         else:
             self.param = param
-            # Init
-            if mtype == 'Hspline':
-                self.model = scii.PchipInterpolator(self.pivots, self.param,
-                    extrapolate=True)  # scipy 0.16
 
-        # Redshift (needs updating)
+        # Model
+        if mtype == 'Gamma':  # I+14
+            zmnx = (0., 10.)
+            self.param = dict(common=dict(Nl=12., Nu=23., Nc=21., bval=28.),  # Common
+                              Bi=[1.75828e8, 9.62288e-4],             # Bi values
+                              LAF=dict(Aval=500, beta=1.7, zcuts=[1.2, 4.7], gamma=[0.2, 2.7, 4.5]), # LAF
+                              DLA=dict(Aval=1.1, beta=0.9, zcuts=[2.0], gamma=[1.0, 2.0]), # DLA
+                              )
+        elif mtype == 'Hspline':
+            if len(self.param) == 0:
+                raise IOError("Need to specify sply parameters!")
+            self.model = scii.PchipInterpolator(self.pivots, self.param['sply'],
+                                                extrapolate=True)  # scipy 0.16
+        #
+        self.zmnx = zmnx
+
+        # Redshift evolution (needs updating)
         self.zpivot = zpivot
         self.gamma = gamma
 
@@ -125,20 +152,21 @@ class FNModel(object):
           Parameters for the f(N) model to update to
         """
         if self.mtype == 'Hspline':
-            self.param = parm
+            self.param['sply'] = parm
             # Need to update the model too
-            self.model = scii.PchipInterpolator(self.pivots, self.param)
+            self.model = scii.PchipInterpolator(self.pivots, self.param['sply'])
         elif self.mtype == 'Gamma':
             if len(parm) == 4: # A,beta for LAF and A,beta for DLA
-                self.param[2][0] = parm[0]
-                self.param[2][1] = parm[1]
-                self.param[3][0] = parm[2]
-                self.param[3][1] = parm[3]
+                self.param['LAF']['Aval'] = parm[0]
+                self.param['LAF']['beta'] = parm[1]
+                self.param['DLA']['Aval'] = parm[2]
+                self.param['DLA']['beta'] = parm[3]
             else:
                 raise ValueError('fN/model: Not ready for {:d} parameters'.format(
-                    len(self.param)))
+                    len(parm)))
 
-    def calculate_lox(self, z, NHI_min, NHI_max=None, neval=10000, cumul=False):
+    def calculate_lox(self, z, NHI_min, NHI_max=None, neval=10000,
+                      cosmo=None, cumul=False):
         """ Calculate l(X) over an N_HI interval
 
         Parameters
@@ -146,13 +174,15 @@ class FNModel(object):
         z : float
           Redshift for evaluation
         NHI_min : float
-          minimum NHI value
+          minimum log NHI value
         NHI_max : float, optional
-          maximum NHI value for evaluation (Infinity)
+          maximum log NHI value for evaluation (Infinity)
         neval : int, optional
           Discretization parameter (10000)
         cumul : bool, optional
           Return a cumulative array? (False)
+        cosmo : astropy.cosmology, optional
+          Cosmological model to adopt (as needed)
 
         Returns
         -------
@@ -177,7 +207,7 @@ class FNModel(object):
         dlgN = lgNHI[1]-lgNHI[0]
 
         # Evaluate f(N,X)
-        lgfNX = self.evaluate(lgNHI, z)
+        lgfNX = self.evaluate(lgNHI, z, cosmo=cosmo)
 
         # Sum
         lX = np.zeros(nz)
@@ -198,7 +228,7 @@ class FNModel(object):
             lgfNX = np.zeros((neval2, nz))
             lX2 = np.zeros(nz)
             for ii in range(nz):
-                lgfNX[:, ii] = self.evaluate(lgNHI2, z[ii]).flatten()
+                lgfNX[:, ii] = self.evaluate(lgNHI2, z[ii], cosmo=cosmo).flatten()
                 lX2[ii] = np.sum(10.**(lgfNX[:, ii]+lgNHI2)) * dlgN * np.log(10.)
             lX = lX + lX2
 
@@ -210,8 +240,8 @@ class FNModel(object):
         else:
             return lX
 
-    def calculate_rhoHI(self, z, NHI_mnx, neval=10000, cumul=False,
-        H0=70.*u.km/(u.s*u.Mpc)):
+
+    def calculate_rhoHI(self, z, NHI_mnx, neval=10000, cumul=False, cosmo=None):
         """ Calculate rho_HI over an N_HI interval
 
         Parameters
@@ -219,20 +249,24 @@ class FNModel(object):
         z : float
           Redshift for evaluation
         NHI_mnx : tuple
-          of floats minimum/maximum NHI values
+          of floats minimum/maximum log NHI values
         neval : int, optional
           Discretization parameter (10000)
         cumul : bool, optional
           Return a cumulative array?
-        H0 : float, optional
-          Hubble's constant with units [70 km/s/Mpc]
+        cosmo : astropy.cosmology, optional
+          Needed for H0 only
 
         Returns
         -------
         rho_HI: float
           rho_HI in units of Msun per comoving Mpc**3
         """
-        # Initial 
+        # Cosmology
+        if cosmo is None:
+            cosmo = cosmology.core.FlatLambdaCDM(70., 0.3)
+
+        # Initial
         NHI_min=NHI_mnx[0]
         NHI_max=NHI_mnx[1]
         try:
@@ -246,7 +280,7 @@ class FNModel(object):
         dlgN = lgNHI[1]-lgNHI[0]
 
         # Evaluate f(N,X)
-        lgfNX = self.evaluate(lgNHI, z)
+        lgfNX = self.evaluate(lgNHI, z, cosmo=cosmo)
 
         # Sum
         rho_HI = np.zeros(nz)
@@ -258,7 +292,7 @@ class FNModel(object):
             cum_sum = np.cumsum(10.**(lgfNX[:, ii]+2*lgNHI)) * dlgN * np.log(10.)
 
         # Constants
-        rho_HI = rho_HI * (const.m_p.cgs * H0 / 
+        rho_HI = rho_HI * (const.m_p.cgs * cosmo.H0 /
             const.c.cgs / (u.cm**2)).to(u.Msun/u.Mpc**3)
 
         # Return
@@ -275,9 +309,8 @@ class FNModel(object):
 
         Parameters
         ----------
-
         NHI : array
-          NHI values
+          log NHI values
         z : float or array
           Redshift for evaluation
         vel_array : ndarray, optional
@@ -287,7 +320,6 @@ class FNModel(object):
 
         Returns
         -------
-
         log_fNX : float, array, or 2D array
           f(NHI,X)[z] values
           Float if given one NHI,z value each. Otherwise 2D array
@@ -295,7 +327,7 @@ class FNModel(object):
 
         """
         # Tuple?
-        if isinstance(NHI, tuple): # All values packed into NHI parameter
+        if isinstance(NHI, tuple):  # All values packed into NHI parameter
             z = NHI[1]
             NHI = NHI[0]
             flg_1D = 1
@@ -348,28 +380,29 @@ class FNModel(object):
         # Gamma function (e.g. Inoue+14)
         elif self.mtype == 'Gamma':
             # Setup the parameters
-            Nl, Nu, Nc, bval = self.param[0]
-
+            Nl, Nu, Nc, bval = [self.param['common'][key]
+                                for key in ['Nl', 'Nu', 'Nc', 'bval']]
             # gNHI
-            Bi = self.param[1]
+            Bi = self.param['Bi']
             ncomp = len(Bi)
             log_gN = np.zeros((lenNHI, ncomp))
-            beta = [item[1] for item in self.param[2:]] 
+            beta = [self.param[itype]['beta'] for itype in ['LAF', 'DLA']]
             for kk in range(ncomp):
                 log_gN[:, kk] += (np.log10(Bi[kk]) + NHI*(-1 * beta[kk])
                                 + (-1. * 10.**(NHI-Nc) / np.log(10)))  # log10 [ exp(-NHI/Nc) ]
             # f(z)
             fz = np.zeros((lenz, 2))
             # Loop on NHI
+            itypes = ['LAF', 'DLA']
             for kk in range(ncomp):
                 if kk == 0:  # LyaF
-                    zcuts = self.param[2][2:4]
-                    gamma = self.param[2][4:]
+                    zcuts = self.param['LAF']['zcuts']
+                    gamma = self.param['LAF']['gamma']
                 else:        # DLA
-                    zcuts = [self.param[3][2]]
-                    gamma = self.param[3][3:]
-                zcuts = [0] + list(zcuts) + [999.]
-                Aval = self.param[2+kk][0]
+                    zcuts = self.param['DLA']['zcuts']
+                    gamma = self.param['DLA']['gamma']
+                zcuts = [0] + zcuts + [999.]
+                Aval = self.param[itypes[kk]]['Aval']
                 # Cut on z
                 for ii in range(1,len(zcuts)):
                     izcut = np.where( (z_val < zcuts[ii]) &
@@ -387,7 +420,7 @@ class FNModel(object):
             dXdz = pyigmu.cosm_xz(z_val, cosmo=cosmo, flg_return=1)
 
             # Final steps
-            if flg_1D == 1: # 
+            if flg_1D == 1:
                 fnX = np.sum(fz * 10.**log_gN, 1) / dXdz
                 log_fNX = np.log10(fnX)
             else: 
@@ -396,7 +429,7 @@ class FNModel(object):
                 for kk in range(ncomp):
                     fnz += np.outer(10.**log_gN[:, kk], fz[:, kk])
                 # Finish up
-                log_fNX = np.log10(fnz) - np.log10( np.outer(np.ones(lenNHI), dXdz) )
+                log_fNX = np.log10(fnz) - np.log10( np.outer(np.ones(lenNHI), dXdz))
         else: 
             raise ValueError('fN.model: Not ready for this model type {:%s}'.format(self.mtype))
 
@@ -427,7 +460,6 @@ class FNModel(object):
         """
         # Imports
         from pyigm.fN import tau_eff as pyteff
-        from astropy import cosmology
 
         # Cosmology
         if cosmo is None:
@@ -437,12 +469,11 @@ class FNModel(object):
         zval, teff_LL = pyteff.lyman_limit(self, zmin, zem, N_eval=neval, cosmo=cosmo)
 
         # Find tau=1
-        imn = np.argmin(np.fabs(teff_LL-1.))
-        if np.fabs(teff_LL[imn]-1.) > 0.02:
-            raise ValueError('fN.model.mfp: teff_LL too far from unity')
+        zt_interp = scii.interp1d(teff_LL, zval)
+        ztau1 = zt_interp(1.)  # Will probably break if 1 is not covered
 
         # MFP
-        mfp = np.fabs(cosmo.lookback_distance(zval[imn]) -
+        mfp = np.fabs(cosmo.lookback_distance(ztau1) -
                         cosmo.lookback_distance(zem))  # Mpc
         # Return
         return mfp
@@ -451,8 +482,7 @@ class FNModel(object):
     ##
     # Output
     def __repr__(self):
-        return ('[%s: %s zmnx=(%g,%g)]' %
-                (self.__class__.__name__,
-                 self.mtype, self.zmnx[0], self.zmnx[1]))
+        return ('<{:s}: {:s} zmnx=({:g},{:g})>'.format(
+                self.__class__.__name__, self.mtype, self.zmnx[0], self.zmnx[1]))
 
 
