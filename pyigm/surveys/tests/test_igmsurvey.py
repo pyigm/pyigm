@@ -5,6 +5,9 @@
 import numpy as np
 import glob, os, imp, pdb
 import pytest
+import astropy
+
+astropy.test()
 
 from pyigm.surveys.llssurvey import LLSSurvey
 from ..igmsurvey import IGMSurvey

@@ -9,6 +9,8 @@ import pytest
 from pyigm.surveys.llssurvey import LLSSurvey
 from ..lls_literature import load_lls_lit
 
+remote_data = pytest.mark.remote_data
+
 lt_path = imp.find_module('linetools')[1]
 
 '''
@@ -17,7 +19,7 @@ def data_path(filename):
     return os.path.join(data_dir, filename)
 '''
 
-
+@remote_data
 def test_read_hdlls_dr1():
     # Read Summary
     summ_fil = glob.glob(lt_path+"/data/LLS/HD-LLS_DR1.fits")
@@ -56,6 +58,7 @@ def test_dat_list():
     assert lls.nsys == 165
 
 
+@remote_data
 def test_sdss():
     """ Test SDSS DR7
     """
@@ -97,6 +100,7 @@ def test_z3mage():
     assert len(z3mage_NC.sightlines) == 61
 
 
+@remote_data
 def test_literature():
     """ Literature list
     """
