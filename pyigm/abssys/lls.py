@@ -180,6 +180,7 @@ class LLSSystem(IGMSystem):
           Update zvlim from lines in .clm (as applicable)
         linelist : LineList
         """
+        from linetools.isgm import utils as ltiu
         if idict is not None:
             table = dict_to_ions(idict)
             self._ionN = table
@@ -192,7 +193,7 @@ class LLSSystem(IGMSystem):
                 # Parse .clm file
                 self.subsys[lbl]._clmdict = igmau.read_clmfile(clm_fil, linelist=linelist)
                 # Build components from lines
-                components = igmau.build_components_from_abslines([], clmdict=self.subsys[lbl]._clmdict, coord=self.coord)
+                components = ltiu.build_components_from_abslines([], clmdict=self.subsys[lbl]._clmdict, coord=self.coord)
                 # Update z, vlim
                 if update_zvlim:
                     vmin,vmax = 9999., -9999.
@@ -209,7 +210,7 @@ class LLSSystem(IGMSystem):
                 self.subsys[lbl].all_file=all_file #MF: useful to have
                 _ = igmau.read_all_file(all_file, components=components)
                 # Build table
-                self.subsys[lbl]._ionN = igmau.iontable_from_components(components,ztbl=self.subsys[lbl].zabs)
+                self.subsys[lbl]._ionN = ltiu.iontable_from_components(components,ztbl=self.subsys[lbl].zabs)
                 # Add to IGMSystem
                 for comp in components:
                     self.add_component(comp)

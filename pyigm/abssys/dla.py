@@ -7,6 +7,8 @@ import pdb
 
 from astropy import units as u
 
+from linetools.isgm import utils as ltigu
+
 from pyigm.abssys.igmsys import IGMSystem
 from pyigm.surveys.igmsurvey import IGMSurvey
 from pyigm.abssys import utils as igmau
@@ -119,7 +121,7 @@ class DLASystem(IGMSystem):
             # Read
             self._clmdict = igmau.read_clmfile(clm_fil, linelist=linelist)
             # Build components
-            components = igmau.build_components_from_abslines([], clmdict=self._clmdict, coord=self.coord)
+            components = ltigu.build_components_from_abslines([], clmdict=self._clmdict, coord=self.coord)
             # Read .ion file and fill in components
             ion_fil = self.tree+self._clmdict['ion_fil']
             self._indiv_ionclms = igmau.read_ion_file(ion_fil, components)
@@ -128,7 +130,7 @@ class DLASystem(IGMSystem):
             self.all_file=all_file #MF: useful to have
             _ = igmau.read_all_file(all_file, components=components)
             # Build table
-            self._ionN = igmau.iontable_from_components(components, ztbl=self.zabs)
+            self._ionN = ltigu.iontable_from_components(components, ztbl=self.zabs)
             # Add to AbsSystem
             for comp in components:
                 self.add_component(comp)
