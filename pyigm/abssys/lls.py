@@ -15,6 +15,7 @@ from linetools.isgm.abscomponent import AbsComponent
 
 from pyigm.abssys.igmsys import IGMSystem, AbsSubSystem
 from pyigm.abssys import utils as igmau
+from .utils import dict_to_ions
 
 class LLSSystem(IGMSystem):
     """
@@ -180,7 +181,7 @@ class LLSSystem(IGMSystem):
         linelist : LineList
         """
         if idict is not None:
-            table = dict_to_ions()
+            table = dict_to_ions(idict)
             self._ionN = table
         elif use_Nfile:
             # Subsystems

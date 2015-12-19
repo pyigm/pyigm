@@ -29,6 +29,7 @@ from linetools.analysis import absline as ltaa
 from pyigm.abssys.igmsys import AbsSubSystem
 from pyigm.abssys import utils as pyiau
 from pyigm.abssys.lls import LLSSystem
+from .llssurvey import LLSSurvey
 
 pyigm_path = imp.find_module('pyigm')[1]
 
@@ -770,7 +771,7 @@ def dessauges09():
             elif is2[0:2] == '..':
                 pass
             else:
-                ion_dict[ion] = dict(flag_N=1,Z=Zion[0],ion=Zion[1])
+                ion_dict[ion] = dict(flg_clm=1,Z=Zion[0],ion=Zion[1])
                 ion_dict[ion]['clm'] = float(is2[1:6]) + NHI - 12 + sol[kk]
                 ion_dict[ion]['sig_clm'] = float(is2[10:14])
         #xdb.set_trace()
@@ -986,29 +987,92 @@ def log_sum(logN):
     Nsum = np.sum(10.**np.array(logN))
     return np.log10(Nsum)
 
-######
-if __name__ == '__main__':
-     
-    flg_test = 0
-    flg_test += 2**0  # Zonak2004, Jenkins2005
 
-    # Test ions
-    if (flg_test % 2**1) >= 2**0:
-        #lls = battisti12()
-        #lls = kacprzak12()
-        #lls = tumlinson11()
-        #lls = dessauges09()
-        #lls = meiring09()
-        #lls = nestor08()
-        #lls = meiring08()
-        #lls = meiring07()
-        #lls = meiring06()
-        lls = peroux06b()
-        #lls = peroux06a()
-        #lls = tripp2005()
-        #lls = jenkins2005()
-        #lls = zonak2004()
-        print(lls)
-        #xdb.set_trace()
-    
-    # Plot the LLS
+def load_lls_lit():
+    # TODO
+    #  Handle duplicates (e.g. DZ vs M08,M09)
+
+    # Begin
+    lls_lit = LLSSurvey()
+    mask = []
+
+    # Zonak 2004
+    Zon04 = zonak2004()
+    lls_lit._abs_sys.append(Zon04)
+    lls_lit.ref = Zon04.Refs[0]
+    mask += [True]
+    # Jenkins 2005
+    Jen05 = jenkins2005()
+    lls_lit._abs_sys.append(Jen05)
+    lls_lit.ref = lls_lit.ref + ',' + Jen05.Refs[0]
+    mask += [True]
+    # Tripp 2005
+    Tri05 = tripp2005()
+    lls_lit._abs_sys.append(Tri05)
+    lls_lit.ref = lls_lit.ref + ',' + Tri05.Refs[0]
+    mask += [True]
+    # Peroux 2006a
+    Prx06a = peroux06a()
+    lls_lit._abs_sys.append(Prx06a)
+    lls_lit.ref = lls_lit.ref + ',' + Prx06a.Refs[0]
+    mask += [True]
+    # Peroux 2006b
+    Prx06b = peroux06b()
+    lls_lit._abs_sys.append(Prx06b)
+    lls_lit.ref = lls_lit.ref + ',' + Prx06b.Refs[0]
+    mask += [True]
+    # Meiring 2006
+    Mei06 = meiring06()
+    lls_lit._abs_sys.append(Mei06)
+    lls_lit.ref = lls_lit.ref + ',' + Mei06.Refs[0]
+    mask += [True]
+    # Meiring 2007
+    Mei07 = meiring07()
+    for ills in Mei07:
+        lls_lit._abs_sys.append(ills)
+        mask += [True]
+    lls_lit.ref = lls_lit.ref + ',' + ills.Refs[0]
+    # Meiring 2008
+    Mei08 = meiring08()
+    for ills in Mei08:
+        lls_lit._abs_sys.append(ills)
+        mask += [True]
+    lls_lit.ref = lls_lit.ref + ',' + ills.Refs[0]
+    # Nestor 2008
+    Nes08 = nestor08()
+    lls_lit._abs_sys.append(Nes08)
+    lls_lit.ref = lls_lit.ref + ',' + Nes08.Refs[0]
+    mask += [True]
+    # Meiring 2009
+    Mei09 = meiring09()
+    for ills in Mei09:
+        lls_lit._abs_sys.append(ills)
+        mask += [True]
+    lls_lit.ref = lls_lit.ref + ',' + ills.Refs[0]
+    # Dessauges-Zavadsky 2009
+    DZ09 = dessauges09()
+    for ills in DZ09:
+        lls_lit._abs_sys.append(ills)
+        mask += [True]
+    lls_lit.ref = lls_lit.ref + ',' + ills.Refs[0]
+    # Tumlinson 2011
+    Tum11 = tumlinson11()
+    lls_lit._abs_sys.append(Tum11)
+    lls_lit.ref = lls_lit.ref + ',' + Tum11.Refs[0]
+    mask += [True]
+    # Kacprzak 2012
+    Kcz12 = kacprzak12()
+    lls_lit._abs_sys.append(Kcz12)
+    mask += [True]
+    lls_lit.ref = lls_lit.ref + ',' + Kcz12.Refs[0]
+     # Dessauges-Zavadsky 2009
+    Bat12 = battisti12()
+    for ills in Bat12:
+        lls_lit._abs_sys.append(ills)
+        mask += [True]
+    lls_lit.ref = lls_lit.ref + ',' + ills.Refs[0]
+
+    # Final Mask
+    lls_lit.mask = np.array(mask)
+    # Return
+    return lls_lit
