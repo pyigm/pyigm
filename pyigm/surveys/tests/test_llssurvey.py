@@ -21,24 +21,9 @@ def data_path(filename):
 
 @remote_data
 def test_read_hdlls_dr1():
-    # Read Summary
-    summ_fil = glob.glob(lt_path+"/data/LLS/HD-LLS_DR1.fits")
-    if len(summ_fil) > 0:
-        summ_fil = summ_fil[0]
-    else:
-        assert True
-        return
-    lls = LLSSurvey.from_sfits(summ_fil)
+    hdlls = LLSSurvey.load_HDLLS()
     assert lls.nsys == 157
 
-    # Read ions
-    ions_fil = glob.glob(lt_path+"/data/LLS/HD-LLS_ions.json")
-    if len(ions_fil) > 0:
-        ions_fil = ions_fil[0]
-    else:
-        assert True
-        return
-    lls.fill_ions(jfile=ions_fil)
     CII_clms = lls.ions((6,2))
     gdCII = np.where(CII_clms['flag_N']>0)[0]
     assert len(gdCII) == 103
