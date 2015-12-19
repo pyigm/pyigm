@@ -30,6 +30,4 @@ def test_gz():
     assert gz[4000] == 67
     np.testing.assert_allclose(zeval[4000], 2.8705998897560931)
 
-"""
-
 
