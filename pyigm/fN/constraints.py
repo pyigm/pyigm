@@ -141,6 +141,23 @@ class FNConstraint(object):
         # Return
         return fN_cs
 
+    @classmethod
+    def load_defaults(cls):
+        """ Load default constraints on f(N)
+
+        Returns
+        -------
+        all_fN_cs : list
+          list of FNConstraint objects
+        """
+        fn_file = pyigm_path+'/data/fN/fn_constraints_z2.5_vanilla.fits'
+        k13r13_file = pyigm_path+'/data/fN/fn_constraints_K13R13_vanilla.fits'
+        n12_file = pyigm_path+'/data/fN/fn_constraints_N12_vanilla.fits'
+        # Load
+        all_fN_cs = cls.from_fitsfile([fn_file,k13r13_file, n12_file])
+        # Return
+        return all_fN_cs
+
     # Initialize with type
     def __init__(self, fN_dtype, zeval=0., ref='', flavor='', cosmo=None):
         if fN_dtype not in ['fN', 'MFP', 'LLS', 'teff', 'beta']:

@@ -7,9 +7,6 @@ import imp, pdb
 
 from pyigm.fN.constraints import FNConstraint
 
-pyigm_path = imp.find_module('pyigm')[1]
-
-
 def test_init():
     tst = FNConstraint('fN')
     assert tst.fN_dtype == 'fN'
@@ -18,10 +15,7 @@ def test_init_from_fits():
     """ Load FNConstraint from a set of FITS files
     """
     # Load
-    fn_file = pyigm_path+'/data/fN/fn_constraints_z2.5_vanilla.fits'
-    k13r13_file = pyigm_path+'/data/fN/fn_constraints_K13R13_vanilla.fits'
-    n12_file = pyigm_path+'/data/fN/fn_constraints_N12_vanilla.fits'
-    all_fN_cs = FNConstraint.from_fitsfile([fn_file,k13r13_file, n12_file])
+    all_fN_cs = FNConstraint.load_defaults()
     # Test
     assert len(all_fN_cs) == 8
     fN_dtype = [fc.fN_dtype for fc in all_fN_cs]
