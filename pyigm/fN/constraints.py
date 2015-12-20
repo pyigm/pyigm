@@ -150,9 +150,9 @@ class FNConstraint(object):
         all_fN_cs : list
           list of FNConstraint objects
         """
-        fn_file = pyigm_path+'/data/fN/fn_constraints_z2.5_vanilla.fits'
-        k13r13_file = pyigm_path+'/data/fN/fn_constraints_K13R13_vanilla.fits'
-        n12_file = pyigm_path+'/data/fN/fn_constraints_N12_vanilla.fits'
+        fn_file = pyigm_path+'/data/fN/fN_constraints_z2.5_vanilla.fits'
+        k13r13_file = pyigm_path+'/data/fN/fN_constraints_K13R13_vanilla.fits'
+        n12_file = pyigm_path+'/data/fN/fN_constraints_N12_vanilla.fits'
         # Load
         all_fN_cs = cls.from_fitsfile([fn_file,k13r13_file, n12_file])
         # Return
