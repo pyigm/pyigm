@@ -119,6 +119,6 @@ The FNConstraint class organizes constraints on :math:`f(N)`.
 It is likely to be used mostly to read in existing data::
 
    pyigm_path = imp.find_module('pyigm')[1]
-   fn_file = pyigm_path+'/data/fN/fn_constraints_z2.5_vanilla.fits'
+   fn_file = pyigm_path+'/data/fN/fN_constraints_z2.5_vanilla.fits'
    fN_cs = FNConstraint.from_fitsfile(fn_file)
 
