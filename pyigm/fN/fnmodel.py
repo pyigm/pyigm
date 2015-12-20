@@ -436,6 +436,8 @@ class FNModel(object):
         # Return
         if (lenNHI + lenz) == 2:
             return log_fNX.flatten()[0]  # scalar
+        elif lenz == 1:
+            return log_fNX.flatten()
         else:
             return log_fNX
 
