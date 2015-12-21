@@ -67,6 +67,35 @@ class MetallicityPDF(object):
         meanZH = np.sum(self.ZH*self.pdf_ZH*self.dZH)
         return meanZH
 
+    def confidence_limits(self, cl):
+        """ Calculate the bounds of a given confidence interval
+
+        Spline interpolation is used
+
+        Parameters
+        ----------
+        cl : float
+          Confidence interval, ranging from 0 to 1
+
+        Returns
+        -------
+        ZH_min, ZH_max : float, float
+          Bounds corresponding to the input confidence limit
+        """
+        from scipy.interpolate import interp1d
+
+        if (cl <= 0.) or (cl >=1):
+            raise IOError("cl must range from 0-1")
+        # Spline the PDF cumulative sum vs ZH
+        cumul = np.cumsum(self.dZH*self.pdf_ZH)
+        f = interp1d(cumul, self.ZH)
+        # Caculate
+        frac = (1.- cl) / 2.
+        ZH_min = float(f(frac))
+        ZH_max = float(f(1-frac))
+        # Return
+        return ZH_min, ZH_max
+
     def normalize(self):
         """ Normalize the PDF
 

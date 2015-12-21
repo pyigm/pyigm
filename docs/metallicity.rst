@@ -49,6 +49,13 @@ meanZH     float          Weighted Mean of [Z/H]
 ========   ============== ============================================
 
 
+Methods
+-------
+
+One can calulate the bounds of a confidence interval with::
+
+   mpdf.confidence_limits(0.68)
+
 Plots
 -----
 
