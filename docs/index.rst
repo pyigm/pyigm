@@ -33,6 +33,7 @@ Contents:
    fN <fn>
    IGMSystem <igmsys>
    IGMSurvey <igmsurvey>
+   MetallicityPDF <metallicity>
 
 ..
    To be added:
