@@ -99,7 +99,6 @@ class MetallicityPDF(object):
     def normalize(self):
         """ Normalize the PDF
 
-        First checks to see if it is normalized
         """
         #
         norm = np.sum(self.dZH*self.pdf_ZH)
