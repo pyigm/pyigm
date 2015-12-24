@@ -4,12 +4,17 @@ import numpy as np
 import imp, glob
 import pdb
 import urllib2
+import h5py
+
 
 from astropy.table import QTable, Column, Table
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 
+from linetools import utils as ltu
+
 from pyigm.surveys.igmsurvey import IGMSurvey
+from pyigm.metallicity.pdf import MetallicityPDF
 
 pyigm_path = imp.find_module('pyigm')[1]
 
@@ -119,17 +124,57 @@ class LLSSurvey(IGMSurvey):
                 code.write(f.read())
             print('HD-LLS: Written to {:s}'.format(ions_fil))
         else:
-            print('HD-LLS: Loading ions file {:s}'.format(summ_fil))
+            print('HD-LLS: Loading ions file {:s}'.format(ions_fil))
+
+        # Metallicity
+        ZH_fil = pyigm_path+"/data/LLS/HD-LLS/HD-LLS_DR1_dustnhi.hdf5"
+        if len(glob.glob(ZH_fil)) == 0:
+            url = 'http://www.ucolick.org/~xavier/HD-LLS/DR1/HD-LLS_dustnhi.hdf5'
+            print('HD-LLS: Grabbing hdf5 metallicity file from {:s}'.format(url))
+            f = urllib2.urlopen(url)
+            with open(ZH_fil, "wb") as code:
+                code.write(f.read())
+            print('HD-LLS: Written to {:s}'.format(ZH_fil))
+        else:
+            print('HD-LLS: Loading metallicity file {:s}'.format(ZH_fil))
 
         # Read
         lls_survey = cls.from_sfits(summ_fil)
         # Load ions
         lls_survey.fill_ions(jfile=ions_fil)
+        # Load metallicity
+        fh5=h5py.File(ZH_fil, 'r')
+        # Get coords
+        ras = []
+        decs = []
+        zval = []
+        mkeys = fh5['met'].keys()
+        mkeys.remove('left_edge_bins')
+        for key in mkeys:
+            radec, z = key.split('z')
+            coord = ltu.radec_to_coord(radec)
+            # Save
+            zval.append(float(z))
+            ras.append(coord.ra.value)
+            decs.append(coord.dec.value)
+        mcoords = SkyCoord(ra=ras*u.deg, dec=decs*u.deg)
 
-        # Set data path (may be None)
+        # Set data path and metallicity
         spath = pyigm_path+"/data/LLS/HD-LLS/Spectra/"
         for lls in lls_survey._abs_sys:
             lls.spec_path = spath
+            # Match
+            sep = lls.coord.separation(mcoords)
+            mt = np.where((sep < 15*u.arcsec) & (np.abs(zval-lls.zabs) < 2e-3))[0]
+            if len(mt) == 0:
+                pdb.set_trace()
+                raise ValueError("Bad match")
+            elif len(mt) > 1:  # Take closest
+                mt = np.argmin(sep)
+            # Save
+            lls.metallicity = MetallicityPDF(fh5['met']['left_edge_bins']+
+                                             fh5['met']['left_edge_bins'].attrs['BINSIZE']/2.,
+                                             fh5['met'][mkeys[mt]])
 
         # Spectra?
         if grab_spectra:

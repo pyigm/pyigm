@@ -25,6 +25,9 @@ class LLSSystem(IGMSystem):
     ----------
     tau_ll : float
       Opacity at the Lyman limit
+    ZH : float, optional
+      Mean metallicity (log10)
+    metallicity : MetallicityPDF, optional
     """
 
     @classmethod
@@ -105,7 +108,8 @@ class LLSSystem(IGMSystem):
 
         # Other
         self.zpeak = None  # Optical depth weighted redshift
-        self.MH = 0.
+        self.ZH = 0.
+        self.metallicity = None  # MetallicityPDF class usually
 
         # Subsystems
         self.nsub = 0
