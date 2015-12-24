@@ -72,7 +72,7 @@ class DLASystem(IGMSystem):
 
         # QSO keys
         slf.qso = slf._datdict['QSO name']
-        slf.zqso = float(slf._datdict['QSO zem'])
+        slf.zem = float(slf._datdict['QSO zem'])
         # Name
         slf.name = '{:s}_z{:0.3f}'.format(slf.qso,zabs)
 
@@ -112,6 +112,7 @@ class DLASystem(IGMSystem):
           dict containing the IonClms info
         use_Nfile : bool, optional
           Parse ions from a .clm file (JXP historical)
+          NOTE: This ignores velocity constraints on components (i.e. skip_vel=True)
         update_zvlim : bool, optional
           Update zvlim from lines in .clm (as applicable)
         linelist : LineList
@@ -121,7 +122,10 @@ class DLASystem(IGMSystem):
             # Read
             self._clmdict = igmau.read_clmfile(clm_fil, linelist=linelist)
             # Build components
-            components = ltigu.build_components_from_abslines([], clmdict=self._clmdict, coord=self.coord)
+            components = ltigu.build_components_from_abslines([],
+                                                              clmdict=self._clmdict,
+                                                              coord=self.coord,
+                                                              skip_vel=True)
             # Read .ion file and fill in components
             ion_fil = self.tree+self._clmdict['ion_fil']
             self._indiv_ionclms = igmau.read_ion_file(ion_fil, components)

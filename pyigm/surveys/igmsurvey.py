@@ -237,13 +237,15 @@ class IGMSurvey(object):
             raise IOError("Must be an IGMSystem object")
         return True
 
-    def fill_ions(self, use_Nfile=False, jfile=None):  # This may be overloaded!
+    def fill_ions(self, use_Nfile=False, jfile=None, debug=False):  # This may be overloaded!
         """ Loop on systems to fill in ions
 
         Parameters
         ----------
         jfile : str, optional
           JSON file containing the information
+        use_Nfile : bool, optional
+          Use (historic) .clm files?
         """
         if jfile is not None:
             # Load
@@ -254,6 +256,8 @@ class IGMSurvey(object):
                 abs_sys.get_ions(idict=ions_dict[abs_sys.name])
         elif use_Nfile:
             for abs_sys in self._abs_sys:
+                if debug:
+                    print(abs_sys)
                 abs_sys.get_ions(use_Nfile=True)
         else:
             raise ValueError("Not sure how to load the ions")
