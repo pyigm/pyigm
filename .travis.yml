@@ -114,7 +114,8 @@ install:
     - if [[ $SETUP_CMD != egg_info ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION scipy; fi
     - if [[ $SETUP_CMD != egg_info ]]; then $PIP_INSTALL specutils; fi
     - if [[ $SETUP_CMD != egg_info ]]; then $PIP_INSTALL git+https://github.com/linetools/linetools.git; fi
-    #- if [[ $SETUP_CMD != egg_info ]]; then $PIP_INSTALL pyyaml; fi
+    - if [[ $SETUP_CMD != egg_info ]]; then $PIP_INSTALL pyyaml; fi
+    - if [[ $SETUP_CMD != egg_info ]]; then $PIP_INSTALL h5py; fi
     - if [[ $SETUP_CMD != egg_info ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION matplotlib; fi
 
     # DOCUMENTATION DEPENDENCIES

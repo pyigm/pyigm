@@ -149,37 +149,5 @@ class DLASystem(IGMSystem):
         """"Return a string representing the type of vehicle this is."""
         return 'DLA'
 
-# #######################################################################
-# #######################################################################
-# #######################################################################
-# Class for DLA Survey
-class DLASurvey(IGMSurvey):
-    """An DLA Survey class
-
-    Attributes:
-        
-    """
-    @classmethod
-    def default_sample(cls):
-        """
-        Returns
-        -------
-        dlasurvey : IGMSurvey
-        """
-        # Default sample of DLA:  Neeleman
-        if os.getenv('DLA') is None:
-            print('Need to grab the DLA tree from JXP')
-            return None
-        dlasurvey = cls.from_flist('Lists/Neeleman13.lst', tree=os.environ.get('DLA'))
-        dlasurvey.ref = 'Neeleman+13'
-
-        # Return
-        return dlasurvey
-
-    def __init__(self, **kwargs):
-        # Generate with type
-        IGMSurvey.__init__(self, 'DLA', **kwargs)
-
-
 
 
