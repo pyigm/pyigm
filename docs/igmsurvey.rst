@@ -110,7 +110,20 @@ DLA
 +++
 
 Subclass for DLA survey.  Presently handles the .dat and .lst files used
-by JXP.   See :doc:`DLASystem_examples` for more.
+by JXP.   See :doc:`DLASurvey_examples` for more.
+
+Here is a Table describing the various samples that may
+be accessed.
+
+.. _PW09: http://adsabs.harvard.edu/abs/2009ApJ...696.1543P
+.. _Neeleman+13: http://adsabs.harvard.edu/abs/2013ApJ...769...54N
+
+========== =============================  =================== ================================
+Survey     Call                           Reference(s)              Description
+========== =============================  =================== ================================
+SDSS_DR5   DLASurvey.load_SDSS_DR5()      `PW09`_             DR5
+H100       DLASurvey.load_H100()          `Neeleman+13`_      100 unbiased HIRES spectra
+========== =============================  =================== ================================
 
 Plots
 =====
@@ -125,8 +138,12 @@ Provide the sightlines Table is filled and has keys
 Z_START and Z_END, this method will generate a
 selection function :math:`g(z)` curve::
 
+   # LLS
    z3mage = LLSSurvey.load_mage_z3()
    zeval, gz = z3mage.calculate_gz()
+   # DLA
+   sdss = DLASurvey.load_SDSS_DR5()
+   zeval, gz = sdss.calculate_gz()
 
 Output
 ======

@@ -21,9 +21,6 @@ def data_path(filename):
 
 @remote_data
 def test_read_hdlls_dr1():
-    if os.getenv('LLSTREE') is None:
-        assert True
-        return
     hdlls = LLSSurvey.load_HDLLS()
     assert hdlls.nsys == 157
 
@@ -50,9 +47,6 @@ def test_dat_list():
 def test_sdss():
     """ Test SDSS DR7
     """
-    if os.getenv('LLSTREE') is None:
-        assert True
-        return
     # All
     sdss_dr7_all = LLSSurvey.load_SDSS_DR7(sample='all')
     assert sdss_dr7_all.nsys == 1935
@@ -95,9 +89,6 @@ def test_z3mage():
 def test_literature():
     """ Literature list
     """
-    if os.getenv('LLSTREE') is None:
-        assert True
-        return
     lls_lit = load_lls_lit()
     assert lls_lit.nsys == 58
     assert lls_lit.ref == 'Zon04,Jen05,Tri05,Prx06a,Prx06b,Mei06,Mei07,Mei08,Nes08,Mei09,DZ09,Tum11,Kcz12,Bat12'

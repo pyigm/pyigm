@@ -2,7 +2,6 @@
 """
 from __future__ import print_function, absolute_import, division, unicode_literals
 
-import os
 import pdb
 
 from astropy import units as u
@@ -10,8 +9,9 @@ from astropy import units as u
 from linetools.isgm import utils as ltigu
 
 from pyigm.abssys.igmsys import IGMSystem
-from pyigm.surveys.igmsurvey import IGMSurvey
 from pyigm.abssys import utils as igmau
+
+from .utils import dict_to_ions
 
 class DLASystem(IGMSystem):
     """
@@ -100,7 +100,7 @@ class DLASystem(IGMSystem):
         # Other
         self.ZH = 0.
 
-    def get_ions(self, use_Nfile=False, update_zvlim=True, linelist=None):
+    def get_ions(self, use_Nfile=False, idict=None, update_zvlim=True, linelist=None):
         """Parse the ions for each Subsystem
 
         And put them together for the full system
@@ -138,6 +138,9 @@ class DLASystem(IGMSystem):
             # Add to AbsSystem
             for comp in components:
                 self.add_component(comp)
+        elif idict is not None:
+            table = dict_to_ions(idict)
+            self._ionN = table
         else:
             raise IOError("Not ready for this")
 

@@ -6,6 +6,7 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import numpy as np
 import json
 from abc import ABCMeta
+import warnings
 import pdb
 
 from astropy import coordinates as coords
@@ -263,7 +264,7 @@ class IGMSurvey(object):
             raise ValueError("Not sure how to load the ions")
 
     # Get ions
-    def ions(self, iZion, skip_null=False):
+    def ions(self, iZion, Ej=0., skip_null=False):
         """
         Generate a Table of columns and so on
         Restrict to those systems where flg_clm > 0
@@ -272,6 +273,8 @@ class IGMSurvey(object):
         ----------
         iZion : tuple
            Z, ion   e.g. (6,4) for CIV
+        Ej : float [1/cm]
+           Energy of the lower level (0. is resonance)
         skip_null : boolean (False)
            Skip systems without an entry, else pad with zeros 
 
@@ -287,7 +290,9 @@ class IGMSurvey(object):
         # Loop on systems (Masked)
         for abs_sys in self.abs_sys():
             # Grab
-            mt = (abs_sys._ionN['Z'] == iZion[0]) & (abs_sys._ionN['ion'] == iZion[1])
+            mt = ((abs_sys._ionN['Z'] == iZion[0])
+                  & (abs_sys._ionN['ion'] == iZion[1])
+                  & (abs_sys._ionN['Ej'] == Ej))
             if np.sum(mt) == 1:
                 irow = abs_sys._ionN[mt]
                 # Cut on flg_clm
@@ -304,7 +309,8 @@ class IGMSurvey(object):
                     t.add_row( row )
                 continue
             else:
-                raise ValueError('Multiple entries...')
+                raise ValueError("Multple entries")
+
 
         # Return
         return t[1:]
