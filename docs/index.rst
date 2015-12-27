@@ -20,6 +20,7 @@ Contents:
    :maxdepth: 1
 
    install
+   misc
    api
 
 **Core classes**
@@ -28,9 +29,11 @@ Contents:
    :maxdepth: 1
 
    CUBA <cuba>
+   IGMGalaxyField <igmfield>
    fN <fn>
    IGMSystem <igmsys>
    IGMSurvey <igmsurvey>
+   MetallicityPDF <metallicity>
 
 ..
    To be added:

@@ -38,7 +38,10 @@ def cosm_xz(z, cosmo=None, flg_return=0):
         if flg_return == 0:  # X(z)
             rslt = cosmo.absorption_distance(z)
         elif flg_return == 1:  # dX/dz
-            rslt = cosmo.abs_distance_integrand(z)
+            try:
+                rslt = cosmo.abs_distance_integrand(z)
+            except AttributeError:
+                rslt = cosmo._xfunc(z)
         else:
             raise ValueError('pyigm.utils.cosm_xz: Bad flg {:d}'.format(flg_return))
     else:
