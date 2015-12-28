@@ -28,19 +28,19 @@ class CGM(object):
       Need to check cosmologies
     """
     # Initialize with a .dat file
-    def __init__(self, galaxy, z=None):
+    def __init__(self, galaxy):
         # Checks
-        if not isinstance(galaxy,Galaxy):
+        if not isinstance(galaxy, Galaxy):
             raise IOError("CGM instantiated with a Galaxy")
         self.galaxy = galaxy
         if self.galaxy.z is None:
             raise IOError("Galaxy redshift *must* be specified")
         # Phases
         self.phases = dict(total={},
-                           cold=dict(T=[0,1e3]*u.K),
-                           cool=dict(T=[1e3,1e5]*u.K),
-                           warm=dict(T=[1e5,1e6]*u.K),
-                           hot=dict(T=[1e6,1e10]*u.K))
+                           cold=dict(T=[0, 1e3]*u.K),
+                           cool=dict(T=[1e3, 1e5]*u.K),
+                           warm=dict(T=[1e5, 1e6]*u.K),
+                           hot=dict(T=[1e6, 1e10]*u.K))
         # rlim
         self.rlim = None
         # AbsSys
@@ -88,7 +88,7 @@ class CGMAbsSys(object):
         if cosmo is None:
             from astropy.cosmology import WMAP9 as cosmo
             print('cgm.CGMAbsSys: Using WMAP9 cosmology')
-        ang_sep = self.abs_sys.coord.separation(self.galaxy.coord).to('arcmin')
+        ang_sep = self.igm_sys.coord.separation(self.galaxy.coord).to('arcmin')
         kpc_amin = cosmo.kpc_comoving_per_arcmin( self.galaxy.z)  # kpc per arcmin
         self.rho = ang_sep * kpc_amin / (1+self.galaxy.z)  # Physical
         # Calculate PA too?

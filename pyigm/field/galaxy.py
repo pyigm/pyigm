@@ -4,8 +4,11 @@
 
 from __future__ import print_function, absolute_import, division, unicode_literals
 
-from astropy.coordinates import SkyCoord
+import pdb
+
 from astropy import units as u
+
+from linetools.utils import radec_to_coord
 
 class Galaxy(object):
     """A Galaxy Class
@@ -27,10 +30,7 @@ class Galaxy(object):
     """
     # Initialize with a .dat file
     def __init__(self, radec, z=None):
-        if isinstance(radec, (tuple)):
-            self.coord = SkyCoord(ra=radec[0], dec=radec[1])
-        elif isinstance(radec, SkyCoord):
-            self.coord = radec
+        self.coord = radec_to_coord(radec)
         # Redshift
         self.z = z
         

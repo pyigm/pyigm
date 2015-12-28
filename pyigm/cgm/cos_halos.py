@@ -15,6 +15,8 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 
 import numpy as np
 import os, glob
+import pdb
+
 from astropy.io import fits, ascii
 from astropy import units as u 
 from astropy.table import Table, Column
@@ -22,6 +24,9 @@ from astropy.table import Table, Column
 from linetools.spectra import io as lsio
 
 from pyigm.cgm.cgmsurvey import CGMAbsSurvey
+from pyigm.field.galaxy import Galaxy
+from .cgm import CGMAbsSys
+from pyigm.abssys.igmsys import IGMSystem
 
 class COSHalos(CGMAbsSurvey):
     """Inherits CGM Abs Survey
@@ -35,28 +40,21 @@ class COSHalos(CGMAbsSurvey):
     kin_init_file : str, optional
       Path to kinematics file
     """
-    def __init__(self, fits_path=None, kin_init_file=None, cdir=None):
+    def __init__(self, cdir=None):
         CGMAbsSurvey.__init__(self)
         self.survey = 'COS-Halos'
         self.ref = 'Tumlinson+11; Werk+12; Tumlinson+13; Werk+13'
         #
         if cdir is None:
-            self.cdir = os.environ.get('DROPBOX_DIR')+'/COS-Halos/'
+            if os.environ.get('COSHALOS_DIR') is None:
+                raise ValueError("Need to set COSHALOS_DIR variable")
+            self.cdir = os.environ.get('COSHALOS_DIR')
         else:
             self.cdir = cdir
         # Summary Tables
-        if fits_path is None:
-            self.fits_path = os.path.abspath(os.environ.get('DROPBOX_DIR')+
-                                             '/COS-Halos/lowions/FITS')
-        else:
-            self.fits_path = fits_path
+        self.fits_path = self.cdir+'/lowions/FITS'
         # Kinematics
-        if kin_init_file is None:
-            self.kin_init_file = os.path.abspath(os.environ.get('DROPBOX_DIR')
-                                                 +'/COS-Halos/Kin/'+
-                                                  'coshalo_kin_driver.dat')
-        else:
-            self.kin_init_file = kin_init_file
+        self.kin_init_file = self.cdir+'/Kin/coshalo_kin_driver.dat'
 
     def load_single(self, inp, skip_ions=False):
         """ Load a single COS-Halos sightline
@@ -87,19 +85,21 @@ class COSHalos(CGMAbsSurvey):
         # Read COS-Halos file
         print('cos_halos: Reading {:s}'.format(fil))
         hdu = fits.open(fil)
-        summ = hdu[1].data
-        galx = hdu[2].data
-        self.cgm_abs.append(CGMSys(galx['ra'][0],
-            galx['dec'][0],
-            summ['zfinal'][0],
-            galx['qsora'][0],
-            galx['qsodec'][0], 
-            galx['zqso'][0]))
+        summ = Table(hdu[1].data)
+        galx = Table(hdu[2].data)
+        # Instantiate the galaxy
+        gal = Galaxy((galx['RA'][0], galx['DEC'][0]), z=summ['ZFINAL'][0])
+        # Instantiate the IGM System
+        igm_sys = IGMSystem('CGM',(galx['QSORA'][0], galx['QSODEC'][0]),
+                            summ['ZFINAL'][0], [-400, 400.]*u.km/u.s)
+        igm_sys.zqso = galx['ZQSO'][0]
+        # Instantiate
+        self.cgm_abs.append(CGMAbsSys(gal, igm_sys))
         mm = len(self.cgm_abs)-1
         # COS-Halos naming
-        self.cgm_abs[mm].field = galx['field'][0]
-        self.cgm_abs[mm].gal_id = galx['galid'][0]
-        # Galxy properties
+        gal.field = galx['FIELD'][0]
+        gal.gal_id = galx['GALID'][0]
+        # Galaxy properties
         self.cgm_abs[mm].galaxy.halo_mass = summ['LOGMHALO'][0] 
         self.cgm_abs[mm].galaxy.stellar_mass = summ['LOGMFINAL'][0] 
         self.cgm_abs[mm].galaxy.sfr = (galx['SFR_UPLIM'][0], galx['SFR'][0],
@@ -107,7 +107,6 @@ class COSHalos(CGMAbsSurvey):
         # Ions
         if skip_ions is True:
             return
-        self.cgm_abs[mm].abs_sys.ions = IonClms()
         all_Z = []
         all_ion = []
         for jj in range(summ['nion'][0]):
@@ -118,27 +117,27 @@ class COSHalos(CGMAbsSurvey):
                 try:
                     dat_tab.add_row(Table(iont)[0])
                 except:
-                    xdb.set_trace()
+                    pdb.set_trace()
             all_Z.append(iont['zion'][0][0])
             all_ion.append(iont['zion'][0][1])
         # Add Z,ion
         dat_tab.add_column(Column(all_Z,name='Z'))
         dat_tab.add_column(Column(all_ion,name='ion'))
         # Set
-        self.cgm_abs[mm].abs_sys.ions._data = dat_tab
+        self.cgm_abs[mm].igm_sys._ionN = dat_tab
         # NHI
-        self.cgm_abs[mm].abs_sys.NHI = self.cgm_abs[mm].abs_sys.ions[(1,1)]['CLM']
+        self.cgm_abs[mm].igm_sys.NHI = self.cgm_abs[mm].igm_sys.ions[(1,1)]['CLM']
+        pdb.set_trace()
 
 
     # Load from mega structure
-    def load_mega(self,flg=1, data_file=None, cosh_dct=None, test=False, **kwargs):
+    def load_mega(self,data_file=None, cosh_dct=None, test=False, **kwargs):
         """ Load the data for COS-Halos
 
         Paramaeters
         ----------
         flg: integer (1)
           Flag indicating how to load the data
-          0 = IDL mega structure
           1 = FITS files from Dropbox
         data_file: string
           Name of data file
@@ -147,28 +146,14 @@ class COSHalos(CGMAbsSurvey):
 
         JXP on 30 Nov 2014
         """
-        #from xastropy.cgm import core as xcc
-        #reload(xcc)
-
-        # IDL save file
-        if flg == 0:
-            raise ValueError('This will not work.')
-            if data_file is None:
-                data_file = os.path.abspath(os.environ.get('DROPBOX_DIR')+'/COS-Halos/lowions/'+
-                                            'coshalos_lowmetals_mega.sav')
-        elif flg == 1: # FITS files
-            # Loop
-            if test is True:
-                cos_files = glob.glob(self.fits_path+'/J091*.fits') # For testing
-            else:
-                cos_files = glob.glob(self.fits_path+'/J*.fits')
-            # Setup
-            self.nsys = len(cos_files)
-            # Read
-            for fil in cos_files:
-                self.load_single(fil, **kwargs)
+        # Loop
+        if test is True:
+            cos_files = glob.glob(self.fits_path+'/J091*.fits') # For testing
         else:
-            raise ValueError('cos_halos.load_mega: Not ready for this flag {:d}'.format(flg))
+            cos_files = glob.glob(self.fits_path+'/J*.fits')
+        # Read
+        for fil in cos_files:
+            self.load_single(fil, **kwargs)
 
     
     ########################## ##########################
