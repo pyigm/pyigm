@@ -6,7 +6,7 @@ import numpy as np
 import os, pdb
 from astropy import units as u
 
-from pyigm.abssys.dla import DLASystem, DLASurvey
+from pyigm.abssys.dla import DLASystem
 
 '''
 def data_path(filename):
