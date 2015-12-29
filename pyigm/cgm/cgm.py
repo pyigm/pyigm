@@ -2,6 +2,8 @@
 """
 from __future__ import print_function, absolute_import, division, unicode_literals
 
+import warnings
+
 from astropy import units as u
 
 from pyigm.field.galaxy import Galaxy
@@ -87,7 +89,7 @@ class CGMAbsSys(object):
         # Calculate rho
         if cosmo is None:
             from astropy.cosmology import WMAP9 as cosmo
-            print('cgm.CGMAbsSys: Using WMAP9 cosmology')
+            warnings.warn('cgm.CGMAbsSys: Using WMAP9 cosmology')
             self.cosmo = cosmo
         else:
             self.cosmo = cosmo

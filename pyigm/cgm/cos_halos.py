@@ -23,6 +23,7 @@ from astropy import units as u
 from astropy.table import Table, Column
 
 from linetools.spectra import io as lsio
+from linetools.spectralline import AbsLine
 
 from pyigm.cgm.cgmsurvey import CGMAbsSurvey
 from pyigm.field.galaxy import Galaxy
@@ -57,7 +58,7 @@ class COSHalos(CGMAbsSurvey):
         # Kinematics
         self.kin_init_file = self.cdir+'/Kin/coshalo_kin_driver.dat'
 
-    def load_single(self, inp, skip_ions=False):
+    def load_single(self, inp, skip_ions=False, verbose=True):
         """ Load a single COS-Halos sightline
         Appends to cgm_abs list
 
@@ -71,6 +72,7 @@ class COSHalos(CGMAbsSurvey):
               Name of galaxy (e.g. '268_22')
         skip_ions : bool, optional
           Avoid loading the ions (not recommended)
+        verbose : bool, optional
         """
         # Parse input
         if isinstance(inp, basestring):
@@ -86,7 +88,8 @@ class COSHalos(CGMAbsSurvey):
             raise IOError('Bad input to load_single')
 
         # Read COS-Halos file
-        print('cos_halos: Reading {:s}'.format(fil))
+        if verbose:
+            print('cos_halos: Reading {:s}'.format(fil))
         hdu = fits.open(fil)
         summ = Table(hdu[1].data)
         galx = Table(hdu[2].data)
@@ -145,9 +148,9 @@ class COSHalos(CGMAbsSurvey):
 
         Paramaeters
         ----------
-        data_file: string
+        data_file : string
           Name of data file
-        pckl_fil: string
+        pckl_fil : string
           Name of file for pickling
         """
         # Loop
@@ -259,10 +262,7 @@ class COSHalos(CGMAbsSurvey):
         JXP on 12 Oct 2015
         """
         # Init
-        if isinstance(inp,int):
-            cgm_abs = self.cgm_abs[inp]
-        elif isinstance(inp,tuple):
-            cgm_abs = self[inp]
+        cgm_abs = self[inp]
         # Directories
         galdir = self.cdir+'/Galaxies/'
         #fielddir = 'fields/'+cgm_abs.field+'/'
@@ -299,10 +299,7 @@ class COSHalos(CGMAbsSurvey):
     
         JXP on 11 Dec 2014
         """
-        if isinstance(inp,int):
-            cgm_abs = self.cgm_abs[inp]
-        elif isinstance(inp,tuple):
-            cgm_abs = self[inp]
+        cgm_abs = self[inp]
         # Directories
         sysdir = cgm_abs.galaxy.gal_id+'_z{:5.3f}'.format(cgm_abs.galaxy.z)
         sysname = cgm_abs.galaxy.field+'_'+sysdir
@@ -318,12 +315,46 @@ class COSHalos(CGMAbsSurvey):
         # Read
         slicedir = self.cdir+'/Targets/fitting/'
         slicename = sysname+'_'+trans+'_slice.fits'
-        spec = lsio.readspec(slicedir+slicename, flux_tags=['FNORM'], sig_tags=['ENORM'])
+        try:
+            spec = lsio.readspec(slicedir+slicename, flux_tags=['FNORM'], sig_tags=['ENORM'])
+        except IOError:
+            warnings.warn("File {:s} not found".format(slicedir+slicename))
+            return None
         # Fill velocity
         spec.velo = spec.relative_vel((cgm_abs.galaxy.z+1)*wrest)
     
         #spec.qck_plot()
         return spec
+
+    def stack_plot(self, inp, use_lines=None, ymnx=None, **kwargs):
+        """ Generate a stack plot of the key lines for a given COS-Halos system
+        Parameters
+        ----------
+        inp : int or tuple
+          int -- Index of the cgm_abs list
+          tuple -- (field,gal_id)
+        """
+        # Init
+        from linetools.analysis import plots as ltap
+        if ymnx is None:
+            ymnx=(-0.1,1.2)
+        cgm_abs = self[inp]
+        abs_lines = []
+        # Setup the lines (defaults to a key seto)
+        if use_lines is None:
+            use_lines = [1215.6700, 1025.7223, 1334.5323, 977.020, 1031.9261, 1037.6167,
+                         1260.4221, 1206.500, 1393.7550, 2796.352]*u.AA
+        for iline in use_lines:
+            spec = self.load_bg_cos_spec(inp, iline)
+            if spec is None:
+                print('Skipping {:g}. Assuming no coverage'.format(iline))
+            aline = AbsLine(iline, closest=True)
+            aline.analy['spec'] = spec
+            aline.attrib['z'] = cgm_abs.galaxy.z
+            abs_lines.append(aline)
+        # Execute
+        ltap.stack_plot(abs_lines, vlim=[-400., 400]*u.km/u.s, ymnx=ymnx, **kwargs)
+
 
 
     def __getitem__(self, inp):
@@ -338,6 +369,15 @@ class COSHalos(CGMAbsSurvey):
         ----------
         cgm_abs
         '''
+        if isinstance(inp,int):
+            return self.cgm_abs[inp]
+        elif isinstance(inp,tuple):
+            if not isinstance(inp[0], basestring):
+                raise IOError("Bad input")
+            if not isinstance(inp[1], basestring):
+                raise IOError("Bad input")
+        else:
+            raise IOError("Bad input")
         # Generate lists
         fields = np.array([cgm_abs.galaxy.field for cgm_abs in self.cgm_abs])
         galids = np.array([cgm_abs.galaxy.gal_id for cgm_abs in self.cgm_abs])
