@@ -88,6 +88,9 @@ class CGMAbsSys(object):
         if cosmo is None:
             from astropy.cosmology import WMAP9 as cosmo
             print('cgm.CGMAbsSys: Using WMAP9 cosmology')
+            self.cosmo = cosmo
+        else:
+            self.cosmo = cosmo
         ang_sep = self.igm_sys.coord.separation(self.galaxy.coord).to('arcmin')
         kpc_amin = cosmo.kpc_comoving_per_arcmin( self.galaxy.z)  # kpc per arcmin
         self.rho = ang_sep * kpc_amin / (1+self.galaxy.z)  # Physical

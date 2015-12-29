@@ -28,6 +28,7 @@ Contents:
 .. toctree::
    :maxdepth: 1
 
+   CGM <cgm>
    CUBA <cuba>
    IGMGalaxyField <igmfield>
    fN <fn>

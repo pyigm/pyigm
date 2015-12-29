@@ -39,13 +39,13 @@ class CGMAbsSurvey(object):
         try:
             lst = [getattr(cgm_abs, k) for cgm_abs in self.cgm_abs]
         except AttributeError:
-            # Try AbsLine_Sys next
+            # Galaxy?
             try:
-                lst = [getattr(cgm_abs.igm_sys, k) for cgm_abs in self.cgm_abs]
+                lst = [getattr(cgm_abs.galaxy, k) for cgm_abs in self.cgm_abs]
             except AttributeError:
-                # Galaxy?
+                # Try AbsLine_Sys last
                 try:
-                    lst = [getattr(cgm_abs.galaxy, k) for cgm_abs in self.cgm_abs]
+                    lst = [getattr(cgm_abs.igm_sys, k) for cgm_abs in self.cgm_abs]
                 except AttributeError:
                     print('cgm.core: Attribute not found!')
                     pdb.set_trace()
