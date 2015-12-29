@@ -43,7 +43,6 @@ def test_dat_list():
     assert lls.nsys == 165
 
 
-@remote_data
 def test_sdss():
     """ Test SDSS DR7
     """

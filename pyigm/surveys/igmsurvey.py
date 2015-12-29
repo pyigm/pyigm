@@ -286,13 +286,19 @@ class IGMSurvey(object):
         t = Table(self.abs_sys()[0]._ionN[0:1]).copy()   # Avoids mixin trouble
         t.add_column(Column(['dum'], name='name', dtype='<U32'))
         t = t[keys]
+        if 'Ej' not in keys:
+            warnings.warn("Ej not in your ionN table.  Ignoring. Be careful..")
 
         # Loop on systems (Masked)
         for abs_sys in self.abs_sys():
             # Grab
-            mt = ((abs_sys._ionN['Z'] == iZion[0])
-                  & (abs_sys._ionN['ion'] == iZion[1])
-                  & (abs_sys._ionN['Ej'] == Ej))
+            if 'Ej' in keys:
+                mt = ((abs_sys._ionN['Z'] == iZion[0])
+                      & (abs_sys._ionN['ion'] == iZion[1])
+                      & (abs_sys._ionN['Ej'] == Ej))
+            else:
+                mt = ((abs_sys._ionN['Z'] == iZion[0])
+                      & (abs_sys._ionN['ion'] == iZion[1]))
             if np.sum(mt) == 1:
                 irow = abs_sys._ionN[mt]
                 # Cut on flg_clm

@@ -128,7 +128,7 @@ class LLSSystem(IGMSystem):
         # LLS keys
         self.bgsrc = self._datdict['QSO name']
         self.zem = float(self._datdict['QSO zem'])  # Was zqso
-        self.MH = float(self._datdict['[M/H] ave'])
+        self.ZH = float(self._datdict['[M/H] ave'])
         self.nsub = int(self._datdict['N subsys'])
         self.cldyfil = self._datdict['Cloudy Grid File']
 
@@ -387,7 +387,7 @@ class LLSSystem(IGMSystem):
                 self.__class__.__name__,
                  self.coord.ra.to_string(unit=u.hour,sep=':',pad=True),
                  self.coord.dec.to_string(sep=':',pad=True,alwayssign=True),
-                 self.zabs, self.NHI, self.tau_LL, self.MH))
+                 self.zabs, self.NHI, self.tau_LL, self.ZH))
 
     def print_abs_type(self):
         """Return a string representing the type of vehicle this is."""

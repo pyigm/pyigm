@@ -219,15 +219,7 @@ class LLSSurvey(IGMSurvey):
         """
         # LLS File
         lls_fil = pyigm_path+'/data/LLS/SDSS/lls_dr7_stat_LLS.fits.gz'
-        if len(glob.glob(lls_fil)) == 0:
-            url = 'https://dl.dropboxusercontent.com/u/6285549/LLS/SDSS/lls_dr7_stat_LLS.fits'
-            print('SDSS-DR7: Grabbing LLS file from {:s}'.format(url))
-            f = urllib2.urlopen(url)
-            with open(lls_fil, "wb") as code:
-                code.write(f.read())
-            print('SDSS-DR7: Written to {:s}'.format(lls_fil))
-        else:
-            print('SDSS-DR7: Loading LLS file {:s}'.format(lls_fil))
+        print('SDSS-DR7: Loading LLS file {:s}'.format(lls_fil))
         lls = QTable.read(lls_fil)
 
         # Rename some columns?
@@ -240,15 +232,7 @@ class LLSSurvey(IGMSurvey):
 
         # QSOs file
         qsos_fil = pyigm_path+'/data/LLS/SDSS/lls_dr7_qsos_sn2050.fits.gz'
-        if len(glob.glob(qsos_fil)) == 0:
-            url = 'https://dl.dropboxusercontent.com/u/6285549/LLS/SDSS/lls_dr7_qsos_sn2050.fits'
-            print('SDSS-DR7: Grabbing QSOs file from {:s}'.format(url))
-            f = urllib2.urlopen(url)
-            with open(qsos_fil, "wb") as code:
-                code.write(f.read())
-            print('SDSS-DR7: Written to {:s}'.format(qsos_fil))
-        else:
-            print('SDSS-DR7: Loading QSOs file {:s}'.format(qsos_fil))
+        print('SDSS-DR7: Loading QSOs file {:s}'.format(qsos_fil))
         qsos = QTable.read(qsos_fil)
         lls_survey.sightlines = qsos
 
