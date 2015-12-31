@@ -55,6 +55,7 @@ class COSHalos(CGMAbsSurvey):
             self.cdir = cdir
         # Summary Tables
         self.fits_path = self.cdir+'/Summary/'
+        self.cldy = Table.read(self.fits_path+'coshaloscloudysol_newphi.fits')
         # Kinematics
         self.kin_init_file = self.cdir+'/Kin/coshalo_kin_driver.dat'
 
@@ -106,6 +107,13 @@ class COSHalos(CGMAbsSurvey):
         igm_sys = IGMSystem('CGM',(galx['QSORA'][0], galx['QSODEC'][0]),
                             summ['ZFINAL'][0], [-400, 400.]*u.km/u.s)
         igm_sys.zqso = galx['ZQSO'][0]
+        # Metallicity
+        mtc = np.where((self.cldy['GALID'] == gal.gal_id) &
+                       (self.cldy['FIELD'] == gal.field))[0]
+        if len(mtc) == 1:
+            igm_sys.ZH = self.cldy[mtc]['ZBEST'][0]
+        else:
+            igm_sys.ZH = -99.
         # Instantiate
         self.cgm_abs.append(CGMAbsSys(gal, igm_sys))
         # Ions
@@ -358,7 +366,7 @@ class COSHalos(CGMAbsSurvey):
 
 
     def __getitem__(self, inp):
-        '''Grab CgmAbs Class from the list
+        """Grab CgmAbs Class from the list
 
         Parameters:
         -----------
@@ -368,7 +376,7 @@ class COSHalos(CGMAbsSurvey):
         Returns:
         ----------
         cgm_abs
-        '''
+        """
         if isinstance(inp,int):
             return self.cgm_abs[inp]
         elif isinstance(inp,tuple):

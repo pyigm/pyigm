@@ -16,16 +16,31 @@ from astropy import constants as const
 
 class IgmGalaxyField(object):
     """ Class for a field associating galaxies to the IGM/CGM
-
-    Parameters
+    Attributes
     ----------
-    radec : tuple or SkyCoord
-        (RA,DEC) in deg or astropy.coordinate
-    name : str, optional
+    coord : SkyCoord
+      Field coordinates.  Likely near the center
+    name : str
+      Name of the field
+    cosmo : astropy.cosmology
+    igm : ??
+    targets : Table
+    galaxies : Table
+    observing : Table
+      Summarizes observations on the galaxies
     """
 
     # Initialize 
     def __init__(self, radec, name=None, cosmo=None, verbose=False):
+        """
+        Parameters
+        ----------
+        radec : tuple or SkyCoord
+          (RA,DEC) in deg or astropy.coordinate
+        name : str, optional
+        cosmo : astropy.cosmology, optional
+        verbose
+        """
         # coord
         if isinstance(radec, (tuple)):
             self.coord = SkyCoord(ra=radec[0], dec=radec[1])
@@ -42,7 +57,7 @@ class IgmGalaxyField(object):
         if cosmo is None:
             from astropy.cosmology import Planck15 as cosmo
             if verbose is True:
-                print('IgmGalxyField: Using Planck15 cosmology')
+                print('IgmGalaxyField: Using Planck15 cosmology')
         self.cosmo = cosmo
 
         # Init
