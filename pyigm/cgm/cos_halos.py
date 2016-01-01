@@ -42,7 +42,7 @@ class COSHalos(CGMAbsSurvey):
     kin_init_file : str, optional
       Path to kinematics file
     """
-    def __init__(self, cdir=None):
+    def __init__(self, cdir=None, fits_path=None, kin_init_file=None):
         CGMAbsSurvey.__init__(self)
         self.survey = 'COS-Halos'
         self.ref = 'Tumlinson+11; Werk+12; Tumlinson+13; Werk+13'
@@ -54,8 +54,14 @@ class COSHalos(CGMAbsSurvey):
         else:
             self.cdir = cdir
         # Summary Tables
-        self.fits_path = self.cdir+'/Summary/'
-        self.cldy = Table.read(self.fits_path+'coshaloscloudysol_newphi.fits')
+        if fits_path is None:
+            self.fits_path = self.cdir+'/Summary/'
+        else:
+            self.fits_path = fits_path
+        try:
+            self.cldy = Table.read(self.fits_path+'coshaloscloudysol_newphi.fits')
+        except IOError:
+            self.cldy = None
         # Kinematics
         self.kin_init_file = self.cdir+'/Kin/coshalo_kin_driver.dat'
 
@@ -108,12 +114,12 @@ class COSHalos(CGMAbsSurvey):
                             summ['ZFINAL'][0], [-400, 400.]*u.km/u.s)
         igm_sys.zqso = galx['ZQSO'][0]
         # Metallicity
-        mtc = np.where((self.cldy['GALID'] == gal.gal_id) &
-                       (self.cldy['FIELD'] == gal.field))[0]
-        if len(mtc) == 1:
-            igm_sys.ZH = self.cldy[mtc]['ZBEST'][0]
-        else:
-            igm_sys.ZH = -99.
+        igm_sys.ZH = -99.
+        if self.cldy is not None:
+            mtc = np.where((self.cldy['GALID'] == gal.gal_id) &
+                           (self.cldy['FIELD'] == gal.field))[0]
+            if len(mtc) == 1:
+                igm_sys.ZH = self.cldy[mtc]['ZBEST'][0]
         # Instantiate
         self.cgm_abs.append(CGMAbsSys(gal, igm_sys))
         # Ions
