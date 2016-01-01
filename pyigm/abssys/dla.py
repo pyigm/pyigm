@@ -121,6 +121,7 @@ class DLASystem(IGMSystem):
             clm_fil = self.tree+self._datdict['Abund file']
             # Read
             self._clmdict = igmau.read_clmfile(clm_fil, linelist=linelist)
+            #pdb.set_trace()
             # Build components
             components = ltigu.build_components_from_abslines([],
                                                               clmdict=self._clmdict,
@@ -131,7 +132,7 @@ class DLASystem(IGMSystem):
             self._indiv_ionclms = igmau.read_ion_file(ion_fil, components)
             # Parse .all file
             all_file = ion_fil.split('.ion')[0]+'.all'
-            self.all_file=all_file #MF: useful to have
+            self.all_file=all_file  #MF: useful to have
             _ = igmau.read_all_file(all_file, components=components)
             # Build table
             self._ionN = ltigu.iontable_from_components(components, ztbl=self.zabs)
