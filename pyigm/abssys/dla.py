@@ -97,9 +97,6 @@ class DLASystem(IGMSystem):
         # Generate with type
         IGMSystem.__init__(self, 'DLA', radec, zabs, vlim, NHI=NHI, **kwargs)
 
-        # Other
-        self.ZH = 0.
-
     def get_ions(self, use_Nfile=False, idict=None, update_zvlim=True, linelist=None):
         """Parse the ions for each Subsystem
 
@@ -152,10 +149,4 @@ class DLASystem(IGMSystem):
                  self.coord.ra.to_string(unit=u.hour, sep=':', pad=True),
                  self.coord.dec.to_string(sep=':', pad=True),
                  self.zabs, self.NHI, self.ZH))
-
-    def print_abs_type(self):
-        """"Return a string representing the type of vehicle this is."""
-        return 'DLA'
-
-
 

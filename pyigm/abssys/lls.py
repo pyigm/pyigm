@@ -104,7 +104,7 @@ class LLSSystem(IGMSystem):
         IGMSystem.__init__(self, 'LLS', radec, zabs, vlim, NHI=NHI, **kwargs)
 
         # Set tau_LL
-        self.tau_LL = (10.**self.NHI)*6.3391597e-18  # Should replace with photocross
+        self.tau_LL = (10.**self.NHI)*ltaa.photo_cross(1, 1, 1*u.Ry)
 
         # Other
         self.zpeak = None  # Optical depth weighted redshift
@@ -180,6 +180,7 @@ class LLSSystem(IGMSystem):
           dict containing the IonClms info
         use_Nfile : bool, optional
           Parse ions from a .clm file (JXP historical)
+          NOTE: This ignores velocity constraints on components (i.e. skip_vel=True)
         update_zvlim : bool, optional
           Update zvlim from lines in .clm (as applicable)
         linelist : LineList
@@ -197,7 +198,10 @@ class LLSSystem(IGMSystem):
                 # Parse .clm file
                 self.subsys[lbl]._clmdict = igmau.read_clmfile(clm_fil, linelist=linelist)
                 # Build components from lines
-                components = ltiu.build_components_from_abslines([], clmdict=self.subsys[lbl]._clmdict, coord=self.coord)
+                components = ltiu.build_components_from_abslines([],
+                                                                 clmdict=self.subsys[lbl]._clmdict,
+                                                                 coord=self.coord,
+                                                                 skip_vel=True)
                 # Update z, vlim
                 if update_zvlim:
                     vmin,vmax = 9999., -9999.

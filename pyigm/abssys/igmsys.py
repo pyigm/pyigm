@@ -44,10 +44,6 @@ class IGMSystem(AbsSystem):
                  self.coord.dec.to_string(sep=':', pad=True),
                  self.zabs, self.NHI, self.ZH))
 
-    def print_abs_type(self):
-        """"Return a string representing the type of vehicle this is."""
-        return 'DLA'
-
 
 class HISystem(AbsSystem):
     """Class for HI Lyman Absorption Line System

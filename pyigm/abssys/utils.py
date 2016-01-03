@@ -383,7 +383,7 @@ def sum_ionN(tbl1, tbl2):
             flags = [row1['flag_N'], row2['flag_N']]
             if 2 in flags:   # At least one saturated
                 flag = 2
-            elif 1 in flags: # None saturated; at least one detection
+            elif 1 in flags:  # None saturated; at least one detection
                 flag = 1
             else:            # Both upper limits
                 flag = 3
