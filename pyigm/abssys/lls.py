@@ -104,7 +104,7 @@ class LLSSystem(IGMSystem):
         IGMSystem.__init__(self, 'LLS', radec, zabs, vlim, NHI=NHI, **kwargs)
 
         # Set tau_LL
-        self.tau_LL = (10.**self.NHI)*ltaa.photo_cross(1, 1, 1*u.Ry)
+        self.tau_LL = (10.**self.NHI)*ltaa.photo_cross(1, 1, 1*u.Ry).to('cm**2').value
 
         # Other
         self.zpeak = None  # Optical depth weighted redshift
