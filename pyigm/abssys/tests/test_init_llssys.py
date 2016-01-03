@@ -20,7 +20,7 @@ def test_simple_init():
     #
     np.testing.assert_allclose(lls.vlim[0].value,-500.)
     np.testing.assert_allclose(lls.NHI, 17.9)
-    np.testing.assert_allclose(lls.tau_LL, 5.03537353413629)
+    np.testing.assert_allclose(lls.tau_LL, 5.035377286841938)
 
 def test_dat_init():
     # JXP .dat files
