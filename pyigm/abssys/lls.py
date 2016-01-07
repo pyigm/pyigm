@@ -12,6 +12,7 @@ from linetools.spectralline import AbsLine
 from linetools.analysis import absline as ltaa
 from linetools.lists.linelist import LineList
 from linetools.isgm.abscomponent import AbsComponent
+from linetools.isgm import utils as ltiu
 
 from pyigm.abssys.igmsys import IGMSystem, AbsSubSystem
 from pyigm.abssys import utils as igmau
@@ -185,7 +186,6 @@ class LLSSystem(IGMSystem):
           Update zvlim from lines in .clm (as applicable)
         linelist : LineList
         """
-        from linetools.isgm import utils as ltiu
         if idict is not None:
             table = dict_to_ions(idict)
             self._ionN = table
@@ -202,14 +202,11 @@ class LLSSystem(IGMSystem):
                                                                  clmdict=self.subsys[lbl]._clmdict,
                                                                  coord=self.coord,
                                                                  skip_vel=True)
+                self.subsys[lbl]._components = components
                 # Update z, vlim
                 if update_zvlim:
-                    vmin,vmax = 9999., -9999.
-                    for component in components:
-                        vmin = min(vmin, component.vlim[0].value)
-                        vmax = max(vmax, component.vlim[1].value)
+                    self.update_vlim(sub_system=lbl)
                     self.subsys[lbl].zabs = self.subsys[lbl]._clmdict['zsys']
-                    self.subsys[lbl].vlim = [vmin, vmax]*u.km/u.s
                 # Read .ion file and fill in components
                 ion_fil = self.tree+self.subsys[lbl]._clmdict['ion_fil']
                 self.subsys[lbl]._indiv_ionclms = igmau.read_ion_file(ion_fil, components)
@@ -320,6 +317,43 @@ class LLSSystem(IGMSystem):
         # Return
         return model
 
+    def load_components(self, inp):
+        """ Load components for subsystems from an input object
+
+        May also update/create subsystems
+
+        Parameters
+        ----------
+        inp : dict or ??
+          Input object for loading the components
+        """
+        if isinstance(inp, dict):
+            lbls= map(chr, range(65, 91))
+            # Subsystems?
+            if 'A' in inp.keys():
+                for lbl in lbls:
+                    if lbl in inp.keys():
+                        if lbl not in self.subsys.keys():
+                            self.subsys[lbl] = AbsSubSystem(self,
+                                                            inp[lbl]['zsys'],
+                                                            [-300., 300]*u.km/u.s,
+                                                            lbl)
+                        # Fill/update
+                        self.subsys[lbl]._clmdict = inp[lbl]  # Not so necessary
+                        components = ltiu.build_components_from_dict(self.subsys[lbl]._clmdict,
+                                                                 coord=self.coord,
+                                                                 skip_vel=True)
+                        self.subsys[lbl]._components = components
+                        # Update vlim
+                        self.update_vlim(sub_system=lbl)
+                    else:
+                        pass
+                self.nsub = len(self.subsys.keys())
+            else:
+                raise ValueError("Not sure what to do here")
+        else:
+            raise NotImplementedError("Not ready for this input")
+
     def get_zpeak(self):
         """ Measure zpeak from an ionic transition
         """
@@ -384,6 +418,24 @@ class LLSSystem(IGMSystem):
             return (0,0), 0.
         # Return
         return ion, vpeak
+
+    def update_vlim(self, sub_system=None):
+        """ Update vlim in the main or subsystems
+
+        Parameters
+        ----------
+        sub_system : str, optional
+          If provided, apply to given sub-system
+        """
+        vmin,vmax = 9999., -9999.
+        if sub_system is not None:
+            components = self.subsys[sub_system]._components
+            for component in components:
+                vmin = min(vmin, component.vlim[0].value)
+                vmax = max(vmax, component.vlim[1].value)
+            self.subsys[sub_system].vlim = [vmin, vmax]*u.km/u.s
+        else:
+            raise NotImplementedError("Need to modify for the main")
 
     # Output
     def __repr__(self):

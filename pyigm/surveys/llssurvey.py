@@ -5,6 +5,7 @@ import imp, glob
 import pdb
 import urllib2
 import h5py
+import json
 
 
 from astropy.table import QTable, Column, Table
@@ -90,18 +91,22 @@ class LLSSurvey(IGMSurvey):
         return lls_survey
 
     @classmethod
-    def load_HDLLS(cls, grab_spectra=False):
+    def load_HDLLS(cls, grab_spectra=False, skip_trans=True):
         """ Default sample of LLS (HD-LLS, DR1)
 
         Parameters
         ----------
         grab_spectra : bool, optional
           Grab 1D spectra?  (155Mb)
+        skip_trans : bool, optional
+          Skip generating sub-systems and loading transitions?
 
         Return
         ------
         lls_survey
         """
+        import tarfile
+
         # Pull from Internet (as necessary)
         summ_fil = pyigm_path+"/data/LLS/HD-LLS/HD-LLS_DR1.fits"
         print('HD-LLS: Loading summary file {:s}'.format(summ_fil))
@@ -111,8 +116,8 @@ class LLSSurvey(IGMSurvey):
         print('HD-LLS: Loading ions file {:s}'.format(ions_fil))
 
         # Transitions
-        clm_fil = pyigm_path+"/data/LLS/HD-LLS/HD-LLS_clms.json.gz"
-        print('HD-LLS: Loading transitions file {:s}'.format(clm_fil))
+        clm_files = pyigm_path+"/data/LLS/HD-LLS/HD-LLS_clms.tar.gz"
+        print('HD-LLS: Loading transitions from {:s}'.format(clm_files))
 
         # Metallicity
         ZH_fil = pyigm_path+"/data/LLS/HD-LLS/HD-LLS_DR1_dustnhi.hdf5"
@@ -120,19 +125,35 @@ class LLSSurvey(IGMSurvey):
 
         # Read
         lls_survey = cls.from_sfits(summ_fil)
-        names = lls_survey.name
+        names = list(lls_survey.name)
+
         # Load transitions
-        clm_dict = ltu.loadjson(clm_fil)
-        for key in clm_dict.keys():
-            idx = np.where(key == names)[0]
-            if len(idx) != 1:
-                raise ValueError("Cannot match this LLS: {:s}".format(key))
-            pdb.set_trace()
+        if not skip_trans:
+            tar = tarfile.open(clm_files)
+            for member in tar.getmembers():
+                if '.' not in member.name:
+                    print('Skipping a likely folder: {:s}'.format(member.name))
+                    continue
+                # Extract
+                f = tar.extractfile(member)
+                tdict = json.load(f)
+                # Find system
+                i0 = member.name.rfind('/')
+                i1 = member.name.rfind('_clm')
+                try:
+                    idx = names.index(member.name[i0+1:i1])
+                except ValueError:
+                    print('Skipping {:s}, not statistical in DR1'.format(member.name[i0+1:i1]))
+                    continue
+                # Fill up
+                lls_survey._abs_sys[idx].load_components(tdict)
+                lls_survey._abs_sys[idx]._components = lls_survey._abs_sys[idx].subsys['A']._components
+
         # Load ions
         lls_survey.fill_ions(jfile=ions_fil)
+
         # Load metallicity
         fh5=h5py.File(ZH_fil, 'r')
-        # Get coords
         ras = []
         decs = []
         zval = []
