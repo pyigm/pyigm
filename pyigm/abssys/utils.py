@@ -26,6 +26,8 @@ from linetools.analysis import absline as ltaa
 def dict_to_ions(idict):
     """  Manipulate dict into an ion astropy Table
 
+    Will likely be deprecated
+
     Parameters
     ----------
     idict : dict

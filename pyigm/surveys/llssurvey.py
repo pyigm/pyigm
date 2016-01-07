@@ -104,42 +104,30 @@ class LLSSurvey(IGMSurvey):
         """
         # Pull from Internet (as necessary)
         summ_fil = pyigm_path+"/data/LLS/HD-LLS/HD-LLS_DR1.fits"
-        if len(glob.glob(summ_fil)) == 0:
-            url = 'http://www.ucolick.org/~xavier/HD-LLS/DR1/HD-LLS_DR1.fits'
-            print('HD-LLS: Grabbing summary file from {:s}'.format(url))
-            f = urllib2.urlopen(url)
-            with open(summ_fil, "wb") as code:
-                code.write(f.read())
-            print('HD-LLS: Written to {:s}'.format(summ_fil))
-        else:
-            print('HD-LLS: Loading summary file {:s}'.format(summ_fil))
+        print('HD-LLS: Loading summary file {:s}'.format(summ_fil))
 
         # Ions
         ions_fil = pyigm_path+"/data/LLS/HD-LLS/HD-LLS_ions.json"
-        if len(glob.glob(ions_fil)) == 0:
-            url = 'http://www.ucolick.org/~xavier/HD-LLS/DR1/HD-LLS_ions.json'
-            print('HD-LLS: Grabbing JSON ion file from {:s}'.format(url))
-            f = urllib2.urlopen(url)
-            with open(ions_fil, "wb") as code:
-                code.write(f.read())
-            print('HD-LLS: Written to {:s}'.format(ions_fil))
-        else:
-            print('HD-LLS: Loading ions file {:s}'.format(ions_fil))
+        print('HD-LLS: Loading ions file {:s}'.format(ions_fil))
+
+        # Transitions
+        clm_fil = pyigm_path+"/data/LLS/HD-LLS/HD-LLS_clms.json.gz"
+        print('HD-LLS: Loading transitions file {:s}'.format(clm_fil))
 
         # Metallicity
         ZH_fil = pyigm_path+"/data/LLS/HD-LLS/HD-LLS_DR1_dustnhi.hdf5"
-        if len(glob.glob(ZH_fil)) == 0:
-            url = 'http://www.ucolick.org/~xavier/HD-LLS/DR1/HD-LLS_dustnhi.hdf5'
-            print('HD-LLS: Grabbing hdf5 metallicity file from {:s}'.format(url))
-            f = urllib2.urlopen(url)
-            with open(ZH_fil, "wb") as code:
-                code.write(f.read())
-            print('HD-LLS: Written to {:s}'.format(ZH_fil))
-        else:
-            print('HD-LLS: Loading metallicity file {:s}'.format(ZH_fil))
+        print('HD-LLS: Loading metallicity file {:s}'.format(ZH_fil))
 
         # Read
         lls_survey = cls.from_sfits(summ_fil)
+        names = lls_survey.name
+        # Load transitions
+        clm_dict = ltu.loadjson(clm_fil)
+        for key in clm_dict.keys():
+            idx = np.where(key == names)[0]
+            if len(idx) != 1:
+                raise ValueError("Cannot match this LLS: {:s}".format(key))
+            pdb.set_trace()
         # Load ions
         lls_survey.fill_ions(jfile=ions_fil)
         # Load metallicity
