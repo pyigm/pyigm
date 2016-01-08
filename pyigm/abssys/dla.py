@@ -6,7 +6,7 @@ import pdb
 
 from astropy import units as u
 
-from linetools.isgm import utils as ltigu
+from linetools.isgm import utils as ltiu
 
 from pyigm.abssys.igmsys import IGMSystem
 from pyigm.abssys import utils as igmau
@@ -120,7 +120,7 @@ class DLASystem(IGMSystem):
             self._clmdict = igmau.read_clmfile(clm_fil, linelist=linelist)
             #pdb.set_trace()
             # Build components
-            components = ltigu.build_components_from_abslines([],
+            components = ltiu.build_components_from_abslines([],
                                                               clmdict=self._clmdict,
                                                               coord=self.coord,
                                                               skip_vel=True)
@@ -132,7 +132,7 @@ class DLASystem(IGMSystem):
             self.all_file=all_file  #MF: useful to have
             _ = igmau.read_all_file(all_file, components=components)
             # Build table
-            self._ionN = ltigu.iontable_from_components(components, ztbl=self.zabs)
+            self._ionN = ltiu.iontable_from_components(components, ztbl=self.zabs)
             # Add to AbsSystem
             for comp in components:
                 self.add_component(comp)
@@ -141,6 +141,23 @@ class DLASystem(IGMSystem):
             self._ionN = table
         else:
             raise IOError("Not ready for this")
+
+    def load_components(self, inp):
+        """ Load components from an input object
+
+        Parameters
+        ----------
+        inp : dict or ??
+          Input object for loading the components
+        """
+        if isinstance(inp, dict):
+            components = ltiu.build_components_from_dict(inp, coord=self.coord,
+                                                         skip_vel=True)
+            # Add in
+            for component in components:
+                self.add_component(component)
+        else:
+            raise NotImplementedError("Not ready for this input")
 
     # Output
     def __repr__(self):

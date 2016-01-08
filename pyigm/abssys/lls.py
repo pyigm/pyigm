@@ -419,23 +419,7 @@ class LLSSystem(IGMSystem):
         # Return
         return ion, vpeak
 
-    def update_vlim(self, sub_system=None):
-        """ Update vlim in the main or subsystems
 
-        Parameters
-        ----------
-        sub_system : str, optional
-          If provided, apply to given sub-system
-        """
-        vmin,vmax = 9999., -9999.
-        if sub_system is not None:
-            components = self.subsys[sub_system]._components
-            for component in components:
-                vmin = min(vmin, component.vlim[0].value)
-                vmax = max(vmax, component.vlim[1].value)
-            self.subsys[sub_system].vlim = [vmin, vmax]*u.km/u.s
-        else:
-            raise NotImplementedError("Need to modify for the main")
 
     # Output
     def __repr__(self):

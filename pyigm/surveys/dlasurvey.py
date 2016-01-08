@@ -5,11 +5,11 @@ import os
 import imp, glob
 import pdb
 import urllib2
+import json
 
 from astropy.table import QTable, Column
 from astropy import units as u
 #from astropy.coordinates import SkyCoord
-
 
 from pyigm.surveys.igmsurvey import IGMSurvey
 
@@ -24,7 +24,7 @@ class DLASurvey(IGMSurvey):
 
     """
     @classmethod
-    def load_H100(cls, grab_spectra=False):
+    def load_H100(cls, grab_spectra=False, skip_trans=True):
         """ Sample of unbiased HIRES DLAs compiled and analyzed by Neeleman+13
 
         Neeleman, M. et al. 2013, ApJ, 769, 54
@@ -33,42 +33,53 @@ class DLASurvey(IGMSurvey):
         ----------
         grab_spectra : bool, optional
           Grab 1D spectra?  (141Mb)
+        skip_trans : bool, optional
+          Skip loading transitions (takes ~60s)?
 
         Return
         ------
         dla_survey
         """
+        import tarfile
+
         # Pull from Internet (as necessary)
         summ_fil = pyigm_path+"/data/DLA/H100/H100_DLA.fits"
-        """
-        if len(glob.glob(summ_fil)) == 0:
-            url = 'https://dl.dropboxusercontent.com/u/6285549/DLA/H100/H100_DLA.fits'
-            print('H100: Grabbing summary file from {:s}'.format(url))
-            f = urllib2.urlopen(url)
-            with open(summ_fil, "wb") as code:
-                code.write(f.read())
-            print('H100: Written to {:s}'.format(summ_fil))
-        else:
-        """
         print('H100: Loading summary file {:s}'.format(summ_fil))
 
         # Ions
         ions_fil = pyigm_path+"/data/DLA/H100/H100_DLA_ions.json"
-        """
-        if len(glob.glob(ions_fil)) == 0:
-            url = 'https://dl.dropboxusercontent.com/u/6285549/DLA/H100/H100_DLA_ions.json'
-            print('H100: Grabbing JSON ion file from {:s}'.format(url))
-            f = urllib2.urlopen(url)
-            with open(ions_fil, "wb") as code:
-                code.write(f.read())
-            print('H100: Written to {:s}'.format(ions_fil))
-        else:
-        """
         print('H100: Loading ions file {:s}'.format(ions_fil))
+
+        # Transitions
+        trans_fil = pyigm_path+"/data/DLA/H100/H100_DLA_clms.tar.gz"
 
         # Read
         dla_survey = cls.from_sfits(summ_fil)
         dla_survey.ref = 'Neeleman+13'
+
+        names = list(dla_survey.name)
+
+        # Load transitions
+        if not skip_trans():
+            print('H100: Loading transitions file {:s}'.format(trans_fil))
+            tar = tarfile.open(trans_fil)
+            for member in tar.getmembers():
+                if '.' not in member.name:
+                    print('Skipping a likely folder: {:s}'.format(member.name))
+                    continue
+                # Extract
+                f = tar.extractfile(member)
+                tdict = json.load(f)
+                # Find system
+                i0 = member.name.rfind('/')
+                i1 = member.name.rfind('_clm')
+                try:
+                    idx = names.index(member.name[i0+1:i1])
+                except ValueError:
+                    pdb.set_trace()
+                # Fill up
+                dla_survey._abs_sys[idx].load_components(tdict)
+
         # Load ions
         dla_survey.fill_ions(jfile=ions_fil)
 

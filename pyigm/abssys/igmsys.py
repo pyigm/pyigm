@@ -36,6 +36,31 @@ class IGMSystem(AbsSystem):
         # Init
         self.ZH = ZH
 
+    def update_vlim(self, sub_system=None):
+        """ Update vlim in the main or subsystems
+
+        Parameters
+        ----------
+        sub_system : str, optional
+          If provided, apply to given sub-system.  Only used in LLS
+        """
+        def get_vmnx(components):
+            vmin,vmax = 9999., -9999.
+            for component in components:
+                vmin = min(vmin, component.vlim[0].value)
+                vmax = max(vmax, component.vlim[1].value)
+            return vmin,vmax
+
+        # Sub-system?
+        if sub_system is not None:
+            components = self.subsys[sub_system]._components
+            vmin, vmax = get_vmnx(components)
+            self.subsys[sub_system].vlim = [vmin, vmax]*u.km/u.s
+        else:
+            components = self._components
+            vmin, vmax = get_vmnx(components)
+            self.vlim = [vmin, vmax]*u.km/u.s
+
     # Output
     def __repr__(self):
         return ('<{:s}: {:s} {:s} {:s}, {:g}, NHI={:g}, Z/H={:g}>'.format(
