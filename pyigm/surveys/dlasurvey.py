@@ -60,7 +60,7 @@ class DLASurvey(IGMSurvey):
         names = list(dla_survey.name)
 
         # Load transitions
-        if not skip_trans():
+        if not skip_trans:
             print('H100: Loading transitions file {:s}'.format(trans_fil))
             tar = tarfile.open(trans_fil)
             for member in tar.getmembers():

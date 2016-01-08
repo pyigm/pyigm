@@ -19,7 +19,7 @@ def data_path(filename):
     return os.path.join(data_dir, filename)
 '''
 
-@remote_data
+
 def test_read_hdlls_dr1():
     hdlls = LLSSurvey.load_HDLLS()
     assert hdlls.nsys == 157
