@@ -9,6 +9,7 @@ ipython nbconvert examples/LLSSystem_examples.ipynb --to rst
 ipython nbconvert examples/LLSSurvey_examples.ipynb --to rst
 ipython nbconvert examples/DLASystem_examples.ipynb --to rst
 
-ipython nbconvert examples/fN_examples.ipynb --to rst
+ipython nbconvert examples/fNModel_examples.ipynb --to rst
+#ipython nbconvert examples/fNConstraint_examples.ipynb --to rst
 
 ipython nbconvert examples/IGMGalaxyField_examples.ipynb --to rst
