@@ -14,6 +14,7 @@ from astropy.coordinates import SkyCoord
 
 from linetools import utils as ltu
 
+from pyigm.abssys.lls import LLSSystem
 from pyigm.surveys.igmsurvey import IGMSurvey
 from pyigm.metallicity.pdf import MetallicityPDF
 
@@ -91,15 +92,17 @@ class LLSSurvey(IGMSurvey):
         return lls_survey
 
     @classmethod
-    def load_HDLLS(cls, grab_spectra=False, skip_trans=True):
+    def load_HDLLS(cls, load_sys=True, grab_spectra=False, isys_path=None):
         """ Default sample of LLS (HD-LLS, DR1)
 
         Parameters
         ----------
         grab_spectra : bool, optional
           Grab 1D spectra?  (155Mb)
-        skip_trans : bool, optional
-          Skip generating sub-systems and loading transitions?
+        load_sys : bool, optional
+          Load systems using the sys tarball
+        isys_path : str, optional
+          Read system files from this path
 
         Return
         ------
@@ -115,20 +118,50 @@ class LLSSurvey(IGMSurvey):
         ions_fil = pyigm_path+"/data/LLS/HD-LLS/HD-LLS_ions.json"
         print('HD-LLS: Loading ions file {:s}'.format(ions_fil))
 
+        # System files
+        sys_files = pyigm_path+"/data/LLS/HD-LLS/HD-LLS_sys.tar.gz"
+
         # Transitions
-        clm_files = pyigm_path+"/data/LLS/HD-LLS/HD-LLS_clms.tar.gz"
-        print('HD-LLS: Loading transitions from {:s}'.format(clm_files))
+        #clm_files = pyigm_path+"/data/LLS/HD-LLS/HD-LLS_clms.tar.gz"
 
         # Metallicity
         ZH_fil = pyigm_path+"/data/LLS/HD-LLS/HD-LLS_DR1_dustnhi.hdf5"
         print('HD-LLS: Loading metallicity file {:s}'.format(ZH_fil))
 
-        # Read
-        lls_survey = cls.from_sfits(summ_fil)
-        names = list(lls_survey.name)
+        # Load systems via the sys tarball.  Includes transitions
+        if load_sys:  # This approach takes ~120s
+            lls_survey = cls(ref='HD-LLS')
+            if isys_path is not None:
+                # Individual files
+                files = glob.glob(isys_path+'*.json')
+                files.sort()
+                for ifile in files:
+                    tdict = ltu.loadjson(ifile)
+                    abssys = LLSSystem.from_dict(tdict)
+                    lls_survey._abs_sys.append(abssys)
+            else:
+                print('HD-LLS: Loading systems from {:s}'.format(sys_files))
+                tar = tarfile.open(sys_files)
+                for member in tar.getmembers():
+                    if '.' not in member.name:
+                        print('Skipping a likely folder: {:s}'.format(member.name))
+                        continue
+                    # Extract
+                    f = tar.extractfile(member)
+                    tdict = json.load(f)
+                    # Generate
+                    abssys = LLSSystem.from_dict(tdict)
+                    lls_survey._abs_sys.append(abssys)
+        else:
+            # Read
+            lls_survey = cls.from_sfits(summ_fil)
+            # Load ions
+            lls_survey.fill_ions(jfile=ions_fil)
 
+        """
         # Load transitions
         if not skip_trans:
+            print('HD-LLS: Loading transitions from {:s}'.format(clm_files))
             tar = tarfile.open(clm_files)
             for member in tar.getmembers():
                 if '.' not in member.name:
@@ -148,9 +181,8 @@ class LLSSurvey(IGMSurvey):
                 # Fill up
                 lls_survey._abs_sys[idx].load_components(tdict)
                 lls_survey._abs_sys[idx]._components = lls_survey._abs_sys[idx].subsys['A']._components
+        """
 
-        # Load ions
-        lls_survey.fill_ions(jfile=ions_fil)
 
         # Load metallicity
         fh5=h5py.File(ZH_fil, 'r')
@@ -166,7 +198,8 @@ class LLSSurvey(IGMSurvey):
             zval.append(float(z))
             ras.append(coord.ra.value)
             decs.append(coord.dec.value)
-        mcoords = SkyCoord(ra=ras*u.deg, dec=decs*u.deg)
+        mcoords = SkyCoord(ras, decs, unit='deg')
+        zval = np.array(zval)
 
         # Set data path and metallicity
         spath = pyigm_path+"/data/LLS/HD-LLS/Spectra/"
@@ -437,3 +470,4 @@ def lls_stat(LLSs, qsos, vprox=3000.*u.km/u.s, maxdz=99.99,
 
     # Return
     return msk_smpl
+

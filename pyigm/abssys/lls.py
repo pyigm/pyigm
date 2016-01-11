@@ -5,8 +5,10 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 
 import numpy as np
 import warnings
+import pdb
 
 from astropy import units as u
+from astropy.coordinates import SkyCoord
 
 from linetools.spectralline import AbsLine
 from linetools.analysis import absline as ltaa
@@ -70,6 +72,41 @@ class LLSSystem(IGMSystem):
         slf._datdict = datdict
         slf.parse_dat_file()
 
+        return slf
+
+    @classmethod
+    def from_dict(cls, idict):
+        """ Generate an LLSSystem from a dict
+
+        Parameters
+        ----------
+        idict : dict
+          Usually read from the hard-drive
+        """
+        kwargs = dict(zem=idict['zem'], NHI=idict['NHI'],
+                      sig_NHI=idict['sig_NHI'], name=idict['Name'])
+        slf = cls(SkyCoord(ra=idict['RA']*u.deg, dec=idict['DEC']*u.deg),
+                  idict['zabs'], idict['vlim']*u.km/u.s, **kwargs)
+        # Components
+        components = ltiu.build_components_from_dict(idict)
+        for component in components:
+            # This is to insure the components follow the rules
+            slf.add_component(component)
+
+        # Subsystems
+        if 'A' in idict.keys():
+            lbls= map(chr, range(65, 91))
+            for lbl in lbls:
+                if lbl in idict.keys():
+                    # Generate
+                    subsys = AbsSubSystem.from_dict(slf, idict[lbl], lbl)
+                    slf.subsys[lbl] = subsys
+                else:
+                    pass
+            # Total them
+            slf.nsub = len(slf.subsys.keys())
+
+        # Return
         return slf
 
     def __init__(self, radec, zabs, vlim, **kwargs):
@@ -198,10 +235,8 @@ class LLSSystem(IGMSystem):
                 # Parse .clm file
                 self.subsys[lbl]._clmdict = igmau.read_clmfile(clm_fil, linelist=linelist)
                 # Build components from lines
-                components = ltiu.build_components_from_abslines([],
-                                                                 clmdict=self.subsys[lbl]._clmdict,
-                                                                 coord=self.coord,
-                                                                 skip_vel=True)
+                components = ltiu.build_components_from_dict(self.subsys[lbl]._clmdict,
+                                                             coord=self.coord, skip_vel=True)
                 self.subsys[lbl]._components = components
                 # Update z, vlim
                 if update_zvlim:
