@@ -69,6 +69,7 @@ class DLASurvey(IGMSurvey):
                     continue
                 # Extract
                 f = tar.extractfile(member)
+                # Need to fix for 3.4
                 tdict = json.load(f)
                 # Find system
                 i0 = member.name.rfind('/')
