@@ -6,7 +6,7 @@ import numpy as np
 import os, pdb
 from astropy import units as u
 
-from pyigm.abssys.dla import DLASystem, DLASurvey
+from pyigm.abssys.dla import DLASystem
 
 '''
 def data_path(filename):
@@ -45,6 +45,7 @@ def test_parse_ion():
     dla.get_ions(use_Nfile=True)
     assert len(dla._ionN) == 13
 
+"""
 def test_default_dla_sample():
     if os.getenv('DLA') is None:
         assert True
@@ -63,4 +64,5 @@ def test_default_dla_sample_with_ions():
     CIV_clms = dlas.ions((6,4))
     gdCIV = np.where(CIV_clms['flag_N']>0)[0]
     assert len(gdCIV) == 74
+"""
 
