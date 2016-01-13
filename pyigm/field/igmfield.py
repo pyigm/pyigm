@@ -236,6 +236,31 @@ class IgmGalaxyField(object):
         # Return
         return subtab[tmsk]
 
+
+    def get_mask_obsdate(self, mask_name):
+        """Given a mask name, find the observing dates
+
+        Parameters
+        ----------
+        mask_name : str
+          Name of the mask
+
+        Returns
+        -------
+        obs_dates : List
+          List of the observing dates (can be empty)
+        """
+        if self.observing is None:
+            raise ValueError('Need to fill observing info!')
+        #
+        mt = np.where(self.observing['MASK_NAME'] == mask_name)[0]
+        if self.observing['DATE_OBS'].mask[mt[0]]:
+            return []
+        obs_dates = [self.observing['DATE_OBS'][imt] for imt in mt]
+        # Return
+        return obs_dates
+
+
     def clean_duplicates(self, table, tol=1*u.arcsec, method='first'):
         """ Clean duplicates in table based on (ra,dec) coordinates
 
@@ -277,29 +302,6 @@ class IgmGalaxyField(object):
 
         #return
         return table[clean_inds]
-
-    def get_mask_obsdate(self, mask_name):
-        """Given a mask name, find the observing dates
-
-        Parameters
-        ----------
-        mask_name : str
-          Name of the mask
-
-        Returns
-        -------
-        obs_dates : List
-          List of the observing dates (can be empty)
-        """
-        if self.observing is None:
-            raise ValueError('Need to fill observing info!')
-        #
-        mt = np.where(self.observing['MASK_NAME'] == mask_name)[0]
-        if self.observing['DATE_OBS'].mask[mt[0]]:
-            return []
-        obs_dates = [self.observing['DATE_OBS'][imt] for imt in mt]
-        # Return
-        return obs_dates
 
     #    
     def __repr__(self):
