@@ -11,6 +11,8 @@ from astropy.units import Quantity
 from astropy.coordinates import SkyCoord
 from astropy import constants as const
 
+import pyigm.field.utils as pfu
+
 #from xastropy.xutils import xdebug as xdb
 
 
@@ -21,7 +23,11 @@ class IgmGalaxyField(object):
     ----------
     radec : tuple or SkyCoord
         (RA,DEC) in deg or astropy.coordinate
-    name : str, optional
+    name : str; optional
+        Default is set from sexagesimal coordinates
+    cosmo : Cosmology; optional
+        Default is astropy.cosmology.Plack15
+
     """
 
     # Initialize 
@@ -37,6 +43,7 @@ class IgmGalaxyField(object):
             self.name = 'IGMFIELD_J{:s}{:s}'.format(
                     self.coord.ra.to_string(unit=u.hour, pad=True),
                     self.coord.dec.to_string(pad=True, alwayssign=True))
+        self.name = name
 
         # Cosmology
         if cosmo is None:
@@ -65,9 +72,9 @@ class IgmGalaxyField(object):
         los_radec : SkyCoord, optional
           Defaults to field RA/DEC
 
+
         Returns
         -------
-
         rho : Quantity (array usually)
           Impact parameter(s) in kpc
         """
@@ -253,6 +260,49 @@ class IgmGalaxyField(object):
         # Return
         return obs_dates
 
+
+    def clean_duplicates(self, table, tol=1*u.arcsec, method='first'):
+        """ Clean duplicates in table based on (ra,dec) coordinates
+
+        Parameters
+        ----------
+        table : Table
+            Table to clean duplicates based on (ra, dec)
+        tol : Angle, optional
+            Angular tolerance for considering duplicates
+        method : str, optional
+            Method to use. Current options are:
+            ``'first'``: if duplicates exist keep only the first one
+
+        Returns
+        -------
+        cleaned_table : Table
+            A version of `table` without duplicates
+        """
+
+        # TODO: add more methods for merging/cleaning duplicates
+
+        if method not in ['first']:
+            raise RuntimeError('Not ready for this method=`{}`'.format(method))
+
+        isdup, idx, dcoord = pfu.check_dup_table(table, tol=tol)
+        dup_inds = np.where(isdup == True)[0]
+        keep = []
+
+        if method == 'first':
+            for ii in dup_inds:
+                mtch = np.where(dcoord[ii].separation(dcoord) < tol)[0]
+                keep.append(min(mtch))
+
+            first_dup = np.unique(np.array(keep))
+
+            no_dup = np.arange(len(idx))[~isdup]
+            clean_inds = np.append(no_dup, first_dup)
+            clean_inds = np.sort(clean_inds)
+
+        #return
+        return table[clean_inds]
+
     #    
     def __repr__(self):
         return ('<{:s}: {:s} {:s} {:s}>'.format(
@@ -260,4 +310,7 @@ class IgmGalaxyField(object):
                  self.name,
                  self.coord.ra.to_string(unit=u.hour, sep=':', pad=True),
                  self.coord.dec.to_string(sep=':', pad=True, alwayssign=True)))
+
+
+
 
