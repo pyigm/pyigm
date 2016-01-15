@@ -3,6 +3,8 @@
 from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
+from scipy.interpolate import interp1d
+
 import pdb
 
 
@@ -66,6 +68,22 @@ class MetallicityPDF(object):
         """
         meanZH = np.sum(self.ZH*self.pdf_ZH*self.dZH)
         return meanZH
+
+    @property
+    def medianZH(self):
+        """ Calculate and return median ZH from the PDF
+
+        Weighted in log-space
+
+        Returns
+        -------
+        medianZH : float
+        """
+        cumsum = np.cumsum(self.pdf_ZH*self.dZH)
+        # Interpolate
+        fint = interp1d(cumsum, self.ZH)
+        medianZH = float(fint(0.5))
+        return medianZH
 
     def confidence_limits(self, cl):
         """ Calculate the bounds of a given confidence interval

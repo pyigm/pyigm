@@ -20,10 +20,19 @@ def test_init_pdf():
     pdf = np.exp(-(ZH+1.5)**2/0.2**2)
     # Class
     mpdf = MetallicityPDF(ZH, pdf)
-    # Test
-    np.testing.assert_allclose(mpdf.meanZH, -1.4998713559597918)
 
 def test_stats():
+    # Dummy data
+    ZH  = np.linspace(-5, 0., 25)
+    pdf = np.exp(-(ZH+1.5)**2/0.2**2)
+    # Class
+    mpdf = MetallicityPDF(ZH, pdf)
+    # Test mean
+    np.testing.assert_allclose(mpdf.meanZH, -1.4998713559597918)
+    #
+    np.testing.assert_allclose(mpdf.medianZH, -1.5967047485449448)
+
+def test_cl():
     # Dummy data
     ZH  = np.linspace(-5, 0., 25)
     pdf = np.exp(-(ZH+1.5)**2/0.2**2)

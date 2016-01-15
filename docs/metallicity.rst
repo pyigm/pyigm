@@ -46,6 +46,7 @@ Attributes/Properties
 Variable   Type           Description
 ========   ============== ============================================
 meanZH     float          Weighted Mean of [Z/H]
+medianZH   float          Median of the cumulative PDF (log space)
 ========   ============== ============================================
 
 
