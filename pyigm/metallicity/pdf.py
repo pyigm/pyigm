@@ -170,6 +170,13 @@ class MetallicityPDF(object):
         MetallicityPDF
 
         """
+        # Check that the ZH arrays are identical
+        if not np.allclose(self.ZH,other.ZH):
+            raise IOError("ZH arrays need to be identical (for now)")
+        # Add em'
+        new = MetallicityPDF(self.ZH, self.pdf_ZH+other.pdf_ZH)
+        # Return
+        return new
 
     def __repr__(self):
         repr = '<{:s}: meanZH={:g}'.format(self.__class__.__name__, self.meanZH)

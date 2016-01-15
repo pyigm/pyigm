@@ -53,9 +53,13 @@ medianZH   float          Median of the cumulative PDF (log space)
 Methods
 -------
 
-One can calulate the bounds of a confidence interval with::
+One can calculate the bounds of a confidence interval with::
 
    mpdf.confidence_limits(0.68)
+
+One can combine two MetallicityPDF's with math::
+
+   sum_pdf = mpdf + mpdf2
 
 Plots
 -----
