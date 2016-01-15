@@ -158,6 +158,18 @@ class MetallicityPDF(object):
             # Show
             show(p)
 
+    def __add__(self, other):
+        """ Combine the existing PDF with an input one
+
+        Parameters
+        ----------
+        other : MetallicityPDF
+
+        Returns
+        -------
+        MetallicityPDF
+
+        """
 
     def __repr__(self):
         repr = '<{:s}: meanZH={:g}'.format(self.__class__.__name__, self.meanZH)
