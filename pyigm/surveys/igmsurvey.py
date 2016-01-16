@@ -17,6 +17,7 @@ from astropy.units.quantity import Quantity
 from astropy.coordinates import SkyCoord
 
 from linetools.spectra import io as lsio
+from linetools.isgm import utils as ltiu
 
 from pyigm.abssys.igmsys import IGMSystem
 
@@ -238,7 +239,7 @@ class IGMSurvey(object):
             raise IOError("Must be an IGMSystem object")
         return True
 
-    def fill_ions(self, use_Nfile=False, jfile=None, debug=False):  # This may be overloaded!
+    def fill_ions(self, use_Nfile=False, jfile=None, use_components=False):  # This may be overloaded!
         """ Loop on systems to fill in ions
 
         Parameters
@@ -247,6 +248,8 @@ class IGMSurvey(object):
           JSON file containing the information
         use_Nfile : bool, optional
           Use (historic) .clm files?
+        use_components : bool, optional
+          Load up the Table with components (recommended)
         """
         if jfile is not None:
             # Load
@@ -257,9 +260,11 @@ class IGMSurvey(object):
                 abs_sys.get_ions(idict=ions_dict[abs_sys.name])
         elif use_Nfile:
             for abs_sys in self._abs_sys:
-                if debug:
-                    print(abs_sys)
                 abs_sys.get_ions(use_Nfile=True)
+        elif use_components:
+            for abs_sys in self._abs_sys:
+                abs_sys._ionN = ltiu.iontable_from_components(abs_sys._components,
+                                                              ztbl=abs_sys.zabs)
         else:
             raise ValueError("Not sure how to load the ions")
 
@@ -282,6 +287,9 @@ class IGMSurvey(object):
         -------
         Table of values for the Survey
         """
+        if len(self.abs_sys()[0]._ionN) == 0:
+            raise IOError("ionN table not set.  Use fill_ionN")
+        #
         keys = [u'name', ] + self.abs_sys()[0]._ionN.keys()
         t = Table(self.abs_sys()[0]._ionN[0:1]).copy()   # Avoids mixin trouble
         t.add_column(Column(['dum'], name='name', dtype='<U32'))

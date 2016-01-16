@@ -23,7 +23,7 @@ def test_init():
 
 
 def test_read_h100():
-    h100 = DLASurvey.load_H100(skip_trans=False)
+    h100 = DLASurvey.load_H100()#skip_trans=False)
     assert h100.nsys == 100
 
     SiII_clms = h100.ions((14, 2))

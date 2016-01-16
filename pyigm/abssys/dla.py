@@ -5,6 +5,7 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import pdb
 
 from astropy import units as u
+from astropy.coordinates import SkyCoord
 
 from linetools.isgm import utils as ltiu
 
@@ -83,6 +84,28 @@ class DLASystem(IGMSystem):
 
         return slf
 
+    @classmethod
+    def from_dict(cls, idict):
+        """ Generate a DLASystem from a dict
+
+        Parameters
+        ----------
+        idict : dict
+          Usually read from the hard-drive
+        """
+        kwargs = dict(zem=idict['zem'], sig_NHI=idict['sig_NHI'],
+                      name=idict['Name'])
+        slf = cls(SkyCoord(idict['RA'], idict['DEC'], unit='deg'),
+                  idict['zabs'], idict['vlim']*u.km/u.s, idict['NHI'],
+                  **kwargs)
+        # Components
+        components = ltiu.build_components_from_dict(idict)
+        for component in components:
+            # This is to insure the components follow the rules
+            slf.add_component(component)
+        # Return
+        return slf
+
     def __init__(self, radec, zabs, vlim, NHI, **kwargs):
         """Standard init
 
@@ -120,10 +143,9 @@ class DLASystem(IGMSystem):
             self._clmdict = igmau.read_clmfile(clm_fil, linelist=linelist)
             #pdb.set_trace()
             # Build components
-            components = ltiu.build_components_from_abslines([],
-                                                              clmdict=self._clmdict,
-                                                              coord=self.coord,
-                                                              skip_vel=True)
+            components = ltiu.build_components_from_dict(self._clmdict,
+                                                         coord=self.coord,
+                                                         skip_vel=True)
             # Read .ion file and fill in components
             ion_fil = self.tree+self._clmdict['ion_fil']
             self._indiv_ionclms = igmau.read_ion_file(ion_fil, components)

@@ -1,5 +1,7 @@
 """ Class for DLA Surveys
 """
+from __future__ import print_function, absolute_import, division, unicode_literals
+
 import numpy as np
 import os
 import imp, glob
@@ -12,6 +14,7 @@ from astropy import units as u
 #from astropy.coordinates import SkyCoord
 
 from pyigm.surveys.igmsurvey import IGMSurvey
+from pyigm.surveys import utils as pyisu
 
 pyigm_path = imp.find_module('pyigm')[1]
 
@@ -24,7 +27,7 @@ class DLASurvey(IGMSurvey):
 
     """
     @classmethod
-    def load_H100(cls, grab_spectra=False, skip_trans=True):
+    def load_H100(cls, grab_spectra=False, load_sys=True, isys_path=None):  #skip_trans=True):
         """ Sample of unbiased HIRES DLAs compiled and analyzed by Neeleman+13
 
         Neeleman, M. et al. 2013, ApJ, 769, 54
@@ -33,15 +36,17 @@ class DLASurvey(IGMSurvey):
         ----------
         grab_spectra : bool, optional
           Grab 1D spectra?  (141Mb)
+        load_sys : bool, optional
+          Load systems? (takes ~60s for 100 systems)
         skip_trans : bool, optional
           Skip loading transitions (takes ~60s)?
+        isys_path : str, optional
+          Read system files from this path
 
         Return
         ------
         dla_survey
         """
-        import tarfile
-
         # Pull from Internet (as necessary)
         summ_fil = pyigm_path+"/data/DLA/H100/H100_DLA.fits"
         print('H100: Loading summary file {:s}'.format(summ_fil))
@@ -53,13 +58,26 @@ class DLASurvey(IGMSurvey):
         # Transitions
         trans_fil = pyigm_path+"/data/DLA/H100/H100_DLA_clms.tar.gz"
 
-        # Read
-        dla_survey = cls.from_sfits(summ_fil)
+        # System files
+        sys_files = pyigm_path+"/data/DLA/H100/H100_DLA_sys.tar.gz"
+
+        if load_sys:  # This approach takes ~120s
+            if isys_path is not None:
+                dla_survey = pyisu.load_sys_files(isys_path, 'DLA', sys_path=True)
+            else:
+                dla_survey = pyisu.load_sys_files(sys_files, 'DLA')
+            dla_survey.fill_ions(use_components=True)
+        else:
+            # Read
+            dla_survey = cls.from_sfits(summ_fil)
+            # Load ions
+            dla_survey.fill_ions(jfile=ions_fil)
+
         dla_survey.ref = 'Neeleman+13'
 
-        names = list(dla_survey.name)
-
+        """
         # Load transitions
+        names = list(dla_survey.name)
         if not skip_trans:
             print('H100: Loading transitions file {:s}'.format(trans_fil))
             tar = tarfile.open(trans_fil)
@@ -80,9 +98,8 @@ class DLASurvey(IGMSurvey):
                     pdb.set_trace()
                 # Fill up
                 dla_survey._abs_sys[idx].load_components(tdict)
+        """
 
-        # Load ions
-        dla_survey.fill_ions(jfile=ions_fil)
 
         spath = pyigm_path+"/data/DLA/H100/Spectra/"
         for dla in dla_survey._abs_sys:
