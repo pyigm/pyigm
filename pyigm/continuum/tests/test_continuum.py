@@ -6,7 +6,7 @@ import numpy as np
 import os, pdb
 import pytest
 
-from pyigm.continuum import quasar as pyicq
+from pyigm.continuum import core as pyicc
 
 '''
 def data_path(filename):
@@ -17,7 +17,7 @@ def data_path(filename):
 
 def test_dict():
     # Init 
-    cdict = pyicq.init_conti_dict(Norm=1.)
+    cdict = pyicc.init_conti_dict(Norm=1.)
 
     assert isinstance(cdict,dict)
     np.testing.assert_allclose(cdict['Norm'], 1.)
