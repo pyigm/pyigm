@@ -239,7 +239,7 @@ class IGMSurvey(object):
             raise IOError("Must be an IGMSystem object")
         return True
 
-    def fill_ions(self, use_Nfile=False, jfile=None, use_components=False):  # This may be overloaded!
+    def fill_ions(self, use_Nfile=False, jfile=None, use_components=False):
         """ Loop on systems to fill in ions
 
         Parameters
