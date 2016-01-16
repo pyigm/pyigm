@@ -16,6 +16,7 @@ pyigm depends on these packages:
 * `matplotlib <http://matplotlib.org/>`_  version 1.4 or later
 * `specutils <https://github.com/astropy/specutils>`_ version 0.2 or later
 * `linetools <https://github.com/linetools/linetools>`_ version 0.1 or later
+* `h5py <http://www.h5py.org/>`_ version 2.5 or later
 
 We strongly recommend that you use `Anaconda
 <https://www.continuum.io/downloads>`_ to install them. With Anaconda

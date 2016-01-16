@@ -3,22 +3,22 @@
 
 from __future__ import print_function, absolute_import, division, unicode_literals
 
-import os, imp, glob
 import numpy as np
 import warnings
+import pdb
 
 from astropy import units as u
-from astropy.table import Table, Column
+from astropy.coordinates import SkyCoord
 
 from linetools.spectralline import AbsLine
 from linetools.analysis import absline as ltaa
 from linetools.lists.linelist import LineList
 from linetools.isgm.abscomponent import AbsComponent
-from linetools.abund import ions as ltai
+from linetools.isgm import utils as ltiu
 
 from pyigm.abssys.igmsys import IGMSystem, AbsSubSystem
 from pyigm.abssys import utils as igmau
-from pyigm.abssys.igmsurvey import IGMSurvey
+from .utils import dict_to_ions
 
 class LLSSystem(IGMSystem):
     """
@@ -28,6 +28,9 @@ class LLSSystem(IGMSystem):
     ----------
     tau_ll : float
       Opacity at the Lyman limit
+    ZH : float, optional
+      Mean metallicity (log10)
+    metallicity : MetallicityPDF, optional
     """
 
     @classmethod
@@ -71,6 +74,41 @@ class LLSSystem(IGMSystem):
 
         return slf
 
+    @classmethod
+    def from_dict(cls, idict):
+        """ Generate an LLSSystem from a dict
+
+        Parameters
+        ----------
+        idict : dict
+          Usually read from the hard-drive
+        """
+        kwargs = dict(zem=idict['zem'], NHI=idict['NHI'],
+                      sig_NHI=idict['sig_NHI'], name=idict['Name'])
+        slf = cls(SkyCoord(ra=idict['RA']*u.deg, dec=idict['DEC']*u.deg),
+                  idict['zabs'], idict['vlim']*u.km/u.s, **kwargs)
+        # Components
+        components = ltiu.build_components_from_dict(idict)
+        for component in components:
+            # This is to insure the components follow the rules
+            slf.add_component(component)
+
+        # Subsystems
+        if 'A' in idict.keys():
+            lbls= map(chr, range(65, 91))
+            for lbl in lbls:
+                if lbl in idict.keys():
+                    # Generate
+                    subsys = AbsSubSystem.from_dict(slf, idict[lbl], lbl)
+                    slf.subsys[lbl] = subsys
+                else:
+                    pass
+            # Total them
+            slf.nsub = len(slf.subsys.keys())
+
+        # Return
+        return slf
+
     def __init__(self, radec, zabs, vlim, **kwargs):
         """Standard init
 
@@ -104,11 +142,12 @@ class LLSSystem(IGMSystem):
         IGMSystem.__init__(self, 'LLS', radec, zabs, vlim, NHI=NHI, **kwargs)
 
         # Set tau_LL
-        self.tau_LL = (10.**self.NHI)*6.3391597e-18  # Should replace with photocross
+        self.tau_LL = (10.**self.NHI)*ltaa.photo_cross(1, 1, 1*u.Ry).to('cm**2').value
 
         # Other
         self.zpeak = None  # Optical depth weighted redshift
-        self.MH = 0.
+        self.ZH = 0.
+        self.metallicity = None  # MetallicityPDF class usually
 
         # Subsystems
         self.nsub = 0
@@ -127,7 +166,7 @@ class LLSSystem(IGMSystem):
         # LLS keys
         self.bgsrc = self._datdict['QSO name']
         self.zem = float(self._datdict['QSO zem'])  # Was zqso
-        self.MH = float(self._datdict['[M/H] ave'])
+        self.ZH = float(self._datdict['[M/H] ave'])
         self.nsub = int(self._datdict['N subsys'])
         self.cldyfil = self._datdict['Cloudy Grid File']
 
@@ -179,40 +218,13 @@ class LLSSystem(IGMSystem):
           dict containing the IonClms info
         use_Nfile : bool, optional
           Parse ions from a .clm file (JXP historical)
+          NOTE: This ignores velocity constraints on components (i.e. skip_vel=True)
         update_zvlim : bool, optional
           Update zvlim from lines in .clm (as applicable)
         linelist : LineList
         """
         if idict is not None:
-            # Manipulate for astropy Table
-            #  Could probably use add_row or dict instantiation
-            table = None
-            for ion in idict.keys():
-                Zion = ltai.name_ion(ion)
-                if table is None:
-                    tkeys = idict[ion].keys()
-                    lst = [[idict[ion][tkey]] for tkey in tkeys]
-                    table = Table(lst, names=tkeys)
-                    # Extra columns
-                    if 'Z' not in tkeys:
-                        table.add_column(Column([Zion[0]], name='Z'))
-                        table.add_column(Column([Zion[1]], name='ion'))
-                else:
-                    tdict = idict[ion]
-                    tkeys = idict[ion].keys()
-                    if 'Z' not in tkeys:
-                        tdict['Z'] = Zion[0]
-                        tdict['ion'] = Zion[1]
-                    # Add
-                    table.add_row(tdict)
-            # Finish
-            try:  # Historical keys
-                table.rename_column('clm', 'logN')
-            except:
-                pass
-            else:
-                table.rename_column('sig_clm', 'sig_logN')
-                table.rename_column('flg_clm', 'flag_N')
+            table = dict_to_ions(idict)
             self._ionN = table
         elif use_Nfile:
             # Subsystems
@@ -223,15 +235,13 @@ class LLSSystem(IGMSystem):
                 # Parse .clm file
                 self.subsys[lbl]._clmdict = igmau.read_clmfile(clm_fil, linelist=linelist)
                 # Build components from lines
-                components = igmau.build_components_from_abslines([], clmdict=self.subsys[lbl]._clmdict, coord=self.coord)
+                components = ltiu.build_components_from_dict(self.subsys[lbl]._clmdict,
+                                                             coord=self.coord, skip_vel=True)
+                self.subsys[lbl]._components = components
                 # Update z, vlim
                 if update_zvlim:
-                    vmin,vmax = 9999., -9999.
-                    for component in components:
-                        vmin = min(vmin, component.vlim[0].value)
-                        vmax = max(vmax, component.vlim[1].value)
+                    self.update_vlim(sub_system=lbl)
                     self.subsys[lbl].zabs = self.subsys[lbl]._clmdict['zsys']
-                    self.subsys[lbl].vlim = [vmin, vmax]*u.km/u.s
                 # Read .ion file and fill in components
                 ion_fil = self.tree+self.subsys[lbl]._clmdict['ion_fil']
                 self.subsys[lbl]._indiv_ionclms = igmau.read_ion_file(ion_fil, components)
@@ -240,7 +250,7 @@ class LLSSystem(IGMSystem):
                 self.subsys[lbl].all_file=all_file #MF: useful to have
                 _ = igmau.read_all_file(all_file, components=components)
                 # Build table
-                self.subsys[lbl]._ionN = igmau.iontable_from_components(components,ztbl=self.subsys[lbl].zabs)
+                self.subsys[lbl]._ionN = ltiu.iontable_from_components(components,ztbl=self.subsys[lbl].zabs)
                 # Add to IGMSystem
                 for comp in components:
                     self.add_component(comp)
@@ -342,6 +352,43 @@ class LLSSystem(IGMSystem):
         # Return
         return model
 
+    def load_components(self, inp):
+        """ Load components for subsystems from an input object
+
+        May also update/create subsystems
+
+        Parameters
+        ----------
+        inp : dict or ??
+          Input object for loading the components
+        """
+        if isinstance(inp, dict):
+            lbls= map(chr, range(65, 91))
+            # Subsystems?
+            if 'A' in inp.keys():
+                for lbl in lbls:
+                    if lbl in inp.keys():
+                        if lbl not in self.subsys.keys():
+                            self.subsys[lbl] = AbsSubSystem(self,
+                                                            inp[lbl]['zsys'],
+                                                            [-300., 300]*u.km/u.s,
+                                                            lbl)
+                        # Fill/update
+                        self.subsys[lbl]._clmdict = inp[lbl]  # Not so necessary
+                        components = ltiu.build_components_from_dict(self.subsys[lbl]._clmdict,
+                                                                 coord=self.coord,
+                                                                 skip_vel=True)
+                        self.subsys[lbl]._components = components
+                        # Update vlim
+                        self.update_vlim(sub_system=lbl)
+                    else:
+                        pass
+                self.nsub = len(self.subsys.keys())
+            else:
+                raise ValueError("Not sure what to do here")
+        else:
+            raise NotImplementedError("Not ready for this input")
+
     def get_zpeak(self):
         """ Measure zpeak from an ionic transition
         """
@@ -407,98 +454,20 @@ class LLSSystem(IGMSystem):
         # Return
         return ion, vpeak
 
+
+
     # Output
     def __repr__(self):
-        return ('[{:s}: {:s} {:s}, zabs={:g}, logNHI={:g}, tau_LL={:g}, [Z/H]={:g} dex]'.format(
+        return ('<{:s}: {:s} {:s}, zabs={:g}, logNHI={:g}, tau_LL={:g}, [Z/H]={:g} dex>'.format(
                 self.__class__.__name__,
                  self.coord.ra.to_string(unit=u.hour,sep=':',pad=True),
                  self.coord.dec.to_string(sep=':',pad=True,alwayssign=True),
-                 self.zabs, self.NHI, self.tau_LL, self.MH))
+                 self.zabs, self.NHI, self.tau_LL, self.ZH))
 
     def print_abs_type(self):
         """Return a string representing the type of vehicle this is."""
         return 'LLS'
 
-class LLSSurvey(IGMSurvey):
-    """
-    An LLS Survey class
-    """
-
-    @classmethod
-    def load_HDLLS(cls):
-        """ Default sample of LLS (HD-LLS, DR1)
-
-        Return
-        ------
-        lls_survey
-        """
-        import urllib2
-        import imp
-        lt_path = imp.find_module('linetools')[1]
-        # Pull from Internet (as necessary)
-        summ_fil = glob.glob(lt_path+"/data/LLS/HD-LLS_DR1.fits")
-        if len(summ_fil) > 0:
-            summ_fil = summ_fil[0]
-        else:
-            url = 'http://www.ucolick.org/~xavier/HD-LLS/DR1/HD-LLS_DR1.fits'
-            print('LLSSurvey: Grabbing summary file from {:s}'.format(url))
-            f = urllib2.urlopen(url)
-            summ_fil = lt_path+"/data/HD-LLS_DR1.fits"
-            with open(summ_fil, "wb") as code:
-                code.write(f.read())
-
-        # Ions
-        ions_fil = glob.glob(lt_path+"/data/LLS/HD-LLS_ions.json")
-        if len(ions_fil) > 0:
-            ions_fil = ions_fil[0]
-        else:
-            url = 'http://www.ucolick.org/~xavier/HD-LLS/DR1/HD-LLS_ions.json'
-            print('LLSSurvey: Grabbing JSON ion file from {:s}'.format(url))
-            f = urllib2.urlopen(url)
-            ions_fil = lt_path+"/data/HD-LLS_ions.json"
-            with open(ions_fil, "wb") as code:
-                code.write(f.read())
-
-        # Read
-        lls_survey = cls.from_sfits(summ_fil)
-        # Load ions
-        lls_survey.fill_ions(jfile=ions_fil)
-        # Set data path (may be None)
-        for lls in lls_survey._abs_sys:
-            lls.spec_path = os.getenv('HDLLS_DATA')
-
-        return lls_survey
-
-    def __init__(self, **kwargs):
-        IGMSurvey.__init__(self, 'LLS', **kwargs)
-
-    def cut_nhi_quality(self, sig_cut=0.4):
-        """ Cut the LLS on NHI quality.
-
-        Could put this in Absline_Survey
-
-        Parameters
-        ----------
-        sig_cut : float, optional
-            Limit to include as quality
-
-        Returns
-        -------
-        gdNHI : ndarray
-        bdNHI : ndarray
-            Indices for those LLS that are good/bad
-            gdNHI is a numpy array of indices
-            bdNHI is a boolean array
-        """
-        # Cut
-        gdNHI = np.where( (self.sigNHI[:, 0] < sig_cut)
-                        & (self.sigNHI[:, 1] < sig_cut))[0]
-        # Mask
-        bdNHI = (self.NHI == self.NHI)
-        bdNHI[gdNHI] = False
-
-        # Return
-        return gdNHI, bdNHI
 
 def tau_multi_lls(wave, all_lls, **kwargs):
     """Calculate opacities on an input observed wavelength grid

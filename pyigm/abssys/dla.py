@@ -2,14 +2,17 @@
 """
 from __future__ import print_function, absolute_import, division, unicode_literals
 
-import os
 import pdb
 
 from astropy import units as u
+from astropy.coordinates import SkyCoord
+
+from linetools.isgm import utils as ltiu
 
 from pyigm.abssys.igmsys import IGMSystem
-from pyigm.abssys.igmsurvey import IGMSurvey
 from pyigm.abssys import utils as igmau
+
+from .utils import dict_to_ions
 
 class DLASystem(IGMSystem):
     """
@@ -70,7 +73,7 @@ class DLASystem(IGMSystem):
 
         # QSO keys
         slf.qso = slf._datdict['QSO name']
-        slf.zqso = float(slf._datdict['QSO zem'])
+        slf.zem = float(slf._datdict['QSO zem'])
         # Name
         slf.name = '{:s}_z{:0.3f}'.format(slf.qso,zabs)
 
@@ -79,6 +82,28 @@ class DLASystem(IGMSystem):
         slf.ZH = float(slf._datdict['[M/H]'])
         slf.sig_ZH = float(slf._datdict['sig([M/H])'])
 
+        return slf
+
+    @classmethod
+    def from_dict(cls, idict):
+        """ Generate a DLASystem from a dict
+
+        Parameters
+        ----------
+        idict : dict
+          Usually read from the hard-drive
+        """
+        kwargs = dict(zem=idict['zem'], sig_NHI=idict['sig_NHI'],
+                      name=idict['Name'])
+        slf = cls(SkyCoord(idict['RA'], idict['DEC'], unit='deg'),
+                  idict['zabs'], idict['vlim']*u.km/u.s, idict['NHI'],
+                  **kwargs)
+        # Components
+        components = ltiu.build_components_from_dict(idict)
+        for component in components:
+            # This is to insure the components follow the rules
+            slf.add_component(component)
+        # Return
         return slf
 
     def __init__(self, radec, zabs, vlim, NHI, **kwargs):
@@ -95,10 +120,7 @@ class DLASystem(IGMSystem):
         # Generate with type
         IGMSystem.__init__(self, 'DLA', radec, zabs, vlim, NHI=NHI, **kwargs)
 
-        # Other
-        self.ZH = 0.
-
-    def get_ions(self, use_Nfile=False, update_zvlim=True, linelist=None):
+    def get_ions(self, use_Nfile=False, idict=None, update_zvlim=True, linelist=None):
         """Parse the ions for each Subsystem
 
         And put them together for the full system
@@ -110,6 +132,7 @@ class DLASystem(IGMSystem):
           dict containing the IonClms info
         use_Nfile : bool, optional
           Parse ions from a .clm file (JXP historical)
+          NOTE: This ignores velocity constraints on components (i.e. skip_vel=True)
         update_zvlim : bool, optional
           Update zvlim from lines in .clm (as applicable)
         linelist : LineList
@@ -118,22 +141,45 @@ class DLASystem(IGMSystem):
             clm_fil = self.tree+self._datdict['Abund file']
             # Read
             self._clmdict = igmau.read_clmfile(clm_fil, linelist=linelist)
+            #pdb.set_trace()
             # Build components
-            components = igmau.build_components_from_abslines([], clmdict=self._clmdict, coord=self.coord)
+            components = ltiu.build_components_from_dict(self._clmdict,
+                                                         coord=self.coord,
+                                                         skip_vel=True)
             # Read .ion file and fill in components
             ion_fil = self.tree+self._clmdict['ion_fil']
             self._indiv_ionclms = igmau.read_ion_file(ion_fil, components)
             # Parse .all file
             all_file = ion_fil.split('.ion')[0]+'.all'
-            self.all_file=all_file #MF: useful to have
+            self.all_file=all_file  #MF: useful to have
             _ = igmau.read_all_file(all_file, components=components)
             # Build table
-            self._ionN = igmau.iontable_from_components(components, ztbl=self.zabs)
+            self._ionN = ltiu.iontable_from_components(components, ztbl=self.zabs)
             # Add to AbsSystem
             for comp in components:
                 self.add_component(comp)
+        elif idict is not None:
+            table = dict_to_ions(idict)
+            self._ionN = table
         else:
             raise IOError("Not ready for this")
+
+    def load_components(self, inp):
+        """ Load components from an input object
+
+        Parameters
+        ----------
+        inp : dict or ??
+          Input object for loading the components
+        """
+        if isinstance(inp, dict):
+            components = ltiu.build_components_from_dict(inp, coord=self.coord,
+                                                         skip_vel=True)
+            # Add in
+            for component in components:
+                self.add_component(component)
+        else:
+            raise NotImplementedError("Not ready for this input")
 
     # Output
     def __repr__(self):
@@ -142,42 +188,4 @@ class DLASystem(IGMSystem):
                  self.coord.ra.to_string(unit=u.hour, sep=':', pad=True),
                  self.coord.dec.to_string(sep=':', pad=True),
                  self.zabs, self.NHI, self.ZH))
-
-    def print_abs_type(self):
-        """"Return a string representing the type of vehicle this is."""
-        return 'DLA'
-
-# #######################################################################
-# #######################################################################
-# #######################################################################
-# Class for DLA Survey
-class DLASurvey(IGMSurvey):
-    """An DLA Survey class
-
-    Attributes:
-        
-    """
-    @classmethod
-    def default_sample(cls):
-        """
-        Returns
-        -------
-        dlasurvey : IGMSurvey
-        """
-        # Default sample of DLA:  Neeleman
-        if os.getenv('DLA') is None:
-            print('Need to grab the DLA tree from JXP')
-            return None
-        dlasurvey = cls.from_flist('Lists/Neeleman13.lst', tree=os.environ.get('DLA'))
-        dlasurvey.ref = 'Neeleman+13'
-
-        # Return
-        return dlasurvey
-
-    def __init__(self, **kwargs):
-        # Generate with type
-        IGMSurvey.__init__(self, 'DLA', **kwargs)
-
-
-
 
