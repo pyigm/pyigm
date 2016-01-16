@@ -21,9 +21,13 @@ def test_init():
     dlas = DLASurvey(ref='null')
     assert dlas.abs_type == 'DLA'
 
+def test_read_h100_nosys():
+    h100 = DLASurvey.load_H100(load_sys=False)
+    assert h100.nsys == 100
 
+@remote_data
 def test_read_h100():
-    h100 = DLASurvey.load_H100()#skip_trans=False)
+    h100 = DLASurvey.load_H100()
     assert h100.nsys == 100
 
     SiII_clms = h100.ions((14, 2))

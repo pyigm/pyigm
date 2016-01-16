@@ -20,6 +20,7 @@ from linetools.spectra import io as lsio
 from linetools.isgm import utils as ltiu
 
 from pyigm.abssys.igmsys import IGMSystem
+from pyigm.abssys.utils import class_by_type
 
 
 class IGMSurvey(object):
@@ -68,7 +69,7 @@ class IGMSurvey(object):
         slf.dat_files = list(data['col1'])
         # Generate IGMSys list
         for dat_file in slf.dat_files:
-            slf._abs_sys.append(set_igmclass(slf.abs_type).from_datfile(dat_file, tree=slf.tree))
+            slf._abs_sys.append(class_by_type(slf.abs_type).from_datfile(dat_file, tree=slf.tree))
         print('Read {:d} files from {:s} in the tree {:s}'.format(
             slf.nsys, slf.flist, slf.tree))
 
@@ -109,7 +110,7 @@ class IGMSurvey(object):
                 inputs[key] = vals
         # vlim
         if 'vlim' not in inputs.keys():
-            default_vlim = [-500, 500.]* u.km / u.s
+            default_vlim = [-1000, 1000.]* u.km / u.s
             inputs['vlim'] = [default_vlim]*nsys
         # Generate
         for kk in range(nsys):
@@ -122,7 +123,7 @@ class IGMSurvey(object):
                 else:
                     kwargs[key] = inputs[key][kk]
             # Instantiate
-            abssys = set_igmclass(slf.abs_type)((args['RA'], args['Dec']), args['zabs'], args['vlim'], **kwargs)
+            abssys = class_by_type(slf.abs_type)((args['RA'], args['Dec']), args['zabs'], args['vlim'], **kwargs)
             # spec_files
             try:
                 abssys.spec_files += systems[kk]['SPEC_FILES'].tolist()
@@ -446,28 +447,6 @@ class GenericIGMSurvey(IGMSurvey):
     """
     def __init__(self, **kwargs):
         IGMSurvey.__init__(self, 'Generic', **kwargs)
-
-
-def set_igmclass(abstype):
-    """Translate abstype into Class
-
-    Parameters
-    ----------
-    abstype : str
-      IGMSystem type, e.g. 'LLS', 'DLA'
-
-    Returns
-    -------
-    Class name
-    """
-    from pyigm.abssys.dla import DLASystem
-    from pyigm.abssys.lls import LLSSystem
-
-    cdict = dict(LLS=LLSSystem, DLA=DLASystem)
-    try:
-        return cdict[abstype]
-    except KeyError:
-        return IGMSystem
 
 
 def lst_to_array(lst, mask=None):

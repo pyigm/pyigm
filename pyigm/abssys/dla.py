@@ -158,6 +158,8 @@ class DLASystem(IGMSystem):
             # Add to AbsSystem
             for comp in components:
                 self.add_component(comp)
+            if self.name == 'PSS0957+33_z4.180':
+                pdb.set_trace()
         elif idict is not None:
             table = dict_to_ions(idict)
             self._ionN = table
