@@ -31,11 +31,15 @@ def init_conti_dict(Norm=0., tilt=0., tilt2=0.,
     conti_dict = dict(Norm=Norm, tilt=tilt, piv_wv=piv_wv, piv_wv2=piv_wv2,
                       tilt2=tilt2, igm=igm, fN_gamma=fN_gamma,
                       LL_flatten=LL_flatten)
-    #
+    # Checks
     if piv_wv2 is None:
         conti_dict.pop('piv_wv2')
-    if piv_wv2 > piv_wv:
-        raise ValueError("piv_wv2 < piv_wv required!")
+    else:
+        if piv_wv is None:
+            raise IOError("piv_wv required if piv_wv2 set")
+        else:
+            if piv_wv2 > piv_wv:
+                raise ValueError("piv_wv2 < piv_wv required!")
     #
     return conti_dict
 
