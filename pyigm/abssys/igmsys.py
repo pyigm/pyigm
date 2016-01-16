@@ -151,6 +151,7 @@ class AbsSubSystem(object):
         Returns
         -------
         outdict : dict
+          JSON capatible
 
         """
         import datetime
