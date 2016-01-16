@@ -18,5 +18,5 @@ def data_path(filename):
 def test_init():
     field = ('PG1407+265',212.349634*u.deg,26.3058650*u.deg)
     lfield = IgmGalaxyField((field[1],field[2]), name=field[0], verbose=True)
-
+    print(lfield)
 

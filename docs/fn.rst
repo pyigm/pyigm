@@ -1,10 +1,10 @@
 .. highlight:: rest
 
-**************
-fN Model Class
-**************
+**********
+fN Classes
+**********
 
-.. index:: fNmodel
+.. index:: fNclass
 
 Notebooks
 =========
@@ -12,16 +12,19 @@ Notebooks
 .. toctree::
    :maxdepth: 1
 
-   fN Model <fN_examples>
+   fN Model <fNModel_examples>
+   fN Constraint <fNConstraint_examples>
 
 Overview
 ========
 
-This Class is designed to enable f(N) calculations in the IGM.
-While the authors have reservations on the validity of f(N)
+There are two classes designed for :math:`f(N)` calculations.
+While the authors have reservations on the validity of :math:`f(N)`
 as a description of the IGM, it still offers good value for
 a number of calculations.
 
+FNModel
+=======
 
 The FNModel Class may take several forms as described below.
 
@@ -34,15 +37,13 @@ Gamma     Power-law + exponential                                 `Inoue+14 <htt
 ========= ======================================================= ============
 
 Instantiation
-=============
+-------------
 
 
 Here are some examples of instantiation::
 
     from pyigm.fN.fnmodel import FNModel
-    # P14 HSpline
     fN_P14 = FNModel('Hspline', zmnx=(2.,5.))
-    # I14
     fN_I14 = FNModel('Gamma')
 
 
@@ -52,7 +53,7 @@ And the default model is currently the P14 formulation::
 
 
 Attributes/Properties
-=====================
+---------------------
 
 ========   ============== ============================================
 Variable   Type           Description
@@ -61,10 +62,10 @@ zmnx       tuple          min/max redshift for using this model to evaluate f(N)
 ========   ============== ============================================
 
 Methods
-=======
+-------
 
 l(X)
-----
+****
 
 Calculate :math:`\ell(X)`, the incidence of absorption per absorption
 path length :math:`dX` in a given interval of column density:
@@ -77,7 +78,7 @@ Easily evaluated with::
    lX = fN_default.calculate_lox(z, Nmin, Nmax)
 
 tau_eff^LL
-----------
+**********
 
 Calculate the effective optical depth to Lyman limit photons
 
@@ -90,14 +91,14 @@ Easily evaluated over across a redshift interval::
    zval,teff_LL = pyteff.lyman_limit(fN_default, 0.5, 2.45)
 
 MFP
----
+***
 
 Evaluate the mean free path to ionizing photons at a given redshift::
 
    mfp = fN_default.mfp(z)
 
 rho HI
-------
+******
 
 Evaluate the mass density in HI atoms at a specific redshift, integrating
 over a :math:`N_{\rm HI}` interval:
@@ -110,3 +111,14 @@ As such::
    rho_HI = fN_default.calculate_rhoHI(z, (Nmin, Nmax))
 
 Most useful for DLA calculations.
+
+fN Constraint
+=============
+
+The FNConstraint class organizes constraints on :math:`f(N)`.
+It is likely to be used mostly to read in existing data::
+
+   pyigm_path = imp.find_module('pyigm')[1]
+   fn_file = pyigm_path+'/data/fN/fN_constraints_z2.5_vanilla.fits'
+   fN_cs = FNConstraint.from_fitsfile(fn_file)
+

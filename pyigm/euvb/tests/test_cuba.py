@@ -13,15 +13,6 @@ def data_path(filename):
     data_dir = os.path.join(os.path.dirname(__file__), 'files')
     return os.path.join(data_dir, filename)
 
-'''
-def test_load_kin():
-    # Class
-    cos_halos = COSHalos()
-    cos_halos.load_mega(skip_ions=True)
-    # Load kin
-    cos_halos.load_abskin()
-'''
-
 def test_init():
     # Class
     cuba = CUBA()
