@@ -89,6 +89,7 @@ z2_HST     LLSSurvey.load_HST_ACS()       `Omeara+11`_        tau>2 with HST/ACS
            LLSSurvey.load_HST_WFC3()      `Omeara+11`_        tau>1 with HST/WFC3
 z3_MagE    LLSSurvey.load_mage_z3()       `Fumagalli+13`_     tau>2 with Magellan/MagE
 HD-LLS     LLSSurvey.load_HDLLS()         `Prochaska+15`_     Ionic column densities
+                                          `Fumagalli+16`_     and metallicity PDF
 Literature lls_literature.load_lls_lit()  See `Fumagalli+16`_ Ionic column densities
 ========== =============================  =================== ================================
 
@@ -97,7 +98,8 @@ Below are additional options for a few of these.
 HD-LLS DR1
 ----------
 
-The standard call loads the ionic column densities.
+The standard call loads the ionic column densities and
+metallicity PDFs.
 One call access the spectra with::
 
    hdlls = LLSSurvey.load_HDLLS(grab_spectra=True)
