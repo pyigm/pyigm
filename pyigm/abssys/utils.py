@@ -403,3 +403,25 @@ def sum_ionN(tbl1, tbl2):
     # Return
     return sum_tbl
 
+def class_by_type(type):
+    """ Enable IGMSystem init by type
+
+    Parameters
+    ----------
+    type : str
+
+    Returns
+    -------
+
+    """
+    from .lls import LLSSystem
+    from .dla import DLASystem
+
+    if type == 'LLS':
+        system = LLSSystem
+    elif type == 'DLA':
+        system = DLASystem
+    else:
+        raise IOError("Bad system type!")
+    # Return
+    return system

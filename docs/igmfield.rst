@@ -26,7 +26,7 @@ essentially any analysis of galaxies with the IGM.
 Instantiation
 =============
 
-Instantiation only requires the field coordinates, presumebly near the center.::
+Instantiation only requires the field coordinates, presumably near the center.::
 
     field = ('PG1407+265',212.349634*u.deg,26.3058650*u.deg)
     lfield = igmf.IgmGalaxyField((field[1],field[2]), name=field[0], verbose=True)
@@ -54,9 +54,10 @@ Methods
 Impact Parameter
 ----------------
 
-Calculate :math:`\rho`, the physical, projected impact parameter from
-a given object to the line-of-sight (LOS) coordinate.  By defualt, the
-LOS is assumed to be the field coordinate.::
+Calculate :math:`\rho`, the projected impact parameter from
+a given object at a given redshift to the line-of-sight (LOS) coordinate. By defualt, the
+projected impact parameter is calculated in co-moving coordinates and the LOS is assumed to be the
+field coordinate.::
 
    rho = lfield.calc_rhoimpact(obj)
 
@@ -89,4 +90,16 @@ Mask Date
 Returns a list of the date(s) when a given mask was observed.::
 
    dates = lfield.get_mask_obsdate('PG1407_may_mid2')
+
+Clean Duplicates
+----------------
+
+Returns a version of a table (e.g. targets, galaxies) without duplicates. The table
+has to have columns for sky coordinates (e.g. RA, DEC) and the duplication criteria is
+based on a angular tolerance (usually small; default is `tol = 1*u.arcsec`). Currently, the
+duplication conflict is solved by only keeping the first entry but we expect other methods
+will be available in the future.::
+
+   targets = lfield.targets
+   clean_targets = lfield.clean_duplicates(targets, tol=1*u.arcsec, method='first')
 

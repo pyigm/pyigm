@@ -5,7 +5,6 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 
 import numpy as np
 import json
-import copy
 from abc import ABCMeta
 import warnings
 import pdb
@@ -18,9 +17,10 @@ from astropy.units.quantity import Quantity
 from astropy.coordinates import SkyCoord
 
 from linetools.spectra import io as lsio
+from linetools.isgm import utils as ltiu
 
 from pyigm.abssys.igmsys import IGMSystem
-from pyigm.utils import lst_to_array
+from pyigm.abssys.utils import class_by_type
 
 
 class IGMSurvey(object):
@@ -69,7 +69,7 @@ class IGMSurvey(object):
         slf.dat_files = list(data['col1'])
         # Generate IGMSys list
         for dat_file in slf.dat_files:
-            slf._abs_sys.append(set_igmclass(slf.abs_type).from_datfile(dat_file, tree=slf.tree))
+            slf._abs_sys.append(class_by_type(slf.abs_type).from_datfile(dat_file, tree=slf.tree))
         print('Read {:d} files from {:s} in the tree {:s}'.format(
             slf.nsys, slf.flist, slf.tree))
 
@@ -110,7 +110,7 @@ class IGMSurvey(object):
                 inputs[key] = vals
         # vlim
         if 'vlim' not in inputs.keys():
-            default_vlim = [-500, 500.]* u.km / u.s
+            default_vlim = [-1000, 1000.]* u.km / u.s
             inputs['vlim'] = [default_vlim]*nsys
         # Generate
         for kk in range(nsys):
@@ -123,7 +123,7 @@ class IGMSurvey(object):
                 else:
                     kwargs[key] = inputs[key][kk]
             # Instantiate
-            abssys = set_igmclass(slf.abs_type)((args['RA'], args['Dec']), args['zabs'], args['vlim'], **kwargs)
+            abssys = class_by_type(slf.abs_type)((args['RA'], args['Dec']), args['zabs'], args['vlim'], **kwargs)
             # spec_files
             try:
                 abssys.spec_files += systems[kk]['SPEC_FILES'].tolist()
@@ -240,7 +240,7 @@ class IGMSurvey(object):
             raise IOError("Must be an IGMSystem object")
         return True
 
-    def fill_ions(self, use_Nfile=False, jfile=None, debug=False):  # This may be overloaded!
+    def fill_ions(self, use_Nfile=False, jfile=None, use_components=False):
         """ Loop on systems to fill in ions
 
         Parameters
@@ -249,6 +249,8 @@ class IGMSurvey(object):
           JSON file containing the information
         use_Nfile : bool, optional
           Use (historic) .clm files?
+        use_components : bool, optional
+          Load up the Table with components (recommended)
         """
         if jfile is not None:
             # Load
@@ -259,9 +261,11 @@ class IGMSurvey(object):
                 abs_sys.get_ions(idict=ions_dict[abs_sys.name])
         elif use_Nfile:
             for abs_sys in self._abs_sys:
-                if debug:
-                    print(abs_sys)
                 abs_sys.get_ions(use_Nfile=True)
+        elif use_components:
+            for abs_sys in self._abs_sys:
+                abs_sys._ionN = ltiu.iontable_from_components(abs_sys._components,
+                                                              ztbl=abs_sys.zabs)
         else:
             raise ValueError("Not sure how to load the ions")
 
@@ -284,6 +288,9 @@ class IGMSurvey(object):
         -------
         Table of values for the Survey
         """
+        if len(self.abs_sys()[0]._ionN) == 0:
+            raise IOError("ionN table not set.  Use fill_ionN")
+        #
         keys = [u'name', ] + self.abs_sys()[0]._ionN.keys()
         t = Table(self.abs_sys()[0]._ionN[0:1]).copy()   # Avoids mixin trouble
         t.add_column(Column(['dum'], name='name', dtype='<U32'))
@@ -442,27 +449,26 @@ class GenericIGMSurvey(IGMSurvey):
         IGMSurvey.__init__(self, 'Generic', **kwargs)
 
 
-def set_igmclass(abstype):
-    """Translate abstype into Class
+def lst_to_array(lst, mask=None):
+    """ Simple method to convert a list to an array
+
+    Allows for a list of Quantity objects
 
     Parameters
     ----------
-    abstype : str
-      IGMSystem type, e.g. 'LLS', 'DLA'
+    lst : list
+      Should be number or Quantities
+    mask : boolean array, optional
 
     Returns
     -------
-    Class name
+    array or Quantity array
+
     """
-    from pyigm.abssys.dla import DLASystem
-    from pyigm.abssys.lls import LLSSystem
-
-    cdict = dict(LLS=LLSSystem, DLA=DLASystem)
-    try:
-        return cdict[abstype]
-    except KeyError:
-        return IGMSystem
-
-
-
+    if mask is None:
+        mask = np.array([True]*len(lst))
+    if isinstance(lst[0], Quantity):
+        return Quantity(lst)[mask]
+    else:
+        return np.array(lst)[mask]
 

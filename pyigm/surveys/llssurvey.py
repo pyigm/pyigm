@@ -1,5 +1,7 @@
 """ Class for LLS Surveys
 """
+from __future__ import print_function, absolute_import, division, unicode_literals
+
 import numpy as np
 import imp, glob
 import pdb
@@ -14,9 +16,10 @@ from astropy.coordinates import SkyCoord
 
 from linetools import utils as ltu
 
-from pyigm.abssys.lls import LLSSystem
 from pyigm.surveys.igmsurvey import IGMSurvey
 from pyigm.metallicity.pdf import MetallicityPDF
+from pyigm.surveys import utils as pyisu
+
 
 pyigm_path = imp.find_module('pyigm')[1]
 
@@ -108,7 +111,6 @@ class LLSSurvey(IGMSurvey):
         ------
         lls_survey
         """
-        import tarfile
 
         # Pull from Internet (as necessary)
         summ_fil = pyigm_path+"/data/LLS/HD-LLS/HD-LLS_DR1.fits"
@@ -130,33 +132,17 @@ class LLSSurvey(IGMSurvey):
 
         # Load systems via the sys tarball.  Includes transitions
         if load_sys:  # This approach takes ~120s
-            lls_survey = cls(ref='HD-LLS')
             if isys_path is not None:
-                # Individual files
-                files = glob.glob(isys_path+'*.json')
-                files.sort()
-                for ifile in files:
-                    tdict = ltu.loadjson(ifile)
-                    abssys = LLSSystem.from_dict(tdict)
-                    lls_survey._abs_sys.append(abssys)
+                lls_survey = pyisu.load_sys_files(isys_path, 'LLS',sys_path=True)
             else:
-                print('HD-LLS: Loading systems from {:s}'.format(sys_files))
-                tar = tarfile.open(sys_files)
-                for member in tar.getmembers():
-                    if '.' not in member.name:
-                        print('Skipping a likely folder: {:s}'.format(member.name))
-                        continue
-                    # Extract
-                    f = tar.extractfile(member)
-                    tdict = json.load(f)
-                    # Generate
-                    abssys = LLSSystem.from_dict(tdict)
-                    lls_survey._abs_sys.append(abssys)
+                lls_survey = pyisu.load_sys_files(sys_files, 'LLS')
+            lls_survey.fill_ions(use_components=True)
         else:
             # Read
             lls_survey = cls.from_sfits(summ_fil)
             # Load ions
             lls_survey.fill_ions(jfile=ions_fil)
+        lls_survey.ref = 'HD-LLS'
 
         """
         # Load transitions
@@ -359,7 +345,6 @@ class LLSSurvey(IGMSurvey):
         lls_survey.sightlines = tab
 
         return lls_survey
-
 
     def __init__(self, **kwargs):
         IGMSurvey.__init__(self, 'LLS', **kwargs)
