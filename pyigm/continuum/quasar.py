@@ -69,7 +69,10 @@ def get_telfer_spec(zqso=0., igm=False, fN_gamma=None,
         HI = LineList('HI')
         twrest = HI._data['wrest']
         # Parallel
-        igm_wv = np.where(telfer['wrest'] < 1220.)[0]
+        if LL_flatten:
+            igm_wv = np.where((telfer['wrest'] > 900.) & (telfer['wrest'] < 1220.))[0]
+        else:
+            igm_wv = np.where(telfer['wrest'] < 1220.)[0]
         adict = []
         for wrest in telfer_spec.dispersion[igm_wv].value:
             tdict = dict(ilambda=wrest, zem=zqso, fN_model=fN_model,
