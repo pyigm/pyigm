@@ -5,12 +5,15 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import numpy as np
 import imp
 import pdb
+import yaml
+import copy
 
 from astropy import units as u
 from astropy.io import fits, ascii
 from astropy.table import Table
 
 from linetools.spectra.xspectrum1d import XSpectrum1D
+from linetools.lists.linelist import LineList
 
 from pyigm.fN import tau_eff as pyift
 from pyigm.fN.fnmodel import FNModel
@@ -20,7 +23,7 @@ pyigm_path = imp.find_module('pyigm')[1]
 
 
 def get_telfer_spec(zqso=0., igm=False, fN_gamma=None,
-                    LL_flatten=True, nproc=4):
+                    LL_flatten=True, nproc=6):
     """Generate a Telfer QSO composite spectrum
 
     Parameters
@@ -59,11 +62,18 @@ def get_telfer_spec(zqso=0., igm=False, fN_gamma=None,
         fN_model.zmnx = (0.,5.)
         if fN_gamma is not None:
             fN_model.gamma = fN_gamma
+        # Setup inputs
+        #EW_FIL = pyigm_path+'/data/fN/EW_SPLINE_b24.yml'
+        #with open(EW_FIL, 'r') as infile:
+        #    EW_spline = yaml.load(infile)  # dict from mk_ew_lyman_spline
+        HI = LineList('HI')
+        twrest = HI._data['wrest']
         # Parallel
         igm_wv = np.where(telfer['wrest'] < 1220.)[0]
         adict = []
         for wrest in telfer_spec.dispersion[igm_wv].value:
-            tdict = dict(ilambda=wrest, zem=zqso, fN_model=fN_model)
+            tdict = dict(ilambda=wrest, zem=zqso, fN_model=fN_model,
+                         wrest=copy.deepcopy(twrest))
             adict.append(tdict)
         # Run
         if nproc > 1:
