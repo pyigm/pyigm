@@ -1,16 +1,6 @@
+"""  Module for the COS-Halos survey
 """
-#;+ 
-#; NAME:
-#; cos_halos
-#;    Version 1.0
-#;
-#; PURPOSE:
-#;    Module for COS-Halos analysis
-#;        Now includes a COS-Dwarfs sub-class
-#;   29-Nov-2014 by JXP
-#;-
-#;------------------------------------------------------------------------------
-"""
+
 from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
