@@ -33,7 +33,7 @@ class CGM(object):
     def __init__(self, galaxy):
         # Checks
         if not isinstance(galaxy, Galaxy):
-            raise IOError("CGM instantiated with a Galaxy")
+            raise IOError("CGM must be instantiated with a Galaxy")
         self.galaxy = galaxy
         if self.galaxy.z is None:
             raise IOError("Galaxy redshift *must* be specified")

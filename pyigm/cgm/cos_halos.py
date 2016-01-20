@@ -150,7 +150,7 @@ class COSHalos(CGMAbsSurvey):
     def load_mega(self,data_file=None, cosh_dct=None, test=False, **kwargs):
         """ Load the data for COS-Halos
 
-        Paramaeters
+        Parameters
         ----------
         data_file : string
           Name of data file
@@ -168,11 +168,11 @@ class COSHalos(CGMAbsSurvey):
 
     
     ########################## ##########################
-    def load_abskin(self,flg=1,kin_file=None,kin_init_file=None):
+    def load_abskin(self, flg=1, kin_file=None, kin_init_file=None):
         """ Load the absorption-line kinematic data for COS-Halos (or COS-Dwarfs)
         Calculate from scratch if needed
 
-        Paramaeters
+        Parameters
         ----------
         flg: int, optional 
           Flag indicating how to load the data
