@@ -30,8 +30,8 @@ Contents:
 
    CGM <cgm>
    CUBA <cuba>
-   IGMGalaxyField <igmfield>
    fN <fn>
+   IGMGalaxyField <igmfield>
    IGMSystem <igmsys>
    IGMSurvey <igmsurvey>
    MetallicityPDF <metallicity>
@@ -44,6 +44,7 @@ Contents:
 .. toctree::
    :maxdepth: 1
 
+   Continuum <continuum>
    Scripts <scripts>
 
 ..

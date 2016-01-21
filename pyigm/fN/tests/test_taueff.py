@@ -3,6 +3,7 @@
 # TEST_UNICODE_LITERALS
 
 import numpy as np
+import copy
 
 import astropy.units as u
 
@@ -53,7 +54,7 @@ def test_parallel():
     #
     adict = []
     for wrest in tst_wv:
-        tdict = dict(ilambda=wrest.value*(1+2.4), zem=2.5, fN_model=fN_model)
+        tdict = dict(ilambda=wrest.value*(1+2.4), zem=2.5, fN_model=fN_model, wrest=copy.deepcopy(tst_wv))
         adict.append(tdict)
 
     pool = multiprocessing.Pool(2) # initialize thread pool N threads
