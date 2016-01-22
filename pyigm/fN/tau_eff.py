@@ -123,9 +123,9 @@ def lyman_limit(fN_model, z912, zem, N_eval=5000, cosmo=None, debug=False):
     # Return
     return zval, teff_LL
 
-
 def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
-                  bval=24., cosmo=None, debug=False, cumul=None, verbose=False):
+             bval=24., cosmo=None, debug=False, cumul=None,
+             verbose=False, EW_spline=None, wrest=None):
     """ tau effective from HI Lyman series absorption
 
     Parameters
@@ -148,6 +148,10 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
          -- Cosmological model to adopt (as needed)
     cumul : List of cumulative sums
          -- Recorded only if cumul is not None
+    EW_spline : spline, optional
+      Speeds up execution if input
+    HI : LineList, optional
+      HI line list.  Speeds up execution
 
     Returns
     -------
@@ -157,6 +161,9 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
     ToDo:
       1. Parallelize the Lyman loop
     """
+    # Cosmology
+    if cosmo is None:
+        cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
     # Lambda
     if not isinstance(ilambda, float):
         raise ValueError('tau_eff: ilambda must be a float for now')
@@ -165,16 +172,18 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
         Lambda = Lambda * u.AA # Ang
 
     # Read in EW spline (if needed)
-    if int(bval) == 24:
-        EW_FIL = pyigm_path+'/data/fN/EW_SPLINE_b24.yml'
-        with open(EW_FIL, 'r') as infile:
-            EW_spline = yaml.load(infile)  # dict from mk_ew_lyman_spline
-    else:
-        raise ValueError('tau_eff: Not ready for this bvalue %g' % bval)
+    if EW_spline is None:
+        if int(bval) == 24:
+            EW_FIL = pyigm_path+'/data/fN/EW_SPLINE_b24.yml'
+            with open(EW_FIL, 'r') as infile:
+                EW_spline = yaml.load(infile)  # dict from mk_ew_lyman_spline
+        else:
+            raise ValueError('tau_eff: Not ready for this bvalue %g' % bval)
 
     # Lines
-    HI = LineList('HI')
-    wrest = HI._data['wrest']
+    if wrest is None:
+        HI = LineList('HI')
+        wrest = HI._data['wrest']
 
     # Find the lines
     gd_Lyman = wrest[(Lambda/(1+zem)) < wrest]
@@ -191,7 +200,7 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
     teff_lyman = np.zeros(nlyman)
 
     # For cumulative
-    if not cumul is None:
+    if cumul is not None:
         cumul.append(lgNval)
 
     # Loop on the lines
@@ -202,10 +211,8 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
         if zeval < 0.:
             teff_lyman[qq] = 0.
             continue
-        # Cosmology
-        if cosmo not in locals():
-            cosmo = FlatLambdaCDM(H0=70, Om0=0.3) # Vanilla
-            dxdz = pyigmu.cosm_xz(zeval, cosmo=cosmo, flg_return=1)
+        # dxdz
+        dxdz = pyigmu.cosm_xz(zeval, cosmo=cosmo, flg_return=1)
 
         # Get EW values (could pack these all together)
         idx = np.where(EW_spline['wrest']*u.AA == line)[0]
@@ -222,8 +229,8 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
         # Sum
         intgrnd = 10.**(log_fnX) * dxdz * dz * Nval
         teff_lyman[qq] = np.sum(intgrnd) * dlgN * np.log(10.)
-        if not cumul is None:
-            cumul.append( np.cumsum(intgrnd) * dlgN * np.log(10.) )
+        if cumul is not None:
+            cumul.append(np.cumsum(intgrnd) * dlgN * np.log(10.))
 
         # Debug
         if debug:
@@ -240,7 +247,6 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
     # Return
     return np.sum(teff_lyman)
 
-
 def map_lymanew(dict_inp):
     """ Simple routine to enable parallel processing
 
@@ -249,7 +255,8 @@ def map_lymanew(dict_inp):
     dict_inp : dict
       dict containing the key info
     """
-    teff = lyman_ew(dict_inp['ilambda'], dict_inp['zem'], dict_inp['fN_model'])
+    teff = lyman_ew(dict_inp['ilambda'], dict_inp['zem'], dict_inp['fN_model'],
+                    wrest=dict_inp['wrest'])#EW_spline=dict_inp['EW_spline'],
     # Return
     return teff
 
@@ -299,3 +306,16 @@ def lyman_alpha_obs(z):
     # Return
     return teff
 
+if __name__ == '__main__':
+    import profile, pstats
+    fN_model = FNModel.default_model()
+    fN_model.zmnx = (0.,5.)
+    zem=3.
+    # Profile
+    outfil = 'tmp.prof'
+    profile.run('print lyman_ew(900.*(1+zem), zem, fN_model)', outfil)
+    # Stats
+    stats = pstats.Stats(outfil)
+    stats.strip_dirs()
+    stats.sort_stats('tottime')
+    stats.print_stats()
