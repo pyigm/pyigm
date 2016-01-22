@@ -238,13 +238,13 @@ def wfc3_continuum(wfc3_indx=None, zqso=0., wave=None,
     nwfc3 = len(wfc3_models_hdu)-1
     # Load up models
     wfc_models = []
-    for ii in range(1,nwfc3-1):
+    for ii in range(1,nwfc3):
         wfc_models.append( Table(wfc3_models_hdu[ii].data) )
     # Grab a random one
     if wfc3_indx is None:
         need_c = True
         while need_c:
-            idx = rstate.randint(0,nwfc3-1)
+            idx = rstate.randint(0,nwfc3-2)
             if wfc_models[idx]['TOTNHI'] > NHI_max:
                 continue
             if wfc_models[idx]['QSO'] in ['J122836.05+510746.2',
