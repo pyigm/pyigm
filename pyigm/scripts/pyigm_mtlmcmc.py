@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 This is the code that loop over data and runs mcmc chains.
 
@@ -20,23 +21,13 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-
+import pdb
  
-def run_mcmc(argv):
+def run_mcmc(args):
 
-    import argparse
     from pyigm.metallicity.mcmc import mcmc_ions
     import numpy as np
 
-    #get the call
-    parser = argparse.ArgumentParser(description='Running grid on shared memory system')
-    parser.add_argument('listmod')
-    parser.add_argument('fileinput')
-    parser.add_argument('outsave')
-    parser.add_argument('grid')
-    parser.add_argument('proc', type=int)
-    args = parser.parse_args(argv)
- 
     #read the input file
     fl = open(args.listmod)
 
@@ -80,19 +71,18 @@ def run_mcmc(argv):
     
     return
 
-if __name__ == "__main__":
-    import sys
-    run_mcmc(sys.argv[1:])
-    
-  
+def main(args=None):
+    import argparse
+    #get the call
+    parser = argparse.ArgumentParser(description='Running grid on shared memory system')
+    parser.add_argument('listmod')
+    parser.add_argument('fileinput')
+    parser.add_argument('outsave')
+    parser.add_argument('grid')
+    parser.add_argument('proc', type=int)
+    pargs = parser.parse_args()
 
-
-
-
-
-
-
-
-
+    # Run
+    run_mcmc(pargs)
 
 
