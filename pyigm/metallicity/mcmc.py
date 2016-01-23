@@ -67,12 +67,11 @@ import warnings
 
 #Here some general import
 import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
-import matplotlib.gridspec as gridspec
+
 try:
-    import triangle
+    import corner
 except ImportError:
-    raise ImportError("Install triangle to use metallicity.mcmc")
+    raise ImportError("Install corner to use metallicity.mcmc")
 
 import pickle
 
@@ -261,8 +260,10 @@ class Emceebones(object):
 
         #now do a corner plot
         samples = sampler.chain[:,self.burn:, :].reshape((-1,self.ndim))
-        cfig = triangle.corner(samples, labels=self.mod_axistag, quantiles=[0.05,0.5,0.95],verbose=False)
+        """
+        cfig = corner(samples, labels=self.mod_axistag, quantiles=[0.05,0.5,0.95],verbose=False)
         cfig.savefig(self.outsave+'/'+self.info['name']+'_corner.pdf')
+        """
 
         #now plot the residuals
         rfig=plt.figure()
@@ -827,9 +828,12 @@ def mcmc_ions(data,infodata,model,nwalkers=500,nsamp=250,threads=12,
 
     Parameters
     ----------
-    data
-    infodata
-    model
+    data : list
+      List of tuples containing the column density constraints
+    infodata : dict
+      dict containing observation info, e.g. NHI, z
+    model : str
+      Name of the grid
     nwalkers : int, optional
     nsamp : int, optional
     threads : int, optional

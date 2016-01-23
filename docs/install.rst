@@ -44,7 +44,7 @@ installed with pip.
 The following packages are required only for MCMC analysis of
 metallicity PDFs (e.g. Fumagalli+16):
 
-* `triangle <https://pypi.python.org/pypi/triangle_plot/0.3.0>`_ v0.3 or later
+* `corner <https://github.com/dfm/corner.py>`_ v0.3 or later
 * `mpmath <http://www.mpmath.org/>`_ version 0.19 or later
 * `emcee <http://http://dan.iel.fm/emcee/current/>`_ version 2.1 or later
 

@@ -27,55 +27,47 @@ def run_mcmc(args):
 
     from pyigm.metallicity.mcmc import mcmc_ions
     import numpy as np
+    from astropy.table import Table
 
-    #read the input file
-    fl = open(args.listmod)
-
-    #read in the data file
-    print 'Loading the data...'
     #load the file
-    data=np.loadtxt(args.fileinput, dtype={'names':('name','zabs','ezabs','ion','logn','elogn','flag','sample'),
-                                           'formats':('S50','f8','f8','S5','f5','f5','f5','S5')})
-    
-    #loop on systems to fit in this batch 
-    for sy in fl:
-     
-        #find th eions for the current system
-        sets=np.where(data['name'] == sy.strip())
-        sets=sets[0]
+    sy = args.sy
+    data = Table.read(args.fileinput, format='ascii')
+
+    #find the ions for the current system
+    sets = np.where(data['name'] == sy.strip())
+    sets = sets[0]
                
-        #now loop over ions for this system and initialise the tuples
-        observ=[]
-        for ii in range(len(sets)):
-            if(data['ion'][sets[ii]] == 'HI'): 
-                               
-                #isolate hydrogen and info
-                #print ii, sets[ii], data['ion'][sets[ii]], sy
-                obsinfo={'NHI':data['logn'][sets[ii]],'eNHI':data['elogn'][sets[ii]],'hiflag':data['flag'][sets[ii]],
-                         'z':data['zabs'][sets[ii]],'errz':data['ezabs'][sets[ii]],'name':sy.strip()}
-            else:
-                
-                #append ion value to list 
-                observ.append((data['ion'][sets[ii]],data['logn'][sets[ii]],data['elogn'][sets[ii]],data['flag'][sets[ii]]))
-                
-        #run the mcmc
-        print 'Ready to run mcmc for {}'.format(sy)
-        
-        #pick optimised values for 12 processors - cosma (proc*NN walkers, proc*YY samples)
-        mcmc=mcmc_ions.mcmc_ions(observ,obsinfo,args.grid,nwalkers=(args.proc*80),nsamp=(args.proc*40),
-                                 optim=False,threads=args.proc,outsave=args.outsave)
-        #mcmc=mcmc_ions.mcmc_ions(observ,obsinfo,args.grid,nwalkers=(10),nsamp=(50),
-        #                         optim=False,threads=args.proc,outsave=args.outsave)
+    #now loop over ions for this system and initialise the tuples
+    observ=[]
+    for ii in range(len(sets)):
+        if(data['ion'][sets[ii]] == 'HI'):
+            #isolate hydrogen and info
+            #print ii, sets[ii], data['ion'][sets[ii]], sy
+            obsinfo={'NHI':data['logn'][sets[ii]],'eNHI':data['elogn'][sets[ii]],'hiflag':data['flag'][sets[ii]],
+                     'z':data['zabs'][sets[ii]],'errz':data['ezabs'][sets[ii]],'name':sy.strip()}
+        else:
+            #append ion value to list
+            observ.append((data['ion'][sets[ii]],data['logn'][sets[ii]],data['elogn'][sets[ii]],data['flag'][sets[ii]]))
+
+    #run the mcmc
+    print 'Ready to run mcmc for {}'.format(sy)
+
+    #pick optimised values for 12 processors - cosma (proc*NN walkers, proc*YY samples)
+    pdb.set_trace()
+    mcmc=mcmc_ions(observ,obsinfo,args.grid,nwalkers=(args.proc*80),nsamp=(args.proc*40),
+                             optim=False,threads=args.proc,outsave=args.outsave)
+    #mcmc=mcmc_ions.mcmc_ions(observ,obsinfo,args.grid,nwalkers=(10),nsamp=(50),
+    #                         optim=False,threads=args.proc,outsave=args.outsave)
 
     print 'All done with this batch'
     
-    return
+    #return
 
 def main(args=None):
     import argparse
     #get the call
     parser = argparse.ArgumentParser(description='Running grid on shared memory system')
-    parser.add_argument('listmod')
+    parser.add_argument('sy', type=str, help='Name of the System to analyze')
     parser.add_argument('fileinput')
     parser.add_argument('outsave')
     parser.add_argument('grid')
@@ -86,3 +78,4 @@ def main(args=None):
     run_mcmc(pargs)
 
 
+# pyigm_mtlmcmc J012156.03+144823.8_z2.662 alldata.txt savehere grid_minimal.pkl 1
