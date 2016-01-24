@@ -51,5 +51,6 @@ def test_add():
     mpdf2 = MetallicityPDF(ZH, pdf2)
     # Sum
     sum_pdf = mpdf + mpdf2
+    sum_pdf.normalize()
     # Test
     np.testing.assert_allclose(sum_pdf.meanZH,-1.5999356764972328)
