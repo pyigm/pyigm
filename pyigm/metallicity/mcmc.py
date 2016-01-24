@@ -64,6 +64,10 @@ import matplotlib as mpl
 mpl.use('Agg')
 
 import warnings
+import pdb
+import json
+import io
+import copy
 
 #Here some general import
 import matplotlib.pyplot as plt
@@ -89,6 +93,7 @@ except ImportError:
     raise ImportError("Install emcee to use metallicity.mcmc")
 
 import numpy as np
+import os
 #enable warning handling in numpy
 #np.seterr(all='raise')
 
@@ -97,7 +102,7 @@ from scipy import interpolate
 #sp.seterr(all='raise')
 import scipy.optimize as op
 
-import os
+from linetools import utils as ltu
 
 class Emceebones(object):
     """
@@ -232,6 +237,13 @@ class Emceebones(object):
         wout=open(self.outsave+'/'+self.info['name']+'_emcee.pkl','w')
         pickle.dump(self.final,wout)
         wout.close()
+        # JSON too?  Might get too large...
+        # But I would prefer something (anything) to pkl
+        json_fil=self.outsave+'/'+self.info['name']+'_emcee.json'
+        gd_dict = ltu.jsonify_dict(self.final)
+        with io.open(json_fil, 'w', encoding='utf-8') as f:
+            f.write(unicode(json.dumps(gd_dict, sort_keys=True, indent=4,
+                                       separators=(',', ': '))))
 
         #Start by plotting the chains with initial guess and final values
         fig=plt.figure()
@@ -260,10 +272,8 @@ class Emceebones(object):
 
         #now do a corner plot
         samples = sampler.chain[:,self.burn:, :].reshape((-1,self.ndim))
-        """
-        cfig = corner(samples, labels=self.mod_axistag, quantiles=[0.05,0.5,0.95],verbose=False)
+        cfig = corner.corner(samples, labels=self.mod_axistag, quantiles=[0.05,0.5,0.95],verbose=False)
         cfig.savefig(self.outsave+'/'+self.info['name']+'_corner.pdf')
-        """
 
         #now plot the residuals
         rfig=plt.figure()
@@ -476,11 +486,11 @@ class Emceebones(object):
         print("Extract best fit model...")
         self.best_fit=[]
         for ion in range(self.nions):
-            self.best_fit.append(emc.interpol[ion](medians))
+            self.best_fit.append(emc.interpol[ion](medians)[0])
 
         #grab effective NHI if in use
         if(self.effnhi):
-            best_fit_nhi=emc.hiinterp(medians)
+            best_fit_nhi=emc.hiinterp(medians)[0]
         else:
             best_fit_nhi=False
 

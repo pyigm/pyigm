@@ -53,11 +53,8 @@ def run_mcmc(args):
     print 'Ready to run mcmc for {}'.format(sy)
 
     #pick optimised values for 12 processors - cosma (proc*NN walkers, proc*YY samples)
-    pdb.set_trace()
     mcmc=mcmc_ions(observ,obsinfo,args.grid,nwalkers=(args.proc*80),nsamp=(args.proc*40),
                              optim=False,threads=args.proc,outsave=args.outsave)
-    #mcmc=mcmc_ions.mcmc_ions(observ,obsinfo,args.grid,nwalkers=(10),nsamp=(50),
-    #                         optim=False,threads=args.proc,outsave=args.outsave)
 
     print 'All done with this batch'
     
@@ -78,4 +75,5 @@ def main(args=None):
     run_mcmc(pargs)
 
 
+# Example
 # pyigm_mtlmcmc J012156.03+144823.8_z2.662 alldata.txt savehere grid_minimal.pkl 1
