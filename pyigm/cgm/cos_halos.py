@@ -39,7 +39,7 @@ class COSHalos(CGMAbsSurvey):
         #
         if cdir is None:
             if os.environ.get('COSHALOS_DATA') is None:
-                raise ValueError("Need to set COSHALOS_DIR variable")
+                raise ValueError("Need to set COSHALOS_DATA variable")
             self.cdir = os.environ.get('COSHALOS_DATA')
         else:
             self.cdir = cdir
