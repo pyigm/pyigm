@@ -110,8 +110,8 @@ class CGMAbsSys(object):
         # Standard name
         if name is None:
             self.name = 'J{:s}{:s}_{:d}_{:d}'.format(
-                    self.galaxy.coord.ra.to_string(unit=u.hour,sep='',pad=True)[0:4],
-                    self.galaxy.coord.dec.to_string(sep='',pad=True,alwayssign=True)[0:5],
+                    self.igm_sys.coord.ra.to_string(unit=u.hour,sep='',pad=True)[0:4],
+                    self.igm_sys.coord.dec.to_string(sep='',pad=True,alwayssign=True)[0:5],
                     int(np.round(self.PA.to('deg').value)),
                     int(np.round(self.ang_sep.to('arcsec').value)))
         else:
