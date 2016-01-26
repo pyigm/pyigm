@@ -53,8 +53,9 @@ def run_mcmc(args):
     print 'Ready to run mcmc for {}'.format(sy)
 
     #pick optimised values for 12 processors - cosma (proc*NN walkers, proc*YY samples)
-    mcmc=mcmc_ions(observ,obsinfo,args.grid,nwalkers=(args.proc*80),nsamp=(args.proc*40),
-                             optim=False,threads=args.proc,outsave=args.outsave)
+    mcmc=mcmc_ions(observ,obsinfo, args.grid, nwalkers=args.nwalkers,
+                   nsamp=args.nsamp, optim=False, threads=args.nthread,
+                   outsave=args.outsave)
 
     print 'All done with this batch'
     
@@ -68,7 +69,9 @@ def main(args=None):
     parser.add_argument('fileinput')
     parser.add_argument('outsave')
     parser.add_argument('grid')
-    parser.add_argument('proc', type=int)
+    parser.add_argument('-nthread', type=int, help='Number of threads')
+    parser.add_argument('-nwalkers', type=int, help='Number of walkers')
+    parser.add_argument('-nsamp', type=int, help='Number of samples')
     pargs = parser.parse_args()
 
     # Run

@@ -861,6 +861,7 @@ def mcmc_ions(data,infodata,model,nwalkers=500,nsamp=250,threads=12,
 
     #Do not run with less than 100 samples
     nsamp=np.max([nsamp,100])
+    nwalkers=np.max([nwalkers,400])
 
     #initialise the mcmc for this problem
     #load the observations and the model
