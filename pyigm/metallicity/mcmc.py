@@ -65,8 +65,6 @@ mpl.use('Agg')
 
 import warnings
 import pdb
-import json
-import io
 import copy
 
 #Here some general import
@@ -219,7 +217,7 @@ class Emceebones(object):
 
         return
 
-    def plotinfo(self, sampler):
+    def plotinfo(self, sampler, use_pkl=False):
         """ Function that makes some useful plots of stuff
 
         Parameters
@@ -234,16 +232,25 @@ class Emceebones(object):
         print('Writing outputs...')
 
         #pickle the results to disk
-        wout=open(self.outsave+'/'+self.info['name']+'_emcee.pkl','w')
-        pickle.dump(self.final,wout)
-        wout.close()
-        # JSON too?  Might get too large...
-        # But I would prefer something (anything) to pkl
-        json_fil=self.outsave+'/'+self.info['name']+'_emcee.json'
-        gd_dict = ltu.jsonify_dict(self.final)
-        with io.open(json_fil, 'w', encoding='utf-8') as f:
-            f.write(unicode(json.dumps(gd_dict, sort_keys=True, indent=4,
-                                       separators=(',', ': '))))
+        if use_pkl:
+            wout=open(self.outsave+'/'+self.info['name']+'_emcee.pkl','w')
+            pickle.dump(self.final,wout)
+            wout.close()
+        else:  # hd5
+            import h5py
+            import json
+            with h5py.File(self.outsave+'/'+self.info['name']+'_emcee.hd5', 'w') as f:
+                # Input
+                in_group = f.create_group('inputs')
+                for in_key in ['data', 'ions', 'guess']:
+                    in_group[in_key] = self.final[in_key]
+                in_group.attrs['info'] = unicode(json.dumps(self.final['info']))
+                # Output
+                out_group = f.create_group('outputs')
+                for out_key in ['tags', 'results', 'pdfs', 'best_fit']:
+                    out_group[out_key] = self.final[out_key]
+                out_group.attrs['acceptance'] = self.final['acceptance']
+                out_group.attrs['effNHI'] = self.final['effNHI']
 
         #Start by plotting the chains with initial guess and final values
         fig=plt.figure()
@@ -466,9 +473,12 @@ class Emceebones(object):
         print("[good range 0.25-0.5. Low is bad!]")
 
         #remove burnt in to generate "clean" PDFs
-        self.burn=45
+        self.burn = 45
+        if self.burn >= self.nsamp:
+            raise ValueError("Burn out exceeds number of samples!")
+
         #get nsamples * ndim pdfs
-        samples = sampler.chain[:,self.burn:,:].reshape((-1,self.ndim))
+        samples = sampler.chain[:, self.burn:, :].reshape((-1,self.ndim))
 
         #now compute percentiles for each paramater
         percentile=[10,16,25,50,75,84,90]
@@ -833,7 +843,7 @@ class Emceeutils():
 
 
 def mcmc_ions(data,infodata,model,nwalkers=500,nsamp=250,threads=12,
-              outsave='emceeout', optim=False, effnhi=True):
+              outsave='emceeout', optim=False, effnhi=True, testing=False):
     """ This is the main, which does not do much
 
     Parameters
@@ -851,6 +861,7 @@ def mcmc_ions(data,infodata,model,nwalkers=500,nsamp=250,threads=12,
     optim : bool, optional
       Optimize?  [Not recommended]
     effnhi : bool, optional
+    testing : bool, optional
 
     Returns
     -------
@@ -859,20 +870,21 @@ def mcmc_ions(data,infodata,model,nwalkers=500,nsamp=250,threads=12,
 
     print('Getting started...')
 
-    #Do not run with less than 100 samples
-    nsamp=np.max([nsamp,100])
-    nwalkers=np.max([nwalkers,400])
+    # Do not run with less than 100 samples or 400 walkers
+    if not testing:
+        nsamp=np.max([nsamp,100])
+        nwalkers=np.max([nwalkers,400])
 
-    #initialise the mcmc for this problem
-    #load the observations and the model
+    # initialise the mcmc for this problem
+    # load the observations and the model
     mcmc=Emceebones(data,infodata,model,nwalkers,
                     nsamp,threads,outsave,optim,effnhi)
 
-    #make space for output if needed
+    # make space for output if needed
     if not os.path.isdir(outsave):
         os.makedirs(outsave)
 
-    #Run emcee on this dataset
+    # Run emcee on this dataset
     results=mcmc()
 
 
