@@ -247,6 +247,9 @@ class Emceebones(object):
                 in_group.attrs['info'] = unicode(json.dumps(self.final['info']))
                 # Output
                 out_group = f.create_group('outputs')
+                mcmc_dict = dict(nwalkers=self.nwalkers, nsamp=self.nsamp,
+                                 nburn=self.burn, nthread=self.threads)
+                out_group.attrs['mcmc'] = unicode(json.dumps(mcmc_dict))
                 for out_key in ['tags', 'results', 'pdfs', 'best_fit']:
                     out_group[out_key] = self.final[out_key]
                 out_group.attrs['acceptance'] = self.final['acceptance']
