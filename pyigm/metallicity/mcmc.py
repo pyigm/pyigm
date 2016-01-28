@@ -244,13 +244,16 @@ class Emceebones(object):
                 in_group = f.create_group('inputs')
                 for in_key in ['data', 'ions', 'guess']:
                     in_group[in_key] = self.final[in_key]
-                in_group.attrs['info'] = unicode(json.dumps(self.final['info']))
+                for key in self.final['info']:
+                    in_group.attrs[key] = self.final['info'][key]
                 # Output
                 out_group = f.create_group('outputs')
-                for out_key in ['tags', 'results', 'pdfs', 'best_fit']:
+                mcmc_dict = dict(nwalkers=self.nwalkers, nsamp=self.nsamp,
+                                 nburn=self.burn, nthread=self.threads)
+                out_group.attrs['mcmc'] = unicode(json.dumps(mcmc_dict))
+                for out_key in ['tags', 'results', 'pdfs', 'best_fit',
+                                'effNHI', 'acceptance']:
                     out_group[out_key] = self.final[out_key]
-                out_group.attrs['acceptance'] = self.final['acceptance']
-                out_group.attrs['effNHI'] = self.final['effNHI']
 
         #Start by plotting the chains with initial guess and final values
         fig=plt.figure()
