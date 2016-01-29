@@ -30,3 +30,8 @@ def test_telfer_and_igm():
 def test_wfc3_conti():
     wfc3, _ = pyicq.wfc3_continuum(wfc3_indx=0, zqso=2.)
     np.testing.assert_allclose(wfc3.flux[100].value, 18.405926715695372)
+
+def test_full_sed():
+    lognu, fnu = pyicq.full_nu_spectrum()
+    np.testing.assert_allclose(lognu[100], 12.51)
+    np.testing.assert_allclose(fnu[100], 89.12509381337513)

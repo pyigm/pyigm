@@ -39,7 +39,7 @@ class COSHalos(CGMAbsSurvey):
         #
         if cdir is None:
             if os.environ.get('COSHALOS_DATA') is None:
-                raise ValueError("Need to set COSHALOS_DIR variable")
+                raise ValueError("Need to set COSHALOS_DATA variable")
             self.cdir = os.environ.get('COSHALOS_DATA')
         else:
             self.cdir = cdir
@@ -111,7 +111,8 @@ class COSHalos(CGMAbsSurvey):
             if len(mtc) == 1:
                 igm_sys.ZH = self.cldy[mtc]['ZBEST'][0]
         # Instantiate
-        self.cgm_abs.append(CGMAbsSys(gal, igm_sys))
+        self.cgm_abs.append(CGMAbsSys(gal, igm_sys,
+                                      name=gal.field+'_'+gal.gal_id))
         # Ions
         if skip_ions is True:
             return
