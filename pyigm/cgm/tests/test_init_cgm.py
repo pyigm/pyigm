@@ -5,9 +5,12 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 # TEST_UNICODE_LITERALS
 
 import pytest
+import numpy as np
+import io
+import json
+
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-import numpy as np
 
 from ..cgm import CGM, CGMAbsSys
 from ..cgmsurvey import CGMAbsSurvey
@@ -39,3 +42,16 @@ def test_init_cgmabssurvey():
     cgmsurvey = CGMAbsSurvey(survey='cos-halos', ref='Tumlinson+13, Werk+13')
     # Test
     assert cgmsurvey.survey == 'cos-halos'
+
+def test_to_dict():
+    radec = (125*u.deg, 45.2*u.deg)
+    gal = Galaxy(radec,z=0.3)
+    radec_qso = (125*u.deg, 45.203*u.deg)
+    igmsys = IGMSystem('CGM', radec_qso, gal.z, [-500,500]*u.km/u.s)
+    # Instantiate
+    cgmabs = CGMAbsSys(gal, igmsys)
+    # Test
+    cdict = cgmabs.to_dict()
+    with io.open('tmp.json', 'w', encoding='utf-8') as f:
+        f.write(unicode(json.dumps(cdict, sort_keys=True, indent=4,
+                                   separators=(',', ': '))))

@@ -9,6 +9,7 @@ import pdb
 from astropy import units as u
 
 from linetools.utils import radec_to_coord
+from linetools import utils as ltu
 
 class Galaxy(object):
     """A Galaxy Class
@@ -37,6 +38,32 @@ class Galaxy(object):
         # Name
         self.name = ('J'+self.coord.ra.to_string(unit=u.hour, sep='', pad=True)+
                     self.coord.dec.to_string(sep='', pad=True, alwayssign=True))
+
+    def to_dict(self):
+        """ Convert the galaxy to a JSON-ready dict for output
+
+        Returns
+        -------
+        gdict : dict
+
+        """
+        import datetime
+        import getpass
+        date = str(datetime.date.today().strftime('%Y-%b-%d'))
+        user = getpass.getuser()
+        # Generate the dict
+        gdict = dict(Name=self.name,
+                       RA=self.coord.ra.value,
+                       DEC=self.coord.dec.value,
+                       CreationDate=date,
+                       user=user
+                       )
+        if self.z is not None:
+            gdict['z'] = self.z
+        # Polish
+        gdict = ltu.jsonify(gdict)
+        # Return
+        return gdict
 
     # #############
     def __repr__(self):

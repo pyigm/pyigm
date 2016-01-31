@@ -5,8 +5,11 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 
 import numpy as np
 import warnings
+import pdb
 
 from astropy import units as u
+
+from linetools import utils as ltu
 
 from pyigm.field.galaxy import Galaxy
 from pyigm.abssys.igmsys import IGMSystem
@@ -117,9 +120,61 @@ class CGMAbsSys(object):
         else:
             self.name = name
 
-    # Output
+    def to_dict(self):
+        """ Convert the system to a JSON-ready dict for output
+        Returns
+        -------
+        cdict : dict
+
+        """
+        import datetime
+        import getpass
+        date = str(datetime.date.today().strftime('%Y-%b-%d'))
+        user = getpass.getuser()
+        # Generate the dict
+        outdict = dict(Name=self.name, z=self.galaxy.z, rho=self.rho.value,
+                       ang_sep=self.ang_sep.value,
+                       PA=self.PA.value,
+                       RA=self.galaxy.coord.ra.value,
+                       DEC=self.galaxy.coord.dec.value,
+                       cosmo = self.cosmo.name,
+                       CreationDate=date,
+                       user=user
+                       )
+        # IGM_SYS
+        outdict['igm_sys'] = self.igm_sys.to_dict()
+        # Galaxy
+        outdict['galaxy'] = self.galaxy.to_dict()
+        # Polish
+        outdict = ltu.jsonify(outdict)
+        # Return
+        return outdict
+
+    def __getattr__(self, k):
+        """ Extend Attributes
+
+        Parameters
+        ----------
+        k : str
+          Attribute
+
+        Returns
+        -------
+          Attribute off main class then galaxy then igm_sys
+        """
+        # Galaxy?
+        try:
+            return getattr(self.galaxy, k)
+        except AttributeError:
+            # Try AbsLine_Sys last
+            try:
+                return getattr(self.igm_sys, k)
+            except AttributeError:
+                print('Attribute not found!')
+                return None
+
     def __repr__(self):
-        return ('<{:s}: {:s} Galaxy RA/DEC={:s}{:s}, zgal={:g}, rho={:g}]'.format(
+        return ('<{:s}: {:s} Galaxy RA/DEC={:s}{:s}, zgal={:g}, rho={:g}>'.format(
                 self.__class__.__name__,
                 self.name,
                  self.galaxy.coord.ra.to_string(unit=u.hour,sep=':',pad=True),

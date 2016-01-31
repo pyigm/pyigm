@@ -360,8 +360,6 @@ class COSHalos(CGMAbsSurvey):
         # Execute
         ltap.stack_plot(abs_lines, vlim=[-400., 400]*u.km/u.s, ymnx=ymnx, **kwargs)
 
-
-
     def __getitem__(self, inp):
         """Grab CgmAbs Class from the list
 
