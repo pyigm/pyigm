@@ -27,6 +27,18 @@ def test_load_sngl():
     # Load
     cos_halos.load_single_fits(('J0950+4831', '177_27'))
 
+def test_write_sngl():
+    import io, json
+    # Class
+    cos_halos = COSHalos(fits_path=data_path(''), cdir=data_path(''))
+    # Load
+    cos_halos.load_single_fits(('J0950+4831', '177_27'))
+    # Write to JSON
+    cdict = cos_halos.cgm_abs[0].to_dict()
+    with io.open('tmp.json', 'w', encoding='utf-8') as f:
+        f.write(unicode(json.dumps(cdict, sort_keys=True, indent=4,
+                                   separators=(',', ': '))))
+
 """
 def test_load_sngl_dwarf():
     # Class
