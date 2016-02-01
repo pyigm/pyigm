@@ -14,6 +14,8 @@ from astropy.table import Table, Column
 
 from linetools.spectra import io as lsio
 from linetools.spectralline import AbsLine
+from linetools.analysis import absline as ltaa
+from linetools.isgm.abscomponent import AbsComponent
 
 from pyigm.cgm.cgmsurvey import CGMAbsSurvey
 from pyigm.field.galaxy import Galaxy
@@ -55,7 +57,7 @@ class COSHalos(CGMAbsSurvey):
         # Kinematics
         self.kin_init_file = self.cdir+'/Kin/coshalo_kin_driver.dat'
 
-    def load_single(self, inp, skip_ions=False, verbose=True):
+    def load_single_fits(self, inp, skip_ions=False, verbose=True):
         """ Load a single COS-Halos sightline
         Appends to cgm_abs list
 
@@ -101,7 +103,7 @@ class COSHalos(CGMAbsSurvey):
                                        galx['SFR_FLAG'][0]) # FLAG actually gives method used
         # Instantiate the IGM System
         igm_sys = IGMSystem('CGM',(galx['QSORA'][0], galx['QSODEC'][0]),
-                            summ['ZFINAL'][0], [-400, 400.]*u.km/u.s)
+                            summ['ZFINAL'][0], [-600, 600.]*u.km/u.s)
         igm_sys.zqso = galx['ZQSO'][0]
         # Metallicity
         igm_sys.ZH = -99.
@@ -111,8 +113,7 @@ class COSHalos(CGMAbsSurvey):
             if len(mtc) == 1:
                 igm_sys.ZH = self.cldy[mtc]['ZBEST'][0]
         # Instantiate
-        self.cgm_abs.append(CGMAbsSys(gal, igm_sys,
-                                      name=gal.field+'_'+gal.gal_id))
+        cgabs = CGMAbsSys(gal, igm_sys, name=gal.field+'_'+gal.gal_id)
         # Ions
         if skip_ions is True:
             return
@@ -130,6 +131,49 @@ class COSHalos(CGMAbsSurvey):
                     pdb.set_trace()
             all_Z.append(iont['ZION'][0][0])
             all_ion.append(iont['ZION'][0][1])
+            # AbsLines
+            abslines = []
+            for kk in range(iont['NTRANS']):
+                flg = iont['FLG'][0][kk]
+                if (flg % 2) == 0:
+                    print('Skipping {:g} as NG'.format(iont['LAMBDA'][0][kk]))
+                    continue
+                elif (flg == 1) or (flg == 3):
+                    flgN = 1
+                elif (flg == 5) or (flg == 7):
+                    flgN = 3
+                elif (flg == 9) or (flg == 11):
+                    flgN = 2
+                else:
+                    raise ValueError("Bad flag!")
+                # Fill in
+                aline = AbsLine(iont['LAMBDA'][0][kk]*u.AA, closest=True)
+                aline.attrib['EW'] = iont['WOBS'][0][kk]*u.AA/1e3  # Observed
+                aline.attrib['sig_EW'] = iont['SIGWOBS'][0][kk]*u.AA/1e3
+                aline.analy['vlim'] = [iont['VMIN'][0][kk],iont['VMAX'][0][kk]]*u.km/u.s
+                aline.attrib['z'] = igm_sys.zabs
+                aline.attrib['coord'] = igm_sys.coord
+                # Check f
+                if (np.abs(aline.data['f']-iont['FVAL'][0][kk])/aline.data['f']) > 0.01:
+                    warnings.warn('COS-Halos f-value does not match linetools for {:g}.  Using COS-Halos for now'.format(aline.wrest))
+                    aline.data['f'] = iont['FVAL'][0][kk]
+                # Colm
+                aline.attrib['logN'] = iont['LOGN'][0][kk]
+                aline.attrib['sig_logN'] = iont['SIGLOGN'][0][kk]
+                aline.attrib['flag_N'] = flgN
+                #pdb.set_trace()
+                _,_ = ltaa.linear_clm(aline.attrib)
+                # Append
+                abslines.append(aline)
+            # Component
+            comp = AbsComponent.from_abslines(abslines)
+            comp.logN = iont['CLM'][0]
+            comp.sig_logN = iont['SIG_CLM'][0]
+            comp.flag_N = iont['FLG_CLM'][0]
+            _,_ = ltaa.linear_clm(comp)
+            cgabs.igm_sys.add_component(comp)
+        self.cgm_abs.append(cgabs)
+
         # Add Z,ion
         dat_tab.add_column(Column(all_Z,name='Z'))
         dat_tab.add_column(Column(all_ion,name='ion'))
@@ -165,7 +209,7 @@ class COSHalos(CGMAbsSurvey):
             cos_files = glob.glob(self.fits_path+'/J*.fits.gz')
         # Read
         for fil in cos_files:
-            self.load_single(fil, **kwargs)
+            self.load_single_fits(fil, **kwargs)
 
     
     ########################## ##########################

@@ -170,7 +170,6 @@ class CGMAbsSys(object):
             try:
                 return getattr(self.igm_sys, k)
             except AttributeError:
-                print('Attribute not found!')
                 return None
 
     def __repr__(self):

@@ -25,7 +25,7 @@ def test_load_sngl():
     # Class
     cos_halos = COSHalos(fits_path=data_path(''), cdir=data_path(''))
     # Load
-    cos_halos.load_single( ('J0950+4831','177_27'))
+    cos_halos.load_single_fits(('J0950+4831', '177_27'))
 
 """
 def test_load_sngl_dwarf():
@@ -46,7 +46,7 @@ def test_getitem():
     # Class
     cos_halos = COSHalos(fits_path=data_path(''), kin_init_file='dum', cdir='dum')
     # Load
-    cos_halos.load_single( ('J0950+4831','177_27'))
+    cos_halos.load_single_fits(('J0950+4831', '177_27'))
     # Get item
     cgm_abs = cos_halos[('J0950+4831','177_27')]
     assert cgm_abs.galaxy.field == 'J0950+4831'
