@@ -135,8 +135,8 @@ class COSHalos(CGMAbsSurvey):
             abslines = []
             for kk in range(iont['NTRANS']):
                 flg = iont['FLG'][0][kk]
-                if (flg % 2) == 0:
-                    print('Skipping {:g} as NG'.format(iont['LAMBDA'][0][kk]))
+                if ((flg % 2) == 0) or (flg == 15) or (flg == 13):
+                    print('Skipping {:g} as NG for a line'.format(iont['LAMBDA'][0][kk]))
                     continue
                 elif (flg == 1) or (flg == 3):
                     flgN = 1
@@ -145,6 +145,7 @@ class COSHalos(CGMAbsSurvey):
                 elif (flg == 9) or (flg == 11):
                     flgN = 2
                 else:
+                    pdb.set_trace()
                     raise ValueError("Bad flag!")
                 # Fill in
                 aline = AbsLine(iont['LAMBDA'][0][kk]*u.AA, closest=True)
@@ -160,16 +161,22 @@ class COSHalos(CGMAbsSurvey):
                 # Colm
                 aline.attrib['logN'] = iont['LOGN'][0][kk]
                 aline.attrib['sig_logN'] = iont['SIGLOGN'][0][kk]
-                aline.attrib['flag_N'] = flgN
+                aline.attrib['flag_N'] = int(flgN)
                 #pdb.set_trace()
                 _,_ = ltaa.linear_clm(aline.attrib)
                 # Append
                 abslines.append(aline)
             # Component
-            comp = AbsComponent.from_abslines(abslines)
-            comp.logN = iont['CLM'][0]
-            comp.sig_logN = iont['SIG_CLM'][0]
-            comp.flag_N = iont['FLG_CLM'][0]
+            if len(abslines) == 0:
+                comp = AbsComponent(cgabs.igm_sys.coord,
+                                    (iont['ZION'][0][0],iont['ZION'][0][1]),
+                                    igm_sys.zabs, igm_sys.vlim)
+
+            else:
+                comp = AbsComponent.from_abslines(abslines)
+            comp.logN = float(iont['CLM'][0])
+            comp.sig_logN = float(iont['SIG_CLM'][0])
+            comp.flag_N = int(iont['FLG_CLM'][0])
             _,_ = ltaa.linear_clm(comp)
             cgabs.igm_sys.add_component(comp)
         self.cgm_abs.append(cgabs)
