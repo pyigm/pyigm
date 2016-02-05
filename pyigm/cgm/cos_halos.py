@@ -116,6 +116,14 @@ class COSHalos(CGMAbsSurvey):
         cgabs = CGMAbsSys(gal, igm_sys, name=gal.field+'_'+gal.gal_id)
         # Ions
         if skip_ions is True:
+            # NHI
+            dat_tab = Table(hdu[3].data)
+            #if dat_tab['Z'] != 1:
+            #    raise ValueError("Uh oh")
+            cgabs.igm_sys.NHI = dat_tab['CLM'][0]
+            cgabs.igm_sys.sig_NHI = dat_tab['SIG_CLM'][0]
+            cgabs.igm_sys.flag_NHI = dat_tab['FLG_CLM'][0]
+            self.cgm_abs.append(cgabs)
             return
         mm = len(self.cgm_abs)-1
         all_Z = []
