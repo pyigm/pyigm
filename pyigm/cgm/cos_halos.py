@@ -7,6 +7,7 @@ import numpy as np
 import os, glob
 import pdb
 import warnings
+import h5py
 
 from astropy.io import fits, ascii
 from astropy import units as u 
@@ -17,6 +18,7 @@ from linetools.spectralline import AbsLine
 from linetools.analysis import absline as ltaa
 from linetools.isgm.abscomponent import AbsComponent
 
+from pyigm.metallicity.pdf import MetallicityPDF
 from pyigm.cgm.cgmsurvey import CGMAbsSurvey
 from pyigm.field.galaxy import Galaxy
 from .cgm import CGMAbsSys
@@ -206,9 +208,8 @@ class COSHalos(CGMAbsSurvey):
         self.cgm_abs[mm].igm_sys.flag_NHI = dat_tab[
             (dat_tab['Z']==1)&(dat_tab['ion']==1)]['flag_N'][0]
 
-    # Load from mega structure
-    def load_mega(self,data_file=None, cosh_dct=None, test=False, **kwargs):
-        """ Load the data for COS-Halos
+    def load_mega(self, data_file=None, cosh_dct=None, test=False, **kwargs):
+        """ Load the data for COS-Halos from FITS files taken from the mega structure
 
         Parameters
         ----------
@@ -225,6 +226,35 @@ class COSHalos(CGMAbsSurvey):
         # Read
         for fil in cos_files:
             self.load_single_fits(fil, **kwargs)
+
+    def load_mtl_pdfs(self, ZH_fil):
+        """ Load the metallicity PDFs from an input file (usually hdf5)
+
+        Parameters
+        ----------
+        ZH_fil : str
+
+        """
+        fh5=h5py.File(ZH_fil, 'r')
+        mkeys = fh5['met'].keys()
+        mkeys.remove('left_edge_bins')
+        mkeys.remove('right_edge_bins')
+        mkeys = np.array(mkeys)
+
+        # Loop
+        for cgm_abs in self.cgm_abs:
+            # Match?
+            mt = np.where(mkeys == cgm_abs.name)[0]
+            if len(mt) == 0:
+                print('No metallicity info for {:s}'.format(cgm_abs.name))
+                print('Skipping..')
+                continue
+            cgm_abs.igm_sys.metallicity = MetallicityPDF(fh5['met']['left_edge_bins']+
+                                         fh5['met']['left_edge_bins'].attrs['BINSIZE']/2.,
+                                         fh5['met'][mkeys[mt][0]])
+            cgm_abs.igm_sys.metallicity.inputs = {}
+            for key in fh5['inputs'][cgm_abs.name]:
+                cgm_abs.igm_sys.metallicity.inputs[key] = fh5['inputs'][cgm_abs.name][key].value
 
     
     ########################## ##########################

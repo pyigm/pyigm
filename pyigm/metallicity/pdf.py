@@ -110,7 +110,7 @@ class MetallicityPDF(object):
         """
         from scipy.interpolate import interp1d
 
-        if (cl <= 0.) or (cl >=1):
+        if (cl <= 0.) or (cl >= 1):
             raise IOError("cl must range from 0-1")
         # Spline the PDF cumulative sum vs ZH
         cumul = np.cumsum(self.dZH*self.pdf_ZH)
