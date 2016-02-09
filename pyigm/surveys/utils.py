@@ -12,7 +12,7 @@ from pyigm.abssys import utils as pyasu
 from .igmsurvey import IGMSurvey
 
 
-def load_sys_files(inp, type, sys_path=False):
+def load_sys_files(inp, type, ref=None, sys_path=False):
     """ Load up a set of SYS files from the hard-drive (JSON files)
 
     Parameters
@@ -20,6 +20,8 @@ def load_sys_files(inp, type, sys_path=False):
     inp : str
     type : str
       type of IGMSystem
+    ref : str, optional
+      Reference label
     sys_path : str, optional
       indicates that inp is a path to a set of SYS files
       otherwise, it should be the filename of a tarball
@@ -30,7 +32,7 @@ def load_sys_files(inp, type, sys_path=False):
     """
     import tarfile
     #
-    survey = class_by_type(type)(ref='HD-LLS')
+    survey = class_by_type(type)(ref=ref)
     system = pyasu.class_by_type(type)
     if sys_path:
         # Individual files
@@ -53,6 +55,7 @@ def load_sys_files(inp, type, sys_path=False):
             # Generate
             abssys = system.from_dict(tdict)
             survey._abs_sys.append(abssys)
+        tar.close()
     # Return
     return survey
 

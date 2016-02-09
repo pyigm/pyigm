@@ -7,6 +7,7 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import pdb
 
 from astropy import units as u
+from astropy.coordinates import SkyCoord
 
 from linetools.utils import radec_to_coord
 from linetools import utils as ltu
@@ -29,7 +30,25 @@ class Galaxy(object):
        Adopted redshift
     coord : SkyCoord
     """
-    # Initialize with a .dat file
+    @classmethod
+    def from_dict(cls, idict):
+        """ Generate a Galaxy object from a dict
+
+        Parameters
+        ----------
+        idict : dict
+
+        """
+        slf = cls(SkyCoord(ra=idict['RA'], dec=idict['DEC'], unit=u.deg))
+        # Attributes
+        for key in ['z', 'name']:
+            try:
+                setattr(slf,key,idict[key])
+            except KeyError:
+                pass
+        # Return
+        return slf
+
     def __init__(self, radec, z=None):
         self.coord = radec_to_coord(radec)
         # Redshift

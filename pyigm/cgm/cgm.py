@@ -8,6 +8,7 @@ import warnings
 import pdb
 
 from astropy import units as u
+from astropy import cosmology
 
 from linetools import utils as ltu
 
@@ -78,8 +79,27 @@ class CGMAbsSys(object):
     rho : Quantity
       Impact parameter (u.kpc)
     """
+    @classmethod
+    def from_dict(cls, idict, **kwargs):
+        """ Generate a CGMAbsSys object from a dict
 
-    # Initialize
+        Parameters
+        ----------
+        idict : dict
+        """
+        # Galaxy object
+        galaxy = Galaxy.from_dict(idict['galaxy'])
+        # IGM system
+        igm_sys = IGMSystem.from_dict(idict['igm_sys'], **kwargs)
+        # Keywords
+        kwargs = dict(name=idict['Name'])
+        if 'cosmo' in idict.keys():
+            kwargs['cosmo'] = getattr(cosmology, idict['cosmo'])
+        # Instantiate
+        slf = cls(galaxy, igm_sys, **kwargs)
+        # Return
+        return slf
+
     def __init__(self, galaxy, igm_sys, cosmo=None, name=None):
         # Checks
         if not isinstance(galaxy, Galaxy):
@@ -97,9 +117,8 @@ class CGMAbsSys(object):
 
         # Calculate rho
         if cosmo is None:
-            from astropy.cosmology import WMAP9 as cosmo
             warnings.warn('cgm.CGMAbsSys: Using WMAP9 cosmology')
-            self.cosmo = cosmo
+            self.cosmo = cosmology.WMAP9
         else:
             self.cosmo = cosmo
         ang_sep = self.igm_sys.coord.separation(self.galaxy.coord).to('arcmin')
@@ -122,10 +141,10 @@ class CGMAbsSys(object):
 
     def to_dict(self):
         """ Convert the system to a JSON-ready dict for output
+
         Returns
         -------
         cdict : dict
-
         """
         import datetime
         import getpass

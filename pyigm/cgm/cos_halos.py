@@ -36,10 +36,10 @@ class COSHalos(CGMAbsSurvey):
     kin_init_file : str, optional
       Path to kinematics file
     """
-    def __init__(self, cdir=None, fits_path=None, kin_init_file=None):
+    def __init__(self, cdir=None, fits_path=None):
         CGMAbsSurvey.__init__(self)
         self.survey = 'COS-Halos'
-        self.ref = 'Tumlinson+11; Werk+12; Tumlinson+13; Werk+13'
+        self.ref = 'Tumlinson+11; Werk+12; Tumlinson+13; Werk+13; Werk+14'
         #
         if cdir is None:
             if os.environ.get('COSHALOS_DATA') is None:
@@ -53,9 +53,9 @@ class COSHalos(CGMAbsSurvey):
         else:
             self.fits_path = fits_path
         try:
-            self.cldy = Table.read(self.fits_path+'coshaloscloudysol_newphi.fits')
+            self.werk14_cldy = Table.read(self.fits_path+'coshaloscloudysol_newphi.fits')
         except IOError:
-            self.cldy = None
+            self.werk14_cldy = None
         # Kinematics
         self.kin_init_file = self.cdir+'/Kin/coshalo_kin_driver.dat'
 
@@ -109,11 +109,12 @@ class COSHalos(CGMAbsSurvey):
         igm_sys.zqso = galx['ZQSO'][0]
         # Metallicity
         igm_sys.ZH = -99.
-        if self.cldy is not None:
+        if self.werk14_cldy is not None:
             mtc = np.where((self.cldy['GALID'] == gal.gal_id) &
                            (self.cldy['FIELD'] == gal.field))[0]
             if len(mtc) == 1:
-                igm_sys.ZH = self.cldy[mtc]['ZBEST'][0]
+                igm_sys.werk14_ZH = self.cldy[mtc]['ZBEST'][0]
+                igm_sys.ZH = igm_sys.werk14_ZH
         # Instantiate
         cgabs = CGMAbsSys(gal, igm_sys, name=gal.field+'_'+gal.gal_id)
         # Ions
@@ -220,12 +221,53 @@ class COSHalos(CGMAbsSurvey):
         """
         # Loop
         if test is True:
-            cos_files = glob.glob(self.fits_path+'/J091*.fits.gz')  # For testing
+            cos_files = glob.glob(self.fits_path+'/J09*.fits.gz')  # For testing
         else:
             cos_files = glob.glob(self.fits_path+'/J*.fits.gz')
         # Read
         for fil in cos_files:
             self.load_single_fits(fil, **kwargs)
+
+    def load_sys(self, tfile=None, empty=True):
+        """ Load the COS-Halos survey from JSON files
+
+        Empties the list
+
+        Parameters
+        ----------
+        tfile : str, optional
+        empty : bool, optional
+          Empty the list
+
+        Returns
+        -------
+
+        """
+        import tarfile
+        import json
+
+        # Tar file
+        if tfile is None:
+            tarfiles = glob.glob(self.cdir+'cos-halos_systems.v*.tar.gz')
+            tarfiles.sort()
+            tfile = tarfiles[-1]
+        print("Be patient, using {:s} to load COS-Halos".format(tfile))
+        # Empty
+        if empty:
+            self.cgm_abs = []
+        # Load
+        tar = tarfile.open(tfile)
+        for member in tar.getmembers():
+            if '.' not in member.name:
+                print('Skipping a likely folder: {:s}'.format(member.name))
+                continue
+            # Extract
+            f = tar.extractfile(member)
+            tdict = json.load(f)
+            # Generate
+            cgmsys = CGMAbsSys.from_dict(tdict, warn_only=True)
+            self.cgm_abs.append(cgmsys)
+        tar.close()
 
     def load_mtl_pdfs(self, ZH_fil):
         """ Load the metallicity PDFs from an input file (usually hdf5)
@@ -255,6 +297,10 @@ class COSHalos(CGMAbsSurvey):
             cgm_abs.igm_sys.metallicity.inputs = {}
             for key in fh5['inputs'][cgm_abs.name]:
                 cgm_abs.igm_sys.metallicity.inputs[key] = fh5['inputs'][cgm_abs.name][key].value
+            # Density (using the metallicity framework for now)
+            cgm_abs.igm_sys.density = MetallicityPDF(fh5['dens']['left_edge_bins']+
+                                                         fh5['dens']['left_edge_bins'].attrs['BINSIZE']/2.,
+                                                         fh5['dens'][mkeys[mt][0]])
 
     
     ########################## ##########################
@@ -448,6 +494,15 @@ class COSHalos(CGMAbsSurvey):
             abs_lines.append(aline)
         # Execute
         ltap.stack_plot(abs_lines, vlim=[-400., 400]*u.km/u.s, ymnx=ymnx, **kwargs)
+
+    def write_survey(self, outfil='COS-Halos_sys.tar.gz'):
+        """ Write the survey to a tarball of JSON files
+
+        Parameters
+        ----------
+        outfil : str, optional
+        """
+        self.to_json_tarball(outfil)
 
     def __getitem__(self, inp):
         """Grab CgmAbs Class from the list

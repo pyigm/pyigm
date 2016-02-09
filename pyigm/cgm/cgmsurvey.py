@@ -1,6 +1,12 @@
 """ Classes for CGM Surveys
 """
+
+from __future__ import print_function, absolute_import, division, unicode_literals
+
+import os
+import warnings
 import pdb
+import json, io
 
 from pyigm.utils import lst_to_array
 
@@ -33,7 +39,55 @@ class CGMAbsSurvey(object):
         """
         return len(self.cgm_abs)
 
-    # Extend attributes
+    def to_json_tarball(self, outfil):
+        """ Generates a gzipped tarball of JSON files, one per system
+
+        Parameters
+        ----------
+        outfil : str
+
+        """
+        import subprocess
+        tmpdir = 'CGM_JSON'
+        try:
+            os.mkdir(tmpdir)
+        except OSError:
+            pass
+        jfiles = []
+
+        # Loop on systems
+        for cgm_abs in self.cgm_abs:
+            # Dict
+            cdict = cgm_abs.to_dict()
+            # Temporary JSON file
+            json_fil = tmpdir+'/'+cgm_abs.name+'.json'
+            jfiles.append(json_fil)
+            with io.open(json_fil, 'w', encoding='utf-8') as f:
+                #try:
+                f.write(unicode(json.dumps(cdict, sort_keys=True, indent=4,
+                                           separators=(',', ': '))))
+                """
+                except TypeError:
+                    from linetools import utils as ltu
+                    f2 = io.open(json_fil, 'w', encoding='utf-8')
+                    for key in cdict['igm_sys']['components'].keys():
+                        print(key)
+                        t1 = cdict['igm_sys']['components'][key]
+                        try:
+                            f2.write(unicode(json.dumps(t1, sort_keys=True, indent=4, separators=(',', ': '))))
+                        except TypeError:
+                            pdb.set_trace()
+                """
+        # Tar
+        warnings.warn("Modify to write directly to tar file")
+        subprocess.call(['tar', '-czf', outfil, tmpdir])
+        print('Wrote: {:s}'.format(outfil))
+
+        # Clean up
+        for jfile in jfiles:
+            os.remove(jfile)
+        os.rmdir(tmpdir)
+
     def __getattr__(self, k):
         # Try Self first
         try:

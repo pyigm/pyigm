@@ -133,9 +133,9 @@ class LLSSurvey(IGMSurvey):
         # Load systems via the sys tarball.  Includes transitions
         if load_sys:  # This approach takes ~120s
             if isys_path is not None:
-                lls_survey = pyisu.load_sys_files(isys_path, 'LLS',sys_path=True)
+                lls_survey = pyisu.load_sys_files(isys_path, 'LLS',sys_path=True, ref='HD-LLS')
             else:
-                lls_survey = pyisu.load_sys_files(sys_files, 'LLS')
+                lls_survey = pyisu.load_sys_files(sys_files, 'LLS', ref='HD-LLS')
             lls_survey.fill_ions(use_components=True)
         else:
             # Read
