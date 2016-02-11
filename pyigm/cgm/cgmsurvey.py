@@ -66,18 +66,6 @@ class CGMAbsSurvey(object):
                 #try:
                 f.write(unicode(json.dumps(cdict, sort_keys=True, indent=4,
                                            separators=(',', ': '))))
-                """
-                except TypeError:
-                    from linetools import utils as ltu
-                    f2 = io.open(json_fil, 'w', encoding='utf-8')
-                    for key in cdict['igm_sys']['components'].keys():
-                        print(key)
-                        t1 = cdict['igm_sys']['components'][key]
-                        try:
-                            f2.write(unicode(json.dumps(t1, sort_keys=True, indent=4, separators=(',', ': '))))
-                        except TypeError:
-                            pdb.set_trace()
-                """
         # Tar
         warnings.warn("Modify to write directly to tar file")
         subprocess.call(['tar', '-czf', outfil, tmpdir])

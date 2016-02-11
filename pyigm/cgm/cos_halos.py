@@ -107,14 +107,6 @@ class COSHalos(CGMAbsSurvey):
         igm_sys = IGMSystem('CGM',(galx['QSORA'][0], galx['QSODEC'][0]),
                             summ['ZFINAL'][0], [-600, 600.]*u.km/u.s)
         igm_sys.zqso = galx['ZQSO'][0]
-        # Metallicity
-        igm_sys.ZH = -99.
-        if self.werk14_cldy is not None:
-            mtc = np.where((self.cldy['GALID'] == gal.gal_id) &
-                           (self.cldy['FIELD'] == gal.field))[0]
-            if len(mtc) == 1:
-                igm_sys.werk14_ZH = self.cldy[mtc]['ZBEST'][0]
-                igm_sys.ZH = igm_sys.werk14_ZH
         # Instantiate
         cgabs = CGMAbsSys(gal, igm_sys, name=gal.field+'_'+gal.gal_id)
         # Ions
@@ -128,7 +120,6 @@ class COSHalos(CGMAbsSurvey):
             cgabs.igm_sys.flag_NHI = dat_tab['FLG_CLM'][0]
             self.cgm_abs.append(cgabs)
             return
-        mm = len(self.cgm_abs)-1
         all_Z = []
         all_ion = []
         for jj in range(summ['NION'][0]):
@@ -202,12 +193,14 @@ class COSHalos(CGMAbsSurvey):
         dat_tab.rename_column('SIG_CLM','sig_logN')
         dat_tab.rename_column('FLG_CLM','flag_N')
         # Set
-        self.cgm_abs[mm].igm_sys._ionN = dat_tab
+        self.cgm_abs[-1].igm_sys._ionN = dat_tab
         # NHI
-        self.cgm_abs[mm].igm_sys.NHI = dat_tab[
-            (dat_tab['Z']==1)&(dat_tab['ion']==1)]['logN'][0]
-        self.cgm_abs[mm].igm_sys.flag_NHI = dat_tab[
-            (dat_tab['Z']==1)&(dat_tab['ion']==1)]['flag_N'][0]
+        HI = (dat_tab['Z'] == 1) & (dat_tab['ion'] == 1)
+        self.cgm_abs[-1].igm_sys.NHI = dat_tab[HI]['logN'][0]
+        self.cgm_abs[-1].igm_sys.sig_NHI = dat_tab[HI]['sig_logN'][0]
+        self.cgm_abs[-1].igm_sys.flag_NHI = dat_tab[HI]['flag_N'][0]
+        #if self.cgm_abs[-1].name == 'J0950+4831_177_27':
+        #    pdb.set_trace()
 
     def load_mega(self, data_file=None, cosh_dct=None, test=False, **kwargs):
         """ Load the data for COS-Halos from FITS files taken from the mega structure
@@ -219,6 +212,7 @@ class COSHalos(CGMAbsSurvey):
         pckl_fil : string
           Name of file for pickling
         """
+        warnings.warn("This module will be DEPRECATED")
         # Loop
         if test is True:
             cos_files = glob.glob(self.fits_path+'/J09*.fits.gz')  # For testing
@@ -227,8 +221,26 @@ class COSHalos(CGMAbsSurvey):
         # Read
         for fil in cos_files:
             self.load_single_fits(fil, **kwargs)
+        # Werk+14
+        if self.werk14_cldy is not None:
+            self.load_werk14()
 
-    def load_sys(self, tfile=None, empty=True):
+    def load_werk14(self):
+        """ Load up the Werk+14 results
+        """
+        for cgm_abs in self.cgm_abs:
+            gal = cgm_abs.galaxy
+            igm_sys = cgm_abs.igm_sys
+            # Metallicity
+            igm_sys.ZH = -99.
+            mtc = np.where((self.werk14_cldy['GALID'] == gal.gal_id) &
+                           (self.werk14_cldy['FIELD'] == gal.field))[0]
+            if len(mtc) == 1:
+                igm_sys.werk14_ZH = self.werk14_cldy[mtc]['ZBEST'][0]
+                igm_sys.werk14_NHI = self.werk14_cldy[mtc]['NHI_BEST'][0]
+                igm_sys.ZH = igm_sys.werk14_ZH
+
+    def load_sys(self, tfile=None, empty=True, debug=False, **kwargs):
         """ Load the COS-Halos survey from JSON files
 
         Empties the list
@@ -238,6 +250,7 @@ class COSHalos(CGMAbsSurvey):
         tfile : str, optional
         empty : bool, optional
           Empty the list
+        debug : bool, optional
 
         Returns
         -------
@@ -257,17 +270,23 @@ class COSHalos(CGMAbsSurvey):
             self.cgm_abs = []
         # Load
         tar = tarfile.open(tfile)
-        for member in tar.getmembers():
+        for kk,member in enumerate(tar.getmembers()):
             if '.' not in member.name:
                 print('Skipping a likely folder: {:s}'.format(member.name))
                 continue
+            # Debug
+            if debug and (kk == 5):
+                break
             # Extract
             f = tar.extractfile(member)
             tdict = json.load(f)
             # Generate
-            cgmsys = CGMAbsSys.from_dict(tdict, warn_only=True)
+            cgmsys = CGMAbsSys.from_dict(tdict, warn_only=True, **kwargs)
             self.cgm_abs.append(cgmsys)
         tar.close()
+        # Werk+14
+        if self.werk14_cldy is not None:
+            self.load_werk14()
 
     def load_mtl_pdfs(self, ZH_fil):
         """ Load the metallicity PDFs from an input file (usually hdf5)
@@ -456,7 +475,8 @@ class COSHalos(CGMAbsSurvey):
         slicedir = self.cdir+'/Targets/fitting/'
         slicename = sysname+'_'+trans+'_slice.fits'
         try:
-            spec = lsio.readspec(slicedir+slicename, flux_tags=['FNORM'], sig_tags=['ENORM'])
+            spec = lsio.readspec(slicedir+slicename,
+                                 flux_tag='FNORM', sig_tag='ENORM')
         except IOError:
             warnings.warn("File {:s} not found".format(slicedir+slicename))
             return None
