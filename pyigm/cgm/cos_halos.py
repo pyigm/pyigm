@@ -157,12 +157,21 @@ class COSHalos(CGMAbsSurvey):
                 aline.attrib['z'] = igm_sys.zabs
                 aline.attrib['coord'] = igm_sys.coord
                 # Check f
-                if (np.abs(aline.data['f']-iont['FVAL'][0][kk])/aline.data['f']) > 0.01:
-                    warnings.warn('COS-Halos f-value does not match linetools for {:g}.  Using COS-Halos for now'.format(aline.wrest))
-                    aline.data['f'] = iont['FVAL'][0][kk]
+                if (np.abs(aline.data['f']-iont['FVAL'][0][kk])/aline.data['f']) > 0.001:
+                    warnings.warn('Updating f-value from Megastructure for {:g}. And N'.format(aline.wrest))
+                    #aline.data['f'] = iont['FVAL'][0][kk]
+                    Nscl = iont['FVAL'][0][kk] / aline.data['f']
+                    flag_f = True
+                else:
+                    Nscl = 1.
+                    flag_f = False
                 # Colm
-                aline.attrib['logN'] = iont['LOGN'][0][kk]
-                aline.attrib['sig_logN'] = iont['SIGLOGN'][0][kk]
+                if flgN == 3:
+                    aline.attrib['logN'] = iont['LOGN2SIG'][0][kk] + np.log10(Nscl)
+                    aline.attrib['sig_logN'] = 9.
+                else:
+                    aline.attrib['logN'] = iont['LOGN'][0][kk] + np.log10(Nscl)
+                    aline.attrib['sig_logN'] = iont['SIGLOGN'][0][kk]
                 aline.attrib['flag_N'] = int(flgN)
                 #pdb.set_trace()
                 _,_ = ltaa.linear_clm(aline.attrib)
@@ -176,10 +185,10 @@ class COSHalos(CGMAbsSurvey):
 
             else:
                 comp = AbsComponent.from_abslines(abslines)
-            comp.logN = float(iont['CLM'][0])
-            comp.sig_logN = float(iont['SIG_CLM'][0])
-            comp.flag_N = int(iont['FLG_CLM'][0])
-            _,_ = ltaa.linear_clm(comp)
+                comp.synthesize_colm()  # Combine the abs lines
+                if (comp.logN - float(iont['CLM'][0]))/comp.logN > 0.1:
+                    pdb.set_trace()
+            #_,_ = ltaa.linear_clm(comp)
             cgabs.igm_sys.add_component(comp)
         self.cgm_abs.append(cgabs)
 
