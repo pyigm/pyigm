@@ -158,8 +158,7 @@ class COSHalos(CGMAbsSurvey):
                 aline.attrib['coord'] = igm_sys.coord
                 # Check f
                 if (np.abs(aline.data['f']-iont['FVAL'][0][kk])/aline.data['f']) > 0.001:
-                    warnings.warn('Updating f-value from Megastructure for {:g}. And N'.format(aline.wrest))
-                    #aline.data['f'] = iont['FVAL'][0][kk]
+                    #warnings.warn('Updating f-value from Megastructure for {:g}. And N'.format(aline.wrest))
                     Nscl = iont['FVAL'][0][kk] / aline.data['f']
                     flag_f = True
                 else:
@@ -185,9 +184,11 @@ class COSHalos(CGMAbsSurvey):
 
             else:
                 comp = AbsComponent.from_abslines(abslines)
-                comp.synthesize_colm()  # Combine the abs lines
-                if (comp.logN - float(iont['CLM'][0]))/comp.logN > 0.1:
-                    pdb.set_trace()
+                if comp.Zion != (1,1):
+                    comp.synthesize_colm()  # Combine the abs lines
+                    if np.abs(comp.logN - float(iont['CLM'][0])) > 0.15:
+                        print("New colm for ({:d},{:d}) and sys {:s} is {:g} different from old".format(
+                            comp.Zion[0], comp.Zion[1], cgabs.name, comp.logN - float(iont['CLM'][0])))
             #_,_ = ltaa.linear_clm(comp)
             cgabs.igm_sys.add_component(comp)
         self.cgm_abs.append(cgabs)
@@ -246,6 +247,8 @@ class COSHalos(CGMAbsSurvey):
                            (self.werk14_cldy['FIELD'] == gal.field))[0]
             if len(mtc) == 1:
                 igm_sys.werk14_ZH = self.werk14_cldy[mtc]['ZBEST'][0]
+                igm_sys.werk14_ZHmnx = [self.werk14_cldy[mtc]['ZMIN'][0],
+                                        self.werk14_cldy[mtc]['ZMAX'][0]]
                 igm_sys.werk14_NHI = self.werk14_cldy[mtc]['NHI_BEST'][0]
                 igm_sys.ZH = igm_sys.werk14_ZH
 
