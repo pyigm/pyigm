@@ -18,7 +18,7 @@ from linetools.spectralline import AbsLine
 from linetools.analysis import absline as ltaa
 from linetools.isgm.abscomponent import AbsComponent
 
-from pyigm.metallicity.pdf import MetallicityPDF
+from pyigm.metallicity.pdf import MetallicityPDF, DensityPDF
 from pyigm.cgm.cgmsurvey import CGMAbsSurvey
 from pyigm.field.galaxy import Galaxy
 from .cgm import CGMAbsSys
@@ -135,10 +135,12 @@ class COSHalos(CGMAbsSurvey):
             all_ion.append(iont['ZION'][0][1])
             # AbsLines
             abslines = []
-            for kk in range(iont['NTRANS']):
+            #for kk in range(iont['NTRANS']):
+            ntrans = len(np.where(iont['LAMBDA'][0] > 1.)[0])
+            for kk in range(ntrans):
                 flg = iont['FLG'][0][kk]
                 if ((flg % 2) == 0) or (flg == 15) or (flg == 13):
-                    print('Skipping {:g} as NG for a line'.format(iont['LAMBDA'][0][kk]))
+                    print('Skipping {:g} as NG for a line; flg={:d}'.format(iont['LAMBDA'][0][kk],flg))
                     continue
                 elif (flg == 1) or (flg == 3):
                     flgN = 1
@@ -183,12 +185,14 @@ class COSHalos(CGMAbsSurvey):
                                     igm_sys.zabs, igm_sys.vlim)
 
             else:
-                comp = AbsComponent.from_abslines(abslines)
+                comp = AbsComponent.from_abslines(abslines, skip_vel=True)
                 if comp.Zion != (1,1):
                     comp.synthesize_colm()  # Combine the abs lines
                     if np.abs(comp.logN - float(iont['CLM'][0])) > 0.15:
                         print("New colm for ({:d},{:d}) and sys {:s} is {:g} different from old".format(
                             comp.Zion[0], comp.Zion[1], cgabs.name, comp.logN - float(iont['CLM'][0])))
+                        if cgabs.name == 'J1342-0053_157_10':
+                            pdb.set_trace()
             #_,_ = ltaa.linear_clm(comp)
             cgabs.igm_sys.add_component(comp)
         self.cgm_abs.append(cgabs)
@@ -246,11 +250,18 @@ class COSHalos(CGMAbsSurvey):
             mtc = np.where((self.werk14_cldy['GALID'] == gal.gal_id) &
                            (self.werk14_cldy['FIELD'] == gal.field))[0]
             if len(mtc) == 1:
+                # Metallicity
                 igm_sys.werk14_ZH = self.werk14_cldy[mtc]['ZBEST'][0]
                 igm_sys.werk14_ZHmnx = [self.werk14_cldy[mtc]['ZMIN'][0],
                                         self.werk14_cldy[mtc]['ZMAX'][0]]
-                igm_sys.werk14_NHI = self.werk14_cldy[mtc]['NHI_BEST'][0]
                 igm_sys.ZH = igm_sys.werk14_ZH
+                # NHI
+                igm_sys.werk14_NHI = self.werk14_cldy[mtc]['NHI_BEST'][0]
+                # NH
+                igm_sys.werk14_NH = np.log10(self.werk14_cldy[mtc]['NH_BEST'][0])
+                igm_sys.werk14_NHmnx = [np.log10(self.werk14_cldy[mtc]['NH_LOW'][0]),
+                                        np.log10(self.werk14_cldy[mtc]['NH_HIGH'][0])]
+
 
     def load_sys(self, tfile=None, empty=True, debug=False, **kwargs):
         """ Load the COS-Halos survey from JSON files
@@ -329,7 +340,7 @@ class COSHalos(CGMAbsSurvey):
             for key in fh5['inputs'][cgm_abs.name]:
                 cgm_abs.igm_sys.metallicity.inputs[key] = fh5['inputs'][cgm_abs.name][key].value
             # Density (using the metallicity framework for now)
-            cgm_abs.igm_sys.density = MetallicityPDF(fh5['dens']['left_edge_bins']+
+            cgm_abs.igm_sys.density = DensityPDF(fh5['dens']['left_edge_bins']+
                                                          fh5['dens']['left_edge_bins'].attrs['BINSIZE']/2.,
                                                          fh5['dens'][mkeys[mt][0]])
 
