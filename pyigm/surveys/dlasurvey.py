@@ -338,7 +338,6 @@ class DLASurvey(IGMSurvey):
         Returns
         -------
         dla_survey : DLASurvey
-
         """
         # DLA files
         dla_fil = pyigm_path+'/data/DLA/XQ-100/XQ100_abs.fit'
