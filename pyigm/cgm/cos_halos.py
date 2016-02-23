@@ -7,6 +7,7 @@ import numpy as np
 import os, glob
 import pdb
 import warnings
+import h5py
 
 from astropy.io import fits, ascii
 from astropy import units as u 
@@ -17,6 +18,7 @@ from linetools.spectralline import AbsLine
 from linetools.analysis import absline as ltaa
 from linetools.isgm.abscomponent import AbsComponent
 
+from pyigm.metallicity.pdf import MetallicityPDF, DensityPDF
 from pyigm.cgm.cgmsurvey import CGMAbsSurvey
 from pyigm.field.galaxy import Galaxy
 from .cgm import CGMAbsSys
@@ -34,10 +36,10 @@ class COSHalos(CGMAbsSurvey):
     kin_init_file : str, optional
       Path to kinematics file
     """
-    def __init__(self, cdir=None, fits_path=None, kin_init_file=None):
+    def __init__(self, cdir=None, fits_path=None):
         CGMAbsSurvey.__init__(self)
         self.survey = 'COS-Halos'
-        self.ref = 'Tumlinson+11; Werk+12; Tumlinson+13; Werk+13'
+        self.ref = 'Tumlinson+11; Werk+12; Tumlinson+13; Werk+13; Werk+14'
         #
         if cdir is None:
             if os.environ.get('COSHALOS_DATA') is None:
@@ -51,9 +53,9 @@ class COSHalos(CGMAbsSurvey):
         else:
             self.fits_path = fits_path
         try:
-            self.cldy = Table.read(self.fits_path+'coshaloscloudysol_newphi.fits')
+            self.werk14_cldy = Table.read(self.fits_path+'coshaloscloudysol_newphi.fits')
         except IOError:
-            self.cldy = None
+            self.werk14_cldy = None
         # Kinematics
         self.kin_init_file = self.cdir+'/Kin/coshalo_kin_driver.dat'
 
@@ -105,13 +107,6 @@ class COSHalos(CGMAbsSurvey):
         igm_sys = IGMSystem('CGM',(galx['QSORA'][0], galx['QSODEC'][0]),
                             summ['ZFINAL'][0], [-600, 600.]*u.km/u.s)
         igm_sys.zqso = galx['ZQSO'][0]
-        # Metallicity
-        igm_sys.ZH = -99.
-        if self.cldy is not None:
-            mtc = np.where((self.cldy['GALID'] == gal.gal_id) &
-                           (self.cldy['FIELD'] == gal.field))[0]
-            if len(mtc) == 1:
-                igm_sys.ZH = self.cldy[mtc]['ZBEST'][0]
         # Instantiate
         cgabs = CGMAbsSys(gal, igm_sys, name=gal.field+'_'+gal.gal_id)
         # Ions
@@ -140,10 +135,12 @@ class COSHalos(CGMAbsSurvey):
             all_ion.append(iont['ZION'][0][1])
             # AbsLines
             abslines = []
-            for kk in range(iont['NTRANS']):
+            #for kk in range(iont['NTRANS']):
+            ntrans = len(np.where(iont['LAMBDA'][0] > 1.)[0])
+            for kk in range(ntrans):
                 flg = iont['FLG'][0][kk]
                 if ((flg % 2) == 0) or (flg == 15) or (flg == 13):
-                    print('Skipping {:g} as NG for a line'.format(iont['LAMBDA'][0][kk]))
+                    print('Skipping {:g} as NG for a line; flg={:d}'.format(iont['LAMBDA'][0][kk],flg))
                     continue
                 elif (flg == 1) or (flg == 3):
                     flgN = 1
@@ -162,12 +159,20 @@ class COSHalos(CGMAbsSurvey):
                 aline.attrib['z'] = igm_sys.zabs
                 aline.attrib['coord'] = igm_sys.coord
                 # Check f
-                if (np.abs(aline.data['f']-iont['FVAL'][0][kk])/aline.data['f']) > 0.01:
-                    warnings.warn('COS-Halos f-value does not match linetools for {:g}.  Using COS-Halos for now'.format(aline.wrest))
-                    aline.data['f'] = iont['FVAL'][0][kk]
+                if (np.abs(aline.data['f']-iont['FVAL'][0][kk])/aline.data['f']) > 0.001:
+                    #warnings.warn('Updating f-value from Megastructure for {:g}. And N'.format(aline.wrest))
+                    Nscl = iont['FVAL'][0][kk] / aline.data['f']
+                    flag_f = True
+                else:
+                    Nscl = 1.
+                    flag_f = False
                 # Colm
-                aline.attrib['logN'] = iont['LOGN'][0][kk]
-                aline.attrib['sig_logN'] = iont['SIGLOGN'][0][kk]
+                if flgN == 3:
+                    aline.attrib['logN'] = iont['LOGN2SIG'][0][kk] + np.log10(Nscl)
+                    aline.attrib['sig_logN'] = 9.
+                else:
+                    aline.attrib['logN'] = iont['LOGN'][0][kk] + np.log10(Nscl)
+                    aline.attrib['sig_logN'] = iont['SIGLOGN'][0][kk]
                 aline.attrib['flag_N'] = int(flgN)
                 #pdb.set_trace()
                 _,_ = ltaa.linear_clm(aline.attrib)
@@ -180,11 +185,15 @@ class COSHalos(CGMAbsSurvey):
                                     igm_sys.zabs, igm_sys.vlim)
 
             else:
-                comp = AbsComponent.from_abslines(abslines)
-            comp.logN = float(iont['CLM'][0])
-            comp.sig_logN = float(iont['SIG_CLM'][0])
-            comp.flag_N = int(iont['FLG_CLM'][0])
-            _,_ = ltaa.linear_clm(comp)
+                comp = AbsComponent.from_abslines(abslines, skip_vel=True)
+                if comp.Zion != (1,1):
+                    comp.synthesize_colm()  # Combine the abs lines
+                    if np.abs(comp.logN - float(iont['CLM'][0])) > 0.15:
+                        print("New colm for ({:d},{:d}) and sys {:s} is {:g} different from old".format(
+                            comp.Zion[0], comp.Zion[1], cgabs.name, comp.logN - float(iont['CLM'][0])))
+                        if cgabs.name == 'J1342-0053_157_10':
+                            pdb.set_trace()
+            #_,_ = ltaa.linear_clm(comp)
             cgabs.igm_sys.add_component(comp)
         self.cgm_abs.append(cgabs)
 
@@ -199,18 +208,16 @@ class COSHalos(CGMAbsSurvey):
         dat_tab.rename_column('FLG_CLM','flag_N')
         # Set
         self.cgm_abs[-1].igm_sys._ionN = dat_tab
-        #if inp[0] == 'J2345-0059':
+        # NHI
+        HI = (dat_tab['Z'] == 1) & (dat_tab['ion'] == 1)
+        self.cgm_abs[-1].igm_sys.NHI = dat_tab[HI]['logN'][0]
+        self.cgm_abs[-1].igm_sys.sig_NHI = dat_tab[HI]['sig_logN'][0]
+        self.cgm_abs[-1].igm_sys.flag_NHI = dat_tab[HI]['flag_N'][0]
+        #if self.cgm_abs[-1].name == 'J0950+4831_177_27':
         #    pdb.set_trace()
 
-        # NHI
-        self.cgm_abs[-1].igm_sys.NHI = dat_tab[
-            (dat_tab['Z']==1)&(dat_tab['ion']==1)]['logN'][0]
-        self.cgm_abs[-1].igm_sys.flag_NHI = dat_tab[
-            (dat_tab['Z']==1)&(dat_tab['ion']==1)]['flag_N'][0]
-
-    # Load from mega structure
-    def load_mega(self,data_file=None, cosh_dct=None, test=False, **kwargs):
-        """ Load the data for COS-Halos
+    def load_mega(self, data_file=None, cosh_dct=None, test=False, **kwargs):
+        """ Load the data for COS-Halos from FITS files taken from the mega structure
 
         Parameters
         ----------
@@ -219,14 +226,123 @@ class COSHalos(CGMAbsSurvey):
         pckl_fil : string
           Name of file for pickling
         """
+        warnings.warn("This module will be DEPRECATED")
         # Loop
         if test is True:
-            cos_files = glob.glob(self.fits_path+'/J091*.fits.gz')  # For testing
+            cos_files = glob.glob(self.fits_path+'/J09*.fits.gz')  # For testing
         else:
             cos_files = glob.glob(self.fits_path+'/J*.fits.gz')
         # Read
         for fil in cos_files:
             self.load_single_fits(fil, **kwargs)
+        # Werk+14
+        if self.werk14_cldy is not None:
+            self.load_werk14()
+
+    def load_werk14(self):
+        """ Load up the Werk+14 results
+        """
+        for cgm_abs in self.cgm_abs:
+            gal = cgm_abs.galaxy
+            igm_sys = cgm_abs.igm_sys
+            # Metallicity
+            igm_sys.ZH = -99.
+            mtc = np.where((self.werk14_cldy['GALID'] == gal.gal_id) &
+                           (self.werk14_cldy['FIELD'] == gal.field))[0]
+            if len(mtc) == 1:
+                # Metallicity
+                igm_sys.werk14_ZH = self.werk14_cldy[mtc]['ZBEST'][0]
+                igm_sys.werk14_ZHmnx = [self.werk14_cldy[mtc]['ZMIN'][0],
+                                        self.werk14_cldy[mtc]['ZMAX'][0]]
+                igm_sys.ZH = igm_sys.werk14_ZH
+                # NHI
+                igm_sys.werk14_NHI = self.werk14_cldy[mtc]['NHI_BEST'][0]
+                # NH
+                igm_sys.werk14_NH = np.log10(self.werk14_cldy[mtc]['NH_BEST'][0])
+                igm_sys.werk14_NHmnx = [np.log10(self.werk14_cldy[mtc]['NH_LOW'][0]),
+                                        np.log10(self.werk14_cldy[mtc]['NH_HIGH'][0])]
+
+
+    def load_sys(self, tfile=None, empty=True, debug=False, **kwargs):
+        """ Load the COS-Halos survey from JSON files
+
+        Empties the list
+
+        Parameters
+        ----------
+        tfile : str, optional
+        empty : bool, optional
+          Empty the list
+        debug : bool, optional
+
+        Returns
+        -------
+
+        """
+        import tarfile
+        import json
+
+        # Tar file
+        if tfile is None:
+            tarfiles = glob.glob(self.cdir+'cos-halos_systems.v*.tar.gz')
+            tarfiles.sort()
+            tfile = tarfiles[-1]
+        print("Be patient, using {:s} to load COS-Halos".format(tfile))
+        # Empty
+        if empty:
+            self.cgm_abs = []
+        # Load
+        tar = tarfile.open(tfile)
+        for kk,member in enumerate(tar.getmembers()):
+            if '.' not in member.name:
+                print('Skipping a likely folder: {:s}'.format(member.name))
+                continue
+            # Debug
+            if debug and (kk == 5):
+                break
+            # Extract
+            f = tar.extractfile(member)
+            tdict = json.load(f)
+            # Generate
+            cgmsys = CGMAbsSys.from_dict(tdict, warn_only=True, **kwargs)
+            self.cgm_abs.append(cgmsys)
+        tar.close()
+        # Werk+14
+        if self.werk14_cldy is not None:
+            self.load_werk14()
+
+    def load_mtl_pdfs(self, ZH_fil):
+        """ Load the metallicity PDFs from an input file (usually hdf5)
+
+        Parameters
+        ----------
+        ZH_fil : str
+
+        """
+        fh5=h5py.File(ZH_fil, 'r')
+        mkeys = fh5['met'].keys()
+        mkeys.remove('left_edge_bins')
+        mkeys.remove('right_edge_bins')
+        mkeys = np.array(mkeys)
+
+        # Loop
+        for cgm_abs in self.cgm_abs:
+            # Match?
+            mt = np.where(mkeys == cgm_abs.name)[0]
+            if len(mt) == 0:
+                print('No metallicity info for {:s}'.format(cgm_abs.name))
+                print('Skipping..')
+                continue
+            cgm_abs.igm_sys.metallicity = MetallicityPDF(fh5['met']['left_edge_bins']+
+                                         fh5['met']['left_edge_bins'].attrs['BINSIZE']/2.,
+                                         fh5['met'][mkeys[mt][0]])
+            cgm_abs.igm_sys.metallicity.inputs = {}
+            for key in fh5['inputs'][cgm_abs.name]:
+                cgm_abs.igm_sys.metallicity.inputs[key] = fh5['inputs'][cgm_abs.name][key].value
+            # Density (using the metallicity framework for now)
+            cgm_abs.igm_sys.density = DensityPDF(fh5['dens']['left_edge_bins']+
+                                                         fh5['dens']['left_edge_bins'].attrs['BINSIZE']/2.,
+                                                         fh5['dens'][mkeys[mt][0]])
 
     
     ########################## ##########################
@@ -382,7 +498,8 @@ class COSHalos(CGMAbsSurvey):
         slicedir = self.cdir+'/Targets/fitting/'
         slicename = sysname+'_'+trans+'_slice.fits'
         try:
-            spec = lsio.readspec(slicedir+slicename, flux_tags=['FNORM'], sig_tags=['ENORM'])
+            spec = lsio.readspec(slicedir+slicename,
+                                 flux_tag='FNORM', sig_tag='ENORM')
         except IOError:
             warnings.warn("File {:s} not found".format(slicedir+slicename))
             return None
@@ -426,6 +543,15 @@ class COSHalos(CGMAbsSurvey):
             abs_lines.append(aline)
         # Execute
         ltap.stack_plot(abs_lines, vlim=[-400., 400]*u.km/u.s, ymnx=ymnx, **kwargs)
+
+    def write_survey(self, outfil='COS-Halos_sys.tar.gz'):
+        """ Write the survey to a tarball of JSON files
+
+        Parameters
+        ----------
+        outfil : str, optional
+        """
+        self.to_json_tarball(outfil)
 
     def __getitem__(self, inp):
         """Grab CgmAbs Class from the list

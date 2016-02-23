@@ -49,14 +49,14 @@ def test_load_sngl_dwarf():
 
 def test_load_survey():
     # Class
-    cos_halos = COSHalos(fits_path=data_path(''), kin_init_file='dum', cdir='dum')
+    cos_halos = COSHalos(fits_path=data_path(''), cdir='dum')
     # Load
     cos_halos.load_mega()  # Only reads one file for the test, actually
     cos_halos.load_mega(skip_ions=True)
 
 def test_getitem():
     # Class
-    cos_halos = COSHalos(fits_path=data_path(''), kin_init_file='dum', cdir='dum')
+    cos_halos = COSHalos(fits_path=data_path(''), cdir='dum')
     # Load
     cos_halos.load_single_fits(('J0950+4831', '177_27'))
     # Get item

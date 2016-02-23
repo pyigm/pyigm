@@ -10,16 +10,185 @@ from scipy.interpolate import interp1d
 
 import pdb
 
+class GenericPDF(object):
+    """A Class for any PDF
+    """
 
-class MetallicityPDF(object):
-    """A Class for Metallicity PDF
+    def __init__(self, x, pdf, parent=None, dx=None, normalize=True):
+        """
+        Parameters
+        ----------
+        x : ndarray
+          x-values of the PDF
+        pdf : ndarray
+          PDF
+        parent : object, optional
+          Parent of the PDF, e.g. an AbsSystem
+        dx : float or ndarray, optional
+          Width of the x 'bins'
+        normalize : bool, optional
+          Normalize the input PDF?
 
-    Attributes
-    ----------
-    ZH : ndarray
-      Values where the PDF has been evaluated
-    phi_ZH : ndarray
-      PDF of the metallicity
+        Returns
+        -------
+        PDF
+        """
+        # Tests
+        if x.size != pdf.size:
+            raise IOError("x and pdf must have the same size")
+        # Set
+        self.x = x
+        self.pdf = pdf
+        self.parent = parent
+
+        # dZH
+        if dx is None:
+            dx = self.x - np.roll(self.x,1)
+            dx[0] = dx[1]
+            self.dx = dx
+        else:
+            self.dx = dx
+
+        # Normalize pdf_ZH
+        if normalize:
+            self.normalize()
+        else:
+            warnings.warn("Not normalizing the PDF")
+
+    @property
+    def mean(self):
+        """ Calculate and return average from the PDF
+
+        Weighted in log-space
+
+        Returns
+        -------
+        mean : float
+        """
+        mean = np.sum(self.x*self.pdf*self.dx)
+        return mean
+
+    @property
+    def median(self):
+        """ Calculate and return median ZH from the PDF
+
+        Weighted in log-space
+
+        Returns
+        -------
+        median : float
+        """
+        cumsum = np.cumsum(self.pdf*self.dx)
+        # Interpolate
+        fint = interp1d(cumsum, self.x)
+        median = float(fint(0.5))
+        return median
+
+    def confidence_limits(self, cl):
+        """ Calculate the bounds of a given confidence interval
+
+        Spline interpolation is used
+
+        Parameters
+        ----------
+        cl : float
+          Confidence interval, ranging from 0 to 1
+
+        Returns
+        -------
+        x_min, x_max : float, float
+          Bounds corresponding to the input confidence limit
+        """
+        from scipy.interpolate import interp1d
+
+        if (cl <= 0.) or (cl >= 1):
+            raise IOError("cl must range from 0-1")
+        # Spline the PDF cumulative sum vs ZH
+        cumul = np.cumsum(self.dx*self.pdf)
+        f = interp1d(cumul, self.x)
+        # Caculate
+        frac = (1.- cl) / 2.
+        x_min = float(f(frac))
+        x_max = float(f(1-frac))
+        # Return
+        return x_min, x_max
+
+    def normalize(self):
+        """ Normalize the PDF
+        """
+        #
+        norm = np.sum(self.dx*self.pdf)
+        self.pdf /= norm
+
+    def hist_plot(self, bokeh=False):
+        """ Simple histogram plot of the PDF
+
+        Parameters
+        ----------
+        bokeh : bool, optional
+          Generate a bokeh plot?
+
+        Returns
+        -------
+
+        """
+        if not bokeh:
+            from matplotlib import pyplot as plt
+            # imports
+            try:
+                import seaborn as sns; sns.set_style("white")
+            except:
+                pass
+            # Giddy up
+            plt.clf()
+            plt.bar(self.x-self.dx/2., self.pdf, width=self.dx)
+            plt.xlabel("x")
+            plt.ylabel("PDF(x)")
+            plt.show()
+            plt.close()
+        else:
+            from bokeh.io import show
+            from bokeh.plotting import figure
+            p = figure(plot_width=400, plot_height=400, title='x PDF')
+            p.quad(top=self.pdf, bottom=0, left=self.x-self.dx/2.,
+                   right=self.x+self.dx/2.)
+            p.xaxis.axis_label = 'x'
+            # Show
+            show(p)
+
+    def __add__(self, other):
+        """ Combine the existing PDF with an input one
+
+        Parameters
+        ----------
+        other : MetallicityPDF
+
+        Returns
+        -------
+        MetallicityPDF
+          The
+
+        """
+        # Check that the ZH arrays are identical
+        if not np.allclose(self.x,other.x):
+            raise IOError("ZH arrays need to be identical (for now)")
+        # Add em'
+        new = GenericPDF(self.x, self.pdf+other.pdf, normalize=False)
+        # Return
+        return new
+
+    def __repr__(self):
+        repr = '<{:s}: mean={:g}'.format(self.__class__.__name__, self.mean)
+        try:
+            repr = repr + ', ' + self.parent.name
+        except:
+            pass
+        repr = repr + '>'
+        return repr
+
+
+class MetallicityPDF(GenericPDF):
+    """A Class for a Metallicity PDF
     """
 
     def __init__(self, ZH, pdf_ZH, parent=None, dZH=None, normalize=True):
@@ -45,24 +214,12 @@ class MetallicityPDF(object):
         # Tests
         if ZH.size != pdf_ZH.size:
             raise IOError("ZH and pdf_ZH must have the same size")
-        # Set
-        self.ZH = ZH
-        self.pdf_ZH = pdf_ZH
-        self.parent = parent
-
-        # dZH
-        if dZH is None:
-            dZH = self.ZH - np.roll(self.ZH,1)
-            dZH[0] = dZH[1]
-            self.dZH = dZH
-        else:
-            self.dZH = dZH
-
-        # Normalize pdf_ZH
-        if normalize:
-            self.normalize()
-        else:
-            warnings.warn("Not normalizing the PDF")
+        # Generate
+        GenericPDF.__init__(self, ZH, pdf_ZH, parent=parent, dx=dZH, normalize=normalize)
+        # Copy a few names
+        self.ZH = self.x
+        self.pdf_ZH = self.pdf
+        self.dZH = self.dx
 
     @property
     def meanZH(self):
@@ -74,8 +231,7 @@ class MetallicityPDF(object):
         -------
         meanZH : float
         """
-        meanZH = np.sum(self.ZH*self.pdf_ZH*self.dZH)
-        return meanZH
+        return self.mean
 
     @property
     def medianZH(self):
@@ -87,84 +243,7 @@ class MetallicityPDF(object):
         -------
         medianZH : float
         """
-        cumsum = np.cumsum(self.pdf_ZH*self.dZH)
-        # Interpolate
-        fint = interp1d(cumsum, self.ZH)
-        medianZH = float(fint(0.5))
-        return medianZH
-
-    def confidence_limits(self, cl):
-        """ Calculate the bounds of a given confidence interval
-
-        Spline interpolation is used
-
-        Parameters
-        ----------
-        cl : float
-          Confidence interval, ranging from 0 to 1
-
-        Returns
-        -------
-        ZH_min, ZH_max : float, float
-          Bounds corresponding to the input confidence limit
-        """
-        from scipy.interpolate import interp1d
-
-        if (cl <= 0.) or (cl >=1):
-            raise IOError("cl must range from 0-1")
-        # Spline the PDF cumulative sum vs ZH
-        cumul = np.cumsum(self.dZH*self.pdf_ZH)
-        f = interp1d(cumul, self.ZH)
-        # Caculate
-        frac = (1.- cl) / 2.
-        ZH_min = float(f(frac))
-        ZH_max = float(f(1-frac))
-        # Return
-        return ZH_min, ZH_max
-
-    def normalize(self):
-        """ Normalize the PDF
-
-        """
-        #
-        norm = np.sum(self.dZH*self.pdf_ZH)
-        self.pdf_ZH /= norm
-
-    def hist_plot(self, bokeh=False):
-        """ Simple histogram plot of the PDF
-
-        Parameters
-        ----------
-        bokeh : bool, optional
-          Generate a bokeh plot?
-
-        Returns
-        -------
-
-        """
-        if not bokeh:
-            from matplotlib import pyplot as plt
-            # imports
-            try:
-                import seaborn as sns; sns.set_style("white")
-            except:
-                pass
-            # Giddy up
-            plt.clf()
-            plt.bar(self.ZH-self.dZH/2., self.pdf_ZH, width=self.dZH)
-            plt.xlabel("[Z/H]")
-            plt.ylabel("PDF([Z/H]")
-            plt.show()
-            plt.close()
-        else:
-            from bokeh.io import show
-            from bokeh.plotting import figure
-            p = figure(plot_width=400, plot_height=400, title='[Z/H] PDF')
-            p.quad(top=self.pdf_ZH, bottom=0, left=self.ZH-self.dZH/2.,
-                   right=self.ZH+self.dZH/2.)
-            p.xaxis.axis_label = '[Z/H]'
-            # Show
-            show(p)
+        return self.median
 
     def __add__(self, other):
         """ Combine the existing PDF with an input one
@@ -189,6 +268,94 @@ class MetallicityPDF(object):
 
     def __repr__(self):
         repr = '<{:s}: meanZH={:g}'.format(self.__class__.__name__, self.meanZH)
+        try:
+            repr = repr + ', ' + self.parent.name
+        except:
+            pass
+        repr = repr + '>'
+        return repr
+
+class DensityPDF(GenericPDF):
+    """A Class for a Density PDF
+    """
+
+    def __init__(self, nH, pdf_nH, parent=None, dnH=None, normalize=True):
+        """
+        Parameters
+        ----------
+        nH : ndarray
+          Values of nH (log10, typically but not required) where the PDF has been evaluated
+        pdf_nH : ndarray
+          PDF of the metallicity
+        parent : object, optional
+          Parent of the metalliicty PDF, e.g. an AbsSystem
+        dnH : float or ndarray, optional
+          Width of the nH 'bins' (log 10)
+        normalize : bool, optional
+          Normalize the input PDF?
+
+        Returns
+        -------
+        MetallicityPDF
+
+        """
+        # Tests
+        if nH.size != pdf_nH.size:
+            raise IOError("nH and pdf_nH must have the same size")
+        # Generate
+        GenericPDF.__init__(self, nH, pdf_nH, parent=parent, dx=dnH, normalize=normalize)
+        # Copy a few names
+        self.nH = self.x
+        self.pdf_nH = self.pdf
+        self.dnH = self.dx
+
+    @property
+    def meannH(self):
+        """ Calculate and return average nH from the PDF
+
+        Weighted in log-space
+
+        Returns
+        -------
+        meannH : float
+        """
+        return self.mean
+
+    @property
+    def mediannH(self):
+        """ Calculate and return median nH from the PDF
+
+        Weighted in log-space
+
+        Returns
+        -------
+        mediannH : float
+        """
+        return self.median
+
+    def __add__(self, other):
+        """ Combine the existing PDF with an input one
+
+        Parameters
+        ----------
+        other : MetallicityPDF
+
+        Returns
+        -------
+        MetallicityPDF
+          The
+
+        """
+        # Check that the nH arrays are identical
+        if not np.allclose(self.nH,other.nH):
+            raise IOError("nH arrays need to be identical (for now)")
+        # Add em'
+        new = DensityPDF(self.nH, self.pdf_nH+other.pdf_nH, normalize=False)
+        # Return
+        return new
+
+    def __repr__(self):
+        repr = '<{:s}: meannH={:g}'.format(self.__class__.__name__, self.meannH)
         try:
             repr = repr + ', ' + self.parent.name
         except:

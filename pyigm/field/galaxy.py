@@ -7,6 +7,7 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import pdb
 
 from astropy import units as u
+from astropy.coordinates import SkyCoord
 
 from linetools.utils import radec_to_coord
 from linetools import utils as ltu
@@ -29,15 +30,39 @@ class Galaxy(object):
        Adopted redshift
     coord : SkyCoord
     """
-    # Initialize with a .dat file
-    def __init__(self, radec, z=None):
+    @classmethod
+    def from_dict(cls, idict):
+        """ Generate a Galaxy object from a dict
+
+        Parameters
+        ----------
+        idict : dict
+
+        """
+        slf = cls(SkyCoord(ra=idict['RA'], dec=idict['DEC'], unit=u.deg),
+                  name=idict['Name'])
+        # Attributes
+        for key in idict.keys():
+            if key in ['RA', 'DEC', 'CreationDate', 'user']:
+                continue
+            try:
+                setattr(slf,key,idict[key])
+            except KeyError:
+                pass
+        # Return
+        return slf
+
+    def __init__(self, radec, z=None, name=None):
         self.coord = radec_to_coord(radec)
         # Redshift
         self.z = z
         
         # Name
-        self.name = ('J'+self.coord.ra.to_string(unit=u.hour, sep='', pad=True)+
-                    self.coord.dec.to_string(sep='', pad=True, alwayssign=True))
+        if name is None:
+            self.name = ('J'+self.coord.ra.to_string(unit=u.hour, sep='', pad=True)+
+                        self.coord.dec.to_string(sep='', pad=True, alwayssign=True))
+        else:
+            self.name = name
 
     def to_dict(self):
         """ Convert the galaxy to a JSON-ready dict for output
@@ -58,8 +83,11 @@ class Galaxy(object):
                        CreationDate=date,
                        user=user
                        )
-        if self.z is not None:
-            gdict['z'] = self.z
+        # Attributes (e.g. SFR)
+        for key in self.__dict__.keys():
+            if key in ['coord', 'name']:
+                continue
+            gdict[key] = getattr(self, key)
         # Polish
         gdict = ltu.jsonify(gdict)
         # Return
