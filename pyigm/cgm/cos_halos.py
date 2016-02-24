@@ -101,6 +101,11 @@ class COSHalos(CGMAbsSurvey):
         # Galaxy properties
         gal.halo_mass = summ['LOGMHALO'][0]
         gal.stellar_mass = summ['LOGMFINAL'][0]
+        gal.rvir = galx['RVIR'][0]
+        gal.MH = galx['ABUN'][0]
+        gal.flag_MH = galx['ABUN_FLAG'][0]
+        gal.sdss_phot = [galx[key][0] for key in ['SDSSU','SDSSG','SDSSR','SDSSI','SDSSZ']]
+        gal.sdss_phot_sig = [galx[key][0] for key in ['SDSSU_ERR','SDSSG_ERR','SDSSR_ERR','SDSSI_ERR','SDSSZ_ERR']]
         gal.sfr = (galx['SFR_UPLIM'][0], galx['SFR'][0],
                                        galx['SFR_FLAG'][0]) # FLAG actually gives method used
         # Instantiate the IGM System
@@ -109,6 +114,8 @@ class COSHalos(CGMAbsSurvey):
         igm_sys.zqso = galx['ZQSO'][0]
         # Instantiate
         cgabs = CGMAbsSys(gal, igm_sys, name=gal.field+'_'+gal.gal_id)
+        # EBV
+        cgabs.ebv = galx['EBV'][0]
         # Ions
         if skip_ions is True:
             # NHI
@@ -191,8 +198,10 @@ class COSHalos(CGMAbsSurvey):
                     if np.abs(comp.logN - float(iont['CLM'][0])) > 0.15:
                         print("New colm for ({:d},{:d}) and sys {:s} is {:g} different from old".format(
                             comp.Zion[0], comp.Zion[1], cgabs.name, comp.logN - float(iont['CLM'][0])))
-                        if cgabs.name == 'J1342-0053_157_10':
-                            pdb.set_trace()
+                    if comp.flag_N != iont['FLG_CLM'][0]:
+                        print("New flag for ({:d},{:d}) and sys {:s} is different from old".format(
+                            comp.Zion[0], comp.Zion[1], cgabs.name))
+                        pdb.set_trace()
             #_,_ = ltaa.linear_clm(comp)
             cgabs.igm_sys.add_component(comp)
         self.cgm_abs.append(cgabs)
@@ -304,7 +313,7 @@ class COSHalos(CGMAbsSurvey):
             f = tar.extractfile(member)
             tdict = json.load(f)
             # Generate
-            cgmsys = CGMAbsSys.from_dict(tdict, warn_only=True, **kwargs)
+            cgmsys = CGMAbsSys.from_dict(tdict, warn_only=True, skip_vel=True, **kwargs)
             self.cgm_abs.append(cgmsys)
         tar.close()
         # Werk+14

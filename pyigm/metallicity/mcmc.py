@@ -228,7 +228,6 @@ class Emceebones(object):
         -------
 
         """
-
         print('Writing outputs...')
 
         #pickle the results to disk
@@ -389,7 +388,15 @@ class Emceebones(object):
                 initguess.append(self.info['z'])
             else:
                 #Handle all other paramaters
-                initguess.append(np.median(self.mod_axisval[pp]))
+                if self.optim == 'guess':
+                    if tag == 'met':
+                        initguess.append(self.info['met'])
+                    elif tag == 'dens':
+                        initguess.append(self.info['dens'])
+                    else:
+                        raise ValueError("Not ready for this one")
+                else:
+                    initguess.append(np.median(self.mod_axisval[pp]))
 
         #now go through a bunch of cases in which the starting ball is
         #set according to local, global, or no optimisation
@@ -430,6 +437,13 @@ class Emceebones(object):
                 print('Optimisation failed: starting emcee from random position')
                 self.optim=False
 
+        if self.optim == 'guess':
+            print("Skip optimisation... Initialise at input guess")
+            #set up a ball centred at initguess
+            pos = [initguess + 1e-2*np.random.randn(self.ndim) for i in range(self.nwalkers)]
+            self.paramguess = initguess
+            pdb.set_trace()
+
         if self.optim == False:
             print("Skip optimisation... Initialise at random with the grid")
 
@@ -443,14 +457,14 @@ class Emceebones(object):
 
                 tag=self.mod_axistag[pp]
                 if tag == 'col':
-                    #For column density, randomise within the error bars
+                    #For column density, randomise within the error bars (2 sigma)
                     ballst=np.random.random(self.nwalkers)*(2*self.info['eNHI'])+(self.info['NHI']-self.info['eNHI'])
                     #now assign value to starting balls
                     for i in range(self.nwalkers):
                         pos[i][pp]=ballst[i]
 
                 elif tag == 'red':
-                    #For redshift, randomise within the error bars
+                    #For redshift, randomise within the error bars (2 sigma)
                     ballst=np.random.random(self.nwalkers)*(2*self.info['errz'])+(self.info['z']-self.info['errz'])
                     #now assign value to starting balls
                     for i in range(self.nwalkers):

@@ -51,10 +51,16 @@ def run_mcmc(args):
 
     #run the mcmc
     print 'Ready to run mcmc for {}'.format(sy)
+    if args.optim == 'guess':
+        obsinfo['met'] = args.met
+        obsinfo['dens'] = args.dens
+        optim = 'guess'
+    else:
+        optim = False
 
     #pick optimised values for 12 processors - cosma (proc*NN walkers, proc*YY samples)
     mcmc=mcmc_ions(observ,obsinfo, args.grid, nwalkers=(args.nwalkers),
-                   nsamp=(args.nsamp), optim=False, threads=args.nthread,
+                   nsamp=(args.nsamp), optim=optim, threads=args.nthread,
                    outsave=args.outsave, testing=args.testing)
 
     print 'All done with this batch'
@@ -72,6 +78,9 @@ def main(args=None):
     parser.add_argument('-nthread', type=int, help='Number of threads')
     parser.add_argument('-nwalkers', type=int, help='Number of walkers')
     parser.add_argument('-nsamp', type=int, help='Number of samples')
+    parser.add_argument('-optim', type=str, help='Optimization method')
+    parser.add_argument('-dens', type=float, help='Guess at density (optim=guess)')
+    parser.add_argument('-met', type=float, help='Guess at metallicity (optim=guess)')
     parser.add_argument("--testing", help="Set to test (over-rides nwalkers)", action="store_true")
     pargs = parser.parse_args()
 
