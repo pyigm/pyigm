@@ -89,4 +89,4 @@ def main(args=None):
 
 
 # Example
-# pyigm_mtlmcmc J012156.03+144823.8_z2.662 alldata.txt savehere grid_minimal.pkl 1
+# pyigm_mtlmcmc J012156.03+144823.8_z2.662 alldata.txt savehere grid_minimal.pkl -nthread=1 -nwalkers=80 -nsamp=80

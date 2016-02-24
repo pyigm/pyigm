@@ -518,13 +518,15 @@ class COSHalos(CGMAbsSurvey):
         #spec.qck_plot()
         return spec
 
-    def stack_plot(self, inp, use_lines=None, ymnx=None, **kwargs):
+    def stack_plot(self, inp, use_lines=None, ymnx=None, add_lines=None, **kwargs):
         """ Generate a stack plot of the key lines for a given COS-Halos system
         Parameters
         ----------
         inp : int or tuple
           int -- Index of the cgm_abs list
           tuple -- (field,gal_id)
+        add_lines : list, optional
+          List of additional lines to plot
         """
         # Init
         from linetools.analysis import plots as ltap
@@ -536,6 +538,10 @@ class COSHalos(CGMAbsSurvey):
         if use_lines is None:
             use_lines = [1215.6700, 1025.7223, 1334.5323, 977.020, 1031.9261, 1037.6167,
                          1260.4221, 1206.500, 1393.7550, 2796.352]*u.AA
+            if add_lines is not None:
+                use_lines = list(use_lines.value) + add_lines
+                use_lines.sort()
+                use_lines = use_lines*u.AA
         for iline in use_lines:
             spec = self.load_bg_cos_spec(inp, iline)
             if spec is None:
