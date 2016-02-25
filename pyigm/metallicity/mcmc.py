@@ -442,7 +442,6 @@ class Emceebones(object):
             #set up a ball centred at initguess
             pos = [initguess + 1e-2*np.random.randn(self.ndim) for i in range(self.nwalkers)]
             self.paramguess = initguess
-            pdb.set_trace()
 
         if self.optim == False:
             print("Skip optimisation... Initialise at random with the grid")

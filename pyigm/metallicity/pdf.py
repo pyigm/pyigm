@@ -286,7 +286,7 @@ class DensityPDF(GenericPDF):
         nH : ndarray
           Values of nH (log10, typically but not required) where the PDF has been evaluated
         pdf_nH : ndarray
-          PDF of the metallicity
+          PDF of the nH values
         parent : object, optional
           Parent of the metalliicty PDF, e.g. an AbsSystem
         dnH : float or ndarray, optional
@@ -338,12 +338,11 @@ class DensityPDF(GenericPDF):
 
         Parameters
         ----------
-        other : MetallicityPDF
+        other : DensityPDF
 
         Returns
         -------
-        MetallicityPDF
-          The
+        DensityPDF
 
         """
         # Check that the nH arrays are identical
