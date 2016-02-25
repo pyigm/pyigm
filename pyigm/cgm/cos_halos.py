@@ -564,6 +564,12 @@ class COSHalos(CGMAbsSurvey):
         # Execute
         ltap.stack_plot(abs_lines, vlim=[-400., 400]*u.km/u.s, ymnx=ymnx, **kwargs)
 
+    def update_survey(self):
+        """ Updates the JSON tarball
+        Returns
+        -------
+
+        """
     def write_survey(self, outfil='COS-Halos_sys.tar.gz'):
         """ Write the survey to a tarball of JSON files
 
