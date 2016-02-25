@@ -51,8 +51,8 @@ def get_telfer_spec(zqso=0., igm=False, fN_gamma=None,
     telfer = ascii.read(
         pyigm_path+'/data/quasar/telfer_hst_comp01_rq.ascii', comment='#')
     scale = telfer['flux'][(telfer['wrest'] == 1450.)]
-    telfer_spec = XSpectrum1D.from_tuple((telfer['wrest']*(1+zqso),
-        telfer['flux']/scale[0]))  # Observer frame
+    telfer_spec = XSpectrum1D.from_tuple((np.array(telfer['wrest'])*(1+zqso),
+        np.array(telfer['flux'])/scale[0]))  # Observer frame
 
     # IGM?
     if igm is True:
@@ -77,7 +77,7 @@ def get_telfer_spec(zqso=0., igm=False, fN_gamma=None,
         else:
             igm_wv = np.where(telfer['wrest'] < 1220.)[0]
         adict = []
-        for wrest in telfer_spec.dispersion[igm_wv].value:
+        for wrest in telfer_spec.wavelength[igm_wv].value:
             tdict = dict(ilambda=wrest, zem=zqso, fN_model=fN_model,
                          wrest=copy.deepcopy(twrest))
             adict.append(tdict)
@@ -91,9 +91,9 @@ def get_telfer_spec(zqso=0., igm=False, fN_gamma=None,
         telfer_spec.flux[igm_wv] *= np.exp(-1.*np.array(ateff))
         # Flatten?
         if LL_flatten:
-            wv_LL = np.where(np.abs(telfer_spec.dispersion/(1+zqso)-914.*u.AA)<3.*u.AA)[0]
+            wv_LL = np.where(np.abs(telfer_spec.wavelength/(1+zqso)-914.*u.AA)<3.*u.AA)[0]
             f_LL = np.median(telfer_spec.flux[wv_LL])
-            wv_low = np.where(telfer_spec.dispersion/(1+zqso)<911.7*u.AA)[0]
+            wv_low = np.where(telfer_spec.wavelength/(1+zqso)<911.7*u.AA)[0]
             telfer_spec.flux[wv_low] = f_LL
 
     # Return
