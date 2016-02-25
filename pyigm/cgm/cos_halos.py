@@ -18,7 +18,7 @@ from linetools.spectralline import AbsLine
 from linetools.analysis import absline as ltaa
 from linetools.isgm.abscomponent import AbsComponent
 
-from pyigm.metallicity.pdf import MetallicityPDF, DensityPDF
+from pyigm.metallicity.pdf import MetallicityPDF, DensityPDF, GenericPDF
 from pyigm.cgm.cgmsurvey import CGMAbsSurvey
 from pyigm.field.galaxy import Galaxy
 from .cgm import CGMAbsSys
@@ -251,13 +251,15 @@ class COSHalos(CGMAbsSurvey):
     def load_werk14(self):
         """ Load up the Werk+14 results
         """
+        cldy_names = np.array([row['FIELD'].strip()+'_'+row['GALID'].strip()
+                               for row in self.werk14_cldy])
         for cgm_abs in self.cgm_abs:
-            gal = cgm_abs.galaxy
             igm_sys = cgm_abs.igm_sys
             # Metallicity
             igm_sys.ZH = -99.
-            mtc = np.where((self.werk14_cldy['GALID'] == gal.gal_id) &
-                           (self.werk14_cldy['FIELD'] == gal.field))[0]
+            #mtc = np.where((self.werk14_cldy['GALID'] == gal.gal_id) &
+            #               (self.werk14_cldy['FIELD'] == gal.field))[0]
+            mtc = np.where(cldy_names == cgm_abs.name)[0]
             if len(mtc) == 1:
                 # Metallicity
                 igm_sys.werk14_ZH = self.werk14_cldy[mtc]['ZBEST'][0]
@@ -270,6 +272,8 @@ class COSHalos(CGMAbsSurvey):
                 igm_sys.werk14_NH = np.log10(self.werk14_cldy[mtc]['NH_BEST'][0])
                 igm_sys.werk14_NHmnx = [np.log10(self.werk14_cldy[mtc]['NH_LOW'][0]),
                                         np.log10(self.werk14_cldy[mtc]['NH_HIGH'][0])]
+            else:
+                print('No Werk+14 Cloudy solution for {:s}'.format(cgm_abs.name))
 
 
     def load_sys(self, tfile=None, empty=True, debug=False, **kwargs):
@@ -320,12 +324,14 @@ class COSHalos(CGMAbsSurvey):
         if self.werk14_cldy is not None:
             self.load_werk14()
 
-    def load_mtl_pdfs(self, ZH_fil):
+    def load_mtl_pdfs(self, ZH_fil, keep_all=False):
         """ Load the metallicity PDFs from an input file (usually hdf5)
 
         Parameters
         ----------
         ZH_fil : str
+        keep_all : bool, optional
+          Save the full metallicity data?
 
         """
         fh5=h5py.File(ZH_fil, 'r')
@@ -342,13 +348,18 @@ class COSHalos(CGMAbsSurvey):
                 print('No metallicity info for {:s}'.format(cgm_abs.name))
                 print('Skipping..')
                 continue
+            # Z/H
             cgm_abs.igm_sys.metallicity = MetallicityPDF(fh5['met']['left_edge_bins']+
                                          fh5['met']['left_edge_bins'].attrs['BINSIZE']/2.,
                                          fh5['met'][mkeys[mt][0]])
             cgm_abs.igm_sys.metallicity.inputs = {}
             for key in fh5['inputs'][cgm_abs.name]:
                 cgm_abs.igm_sys.metallicity.inputs[key] = fh5['inputs'][cgm_abs.name][key].value
-            # Density (using the metallicity framework for now)
+            # NHI
+            cgm_abs.igm_sys.NHIPDF = GenericPDF(fh5['col']['left_edge_bins']+
+                                                 fh5['col']['left_edge_bins'].attrs['BINSIZE']/2.,
+                                                 fh5['col'][mkeys[mt][0]])
+            # Density
             cgm_abs.igm_sys.density = DensityPDF(fh5['dens']['left_edge_bins']+
                                                          fh5['dens']['left_edge_bins'].attrs['BINSIZE']/2.,
                                                          fh5['dens'][mkeys[mt][0]])
