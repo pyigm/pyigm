@@ -8,6 +8,7 @@ import os, glob
 import pdb
 import warnings
 import h5py
+import json, yaml
 
 from astropy.io import fits, ascii
 from astropy import units as u 
@@ -564,12 +565,6 @@ class COSHalos(CGMAbsSurvey):
         # Execute
         ltap.stack_plot(abs_lines, vlim=[-400., 400]*u.km/u.s, ymnx=ymnx, **kwargs)
 
-    def update_survey(self):
-        """ Updates the JSON tarball
-        Returns
-        -------
-
-        """
     def write_survey(self, outfil='COS-Halos_sys.tar.gz'):
         """ Write the survey to a tarball of JSON files
 
@@ -611,6 +606,57 @@ class COSHalos(CGMAbsSurvey):
         else:
             return self.cgm_abs[mt]
 
+
+def update_cos_halos(self):
+    """ Updates the JSON tarball
+    Returns
+    -------
+    """
+    print("See the COS-Halos_database notebook for details")
+
+    # Generate v1.0
+    print("Generate v1.0 of the JSON tarball")
+    cos_halos = COSHalos()
+    cos_halos.load_mega()
+    tarfil = cos_halos.cdir+'/cos-halos_systems.v1.0.tar.gz'
+    cos_halos.write_survey(tarfil)
+    del cos_halos
+
+    # Generate v1.1 which uses the NHI measurements from P+16 and
+    #   modifies a few ions and transitions as limits or NG
+    print("Generate v1.1 of the JSON tarball")
+    cos_halos_v10 = COSHalos()
+    cos_halos_v10.load_sys(tfile=cos_halos.cdir+'/cos-halos_systems.v1.0.tar.gz')
+    # NHI
+    LLS_file = cos_halos_v10.cdir + '/Updates/COS_Halos_LLS.json'
+    with open(LLS_file) as json_file:
+        fdict = json.load(json_file)
+    # Loop on systems
+    names = cos_halos_v10.name
+    for key in fdict.keys():
+        # Match
+        mt = np.where(names == key)[0]
+        if len(mt) != 1:
+            raise ValueError("No match?!")
+        # Fill in
+        if fdict[key]['flag_NHI'] == 1:
+            cos_halos_v10.cgm_abs[mt[0]].igm_sys.NHI = fdict[key]['fit_NHI'][0]
+            cos_halos_v10.cgm_abs[mt[0]].igm_sys.sig_NHI = (fdict[key]['fit_NHI'][2]-fdict[key]['fit_NHI'][1])/2.
+            cos_halos_v10.cgm_abs[mt[0]].igm_sys.flag_NHI = 1
+        elif fdict[key]['flag_NHI'] == 2:
+            cos_halos_v10.cgm_abs[mt[0]].igm_sys.NHI = fdict[key]['fit_NHI'][1]
+            cos_halos_v10.cgm_abs[mt[0]].igm_sys.flag_NHI = 2
+        elif fdict[key]['flag_NHI'] == 3:
+            cos_halos_v10.cgm_abs[mt[0]].igm_sys.NHI = fdict[key]['fit_NHI'][2]
+            cos_halos_v10.cgm_abs[mt[0]].igm_sys.flag_NHI = 3
+    # Bad ions
+    filename = cos_halos_v10.cdir + '/Updates/COS_Halos_ions_updates.yaml'
+    with open(filename, 'r') as infile:
+            up_ion_data = yaml.load(infile)
+    #
+
+    # Write
+    tarfil = cos_halos_v10.cdir+'/cos-halos_systems.v1.1.tar.gz'
 
 class COSDwarfs(COSHalos):
     """Inherits COS Halos Class
