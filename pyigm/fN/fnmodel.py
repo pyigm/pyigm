@@ -135,6 +135,7 @@ class FNModel(object):
             self.model = scii.PchipInterpolator(self.pivots, self.param['sply'],
                                                 extrapolate=True)  # scipy 0.16
         #
+        self.fN_mtype = mtype
         self.zmnx = zmnx
 
         # Redshift evolution (needs updating)

@@ -255,8 +255,10 @@ def wfc3_continuum(wfc3_indx=None, zqso=0., wave=None,
         idx = wfc3_indx
 
     # Generate spectrum
-    wfc_spec = XSpectrum1D.from_tuple((wfc_models[idx]['WREST'].flatten()*(1+zqso),
-        wfc_models[idx]['FLUX'].flatten()))
+    pdb.set_trace()
+    wfc_spec = XSpectrum1D.from_tuple((
+        wfc_models[idx]['WREST'].data.flatten()*(1+zqso),
+        wfc_models[idx]['FLUX'].data.flatten()))
     # Smooth
     wfc_smooth = wfc_spec.gauss_smooth(fwhm=smooth)
 
