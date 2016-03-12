@@ -87,7 +87,7 @@ class FNModel(object):
         Parameters
         ----------
         mtype : str
-          Type of model.  Gamma or Hspline
+          Type of model.  Gamma,  Hspline, PowerLaw
         zmnx : tuple, optional
           Redshift range for evaluation
         pivots : ndarray, optional
@@ -104,7 +104,7 @@ class FNModel(object):
         FNModel
 
         """
-        if mtype not in ['Gamma', 'Hspline']:
+        if mtype not in ['Gamma', 'Hspline', 'PowerLaw']:
             raise IOError("Invalid mtype")
         self.mtype = mtype  # Should probably check the choice
 
@@ -134,6 +134,10 @@ class FNModel(object):
                 raise IOError("Need to specify sply parameters!")
             self.model = scii.PchipInterpolator(self.pivots, self.param['sply'],
                                                 extrapolate=True)  # scipy 0.16
+        elif mtype == 'PowerLaw':
+            if len(self.param) == 0:
+                raise IOError("Need to specify PowerLaw parameters!")
+
         #
         self.fN_mtype = mtype
         self.zmnx = zmnx
@@ -431,7 +435,21 @@ class FNModel(object):
                     fnz += np.outer(10.**log_gN[:, kk], fz[:, kk])
                 # Finish up
                 log_fNX = np.log10(fnz) - np.log10( np.outer(np.ones(lenNHI), dXdz))
-        else: 
+        elif self.mtype == 'PowerLaw':
+            log_fNX = self.param['B'] + self.param['beta'] * NHI
+            #
+            if (not isiterable(z_val)) | (flg_1D == 1):  # scalar or 1D array wanted
+                log_fNX += self.gamma * np.log10((1+z_val)/(1+self.zpivot))
+            else:
+                lgNHI_grid = np.outer(log_fNX, np.ones(len(z_val)))
+                lenfX = len(log_fNX)
+                #
+                z_grid1 = 10**(np.outer(np.ones(lenfX)*self.gamma,
+                                        np.log10(1+z_val)))  #; (1+z)^gamma
+                z_grid2 = np.outer( np.ones(lenfX)*((1./(1+self.zpivot))**self.gamma),
+                                    np.ones(len(z_val)))
+                log_fNX = lgNHI_grid + np.log10(z_grid1*z_grid2)
+        else:
             raise ValueError('fN.model: Not ready for this model type {:%s}'.format(self.mtype))
 
         # Return

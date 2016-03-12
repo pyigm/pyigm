@@ -123,6 +123,7 @@ def lyman_limit(fN_model, z912, zem, N_eval=5000, cosmo=None, debug=False):
     # Return
     return zval, teff_LL
 
+
 def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
              bval=24., cosmo=None, debug=False, cumul=None,
              verbose=False, EW_spline=None, wrest=None):

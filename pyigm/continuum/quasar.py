@@ -255,7 +255,6 @@ def wfc3_continuum(wfc3_indx=None, zqso=0., wave=None,
         idx = wfc3_indx
 
     # Generate spectrum
-    pdb.set_trace()
     wfc_spec = XSpectrum1D.from_tuple((
         wfc_models[idx]['WREST'].data.flatten()*(1+zqso),
         wfc_models[idx]['FLUX'].data.flatten()))

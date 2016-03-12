@@ -249,17 +249,18 @@ def mock_HIlines(HI_comps, wvmnx, tau0_min=5e-3):
 
 
 def mk_mock(wave, zem, fN_model, out_spec=None,
-            out_tbl=None, s2n=15., seed=None):
+            out_tbl=None, s2n=15., fwhm=3., seed=None):
     """ Generate a mock
     Parameters
     ----------
     wave : Quantity array
     zem : float
     fN_model
-    seed : int, optional
     out_spec : str, optional
     out_tbl : str, optional
     s2n : float, optional
+    fwhm : float, optional
+    seed : int, optional
 
     Returns
     -------
@@ -272,9 +273,7 @@ def mk_mock(wave, zem, fN_model, out_spec=None,
     # Wavelength Range
     wvmin = np.min(wave) #(1+zem)*912.*u.AA - 1000*u.AA
     wvmax = np.max(wave)
-
-    # Keep only the good ones
-    gdwv = (wave >= wvmin) & (wave <= wvmax)
+    dwv = np.median(wave - np.roll(wave,1))
 
     # zrange for Lya
     zmin = (wvmin/(1215.6700*u.AA))-1.
@@ -287,38 +286,37 @@ def mk_mock(wave, zem, fN_model, out_spec=None,
 
     # Optical depth
     sub_wave, tot_tau = generate_tau(wave, HIlines, HI_comps)
+    dwv_sub = np.median(sub_wave-np.roll(sub_wave,1))
 
     # Normalized mock spectrum (sub-grid of wavelengths)
     sub_flux = np.exp(-1.*tot_tau)
     sub_mock = XSpectrum1D.from_tuple( (sub_wave,sub_flux) )
 
-    #from xastropy.xutils import xdebug as xdb
-    #xdb.set_trace()
+    # Smooth
+    smooth_mock = sub_mock.gauss_smooth(fwhm=fwhm*(dwv/dwv_sub))
+
     # Rebin
-    mock = sub_mock.rebin(wave)
-    mock = XSpectrum1D.from_tuple( (mock.wavelength,mock.flux,np.ones(len(mock.flux))/s2n) )
+    mock = smooth_mock.rebin(wave)
 
-
-    # Add instrument + noise
-    mock.gauss_smooth(fwhm=3.)
-    mock.add_noise()
+    # Add noise
+    mock.sig = np.ones(len(mock.flux))/s2n
+    noisy_mock = mock.add_noise()
 
     # Continuum
-    reload(pycq)
     conti, wfc3_idx = pycq.wfc3_continuum(zqso=zem,wave=wave,rstate=rstate)
 
     # Full
-    full_mock = XSpectrum1D.from_tuple( (wave,mock.flux*conti.flux,
-                                 conti.flux*np.ones(len(mock.flux))/s2n) )
+    full_mock = XSpectrum1D.from_tuple((wave,noisy_mock.flux*conti.flux,
+                                 conti.flux*np.ones(len(noisy_mock.flux))/s2n))
 
-    # Write spectrum
+    # Write spectrum (as desired)
     full_mock.meta.update(dict(zQSO=zem, S2N=s2n, seed=seed,
             fN_gamma=fN_model.gamma, fN_type=fN_model.fN_mtype, conti=wfc3_idx))
     if out_spec is not None:
         full_mock.write_to_fits(out_spec, clobber=True)
 
-    # Save HI data
+    # Save HI data (as desired)
     if out_tbl is not None:
         HI_comps.write(out_tbl, overwrite=True)
     # Return
-    return full_mock, HI_comps
+    return full_mock, HI_comps, (sub_mock, tot_tau, mock)
