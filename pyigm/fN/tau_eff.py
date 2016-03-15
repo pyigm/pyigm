@@ -102,7 +102,7 @@ def lyman_limit(fN_model, z912, zem, N_eval=5000, cosmo=None, debug=False):
 
     # Evaluate tau(z,N)
     teff_engy = (const.Ryd.to(u.eV, equivalencies=u.spectral()) /
-                 ((1+zval)/(1+zem)) )
+                 ((1+zval)/(1+zem)))
     sigma_z = ltaa.photo_cross(1, 1, teff_engy)
     tau_zN = np.outer(Nval, sigma_z)
 
@@ -111,9 +111,10 @@ def lyman_limit(fN_model, z912, zem, N_eval=5000, cosmo=None, debug=False):
 
     # Sum
     sumz_first = False
-    if sumz_first == False:
+    if sumz_first is False:
         #; Sum in N first
         N_summed = np.sum(intg * np.outer(Nval, np.ones(N_eval)),  0) * dlgN * np.log(10.)
+        pdb.set_trace()
         # Sum in z
         teff_LL = (np.cumsum(N_summed[::-1]))[::-1] * dz
 

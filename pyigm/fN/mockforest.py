@@ -248,7 +248,7 @@ def mock_HIlines(HI_comps, wvmnx, tau0_min=5e-3):
     return abs_lines
 
 
-def mk_mock(wave, zem, fN_model, out_spec=None,
+def mk_mock(wave, zem, fN_model, out_spec=None, add_conti=True,
             out_tbl=None, s2n=15., fwhm=3., seed=None):
     """ Generate a mock
     Parameters
@@ -303,11 +303,16 @@ def mk_mock(wave, zem, fN_model, out_spec=None,
     noisy_mock = mock.add_noise()
 
     # Continuum
-    conti, wfc3_idx = pycq.wfc3_continuum(zqso=zem,wave=wave,rstate=rstate)
+    if add_conti:
+        conti, wfc3_idx = pycq.wfc3_continuum(zqso=zem,wave=wave,rstate=rstate)
+        cflux = conti.flux
+    else:
+        cflux = np.ones_like(noisy_mock.flux)
+        wfc3_idx = -1
 
     # Full
-    full_mock = XSpectrum1D.from_tuple((wave,noisy_mock.flux*conti.flux,
-                                 conti.flux*np.ones(len(noisy_mock.flux))/s2n))
+    full_mock = XSpectrum1D.from_tuple((wave,noisy_mock.flux*cflux,
+                                 cflux*np.ones(len(noisy_mock.flux))/s2n))
 
     # Write spectrum (as desired)
     full_mock.meta.update(dict(zQSO=zem, S2N=s2n, seed=seed,
