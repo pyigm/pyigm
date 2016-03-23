@@ -245,7 +245,6 @@ class FNModel(object):
         else:
             return lX
 
-
     def calculate_rhoHI(self, z, NHI_mnx, neval=10000, cumul=False, cosmo=None):
         """ Calculate rho_HI over an N_HI interval
 
@@ -258,7 +257,7 @@ class FNModel(object):
         neval : int, optional
           Discretization parameter (10000)
         cumul : bool, optional
-          Return a cumulative array?
+          Return lgNHI, cumul_rhoHI too
         cosmo : astropy.cosmology, optional
           Needed for H0 only
 
@@ -266,6 +265,9 @@ class FNModel(object):
         -------
         rho_HI: float
           rho_HI in units of Msun per comoving Mpc**3
+        if cumul is True
+          lgNHI : array of log NHI values
+          cumul : array of cumulative rho_HI
         """
         # Cosmology
         if cosmo is None:
@@ -291,7 +293,7 @@ class FNModel(object):
         rho_HI = np.zeros(nz)
         for ii in range(nz): 
             rho_HI[ii] = np.sum(10.**(lgfNX[:, ii]+2*lgNHI)) * dlgN * np.log(10.)
-        if cumul==True: 
+        if cumul is True:
             if nz > 1:  #; Have not modified this yet
                 raise ValueError('fN.model: Not ready for this model type %s' % self.mtype)
             cum_sum = np.cumsum(10.**(lgfNX[:, ii]+2*lgNHI)) * dlgN * np.log(10.)
@@ -303,7 +305,7 @@ class FNModel(object):
         # Return
         if nz == 1:
             rho_HI = rho_HI[0]
-        if cumul == True:
+        if cumul is True:
             return rho_HI, cum_sum, lgNHI
         else:
             return rho_HI

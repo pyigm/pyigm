@@ -114,7 +114,6 @@ def lyman_limit(fN_model, z912, zem, N_eval=5000, cosmo=None, debug=False):
     if sumz_first is False:
         #; Sum in N first
         N_summed = np.sum(intg * np.outer(Nval, np.ones(N_eval)),  0) * dlgN * np.log(10.)
-        pdb.set_trace()
         # Sum in z
         teff_LL = (np.cumsum(N_summed[::-1]))[::-1] * dz
 
