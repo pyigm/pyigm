@@ -206,7 +206,8 @@ class LLSSystem(IGMSystem):
                 self.subsys[lbls[i]].NHI = self.subsys[lbls[i]]._datdict['NHI']
                 self.subsys[lbls[i]].sig_NHI = self.subsys[lbls[i]]._datdict['NHIsig']
 
-    def get_ions(self, use_Nfile=False, idict=None, update_zvlim=True, linelist=None):
+    def get_ions(self, use_Nfile=False, idict=None, update_zvlim=True,
+                 linelist=None, verbose=True):
         """Parse the ions for each Subsystem
 
         And put them together for the full system
