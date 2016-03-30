@@ -19,12 +19,14 @@ def data_path(filename):
     return os.path.join(data_dir, filename)
 '''
 
+
 def test_simple_dla_init():
 	# Init 
     dla = DLASystem((0.*u.deg, 0.*u.deg), 2.5, None, NHI=20.55)
     #
     np.testing.assert_allclose(dla.vlim[0].value,-500.)
     np.testing.assert_allclose(dla.NHI, 20.55)
+
 
 def test_dat_init():
     # JXP .dat files
@@ -37,6 +39,7 @@ def test_dat_init():
     #
     np.testing.assert_allclose(dla.NHI, 21.37)
     np.testing.assert_allclose(dla.zabs, 2.309)
+
 
 def test_parse_ion():
     # JXP .ion file
