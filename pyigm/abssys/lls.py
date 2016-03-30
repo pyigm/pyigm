@@ -206,7 +206,8 @@ class LLSSystem(IGMSystem):
                 self.subsys[lbls[i]].NHI = self.subsys[lbls[i]]._datdict['NHI']
                 self.subsys[lbls[i]].sig_NHI = self.subsys[lbls[i]]._datdict['NHIsig']
 
-    def get_ions(self, use_Nfile=False, idict=None, update_zvlim=True, linelist=None):
+    def get_ions(self, use_Nfile=False, idict=None, update_zvlim=True,
+                 linelist=None, verbose=True):
         """Parse the ions for each Subsystem
 
         And put them together for the full system
@@ -321,7 +322,7 @@ class LLSSystem(IGMSystem):
         from linetools.analysis import voigt as lav
 
         # Energies in LLS rest-frame
-        wv_rest = spec.dispersion / (self.zabs+1)
+        wv_rest = spec.wavelength / (self.zabs+1)
         energy = wv_rest.to(u.eV, equivalencies=u.spectral())
 
         # Get photo_cross and calculate tau
@@ -331,7 +332,7 @@ class LLSSystem(IGMSystem):
         if 'lls_lines' not in self.__dict__.keys():
             self.fill_lls_lines()
 
-        tau_Lyman = lav.voigt_from_abslines(spec.dispersion, self.lls_lines, ret='tau')
+        tau_Lyman = lav.voigt_from_abslines(spec.wavelength, self.lls_lines, ret='tau')
 
         # Combine
         tau_model = tau_LL + tau_Lyman

@@ -174,7 +174,7 @@ def read_all_file(all_file, components=None, verbose=False):
     return table
 
 
-def read_clmfile(clm_file, linelist=None):
+def read_clmfile(clm_file, linelist=None, verbose=True):
     """ Read in a .CLM file in an appropriate manner
 
     NOTE: If program breaks in this function, check the clm to see if it is properly formatted.
@@ -254,7 +254,7 @@ def read_clmfile(clm_file, linelist=None):
         vmax = float(tmp[2].strip())
         key = float(tmp[0].strip()) # Using a numpy float not string!
         # Generate
-        clm_dict['lines'][key] = AbsLine(key*u.AA,closest=True,linelist=linelist)
+        clm_dict['lines'][key] = AbsLine(key*u.AA,closest=True,linelist=linelist, verbose=verbose)
         clm_dict['lines'][key].attrib['z'] = clm_dict['zsys']
         clm_dict['lines'][key].analy['FLAGS'] = ionflg, int(tmp[3].strip())
         # By-hand
