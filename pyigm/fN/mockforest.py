@@ -25,6 +25,7 @@ from pyigm.continuum import quasar as pycq
 
 pyigm_path = imp.find_module('pyigm')[1]
 
+
 def dopp_val(x,bsig=24*u.km/u.s,bmnx=(15.,80)*u.km/u.s):
     """ Generate random distribution of b-values
     Follows Hui&Rutledge 1999 distribution
@@ -49,6 +50,7 @@ def dopp_val(x,bsig=24*u.km/u.s,bmnx=(15.,80)*u.km/u.s):
     #Lastly
     bx = bx4**(0.25)
     return bx
+
 
 def monte_HIcomp( zmnx, fN_model, NHI_mnx=None, dz=0.001, cosmo=None,
     rstate=None, seed=None):
@@ -266,6 +268,8 @@ def mk_mock(wave, zem, fN_model, out_spec=None, add_conti=True,
     -------
     full_mock : XSpectrum1D of the mock
     HI_comps : Table of the components
+    misc : tuple
+      Other bits and pieces [may deprecate]
     """
     # Init
     rstate=np.random.RandomState(seed)

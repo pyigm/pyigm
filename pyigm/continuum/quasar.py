@@ -6,7 +6,6 @@ import numpy as np
 import os
 import imp
 import pdb
-import copy
 
 from scipy.interpolate import interp1d
 
@@ -79,7 +78,7 @@ def get_telfer_spec(zqso=0., igm=False, fN_gamma=None,
         adict = []
         for wrest in telfer_spec.wavelength[igm_wv].value:
             tdict = dict(ilambda=wrest, zem=zqso, fN_model=fN_model,
-                         wrest=copy.deepcopy(twrest))
+                         wrest=twrest.copy())
             adict.append(tdict)
         # Run
         if nproc > 1:

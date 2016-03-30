@@ -35,6 +35,7 @@ def test_lya():
     #np.testing.assert_allclose(teff, 0.19821452949713764)
     np.testing.assert_allclose(teff, 0.1981831995528795)  # scipy 0.17
 
+
 def test_lyx():
     # f(N)
     fN_model = FNModel.default_model()
@@ -44,6 +45,7 @@ def test_lyx():
     teff = pyteff.lyman_ew(lamb, 2.5, fN_model, NHI_MIN=12., NHI_MAX=17.)
     # Test
     np.testing.assert_allclose(teff, 0.23467431253226975)  # scipy 0.17
+
 
 def test_parallel():
     import multiprocessing
