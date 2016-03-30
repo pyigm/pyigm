@@ -92,10 +92,10 @@ def get_telfer_spec(zqso=0., igm=False, fN_gamma=None,
         # Flatten?
         if LL_flatten:
             wv_LL = np.where(np.abs(telfer_spec.wavelength/(1+zqso)-914.*u.AA)<3.*u.AA)[0]
-            f_LL = np.median(telfer_spec.flux[wv_LL])
+            f_LL = np.median(new_flux[wv_LL])
             wv_low = np.where(telfer_spec.wavelength/(1+zqso)<911.7*u.AA)[0]
             new_flux[wv_low] = f_LL
-        # Regenerate
+        # Regenerate spectrum
         telfer_spec = XSpectrum1D.from_tuple(
                 (np.array(telfer['wrest'])*(1+zqso), new_flux))
 
