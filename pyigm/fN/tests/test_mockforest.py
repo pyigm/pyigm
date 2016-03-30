@@ -30,6 +30,6 @@ def test_mk_mock():
     fN_model = FNModel.default_model()
 
     #
-    mock_spec, HI_comps, _ = mk_mock(wave, zem, fN_model, s2n=s2n, fwhm=sampling,
-                                     seed=11223)
-    pdb.set_trace()
+    mock_spec, HI_comps, _ = mk_mock(wave, zem, fN_model, s2n=s2n,
+                                     fwhm=sampling, seed=11223)
+    np.testing.assert_allclose(mock_spec.flux[300].value,21.769750595092773)

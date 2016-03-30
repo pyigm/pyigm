@@ -304,7 +304,7 @@ def mk_mock(wave, zem, fN_model, out_spec=None, add_conti=True,
 
     # Add noise
     mock.sig = np.ones(len(mock.flux))/s2n
-    noisy_mock = mock.add_noise()
+    noisy_mock = mock.add_noise(rstate=rstate)
 
     # Continuum
     if add_conti:
