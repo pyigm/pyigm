@@ -43,7 +43,7 @@ def test_parse_ion():
     dla = DLASystem.from_datfile(datfil, tree=os.environ.get('DLA'))
     #
     dla.get_ions(use_Nfile=True)
-    assert len(dla._ionN) == 13
+    assert len(dla._ionN) == 14
 
 """
 def test_default_dla_sample():

@@ -6,6 +6,8 @@ import numpy as np
 import os, pdb
 import pytest
 
+from astropy import units as u
+
 from pyigm.continuum import quasar as pyicq
 
 '''
@@ -23,8 +25,9 @@ def test_telfer():
 
 def test_telfer_and_igm():
     telfer = pyicq.get_telfer_spec(zqso=3., igm=True, nproc=4)
-    # Test
-    np.testing.assert_allclose(telfer.flux[100].value, 0.9383676133341446)
+    # Test in forest
+    imin = np.argmin(np.abs(telfer.wavelength - 4800*u.AA))
+    np.testing.assert_allclose(telfer.flux[imin].value, 1.7964258193969727)
 
 
 def test_wfc3_conti():
