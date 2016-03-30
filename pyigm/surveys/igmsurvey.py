@@ -100,7 +100,8 @@ class IGMSurvey(object):
         kdict = dict(NHI=['NHI', 'logNHI'],
                      sig_NHI=['sig(logNHI)', 'SIGNHI'],
                      name=['Name'], vlim=['vlim'],
-                     zabs=['Z_LLS', 'ZABS'], zem=['Z_QSO', 'QSO_ZEM'],
+                     zabs=['Z_LLS', 'ZABS', 'zabs'],
+                     zem=['Z_QSO', 'QSO_ZEM'],
                      RA=['RA'], Dec=['DEC', 'Dec'])
         # Parse the Table
         inputs = {}
@@ -240,7 +241,8 @@ class IGMSurvey(object):
             raise IOError("Must be an IGMSystem object")
         return True
 
-    def fill_ions(self, use_Nfile=False, jfile=None, use_components=False):
+    def fill_ions(self, use_Nfile=False, jfile=None, use_components=False,
+                  verbose=True):
         """ Loop on systems to fill in ions
 
         Parameters
@@ -261,7 +263,7 @@ class IGMSurvey(object):
                 abs_sys.get_ions(idict=ions_dict[abs_sys.name])
         elif use_Nfile:
             for abs_sys in self._abs_sys:
-                abs_sys.get_ions(use_Nfile=True)
+                abs_sys.get_ions(use_Nfile=True, verbose=verbose)
         elif use_components:
             for abs_sys in self._abs_sys:
                 abs_sys._ionN = ltiu.iontable_from_components(abs_sys._components,

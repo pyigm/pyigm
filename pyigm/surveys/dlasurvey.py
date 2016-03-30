@@ -9,7 +9,7 @@ import pdb
 import urllib2
 import json
 
-from astropy.table import QTable, Column
+from astropy.table import QTable, Column, Table, vstack
 from astropy import units as u
 #from astropy.coordinates import SkyCoord
 
@@ -200,6 +200,156 @@ class DLASurvey(IGMSurvey):
             dla_survey.mask = ~mask
         # Return
         print('SDSS-DR5: Loaded')
+        return dla_survey
+
+    @classmethod
+    def load_lit(cls, dla_fil, qsos_fil, ref, sample='stat', Pdla_fil=None):
+        """ Load the DLA from a literature sample using the files
+        provided by Ruben (see Sanchez-Ramirez et al. 2016, MNRAS, 456, 4488)
+
+        Parameters
+        ----------
+        sample : str, optional
+          DLA sample
+            stat : Statistical sample
+            all : All LLS
+            nonstat : Non-statistical sample
+
+        Returns
+        -------
+        dla_survey : DLASurvey
+
+        """
+        # DLA files
+        stat_dlas = Table.read(dla_fil)
+        if Pdla_fil is not None:
+            Pdlas = Table.read(Pdla_fil)
+            dlas = vstack([stat_dlas,Pdlas])
+        else:
+            dlas = stat_dlas
+
+        # Rename some columns?
+        dlas.rename_column('Dec', 'DEC')
+        dlas.rename_column('logN', 'NHI')
+
+        # Cut on NHI
+        gd_dla = dlas['NHI'] >= 20.3
+
+        # Read
+        dla_survey = cls.from_sfits(dlas[gd_dla])
+        dla_survey.ref = ref
+
+        # g(z) file
+        print('Loading QSOs file {:s}'.format(qsos_fil))
+        qsos = Table.read(qsos_fil)
+        qsos.rename_column('zmin', 'Z_START')
+        qsos.rename_column('zmax', 'Z_END')
+        qsos.rename_column('Dec', 'DEC')
+        qsos.rename_column('zem', 'ZEM')
+        dla_survey.sightlines = qsos
+
+        # All?
+        if sample == 'all':
+            return dla_survey
+
+        # Stat
+        # Generate mask
+        mask = dla_stat(dla_survey, qsos)
+        if sample == 'stat':
+            dla_survey.mask = mask
+        else:
+            dla_survey.mask = ~mask
+        # Return
+        print('Loaded')
+        return dla_survey
+
+    @classmethod
+    def load_P03(cls, sample='stat'):
+        """ Load the DLA from the Peroux+03 survey
+
+        (Peroux et al. 2003, MNRAS, 346, 1103)
+        IUE dataset has been removed (see Sanchez-Ramirez)
+        Errors and duplicates cleaned by Sanchez-Ramirez
+        Adopts a 5000km/s cutoff
+
+        Parameters
+        ----------
+        sample : str, optional
+          DLA sample
+            stat : Statistical sample
+            all : All LLS
+            nonstat : Non-statistical sample
+
+        Returns
+        -------
+        dla_survey : DLASurvey
+
+        """
+        # DLA files
+        dla_fil = pyigm_path+'/data/DLA/P03/P03_abs.fit'
+        ref = 'P03'
+        qsos_fil = pyigm_path+'/data/DLA/P03/P03_zpath.fit'
+        #
+        dla_survey = cls.load_lit(dla_fil, qsos_fil, ref, sample=sample)
+        return dla_survey
+
+
+    @classmethod
+    def load_G09(cls, sample='stat'):
+        """ Load the DLA from the Guimaraes+09 survey
+
+        (Guimaraes et al. 2009, A&A, 508, 133)
+        Adopts a 5000km/s cutoff
+
+        Parameters
+        ----------
+        sample : str, optional
+          DLA sample
+            stat : Statistical sample
+            all : All LLS
+            nonstat : Non-statistical sample
+
+        Returns
+        -------
+        dla_survey : DLASurvey
+
+        """
+        # DLA files
+        dla_fil = pyigm_path+'/data/DLA/G09/G09_abs.fit'
+        Pdla_fil = pyigm_path+'/data/DLA/G09/G09_pabs.fit'
+        ref = 'G09'
+        qsos_fil = pyigm_path+'/data/DLA/G09/G09_zpath.fit'
+        #
+        dla_survey = cls.load_lit(dla_fil, qsos_fil, ref,
+                                  Pdla_fil=Pdla_fil, sample=sample)
+        return dla_survey
+
+    @classmethod
+    def load_XQ100(cls, sample='stat'):
+        """ Load the DLA from XQ-100
+
+        (Sanchez-Ramirez et al. 2016, MNRAS, 456, 4488)
+
+        Parameters
+        ----------
+        sample : str, optional
+          DLA sample
+            stat : Statistical sample
+            all : All LLS
+            nonstat : Non-statistical sample
+
+        Returns
+        -------
+        dla_survey : DLASurvey
+        """
+        # DLA files
+        dla_fil = pyigm_path+'/data/DLA/XQ-100/XQ100_abs.fit'
+        Pdla_fil = pyigm_path+'/data/DLA/XQ-100/XQ100_pabs.fit'
+        ref = 'XQ-100'
+        qsos_fil = pyigm_path+'/data/DLA/XQ-100/XQ100_zpath.fit'
+        #
+        dla_survey = cls.load_lit(dla_fil, qsos_fil, ref,Pdla_fil=Pdla_fil,
+                                  sample=sample)
         return dla_survey
 
     @classmethod
