@@ -267,8 +267,10 @@ class DLASurvey(IGMSurvey):
     def load_P03(cls, sample='stat'):
         """ Load the DLA from the Peroux+03 survey
 
-        (Peroux et al. 2003, MNRAS, 345, 480)
-        Errors and duplicates cleaned by Ruben
+        (Peroux et al. 2003, MNRAS, 346, 1103)
+        IUE dataset has been removed (see Sanchez-Ramirez)
+        Errors and duplicates cleaned by Sanchez-Ramirez
+        Adopts a 5000km/s cutoff
 
         Parameters
         ----------
@@ -296,7 +298,8 @@ class DLASurvey(IGMSurvey):
     def load_G09(cls, sample='stat'):
         """ Load the DLA from the Guimaraes+09 survey
 
-        (Guimaraes et al. 2009, ApJ, 508, 133)
+        (Guimaraes et al. 2009, A&A, 508, 133)
+        Adopts a 5000km/s cutoff
 
         Parameters
         ----------
