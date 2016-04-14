@@ -92,11 +92,11 @@ class CGMAbsSys(object):
         # IGM system
         igm_sys = IGMSystem.from_dict(idict['igm_sys'], **kwargs)
         # Keywords
-        kwargs = dict(name=idict['Name'])
+        kwargs2 = dict(name=idict['Name'])
         if 'cosmo' in idict.keys():
-            kwargs['cosmo'] = getattr(cosmology, idict['cosmo'])
+            kwargs2['cosmo'] = getattr(cosmology, idict['cosmo'])
         # Instantiate
-        slf = cls(galaxy, igm_sys, **kwargs)
+        slf = cls(galaxy, igm_sys, **kwargs2)
         # Return
         return slf
 
