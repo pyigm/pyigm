@@ -122,7 +122,7 @@ class Emceebones(object):
         threads : int
           Number of threads (for multi-processing)
         outsave
-        optim
+        optim : str
         effnhi
 
         Returns
@@ -893,7 +893,7 @@ def mcmc_ions(data,infodata,model,nwalkers=500,nsamp=250,threads=12,
     nsamp : int, optional
     threads : int, optional
     outsave : str, optional
-    optim : bool, optional
+    optim : str, optional
       Optimize?  [Not recommended]
     effnhi : bool, optional
     testing : bool, optional

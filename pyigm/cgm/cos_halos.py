@@ -307,7 +307,7 @@ class COSHalos(CGMAbsSurvey):
             self.cgm_abs = []
         # Load
         tar = tarfile.open(tfile)
-        for kk,member in enumerate(tar.getmembers()):
+        for kk, member in enumerate(tar.getmembers()):
             if '.' not in member.name:
                 print('Skipping a likely folder: {:s}'.format(member.name))
                 continue
@@ -318,7 +318,7 @@ class COSHalos(CGMAbsSurvey):
             f = tar.extractfile(member)
             tdict = json.load(f)
             # Generate
-            cgmsys = CGMAbsSys.from_dict(tdict, warn_only=True, skip_vel=True, **kwargs)
+            cgmsys = CGMAbsSys.from_dict(tdict, skip_vel=True, **kwargs)
             self.cgm_abs.append(cgmsys)
         tar.close()
         # Werk+14

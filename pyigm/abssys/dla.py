@@ -120,7 +120,8 @@ class DLASystem(IGMSystem):
         # Generate with type
         IGMSystem.__init__(self, 'DLA', radec, zabs, vlim, NHI=NHI, **kwargs)
 
-    def get_ions(self, use_Nfile=False, idict=None, update_zvlim=True, linelist=None):
+    def get_ions(self, use_Nfile=False, idict=None, update_zvlim=True,
+                 linelist=None, verbose=True):
         """Parse the ions for each Subsystem
 
         And put them together for the full system
