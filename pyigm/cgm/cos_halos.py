@@ -307,7 +307,7 @@ class COSHalos(CGMAbsSurvey):
             self.cgm_abs = []
         # Load
         tar = tarfile.open(tfile)
-        for kk,member in enumerate(tar.getmembers()):
+        for kk, member in enumerate(tar.getmembers()):
             if '.' not in member.name:
                 print('Skipping a likely folder: {:s}'.format(member.name))
                 continue
