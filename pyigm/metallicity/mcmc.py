@@ -192,6 +192,10 @@ class Emceebones(object):
         #loop over all the ions observed
         for obs in data:
 
+            # Check for zero error (causes unexepcted failure)
+            if obs[2] <= 0.:
+                raise ValueError("Cannot have 0 error on the column density, even in a limit.  Fix {}".format(obs[0]))
+
             #check obs one by one for corresponding entries in model
             if modl[2].has_key(obs[0]):
 
@@ -442,6 +446,21 @@ class Emceebones(object):
             #set up a ball centred at initguess
             pos = [initguess + 1e-2*np.random.randn(self.ndim) for i in range(self.nwalkers)]
             self.paramguess = initguess
+            '''
+            pos = [initguess + 1e-1*np.random.randn(self.ndim) for i in range(self.nwalkers)]
+            self.paramguess = initguess
+            # Don't center on NHI
+            for pp in range(self.ndim):
+                tag=self.mod_axistag[pp]
+                if tag == 'col':
+                    #For column density, randomise within the error bars (2 sigma)
+                    ballst=np.random.random(self.nwalkers)*(2*self.info['eNHI'])+(self.info['NHI']-self.info['eNHI'])
+                    #now assign value to starting balls
+                    for i in range(self.nwalkers):
+                        pos[i][pp]=ballst[i]
+                else:
+                    pass
+            '''
 
         if self.optim == False:
             print("Skip optimisation... Initialise at random with the grid")
