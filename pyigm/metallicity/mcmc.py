@@ -392,7 +392,7 @@ class Emceebones(object):
                 initguess.append(self.info['z'])
             else:
                 #Handle all other paramaters
-                if self.optim == 'guess':
+                if self.optim in ['guess', 'guess_NHI']:
                     if tag == 'met':
                         initguess.append(self.info['met'])
                     elif tag == 'dens':
@@ -441,26 +441,25 @@ class Emceebones(object):
                 print('Optimisation failed: starting emcee from random position')
                 self.optim=False
 
-        if self.optim == 'guess':
+        if self.optim in ['guess', 'guess_NHI']:
             print("Skip optimisation... Initialise at input guess")
             #set up a ball centred at initguess
             pos = [initguess + 1e-2*np.random.randn(self.ndim) for i in range(self.nwalkers)]
             self.paramguess = initguess
-            '''
-            pos = [initguess + 1e-1*np.random.randn(self.ndim) for i in range(self.nwalkers)]
-            self.paramguess = initguess
-            # Don't center on NHI
-            for pp in range(self.ndim):
-                tag=self.mod_axistag[pp]
-                if tag == 'col':
-                    #For column density, randomise within the error bars (2 sigma)
-                    ballst=np.random.random(self.nwalkers)*(2*self.info['eNHI'])+(self.info['NHI']-self.info['eNHI'])
-                    #now assign value to starting balls
-                    for i in range(self.nwalkers):
-                        pos[i][pp]=ballst[i]
-                else:
-                    pass
-            '''
+            if self.optim == 'guess_NHI':
+                # Don't center on NHI
+                ballNHI=np.random.random(self.nwalkers)*(2*self.info['eNHI'])+(self.info['NHI']-self.info['eNHI'])
+                for pp in range(self.ndim):
+                    tag=self.mod_axistag[pp]
+                    if tag == 'col':
+                        #For column density, randomise within the error range
+                        for i in range(self.nwalkers):
+                            pos[i][pp] = ballNHI[i]
+                    if tag == 'met':
+                        for i in range(self.nwalkers):
+                            pos[i][pp] -= (ballNHI[i]-self.info['NHI'])
+                    else:
+                        pass
 
         if self.optim == False:
             print("Skip optimisation... Initialise at random with the grid")
@@ -475,14 +474,14 @@ class Emceebones(object):
 
                 tag=self.mod_axistag[pp]
                 if tag == 'col':
-                    #For column density, randomise within the error bars (2 sigma)
+                    #For column density, randomise uniformly within the error bars (+/- 1 sigma)
                     ballst=np.random.random(self.nwalkers)*(2*self.info['eNHI'])+(self.info['NHI']-self.info['eNHI'])
                     #now assign value to starting balls
                     for i in range(self.nwalkers):
                         pos[i][pp]=ballst[i]
 
                 elif tag == 'red':
-                    #For redshift, randomise within the error bars (2 sigma)
+                    #For redshift, randomise within the error bars (+/- 1 sigma)
                     ballst=np.random.random(self.nwalkers)*(2*self.info['errz'])+(self.info['z']-self.info['errz'])
                     #now assign value to starting balls
                     for i in range(self.nwalkers):
