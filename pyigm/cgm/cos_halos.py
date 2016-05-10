@@ -109,6 +109,7 @@ class COSHalos(CGMAbsSurvey):
         gal.sdss_phot_sig = [galx[key][0] for key in ['SDSSU_ERR','SDSSG_ERR','SDSSR_ERR','SDSSI_ERR','SDSSZ_ERR']]
         gal.sfr = (galx['SFR_UPLIM'][0], galx['SFR'][0],
                                        galx['SFR_FLAG'][0]) # FLAG actually gives method used
+        gal.ssfr = galx['SSFR'][0]
         # Instantiate the IGM System
         igm_sys = IGMSystem('CGM',(galx['QSORA'][0], galx['QSODEC'][0]),
                             summ['ZFINAL'][0], [-600, 600.]*u.km/u.s)
@@ -147,22 +148,19 @@ class COSHalos(CGMAbsSurvey):
             ntrans = len(np.where(iont['LAMBDA'][0] > 1.)[0])
             for kk in range(ntrans):
                 flg = iont['FLG'][0][kk]
-                if ((flg % 2) == 0) or (flg == 15) or (flg == 13):
-                    print('Skipping {:g} as NG for a line; flg={:d}'.format(iont['LAMBDA'][0][kk],flg))
-                    continue
-                elif (flg == 1) or (flg == 3):
-                    flgN = 1
-                elif (flg == 5) or (flg == 7):
-                    flgN = 3
-                elif (flg == 9) or (flg == 11):
-                    flgN = 2
-                else:
-                    pdb.set_trace()
-                    raise ValueError("Bad flag!")
                 # Fill in
                 aline = AbsLine(iont['LAMBDA'][0][kk]*u.AA, closest=True)
+                aline.attrib['flag_origCH'] = int(flg)
                 aline.attrib['EW'] = iont['WOBS'][0][kk]*u.AA/1e3  # Observed
                 aline.attrib['sig_EW'] = iont['SIGWOBS'][0][kk]*u.AA/1e3
+                if aline.attrib['EW'] > 3.*aline.attrib['sig_EW']:
+                    aline.attrib['flag_EW'] = 1
+                else:
+                    aline.attrib['flag_EW'] = 3
+                # Force an upper limit (i.e. from a blend)
+                if (flg == 2) or (flg == 4) or (flg == 6):
+                    aline.attrib['flag_EW'] = 3
+                #
                 aline.analy['vlim'] = [iont['VMIN'][0][kk],iont['VMAX'][0][kk]]*u.km/u.s
                 aline.attrib['z'] = igm_sys.zabs
                 aline.attrib['coord'] = igm_sys.coord
@@ -175,15 +173,30 @@ class COSHalos(CGMAbsSurvey):
                     Nscl = 1.
                     flag_f = False
                 # Colm
+                if ((flg % 2) == 0) or (flg == 15) or (flg == 13):
+                    flgN = 0
+                    print('Skipping column contribution from {:g} as NG for a line; flg={:d}'.format(iont['LAMBDA'][0][kk],flg))
+                elif (flg == 1) or (flg == 3):
+                    flgN = 1
+                elif (flg == 5) or (flg == 7):
+                    flgN = 3
+                elif (flg == 9) or (flg == 11):
+                    flgN = 2
+                else:
+                    pdb.set_trace()
+                    raise ValueError("Bad flag!")
                 if flgN == 3:
                     aline.attrib['logN'] = iont['LOGN2SIG'][0][kk] + np.log10(Nscl)
                     aline.attrib['sig_logN'] = 9.
+                elif flgN == 0:  # Not for N measurement
+                    pass
                 else:
                     aline.attrib['logN'] = iont['LOGN'][0][kk] + np.log10(Nscl)
                     aline.attrib['sig_logN'] = iont['SIGLOGN'][0][kk]
                 aline.attrib['flag_N'] = int(flgN)
                 #pdb.set_trace()
-                _,_ = ltaa.linear_clm(aline.attrib)
+                if flgN != 0:
+                    _,_ = ltaa.linear_clm(aline.attrib)
                 # Append
                 abslines.append(aline)
             # Component
@@ -200,9 +213,12 @@ class COSHalos(CGMAbsSurvey):
                         print("New colm for ({:d},{:d}) and sys {:s} is {:g} different from old".format(
                             comp.Zion[0], comp.Zion[1], cgabs.name, comp.logN - float(iont['CLM'][0])))
                     if comp.flag_N != iont['FLG_CLM'][0]:
-                        print("New flag for ({:d},{:d}) and sys {:s} is different from old".format(
-                            comp.Zion[0], comp.Zion[1], cgabs.name))
-                        pdb.set_trace()
+                        if comp.flag_N == 0:
+                            pass
+                        else:
+                            print("New flag for ({:d},{:d}) and sys {:s} is different from old".format(
+                                comp.Zion[0], comp.Zion[1], cgabs.name))
+                            pdb.set_trace()
             #_,_ = ltaa.linear_clm(comp)
             cgabs.igm_sys.add_component(comp)
         self.cgm_abs.append(cgabs)
@@ -601,7 +617,7 @@ class COSHalos(CGMAbsSurvey):
         #
         mt = np.where( (fields == inp[0]) & (galids == inp[1]))[0]
         if len(mt) != 1:
-            warnings.warning('CosHalos: CGM not found')
+            warnings.warn('CosHalos: CGM not found')
             return None
         else:
             return self.cgm_abs[mt]

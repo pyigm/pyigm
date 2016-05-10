@@ -20,6 +20,7 @@ class GenericPDF(object):
         ----------
         x : ndarray
           x-values of the PDF
+          Must be sorted!
         pdf : ndarray
           PDF
         parent : object, optional
@@ -80,7 +81,7 @@ class GenericPDF(object):
         """
         cumsum = np.cumsum(self.pdf*self.dx)
         # Interpolate
-        fint = interp1d(cumsum, self.x)
+        fint = interp1d(cumsum, self.x, assume_sorted=True)  # Sorted is important
         median = float(fint(0.5))
         return median
 
@@ -99,13 +100,11 @@ class GenericPDF(object):
         x_min, x_max : float, float
           Bounds corresponding to the input confidence limit
         """
-        from scipy.interpolate import interp1d
-
         if (cl <= 0.) or (cl >= 1):
             raise IOError("cl must range from 0-1")
         # Spline the PDF cumulative sum vs ZH
         cumul = np.cumsum(self.dx*self.pdf)
-        f = interp1d(cumul, self.x)
+        f = interp1d(cumul, self.x, assume_sorted=True)
         # Caculate
         frac = (1.- cl) / 2.
         x_min = float(f(frac))
