@@ -9,9 +9,10 @@ import warnings
 import pdb
 import json, io
 
-from astropy.table import Table
+from astropy.table import Table, Column
 
 from pyigm.utils import lst_to_array
+from pyigm.surveys.igmsurvey import GenericIGMSurvey
 
 class CGMAbsSurvey(object):
     """A CGM Survey class in absorption
@@ -79,9 +80,9 @@ class CGMAbsSurvey(object):
             os.remove(jfile)
         os.rmdir(tmpdir)
 
-    # Kinematics (for convenience)
     def ion_tbl(self, Zion, fill_ion=True):
         """ Generate a Table of Ionic column densities for an input ion
+
         Parameters
         ----------
         Zion : tuple
@@ -92,30 +93,50 @@ class CGMAbsSurvey(object):
         -------
         tbl : astropy.Table
         """
-        names, N, sigN, flagN = [],  [],  [], []
+        # Generate dummy IGMSurvey
+        dumb = GenericIGMSurvey()
+        names = []
         for cgmabs in self.cgm_abs:
-            # Fill ions
             if fill_ion:
                 cgmabs.igm_sys.fill_ionN()
-            # Parse
+            dumb._abs_sys.append(cgmabs.igm_sys)
+            # Names
             names.append(cgmabs.name)
-            #
-            mt = np.where((cgmabs.igm_sys._ionN['Z'] == Zion[0]) &
-                          (cgmabs.igm_sys._ionN['ion'] == Zion[1]))[0]
-            if len(mt) == 0:
-                N.append(0.)
-                sigN.append(0.)
-                flagN.append(0)
-            elif len(mt) == 1:
-                N.append(cgmabs.igm_sys._ionN['logN'][mt][0])
-                sigN.append(cgmabs.igm_sys._ionN['sig_logN'][mt][0])
-                flagN.append(cgmabs.igm_sys._ionN['flag_N'][mt][0])
-            else:
-                raise ValueError("Multiple entires with Zion ={:d},{:d})".format(Zion[0],Zion[1]))
-        # Generate the Table
-        tbl = Table([names,flagN, N,sigN], names=('sys', 'flag_N', 'logN', 'sig_logN'))
+        # Run ions
+        tbl = dumb.ions(Zion)
+        # Add CGM name
+        tbl.add_column(Column(names, name='cgm_name'))
         # Return
         return tbl
+
+    def trans_tbl(self, inp, fill_ion=True):
+        """ Generate a Table of Data on a given transition, e.g. SiIII 1206
+
+        Parameters
+        ----------
+        inp : str or Quantity
+          str -- Name of the transition, e.g. 'CII 1334'
+          Quantity -- Rest wavelength of the transition, e.g. 1334.53*u.AA to 0.01 precision
+
+        Returns
+        -------
+        tbl : astropy.Table
+        """
+        # Generate dummy IGMSurvey
+        dumb = GenericIGMSurvey()
+        names = []
+        for cgmabs in self.cgm_abs:
+            dumb._abs_sys.append(cgmabs.igm_sys)
+            # Names
+            names.append(cgmabs.name)
+        # Run ions
+        tbl = dumb.trans(inp)
+        # Add CGM name
+        tbl.add_column(Column(names, name='cgm_name'))
+        # Return
+        return tbl
+
+
 
 
     # Kinematics (for convenience)
