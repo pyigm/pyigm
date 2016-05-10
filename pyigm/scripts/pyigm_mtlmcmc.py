@@ -51,10 +51,10 @@ def run_mcmc(args):
 
     #run the mcmc
     print 'Ready to run mcmc for {}'.format(sy)
-    if args.optim == 'guess':
+    if args.optim in ['guess', 'guess_NHI']:
         obsinfo['met'] = args.met
         obsinfo['dens'] = args.dens
-        optim = 'guess'
+        optim = args.optim
     else:
         optim = False
 

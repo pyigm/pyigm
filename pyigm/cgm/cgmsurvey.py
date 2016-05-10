@@ -3,10 +3,13 @@
 
 from __future__ import print_function, absolute_import, division, unicode_literals
 
+import numpy as np
 import os
 import warnings
 import pdb
 import json, io
+
+from astropy.table import Table
 
 from pyigm.utils import lst_to_array
 
@@ -76,23 +79,44 @@ class CGMAbsSurvey(object):
             os.remove(jfile)
         os.rmdir(tmpdir)
 
-    def __getattr__(self, k):
-        # Try Self first
-        try:
-            lst = [getattr(cgm_abs, k) for cgm_abs in self.cgm_abs]
-        except AttributeError:
-            # Galaxy?
-            try:
-                lst = [getattr(cgm_abs.galaxy, k) for cgm_abs in self.cgm_abs]
-            except AttributeError:
-                # Try AbsLine_Sys last
-                try:
-                    lst = [getattr(cgm_abs.igm_sys, k) for cgm_abs in self.cgm_abs]
-                except AttributeError:
-                    print('cgm.core: Attribute not found!')
-                    pdb.set_trace()
-        # Return array
-        return lst_to_array(lst, mask=self.mask)
+    # Kinematics (for convenience)
+    def ion_tbl(self, Zion, fill_ion=True):
+        """ Generate a Table of Ionic column densities for an input ion
+        Parameters
+        ----------
+        Zion : tuple
+        fill_ion : bool, optional
+          Fill each ionN table in the survey (a bit slow)
+
+        Returns
+        -------
+        tbl : astropy.Table
+        """
+        names, N, sigN, flagN = [],  [],  [], []
+        for cgmabs in self.cgm_abs:
+            # Fill ions
+            if fill_ion:
+                cgmabs.igm_sys.fill_ionN()
+            # Parse
+            names.append(cgmabs.name)
+            #
+            mt = np.where((cgmabs.igm_sys._ionN['Z'] == Zion[0]) &
+                          (cgmabs.igm_sys._ionN['ion'] == Zion[1]))[0]
+            if len(mt) == 0:
+                N.append(0.)
+                sigN.append(0.)
+                flagN.append(0)
+            elif len(mt) == 1:
+                N.append(cgmabs.igm_sys._ionN['logN'][mt][0])
+                sigN.append(cgmabs.igm_sys._ionN['sig_logN'][mt][0])
+                flagN.append(cgmabs.igm_sys._ionN['flag_N'][mt][0])
+            else:
+                raise ValueError("Multiple entires with Zion ={:d},{:d})".format(Zion[0],Zion[1]))
+        # Generate the Table
+        tbl = Table([names,flagN, N,sigN], names=('sys', 'flag_N', 'logN', 'sig_logN'))
+        # Return
+        return tbl
+
 
     # Kinematics (for convenience)
     def abs_kin(self, lbl):
@@ -124,7 +148,24 @@ class CGMAbsSurvey(object):
             t.add_row( row )
         return t
 
-    # Printing
+    def __getattr__(self, k):
+        # Try Self first
+        try:
+            lst = [getattr(cgm_abs, k) for cgm_abs in self.cgm_abs]
+        except AttributeError:
+            # Galaxy?
+            try:
+                lst = [getattr(cgm_abs.galaxy, k) for cgm_abs in self.cgm_abs]
+            except AttributeError:
+                # Try AbsLine_Sys last
+                try:
+                    lst = [getattr(cgm_abs.igm_sys, k) for cgm_abs in self.cgm_abs]
+                except AttributeError:
+                    print('cgm.core: Attribute not found!')
+                    pdb.set_trace()
+        # Return array
+        return lst_to_array(lst, mask=self.mask)
+
     def __repr__(self):
         str1 = '<CGM_Survey: {:s} nsys={:d}, ref={:s}>\n'.format(self.survey, self.nsys, self.ref)
         for ii in range(self.nsys):

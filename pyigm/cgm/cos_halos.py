@@ -304,6 +304,7 @@ class COSHalos(CGMAbsSurvey):
         empty : bool, optional
           Empty the list
         debug : bool, optional
+          Only load the first 5
 
         Returns
         -------
