@@ -96,11 +96,12 @@ class CGMAbsSys(object):
         if 'cosmo' in idict.keys():
             kwargs2['cosmo'] = getattr(cosmology, idict['cosmo'])
         # Instantiate
+        pdb.set_trace()
         slf = cls(galaxy, igm_sys, **kwargs2)
         # Return
         return slf
 
-    def __init__(self, galaxy, igm_sys, cosmo=None, name=None):
+    def __init__(self, galaxy, igm_sys, cosmo=None, name=None, rho=None, ang_sep=None):
         # Checks
         if not isinstance(galaxy, Galaxy):
             raise IOError('CGMAbsSys instantiated with a Galaxy')

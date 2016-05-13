@@ -37,7 +37,7 @@ class COSHalos(CGMAbsSurvey):
     kin_init_file : str, optional
       Path to kinematics file
     """
-    def __init__(self, cdir=None, fits_path=None):
+    def __init__(self, cdir=None, fits_path=None, load=True, **kwargs):
         CGMAbsSurvey.__init__(self)
         self.survey = 'COS-Halos'
         self.ref = 'Tumlinson+11; Werk+12; Tumlinson+13; Werk+13; Werk+14'
@@ -59,6 +59,9 @@ class COSHalos(CGMAbsSurvey):
             self.werk14_cldy = None
         # Kinematics
         self.kin_init_file = self.cdir+'/Kin/coshalo_kin_driver.dat'
+        # Init?
+        if load:
+            self.load_sys(**kwargs)
 
     def load_single_fits(self, inp, skip_ions=False, verbose=True):
         """ Load a single COS-Halos sightline
@@ -312,6 +315,8 @@ class COSHalos(CGMAbsSurvey):
         """
         import tarfile
         import json
+        from linetools.lists.linelist import LineList
+        llist = LineList('ISM')
 
         # Tar file
         if tfile is None:
@@ -335,7 +340,8 @@ class COSHalos(CGMAbsSurvey):
             f = tar.extractfile(member)
             tdict = json.load(f)
             # Generate
-            cgmsys = CGMAbsSys.from_dict(tdict, skip_vel=True, **kwargs)
+            cgmsys = CGMAbsSys.from_dict(tdict, skip_vel=True, chk_sep=False, skip_data_chk=True,
+                                         use_coord=True, use_line_list='ISM', linelist=llist, **kwargs)
             self.cgm_abs.append(cgmsys)
         tar.close()
         # Werk+14
@@ -598,6 +604,7 @@ class COSHalos(CGMAbsSurvey):
         -----------
         ion: tuple
           tuple:  (field,gal_id)
+          str: field_gal_id
 
         Returns:
         ----------
@@ -610,13 +617,20 @@ class COSHalos(CGMAbsSurvey):
                 raise IOError("Bad input")
             if not isinstance(inp[1], basestring):
                 raise IOError("Bad input")
+            field = inp[0]
+            galid = inp[1]
+        elif isinstance(inp, basestring):
+            # Split at the first _
+            under = inp.find('_')
+            field = inp[:under]
+            galid = inp[under+1:]
         else:
             raise IOError("Bad input")
         # Generate lists
         fields = np.array([cgm_abs.galaxy.field for cgm_abs in self.cgm_abs])
         galids = np.array([cgm_abs.galaxy.gal_id for cgm_abs in self.cgm_abs])
         #
-        mt = np.where( (fields == inp[0]) & (galids == inp[1]))[0]
+        mt = np.where( (fields == field) & (galids == galid))[0]
         if len(mt) != 1:
             warnings.warn('CosHalos: CGM not found')
             return None
