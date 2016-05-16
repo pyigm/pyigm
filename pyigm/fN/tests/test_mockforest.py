@@ -4,7 +4,9 @@
 
 import numpy as np
 import os, pdb
+
 from astropy import units as u
+from astropy.cosmology import Planck15
 
 from pyigm.fN.mockforest import mk_mock
 from pyigm.fN.fnmodel import FNModel
@@ -27,9 +29,9 @@ def test_mk_mock():
     disp = 4000/R/sampling # Angstrom
     wave = np.arange(3800., 1300*(1+zem), disp)*u.AA
     # f(N)
-    fN_model = FNModel.default_model()
+    fN_model = FNModel.default_model(cosmo=Planck15)
 
     #
     mock_spec, HI_comps, _ = mk_mock(wave, zem, fN_model, s2n=s2n,
                                      fwhm=sampling, seed=11223)
-    np.testing.assert_allclose(mock_spec.flux[300].value,21.769750595092773)
+    np.testing.assert_allclose(mock_spec.flux[300].value, 21.77, rtol=0.05)  # scipy 0.17

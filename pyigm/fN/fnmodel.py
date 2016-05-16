@@ -43,7 +43,7 @@ class FNModel(object):
           Power law for dN/dX, not dN/dz (1.5)
     """
     @classmethod
-    def default_model(cls, use_mcmc=False):
+    def default_model(cls, use_mcmc=False, cosmo=None):
         """ Pass back a default fN_model from Prochaska+14
 
         Tested against XIDL code by JXP on 09 Nov 2014
@@ -56,6 +56,8 @@ class FNModel(object):
           Use the MCMC chain to generate the model
         write : boolean, optional (False)
           Write out the model
+        cosmo : astropy.cosmology, optional
+          Cosmology for some calculations
         """
         if use_mcmc:
             # MCMC Analysis (might put these on a website)
@@ -75,14 +77,14 @@ class FNModel(object):
             hdu = fits.open(fN_file)
             fN_data = hdu[1].data
             # Instantiate
-            fN_model = cls('Hspline', zmnx=(0.5, 3.0),
+            fN_model = cls('Hspline', zmnx=(0.5, 3.0), cosmo=cosmo,
                             pivots=np.array(fN_data['LGN']).flatten(),
                             param=dict(sply=np.array(fN_data['FN']).flatten()))
         # Return
         return fN_model
 
     def __init__(self, mtype, zmnx=(0., 0.), pivots=None, param=None,
-                 zpivot=2.4, gamma=1.5):
+                 zpivot=2.4, gamma=1.5, cosmo=None):
         """
         Parameters
         ----------
@@ -98,6 +100,8 @@ class FNModel(object):
           Pivot redshift for (1+z)^gamma redshift evolution
         gamma : float, optional
           Power-law exponent for (1+z)^gamma redshift evolution
+        cosmo : astropy.cosmology, optional
+          Cosmology for some calculations
 
         Returns
         -------
@@ -145,6 +149,7 @@ class FNModel(object):
         # Redshift evolution (needs updating)
         self.zpivot = zpivot
         self.gamma = gamma
+        self.cosmo = cosmo
 
     def update_parameters(self, parm):
         """ Update parameters (mainly used in the MCMC)
@@ -424,6 +429,8 @@ class FNModel(object):
                                                    (1+zcuts[1]) )**gamma[ii-2] *
                                                     ((1+z_val[izcut]) / (1+zcuts[2]) )**gamma[ii-1] )
             # dX/dz
+            if cosmo is None:
+                cosmo = self.cosmo
             dXdz = pyigmu.cosm_xz(z_val, cosmo=cosmo, flg_return=1)
 
             # Final steps
