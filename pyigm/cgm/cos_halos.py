@@ -169,7 +169,6 @@ class COSHalos(CGMAbsSurvey):
                 aline.attrib['coord'] = igm_sys.coord
                 # Check f
                 if (np.abs(aline.data['f']-iont['FVAL'][0][kk])/aline.data['f']) > 0.001:
-                    #warnings.warn('Updating f-value from Megastructure for {:g}. And N'.format(aline.wrest))
                     Nscl = iont['FVAL'][0][kk] / aline.data['f']
                     flag_f = True
                 else:
