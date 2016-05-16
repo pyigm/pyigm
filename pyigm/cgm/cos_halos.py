@@ -635,7 +635,7 @@ class COSHalos(CGMAbsSurvey):
             warnings.warn('CosHalos: CGM not found')
             return None
         else:
-            return self.cgm_abs[mt]
+            return self.cgm_abs[mt[0]]
 
 
 def update_cos_halos(self):
