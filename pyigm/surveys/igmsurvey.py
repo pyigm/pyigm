@@ -328,9 +328,194 @@ class IGMSurvey(object):
             else:
                 raise ValueError("Multple entries")
 
-
         # Return
         return t[1:]
+
+    def trans(self, inp):
+        """ Generate a Table of Data on a given transition, e.g. SiIII 1206
+
+        Parameters
+        ----------
+        inp : str or Quantity
+          str -- Name of the transition, e.g. 'CII 1334'
+          Quantity -- Rest wavelength of the transition, e.g. 1334.53*u.AA
+            to 0.01 precision
+
+        Returns
+        -------
+        tbl : astropy.Table
+        """
+        attrib = ['sys', 'z', 'flag_EW', 'EW', 'sig_EW', 'flag_N', 'logN', 'sig_logN']
+        nattrib = len(attrib)
+        clms = []
+        for ii in range(nattrib):
+            clms.append([])
+        for abs_sys in self.abs_sys():
+            # Name
+            clms[0].append(abs_sys.name)
+            #
+            aline = abs_sys.get_absline(inp)
+            if aline is None:
+                for jj in range(1,nattrib):
+                    clms[jj].append(0)
+            else:
+                for jj in range(1,nattrib):
+                    try:  # Deal with Quantity
+                        clms[jj].append(aline.attrib[attrib[jj]].value)
+                    except AttributeError:
+                        clms[jj].append(aline.attrib[attrib[jj]])
+                    except KeyError:
+                        clms[jj].append(0)
+        # Generate the Table
+        tbl = Table(clms, names=attrib)
+        # Return
+        return tbl
+
+    # Mask
+    def update_mask(self, mask, increment=False):
+        """ Update the Mask for the abs_sys
+
+        Parameters
+        ----------
+        mask : array (usually Boolean)
+           Mask of systems
+        increment : bool, optional
+           Increment the mask (i.e. keep False as False)
+        """
+        if len(mask) == len(self._abs_sys):  # Boolean mask
+            if increment is False:
+                self.mask = mask
+            else:
+                self.mask = self.mask & mask
+        else:
+            raise ValueError('abs_survey: Needs developing!')
+
+    def __getattr__(self, k):
+        """ Generate an array of attribute 'k' from the IGMSystems
+
+        Mask is applied
+
+        Parameters
+        ----------
+        k : str
+          Attribute
+
+        Returns
+        -------
+        numpy array
+        """
+        try:
+            lst = [getattr(abs_sys, k) for abs_sys in self._abs_sys]
+        except ValueError:
+            raise ValueError("Attribute does not exist")
+        # Special cases
+        if k == 'coord':
+            ra = [coord.ra for coord in lst]
+            dec = [coord.dec for coord in lst]
+            lst = SkyCoord(ra=ra, dec=dec)
+            return lst[self.mask]
+        # Recast as an array
+        return lst_to_array(lst, mask=self.mask)
+
+    def __add__(self, other, toler=2*u.arcsec):
+        """ Combine one or more IGMSurvey objects
+
+        Routine does a number of checks on the abstype,
+        the uniqueness of the sightlines and systems, etc.
+
+        Parameters
+        ----------
+        other : IGMSurvey
+        toler : Angle or Quantity
+          Tolerance for uniqueness
+
+        Returns
+        -------
+        combined : IGMSurvey
+
+        """
+        # Check the Surveys are the same type
+        if self.abs_type != other.abs_type:
+            raise IOError("Combined surveys need to be same abs_type")
+
+        # Init
+        combined = IGMSurvey(self.abs_type)
+        combined.ref = self.ref + ',' + other.ref
+
+        # Check for unique systems
+        other_coord =other.coord
+        for abssys in self._abs_sys:
+            if np.sum((abssys.coord.separation(other_coord) < toler) & (
+                        np.abs(abssys.zabs-other.zabs) < (1000*(1+abssys.zabs)/3e5))) > 0:
+                raise NotImplementedError("Need to deal with this")
+        # Combine systems
+        combined._abs_sys = self._abs_sys + other._abs_sys
+        combined.mask = np.concatenate((self.mask, other.mask))
+
+        # Sightlines?
+        if self.sightlines is not None:
+            slf_scoord = SkyCoord(ra=self.sightlines['RA']*u.deg,
+                                  dec=self.sightlines['DEC']*u.deg)
+            oth_scoord = SkyCoord(ra=other.sightlines['RA']*u.deg,
+                                  dec=other.sightlines['DEC']*u.deg)
+            idx, d2d, d3d = coords.match_coordinates_sky(slf_scoord,
+                                                         oth_scoord, nthneighbor=1)
+            mt = d2d < toler
+            if np.sum(mt) > 0:
+                raise NotImplementedError("Need to deal with this")
+            else:
+                # Combine systems
+                combined.sightlines = vstack([self.sightlines,
+                                              other.sightlines])
+        # Return
+        return combined
+
+    def __repr__(self):
+        if self.flist is not None:
+            return '<IGMSurvey: {:s} {:s}, nsys={:d}, type={:s}, ref={:s}>'.format(
+                    self.tree, self.flist, self.nsys, self.abs_type, self.ref)
+        else:
+            repr = '<IGMSurvey: nsys={:d}, type={:s}, ref={:s}'.format(
+                    self.nsys, self.abs_type, self.ref)
+            if self.sightlines is not None:
+                repr = repr + ', nsightlines={:d}'.format(len(self.sightlines))
+            repr = repr +'>'
+            return repr
+
+
+class GenericIGMSurvey(IGMSurvey):
+    """A simple absorption line survey
+    """
+    def __init__(self, **kwargs):
+        IGMSurvey.__init__(self, 'Generic', **kwargs)
+
+
+def lst_to_array(lst, mask=None):
+    """ Simple method to convert a list to an array
+
+    Allows for a list of Quantity objects
+
+    Parameters
+    ----------
+    lst : list
+      Should be number or Quantities
+    mask : boolean array, optional
+
+    Returns
+    -------
+    array or Quantity array
+
+    """
+    if mask is None:
+        mask = np.array([True]*len(lst))
+    if isinstance(lst[0], Quantity):
+        return Quantity(lst)[mask]
+    else:
+        return np.array(lst)[mask]
+        # Generate the Table
+        tbl = Table(clms, names=attrib)
+        # Return
+        return tbl
 
     # Mask
     def update_mask(self, mask, increment=False):

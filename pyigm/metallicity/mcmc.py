@@ -122,7 +122,7 @@ class Emceebones(object):
         threads : int
           Number of threads (for multi-processing)
         outsave
-        optim
+        optim : str
         effnhi
 
         Returns
@@ -192,6 +192,10 @@ class Emceebones(object):
         #loop over all the ions observed
         for obs in data:
 
+            # Check for zero error (causes unexepcted failure)
+            if obs[2] <= 0.:
+                raise ValueError("Cannot have 0 error on the column density, even in a limit.  Fix {}".format(obs[0]))
+
             #check obs one by one for corresponding entries in model
             if modl[2].has_key(obs[0]):
 
@@ -228,7 +232,6 @@ class Emceebones(object):
         -------
 
         """
-
         print('Writing outputs...')
 
         #pickle the results to disk
@@ -389,7 +392,15 @@ class Emceebones(object):
                 initguess.append(self.info['z'])
             else:
                 #Handle all other paramaters
-                initguess.append(np.median(self.mod_axisval[pp]))
+                if self.optim in ['guess', 'guess_NHI']:
+                    if tag == 'met':
+                        initguess.append(self.info['met'])
+                    elif tag == 'dens':
+                        initguess.append(self.info['dens'])
+                    else:
+                        raise ValueError("Not ready for this one")
+                else:
+                    initguess.append(np.median(self.mod_axisval[pp]))
 
         #now go through a bunch of cases in which the starting ball is
         #set according to local, global, or no optimisation
@@ -430,6 +441,26 @@ class Emceebones(object):
                 print('Optimisation failed: starting emcee from random position')
                 self.optim=False
 
+        if self.optim in ['guess', 'guess_NHI']:
+            print("Skip optimisation... Initialise at input guess")
+            #set up a ball centred at initguess
+            pos = [initguess + 1e-2*np.random.randn(self.ndim) for i in range(self.nwalkers)]
+            self.paramguess = initguess
+            if self.optim == 'guess_NHI':
+                # Don't center on NHI
+                ballNHI=np.random.random(self.nwalkers)*(2*self.info['eNHI'])+(self.info['NHI']-self.info['eNHI'])
+                for pp in range(self.ndim):
+                    tag=self.mod_axistag[pp]
+                    if tag == 'col':
+                        #For column density, randomise within the error range
+                        for i in range(self.nwalkers):
+                            pos[i][pp] = ballNHI[i]
+                    if tag == 'met':
+                        for i in range(self.nwalkers):
+                            pos[i][pp] -= (ballNHI[i]-self.info['NHI'])
+                    else:
+                        pass
+
         if self.optim == False:
             print("Skip optimisation... Initialise at random with the grid")
 
@@ -443,14 +474,14 @@ class Emceebones(object):
 
                 tag=self.mod_axistag[pp]
                 if tag == 'col':
-                    #For column density, randomise within the error bars
+                    #For column density, randomise uniformly within the error bars (+/- 1 sigma)
                     ballst=np.random.random(self.nwalkers)*(2*self.info['eNHI'])+(self.info['NHI']-self.info['eNHI'])
                     #now assign value to starting balls
                     for i in range(self.nwalkers):
                         pos[i][pp]=ballst[i]
 
                 elif tag == 'red':
-                    #For redshift, randomise within the error bars
+                    #For redshift, randomise within the error bars (+/- 1 sigma)
                     ballst=np.random.random(self.nwalkers)*(2*self.info['errz'])+(self.info['z']-self.info['errz'])
                     #now assign value to starting balls
                     for i in range(self.nwalkers):
@@ -861,7 +892,7 @@ def mcmc_ions(data,infodata,model,nwalkers=500,nsamp=250,threads=12,
     nsamp : int, optional
     threads : int, optional
     outsave : str, optional
-    optim : bool, optional
+    optim : str, optional
       Optimize?  [Not recommended]
     effnhi : bool, optional
     testing : bool, optional

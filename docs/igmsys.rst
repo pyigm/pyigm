@@ -2,9 +2,9 @@
 
 .. _IGMSystem:
 
-******************
-IGMSystem Class
-******************
+*********
+IGMSystem
+*********
 
 .. index:: IGMSystem
 
@@ -21,7 +21,7 @@ Notebooks
 Overview
 ========
 
-This Class is designed to organize and analyze an
+The IGMSystem class is designed to organize and analyze an
 absorption system.  This is generally constructed
 of one or more (:ref:`AbsComponent`).
 The base class is abstract, i.e. one must instantiate
