@@ -80,12 +80,14 @@ class CGMAbsSys(object):
       Impact parameter (u.kpc)
     """
     @classmethod
-    def from_dict(cls, idict, **kwargs):
+    def from_dict(cls, idict, use_angrho=False, **kwargs):
         """ Generate a CGMAbsSys object from a dict
 
         Parameters
         ----------
         idict : dict
+        use_angrho : bool, optional
+          Use ang_sep and rho if in idict and cosmo is too
         """
         # Galaxy object
         galaxy = Galaxy.from_dict(idict['galaxy'])
@@ -95,13 +97,15 @@ class CGMAbsSys(object):
         kwargs2 = dict(name=idict['Name'])
         if 'cosmo' in idict.keys():
             kwargs2['cosmo'] = getattr(cosmology, idict['cosmo'])
+            if use_angrho:
+                kwargs2['ang_sep'] = idict['ang_sep']*u.arcsec
+                kwargs2['rho'] = idict['rho']*u.kpc
         # Instantiate
-        pdb.set_trace()
         slf = cls(galaxy, igm_sys, **kwargs2)
         # Return
         return slf
 
-    def __init__(self, galaxy, igm_sys, cosmo=None, name=None, rho=None, ang_sep=None):
+    def __init__(self, galaxy, igm_sys, cosmo=None, name=None, rho=None, PA=None, ang_sep=None):
         # Checks
         if not isinstance(galaxy, Galaxy):
             raise IOError('CGMAbsSys instantiated with a Galaxy')
@@ -122,12 +126,15 @@ class CGMAbsSys(object):
             self.cosmo = cosmology.WMAP9
         else:
             self.cosmo = cosmo
-        ang_sep = self.igm_sys.coord.separation(self.galaxy.coord).to('arcmin')
-        kpc_amin = self.cosmo.kpc_comoving_per_arcmin(self.galaxy.z)  # kpc per arcmin
-        self.rho = ang_sep * kpc_amin / (1+self.galaxy.z)  # Physical
-        self.ang_sep = ang_sep.to('arcsec')
 
-        # Calculate PA too?
+        # Impact parameter and PA
+        if ang_sep is None:
+            ang_sep = self.igm_sys.coord.separation(self.galaxy.coord).to('arcsec')
+        if rho is None:
+            kpc_amin = self.cosmo.kpc_comoving_per_arcmin(self.galaxy.z)  # kpc per arcmin
+            rho = ang_sep.to('arcmin') * kpc_amin / (1+self.galaxy.z)  # Physical
+        self.rho = rho
+        self.ang_sep = ang_sep
         self.PA = self.igm_sys.coord.position_angle(self.galaxy.coord)
 
         # Standard name

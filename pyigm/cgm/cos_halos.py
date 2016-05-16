@@ -271,8 +271,7 @@ class COSHalos(CGMAbsSurvey):
     def load_werk14(self):
         """ Load up the Werk+14 results
         """
-        cldy_names = np.array([row['FIELD'].strip()+'_'+row['GALID'].strip()
-                               for row in self.werk14_cldy])
+        cldy_names = np.array([row['FIELD'].strip()+'_'+row['GALID'].strip() for row in self.werk14_cldy])
         for cgm_abs in self.cgm_abs:
             igm_sys = cgm_abs.igm_sys
             # Metallicity
@@ -282,16 +281,16 @@ class COSHalos(CGMAbsSurvey):
             mtc = np.where(cldy_names == cgm_abs.name)[0]
             if len(mtc) == 1:
                 # Metallicity
-                igm_sys.werk14_ZH = self.werk14_cldy[mtc]['ZBEST'][0]
-                igm_sys.werk14_ZHmnx = [self.werk14_cldy[mtc]['ZMIN'][0],
-                                        self.werk14_cldy[mtc]['ZMAX'][0]]
+                igm_sys.werk14_ZH = self.werk14_cldy['ZBEST'][mtc][0]
+                igm_sys.werk14_ZHmnx = [self.werk14_cldy['ZMIN'][mtc][0],
+                                        self.werk14_cldy['ZMAX'][mtc][0]]
                 igm_sys.ZH = igm_sys.werk14_ZH
                 # NHI
-                igm_sys.werk14_NHI = self.werk14_cldy[mtc]['NHI_BEST'][0]
+                igm_sys.werk14_NHI = self.werk14_cldy['NHI_BEST'][mtc][0]
                 # NH
-                igm_sys.werk14_NH = np.log10(self.werk14_cldy[mtc]['NH_BEST'][0])
-                igm_sys.werk14_NHmnx = [np.log10(self.werk14_cldy[mtc]['NH_LOW'][0]),
-                                        np.log10(self.werk14_cldy[mtc]['NH_HIGH'][0])]
+                igm_sys.werk14_NH = np.log10(self.werk14_cldy['NH_BEST'][mtc][0])
+                igm_sys.werk14_NHmnx = [np.log10(self.werk14_cldy['NH_LOW'][mtc][0]),
+                                        np.log10(self.werk14_cldy['NH_HIGH'][mtc][0])]
             else:
                 print('No Werk+14 Cloudy solution for {:s}'.format(cgm_abs.name))
 
@@ -341,7 +340,8 @@ class COSHalos(CGMAbsSurvey):
             tdict = json.load(f)
             # Generate
             cgmsys = CGMAbsSys.from_dict(tdict, skip_vel=True, chk_sep=False, skip_data_chk=True,
-                                         use_coord=True, use_line_list='ISM', linelist=llist, **kwargs)
+                                         use_coord=True, use_line_list='ISM', use_angrho=True,
+                                         linelist=llist, **kwargs)
             self.cgm_abs.append(cgmsys)
         tar.close()
         # Werk+14
