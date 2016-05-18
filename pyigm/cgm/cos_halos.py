@@ -208,7 +208,7 @@ class COSHalos(CGMAbsSurvey):
                                     igm_sys.zabs, igm_sys.vlim)
 
             else:
-                comp = AbsComponent.from_abslines(abslines, skip_vel=True)
+                comp = AbsComponent.from_abslines(abslines, chk_vel=False)
                 if comp.Zion != (1,1):
                     comp.synthesize_colm()  # Combine the abs lines
                     if np.abs(comp.logN - float(iont['CLM'][0])) > 0.15:
@@ -338,7 +338,7 @@ class COSHalos(CGMAbsSurvey):
             f = tar.extractfile(member)
             tdict = json.load(f)
             # Generate
-            cgmsys = CGMAbsSys.from_dict(tdict, skip_vel=True, chk_sep=False, skip_data_chk=True,
+            cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, skip_data_chk=True,
                                          use_coord=True, use_line_list='ISM', use_angrho=True,
                                          linelist=llist, **kwargs)
             self.cgm_abs.append(cgmsys)
