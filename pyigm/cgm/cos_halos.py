@@ -338,8 +338,8 @@ class COSHalos(CGMAbsSurvey):
             f = tar.extractfile(member)
             tdict = json.load(f)
             # Generate
-            cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, skip_data_chk=True,
-                                         use_coord=True, use_line_list='ISM', use_angrho=True,
+            cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, chk_data=False,
+                                         use_coord=True, use_angrho=True,
                                          linelist=llist, **kwargs)
             self.cgm_abs.append(cgmsys)
         tar.close()
