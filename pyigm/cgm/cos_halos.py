@@ -114,8 +114,9 @@ class COSHalos(CGMAbsSurvey):
                                        galx['SFR_FLAG'][0]) # FLAG actually gives method used
         gal.ssfr = galx['SSFR'][0]
         # Instantiate the IGM System
-        igm_sys = IGMSystem('CGM',(galx['QSORA'][0], galx['QSODEC'][0]),
-                            summ['ZFINAL'][0], [-600, 600.]*u.km/u.s)
+        igm_sys = IGMSystem((galx['QSORA'][0], galx['QSODEC'][0]),
+                            summ['ZFINAL'][0], [-600, 600.]*u.km/u.s,
+                            abs_type='CGM')
         igm_sys.zqso = galx['ZQSO'][0]
         # Instantiate
         cgabs = CGMAbsSys(gal, igm_sys, name=gal.field+'_'+gal.gal_id)

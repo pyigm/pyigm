@@ -32,7 +32,7 @@ def test_init_cgmabssys():
     radec = (125*u.deg, 45.2*u.deg)
     gal = Galaxy(radec,z=0.3)
     radec_qso = (125*u.deg, 45.203*u.deg)
-    igmsys = IGMSystem('CGM', radec_qso, gal.z, [-500,500]*u.km/u.s)
+    igmsys = IGMSystem(radec_qso, gal.z, [-500,500]*u.km/u.s, abs_type='CGM')
     # Instantiate
     cgmabs = CGMAbsSys(gal, igmsys)
     # Test
@@ -47,7 +47,7 @@ def test_to_dict():
     radec = (125*u.deg, 45.2*u.deg)
     gal = Galaxy(radec,z=0.3)
     radec_qso = (125*u.deg, 45.203*u.deg)
-    igmsys = IGMSystem('CGM', radec_qso, gal.z, [-500,500]*u.km/u.s)
+    igmsys = IGMSystem(radec_qso, gal.z, [-500,500]*u.km/u.s, abs_type='CGM')
     # Instantiate
     cgmabs = CGMAbsSys(gal, igmsys)
     # Test

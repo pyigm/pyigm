@@ -33,7 +33,6 @@ absorption components.  It is specified by:
 =============== ========   ============== ============================================
 Property        Variable   Type           Description
 =============== ========   ============== ============================================
-Type            abs_type   str            Name of the type of system
 RA, DEC         radec      tuple or coord RA,DEC in deg or astropy.coordinate
 Redshift        z          float          absorption redshift
 Velocity limits vlim       Quantity array -/+ velocity limits of the system

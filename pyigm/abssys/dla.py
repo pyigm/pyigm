@@ -118,7 +118,7 @@ class DLASystem(IGMSystem):
         if vlim is None:
             vlim = [-500., 500.]*u.km/u.s
         # Generate with type
-        IGMSystem.__init__(self, 'DLA', radec, zabs, vlim, NHI=NHI, **kwargs)
+        IGMSystem.__init__(self, radec, zabs, vlim, NHI=NHI, abs_type='DLA', **kwargs)
 
     def get_ions(self, use_Nfile=False, idict=None, update_zvlim=True,
                  linelist=None, verbose=True):
