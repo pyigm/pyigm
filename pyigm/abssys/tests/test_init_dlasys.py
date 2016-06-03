@@ -13,11 +13,9 @@ from linetools.isgm.abscomponent import AbsComponent
 
 from pyigm.abssys.dla import DLASystem
 
-'''
 def data_path(filename):
     data_dir = os.path.join(os.path.dirname(__file__), 'files')
     return os.path.join(data_dir, filename)
-'''
 
 
 def test_simple_dla_init():
@@ -53,6 +51,9 @@ def test_parse_ion():
     dla.get_ions(use_Nfile=True)
     assert len(dla._ionN) == 14
 
+def test_dla_from_dict():
+    dla = DLASystem.from_json(data_path('J010311.38+131616.7_z2.309_HIRES.json'))
+    assert len(dla._components) == 19
 
 def test_DLA_from_components():
     radec = SkyCoord(ra=123.1143*u.deg, dec=-12.4321*u.deg)

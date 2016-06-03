@@ -84,6 +84,7 @@ class DLASystem(IGMSystem):
 
         return slf
 
+    '''
     @classmethod
     def from_dict(cls, idict):
         """ Generate a DLASystem from a dict
@@ -105,6 +106,7 @@ class DLASystem(IGMSystem):
             slf.add_component(component)
         # Return
         return slf
+    '''
 
     def __init__(self, radec, zabs, vlim, NHI, **kwargs):
         """Standard init
@@ -146,7 +148,7 @@ class DLASystem(IGMSystem):
             # Build components
             components = ltiu.build_components_from_dict(self._clmdict,
                                                          coord=self.coord,
-                                                         skip_vel=True)
+                                                         chk_vel=False)
             # Read .ion file and fill in components
             ion_fil = self.tree+self._clmdict['ion_fil']
             self._indiv_ionclms = igmau.read_ion_file(ion_fil, components)
