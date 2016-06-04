@@ -10,6 +10,8 @@ from astropy.coordinates import SkyCoord
 
 from linetools.spectralline import AbsLine
 from linetools.isgm.abscomponent import AbsComponent
+from linetools.spectra import io as lsio
+import linetools
 
 from pyigm.abssys.dla import DLASystem
 
@@ -96,4 +98,13 @@ def test_default_dla_sample_with_ions():
     gdCIV = np.where(CIV_clms['flag_N']>0)[0]
     assert len(gdCIV) == 74
 """
+
+def test_dla_XH():
+    spec_fil = linetools.__path__[0]+'/spectra/tests/files/PH957_f.fits'
+    spec = lsio.readspec(spec_fil)
+    dla = DLASystem.from_json(data_path('J010311.38+131616.7_z2.309_HIRES.json'))
+    #
+    dla.measure_aodm(spec=spec)
+    dla.update_component_colm()
+    dla.calc_abundances()
 

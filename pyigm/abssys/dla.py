@@ -122,6 +122,35 @@ class DLASystem(IGMSystem):
         # Generate with type
         IGMSystem.__init__(self, radec, zabs, vlim, NHI=NHI, abs_type='DLA', **kwargs)
 
+    def calc_abundances(self):
+        """ Calculate [X/H] for each low-ion component
+
+        Returns
+        -------
+
+        """
+        from linetools.abund.elements import ELEMENTS
+        from linetools.abund import solar
+        solabnd = solar.SolarAbund()
+        # Loop components
+        for comp in self._components:
+            # Check Ej -- ground-state only
+            if comp.Ej > 0./u.cm:
+                continue
+            # Skip Hydrogen
+            if comp.Zion[0] == 1:
+                continue
+            # Low-ion?
+            elm = ELEMENTS[comp.Zion[0]]
+            if comp.Zion[1] == 1:
+                Elow = 0.
+            else:
+                Elow = elm.ionenergy[comp.Zion[1]]
+            if (elm.ionenergy[comp.Zion[1]] < 13.6) or (Elow > 13.6):
+                continue
+            # Flags..
+            comp.XH = comp.logN - self.NHI + 12 - solabnd[comp.Zion[0]]
+
     def get_ions(self, use_Nfile=False, idict=None, update_zvlim=True,
                  linelist=None, verbose=True):
         """Parse the ions for each Subsystem
