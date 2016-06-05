@@ -11,6 +11,7 @@ from astropy.coordinates import SkyCoord
 from linetools.spectralline import AbsLine
 from linetools.isgm.abscomponent import AbsComponent
 from linetools.spectra import io as lsio
+from linetools.abund.relabund import RelAbund
 import linetools
 
 from pyigm.abssys.dla import DLASystem
@@ -18,6 +19,7 @@ from pyigm.abssys.dla import DLASystem
 def data_path(filename):
     data_dir = os.path.join(os.path.dirname(__file__), 'files')
     return os.path.join(data_dir, filename)
+
 
 
 def test_simple_dla_init():
@@ -54,8 +56,8 @@ def test_parse_ion():
     assert len(dla._ionN) == 14
 
 def test_dla_from_dict():
-    dla = DLASystem.from_json(data_path('J010311.38+131616.7_z2.309_HIRES.json'))
-    assert len(dla._components) == 19
+    dla = DLASystem.from_json(data_path('J010311.38+131616.7_z2.309_ESI.json'))
+    assert len(dla._components) == 16
 
 def test_DLA_from_components():
     radec = SkyCoord(ra=123.1143*u.deg, dec=-12.4321*u.deg)
@@ -99,12 +101,15 @@ def test_default_dla_sample_with_ions():
     assert len(gdCIV) == 74
 """
 
-def test_dla_XH():
+def test_dla_XY():
     spec_fil = linetools.__path__[0]+'/spectra/tests/files/PH957_f.fits'
     spec = lsio.readspec(spec_fil)
-    dla = DLASystem.from_json(data_path('J010311.38+131616.7_z2.309_HIRES.json'))
+    dla = DLASystem.from_json(data_path('J010311.38+131616.7_z2.309_ESI.json'))
     #
     dla.measure_aodm(spec=spec)
     dla.update_component_colm()
-    dla.calc_abundances()
+    dla.fill_ionN()
+    dla.XY = RelAbund.from_ionclm_table((1,21.37,0.08), dla._ionN)
+    tbl = dla.XY.table()
+    assert len(tbl) == 8
 
