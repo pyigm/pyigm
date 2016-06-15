@@ -50,15 +50,16 @@ COLOR_MODEL = '#999966'
 COLORS = ['#0066FF','#339933','#CC3300','#660066','#FF9900','#B20047']
 zero_coord = SkyCoord(ra=0.*u.deg, dec=0.*u.deg)  # Coords
 
+
 # GUI for fitting LLS in a spectrum
 class IGMGuessesGui(QtGui.QMainWindow):
-    ''' GUI to identify absorption features and provide reasonable
+    """ GUI to identify absorption features and provide reasonable
         first guesses of (z, logN, b) for subsequent Voigt profile
         fitting.
 
         v0.5
         30-Jul-2015 by JXP
-    '''
+    """
     def __init__(self, ispec, parent=None, previous_file=None, 
         srch_id=True, outfil=None, fwhm=None, zqso=None,
         plot_residuals=True,n_max_tuple=None, min_strength=None,
@@ -832,10 +833,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
         ## Reset z
         if event.key == ' ': # space to move redshift
-            #from xastropy.relativity import velocities
-            #newz = velocities.z_from_v(self.z, event.xdata)
             self.z = self.z + event.xdata * (1 + self.z) / c_mks
-            #self.abs_sys.zabs = newz
             # Drawing
             self.psdict['x_minmax'] = self.vmnx.value
 
@@ -937,6 +935,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         if event.key == 'L': # Toggle ID lines
             self.flag_idlbl = ~self.flag_idlbl
 
+        """
         # AODM plot
         if event.key == ':':  # 
             # Grab good lines
@@ -949,6 +948,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 gui.exec_()
             else:
                 print('VelPlot.AODM: No good lines to plot')
+        """
 
         if event.key == '?':
             print(self.help_message)
