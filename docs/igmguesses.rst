@@ -55,3 +55,4 @@ Line identification algorithm
 -----------------------------
 
 1. Identify all absorption features available at redshift z = 0.
+2. Identify all features at z= zQSO.
