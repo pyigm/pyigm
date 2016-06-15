@@ -866,8 +866,8 @@ class IGGVelPlotWidget(QtGui.QWidget):
             self.idx_line = 0
             self.init_lines()
         if event.key == 'T':  # Update Strong
-            # self.llist['List'] = 'Strong'
-            self.parent.update_available_lines(linelist=self.llist['Strong'])
+            self.llist['List'] = 'Strong'
+            #self.parent.update_available_lines(linelist=self.llist['Strong'])
             self.idx_line = 0
             self.init_lines()
         if event.key == 'U':  # Update ISM
