@@ -46,10 +46,6 @@ def parser(options=None):
 
 def main(args=None):
     pargs = parser(options=args)
-    if pargs.inp is None and pargs.all is False:
-        print("No option selected.  Use -h for Help")
-        return
-
     import sys
 
     app = QtGui.QApplication(sys.argv)
