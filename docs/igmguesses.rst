@@ -55,14 +55,17 @@ Optional arguments
                                                     This is useful to get rid of very weak transitions from the model
     =============================================== ================================================================================
 
+The number of transitions displayed by default can be excessive for many
+(especially low-redshift) spectra, so using the argument "--n_max_tuple 5"
+can be a decent starting option.
 
+Line reliability
+----------------
 
 Because the identification of absorption lines is not always
 certain, in IGMGuesses we have incorporated three levels of
 reliability for a line identification, defined as follows.
 
-Line reliability
-----------------
 
 Certain (a): These include ion components with multiple
 transitions where at least two of them are available and visible
