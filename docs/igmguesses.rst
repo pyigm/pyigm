@@ -59,6 +59,7 @@ The number of transitions displayed by default can be excessive for many
 (especially low-redshift) spectra, so using the argument "--n_max_tuple 5"
 can be a decent starting option.
 
+
 Component definition
 ====================
 We remind the user that IGMGuesses works on a "absorption component"
@@ -72,7 +73,8 @@ different from the convention used in other softwares.
 In order for IGMGuesses to estimate (N, b, z) one may also need to specify a
 rest-frame velocity window associated to the component (but note that more generally
 one could use different velocity windows for individual absorption lines in a
-given component).
+given component). This velocity window can also be used to figure out which components are blended
+or unblended, in the expected subsequent Voigt profile fitting.
 
 
 Line reliability
@@ -82,16 +84,29 @@ Because the identification of absorption lines in a given spectrum
 is not always 100% certain, in IGMGuesses we have incorporated three
 levels of reliability for a component identification, defined as follows.
 
-Certain (a): These include ion components with multiple
+Certain (label a): These include components with multiple
 transitions where at least two of them are available and visible
-in the spectrum, showing the expected ratios and kinematic
-structure between them. Common absorption seen at `z=0` can
-also be considered reliable.
+in the spectrum, and showing the expected ratios and kinematic
+structure. Common absorption seen at `z=0` fall in this category,
+as well as strong HI showing multiple Lyman series transitions.
 
-Possible (b): These can include ion components from single
-(or multiple) transition ions, or those
+Possible (label b): These include components from single
+transition ions that are at the same redshift (within a reasonable
+velocity window) from another certain component (e.g. CIII at the
+same redshift than a certain HI). Another case where this category
+should apply is when we have components from ions with multiple
+transitions but that for some reason only 1 transition is clearly seen
+(e.g. due to heavy blends, poor S/N, wavelength coverage, etc). Examples of these
+could be weak HI where only HI Lya is visible, or a OVI component where one of
+the transition is blended with something else thus not certain.
 
-Uncertain (c): These corresponds to those
+Uncertain (label c): These correspond to those components that
+based on the user experience are likely to be an incorrect identification.
+
+Unknown (not implemented yet): This category is for those absorption
+features that cannot be explained with current information.
+
+
 
 
 Line identification algorithm
