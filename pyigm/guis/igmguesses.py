@@ -113,6 +113,7 @@ T         : update available transitions at current redshift from `Strong` LineL
 U         : update available transitions at current redshift from `ISM` LineList
 H         : update to HI Lyman series LineList at current redshift
             (type `T` or `U` to get metals back)
+s         : restrict to subset of lines on spectrum for current redshift
 A         : set limits for fitting an absorption component
             from cursor position (need to be pressed twice:
             once for each left and right limits)
@@ -866,13 +867,17 @@ class IGGVelPlotWidget(QtGui.QWidget):
             self.idx_line = 0
             self.init_lines()
         if event.key == 'T':  # Update Strong
-            # self.llist['List'] = 'Strong'
-            self.parent.update_available_lines(linelist=self.llist['Strong'])
+            self.llist['List'] = 'Strong'
+            #self.parent.update_available_lines(linelist=self.llist['Strong'])
             self.idx_line = 0
             self.init_lines()
         if event.key == 'U':  # Update ISM
             # self.llist['List'] = 'ISM'
             self.parent.update_available_lines(linelist=self.llist['ISM'])
+            self.idx_line = 0
+            self.init_lines()
+        if event.key == 's':  # Select a subset of the available lines
+            self.parent.update_available_lines(linelist=self.llist['List'])
             self.idx_line = 0
             self.init_lines()
 
