@@ -44,14 +44,18 @@ def parser(options=None):
         args = parser.parse_args(options)
     return args
 
+
 def main(args=None):
     pargs = parser(options=args)
     import sys
 
     app = QtGui.QApplication(sys.argv)
-    gui = IGMGuessesGui(pargs.in_file, outfil=pargs.out_file, fwhm=pargs.fwhm,
+    gui = IGMGuessesGui(pargs.in_file,
+                        outfil=pargs.out_file,
+                        fwhm=pargs.fwhm,
                         previous_file=pargs.previous_file,
-                        n_max_tuple=pargs.n_max_tuple,min_strength=pargs.min_strength,
+                        n_max_tuple=pargs.n_max_tuple,
+                        min_strength=pargs.min_strength,
                         min_ew=pargs.min_ew)
     gui.show()
     app.exec_()
