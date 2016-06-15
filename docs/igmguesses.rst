@@ -55,6 +55,10 @@ Optional arguments
                                                     This is useful to get rid of very weak transitions from the model
     =============================================== ================================================================================
 
+The number of transitions displayed by default can be excessive for many
+(especially low-redshift) spectra, so using the argument "--n_max_tuple 5"
+can be a decent starting option.
+
 Component definition
 ====================
 We remind the user that IGMGuesses works on a "absorption component"
@@ -74,9 +78,9 @@ given component).
 Line reliability
 ================
 
-Because the identification of absorption lines i a given spectrum
+Because the identification of absorption lines in a given spectrum
 is not always 100% certain, in IGMGuesses we have incorporated three
-levels of reliability for a line identification, defined as follows.
+levels of reliability for a component identification, defined as follows.
 
 Certain (a): These include ion components with multiple
 transitions where at least two of them are available and visible
