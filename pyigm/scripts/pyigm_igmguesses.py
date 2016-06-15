@@ -50,7 +50,7 @@ def main(args=None):
 
     app = QtGui.QApplication(sys.argv)
     gui = IGMGuessesGui(pargs.in_file, outfil=pargs.out_file, fwhm=pargs.fwhm,
-                        previous_file=pargs.previous_file, zqso=pargs.zqso,
+                        previous_file=pargs.previous_file,
                         n_max_tuple=pargs.n_max_tuple,min_strength=pargs.min_strength,
                         min_ew=pargs.min_ew)
     gui.show()

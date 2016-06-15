@@ -61,7 +61,7 @@ class IGMGuessesGui(QtGui.QMainWindow):
         30-Jul-2015 by JXP
     """
     def __init__(self, ispec, parent=None, previous_file=None, 
-        srch_id=True, outfil=None, fwhm=None, zqso=None,
+        srch_id=True, outfil=None, fwhm=None,
         plot_residuals=True,n_max_tuple=None, min_strength=None,
                  min_ew=None):
         QtGui.QMainWindow.__init__(self, parent)
@@ -72,8 +72,6 @@ class IGMGuessesGui(QtGui.QMainWindow):
             Name of the previous IGMguesses json file
         smooth: float, optional
             Number of pixels to smooth on
-        zqso: float, optional
-            Redshift of the quasar.  If input, a Telfer continuum is used
         plot_residuals : bool, optional
             Whether to plot residuals
         n_max_tuple : int, optional
