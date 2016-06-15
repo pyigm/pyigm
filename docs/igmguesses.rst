@@ -55,35 +55,49 @@ Optional arguments
                                                     This is useful to get rid of very weak transitions from the model
     =============================================== ================================================================================
 
+Component definition
+====================
+We remind the user that IGMGuesses works on a "absorption component"
+basis as given by linetools. Thus, absorption features seen in a spectrum
+are the result of the superposition of single or multiple absorption
+components. An absorption component is described by the tuple (ion, N, b, z),
+where ion is the ion species (e.g. HI, CIV, CIII, SiII), N is the column density,
+b is the Doppler parameter, z is the redshift. Be aware that this definition may be
+different from the convention used in other softwares.
 
+In order for IGMGuesses to estimate (N, b, z) one may also need to specify a
+rest-frame velocity window associated to the component (but note that more generally
+one could use different velocity windows for individual absorption lines in a
+given component).
 
-Because the identification of absorption lines is not always
-certain, in IGMGuesses we have incorporated three levels of
-reliability for a line identification, defined as follows.
 
 Line reliability
-----------------
+================
+
+Because the identification of absorption lines i a given spectrum
+is not always 100% certain, in IGMGuesses we have incorporated three
+levels of reliability for a line identification, defined as follows.
 
 Certain (a): These include ion components with multiple
 transitions where at least two of them are available and visible
 in the spectrum, showing the expected ratios and kinematic
-structure between them. Common absorption seen at `z=0` can also be considered reliable.
+structure between them. Common absorption seen at `z=0` can
+also be considered reliable.
 
 Possible (b): These can include ion components from single
 (or multiple) transition ions, or those
 
+Uncertain (c): These corresponds to those
 
 
-Although the user is free to use IGMGuesses as their discretion,
+Line identification algorithm
+=============================
+
+Although the users are free to use IGMGuesses as they please,
 here we provide a simple algorithm for a systematic absorption
 line identification which has empirically proven to be very
 efficient.
 
 
-
-
-Line identification algorithm
------------------------------
-
-1. Identify all absorption features available at redshift z = 0.
-2. Identify all features at z= zQSO.
+1. Identify all absorption features available at redshift z = 0,
+and assign them to the corresponding reliability category (see above).
