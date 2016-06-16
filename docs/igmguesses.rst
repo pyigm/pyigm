@@ -42,17 +42,21 @@ linetools' `lt_continuumfit` script (see https://github.com/linetools/linetools)
 Optional arguments
 ++++++++++++++++++
 
-    =============================================== ================================================================================ ==============
-    Argument                                        Description                                                                      Default
-    =============================================== ================================================================================ ==============
+    =============================================== =============================================== ==============
+    Argument                                        Description                                     Default
+    =============================================== =============================================== ==============
     -h, --help                                      Show the help message and exit
-    -o OUT_FILE, --out_file OUT_FILE                Output JSON file with absorption model                                           IGM_model.json
+    -o OUT_FILE, --out_file OUT_FILE                Output JSON file with absorption model          IGM_model.json
     -p PREVIOUS_FILE, --previous_file PREVIOUS_FILE Input JSON file with absorption model (if any)
-    --fwhm FWHM                                     FWHM Gaussian smoothing for fitting (in pixels)                                  3
-    --n_max_tuple N_MAX_TUPLE                       Maximum number of transitions per ion species to display                         5
-    --min_strength MIN_STRENGTH                     Minimum strength for transitions to be displayed; choose values between (0,14.7) 0
-    --min_ew MIN_EW                                 Minimum EW (in AA) for transitions to be shown/stored within a component.        0.005
-                                                    This is useful to get rid of very weak transitions from the model
+    --fwhm FWHM                                     FWHM Gaussian smoothing for fitting (in pixels) 3
+    --n_max_tuple N_MAX_TUPLE                       Maximum number of transitions per ion species   5
+                                                    to display
+    --min_strength MIN_STRENGTH                     Minimum strength for transitions to be          0
+                                                    displayed; choose values between (0,14.7)
+    --min_ew MIN_EW                                 Minimum EW (in AA) for transitions to be
+                                                    shown/stored within a component. This is useful 0.005
+                                                    for getting rid of very weak transitions from
+                                                    the model
     =============================================== ================================================================================ ==============
 
 The number of transitions displayed by default can be excessive for many
