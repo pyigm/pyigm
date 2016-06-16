@@ -169,7 +169,7 @@ main panels, these are:
 - **Component Widget** *(top right)*: This is the widget that displays and
   controls the main parameter for modeling the currently selected absorption
   component, i.e. (N, b, z). You can slightly increase/decrease the current
-  values using the keystrokes 'N'/'n', 'V'/'v' and '<','>', respectively. You
+  values using the keystrokes 'N'/'n', 'V'/'v' and '<'/'>', respectively. You
   can also modify them directly by hand just editing the respective values on
   the widget itself. Reliability flags must be chosen from the available list (see
   above for definitions). A string comment can also be entered
@@ -192,8 +192,8 @@ main panels, these are:
   (update).
 
 
-Adding/Removing/Selecting Components
-------------------------------------
+Adding/Removing/Selecting/Editing Components
+--------------------------------------------
 
 - **Adding a component**: Click on the *Velocity Window* associated to the
   relevant ion transition and define the rest-frame velocity limits by pressing
@@ -204,7 +204,9 @@ Adding/Removing/Selecting Components
   guessing the model parameters. Thus, it is recommended to select a transition
   that is not saturated, blended or in a poor S/N spectral region, when possible.
   Still, a model of the component will be displayed encompassing *all* the transitions.
-  Modification to the parameters can be done by keystrokes of manually using the widgets.
+  Another convenient way to add a component is by using the single keystroke 'a',
+  which tells IGMGuesses to use the same velocity window as the previously selected
+  component.
 
   - **Removing a component**: Use 'D' to remove the *closest* (in velocity) component to
   the cursor position in a given velocity window panel. You can also remove a component
@@ -216,5 +218,20 @@ Adding/Removing/Selecting Components
   panel to make sure IGMGuesses recognizes you are selecting from the velocity panel).
   You can also select a component directly from the *Components List* widget.
 
+  - **Editing a component**: Use the keystrokes N'/'n', 'V'/'v' and '<'/'>', to slightly
+  increase/decrease the values of (N, b, z), respectively, for the currently selected
+  component. Alternatively, you can modify these values by hand directly from the
+  *Component Widget*. The lower/upper velocity limits of a given component can be
+  modified by using the keystrokes '1'/'2', respectively. Use 'R' if you wish to refit the
+  data using the current velocity limits.
 
 
+Redshift navigation
+-------------------
+
+There are two ways that you can navigate in redshift space:
+
+    - **Panning**: Use the Space Bar to set the redshift given by the the rest-frame velocity
+    of the cursor.
+
+    - **By hand**: Use '^' to select the redshift by hand. A pop-up widget should appear.
