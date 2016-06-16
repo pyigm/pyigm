@@ -89,27 +89,27 @@ Because the identification of absorption lines in a given spectrum
 is not always 100% certain, in IGMGuesses we have incorporated three
 levels of reliability for a component identification, defined as follows.
 
-Certain (label a): These include components with multiple
-transitions where at least two of them are available and visible
-in the spectrum, and showing the expected ratios and kinematic
-structure. Common absorption seen at `z=0` fall in this category,
-as well as strong HI showing multiple Lyman series transitions.
+- **Certain (label a)**: These include components with multiple
+  transitions where at least two of them are available and visible
+  in the spectrum, and showing the expected ratios and kinematic
+  structure. Common absorption seen at `z=0` fall in this category,
+  as well as strong HI showing multiple Lyman series transitions.
 
-Possible (label b): These include components from single
-transition ions that are at the same redshift (within a reasonable
-velocity window) from another certain component (e.g. CIII at the
-same redshift than a certain HI). Another case where this category
-should apply is when we have components from ions with multiple
-transitions but that for some reason only 1 transition is clearly seen
-(e.g. due to heavy blends, poor S/N, wavelength coverage, etc). Examples of these
-could be weak HI where only HI Lya is visible, or a OVI component where one of
-the transition is blended with something else thus not certain.
+- **Possible (label b)**: These include components from single
+  transition ions that are at the same redshift (within a reasonable
+  velocity window) from another certain component (e.g. CIII at the
+  same redshift than a certain HI). Another case where this category
+  should apply is when we have components from ions with multiple
+  transitions but that for some reason only 1 transition is clearly seen
+  (e.g. due to heavy blends, poor S/N, wavelength coverage, etc). Examples of these
+  could be weak HI where only HI Lya is visible, or a OVI component where one of
+  the transition is blended with something else thus not certain.
 
-Uncertain (label c): These correspond to those components that
-based on the user experience are likely to be an incorrect identification.
+- **Uncertain (label c)**: These correspond to those components that
+  based on the user experience are likely to be an incorrect identification.
 
-Unknown (not implemented yet): This category is for those absorption
-features that cannot be explained with current information.
+- **Unknown (not implemented yet)**: This category is for those absorption
+  features that cannot be explained with current information.
 
 
 Line identification algorithm
@@ -120,24 +120,24 @@ here we provide a simple algorithm for a systematic absorption
 line identification which has empirically proven to be very
 efficient.
 
-1. Identify all absorption components available at redshift z = 0,
+- 1. Identify all absorption components available at redshift z = 0,
 and assign them to the corresponding reliability category (see above).
 Depending on the (RA, Dec) of the QSO also inspect dv close to known
 structures (e.g. dv = -200 km/s for sightlines close to Andromeda galaxy).
 
-2. Identify all absorption components available at redshift z = z_qso,
+- 2. Identify all absorption components available at redshift z = z_qso,
 and assign them to the corresponding reliability category (see above).
 
-3. Identify HI components showing at least two transitions (e.g. Ly-alpha
+- 3. Identify HI components showing at least two transitions (e.g. Ly-alpha
 and Ly-beta, Ly-beta and Ly-gamma, etc), starting at z=z_qso until z=0, and
 assign them to the 'certain' category. This classification includes the full
 Lyman series transitions of the component available in the spectrum.
 
-4. Identify all possible metal absorption components within a reasonable
+- 4. Identify all possible metal absorption components within a reasonable
 rest-frame velocity window (dv) from each HI redshift found in the previous
 step and assign them to the corresponding reliability category (see above).
 
-5. Assume all the unidentified absorption features to be HI Lya starting from
+- 5. Assume all the unidentified absorption features to be HI Lya starting from
 z=z_qso down to z=0, and assign them to the 'possible' category. Then repeat
 step 4.
 
