@@ -59,9 +59,10 @@ Optional arguments
                                                     the model
     =============================================== =============================================== ==============
 
-The number of transitions displayed by default can be excessive for many
-(especially low-redshift) spectra, so using the default argument "--n_max_tuple 5"
-is a decent starting option.
+The number of transitions available for some ions  can be excessive for many,
+especially low-redshift spectra (e.g. CI, CI**), so using the default argument
+"--n_max_tuple 5" is a decent starting option. Feel free however to try different
+values depending on your scientific needs.
 
 
 Component definition
