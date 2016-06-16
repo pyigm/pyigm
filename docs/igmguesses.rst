@@ -125,7 +125,7 @@ efficient.
 - 1. Identify all absorption components available at redshift z = 0,
      and assign them to the corresponding reliability category (see above).
      Depending on the (RA, Dec) of the QSO also inspect dv close to known
-     structures (e.g. dv = -200 km/s for sightlines close to Andromeda galaxy).
+     structures (e.g. `dv = -200 km/s` for sightlines close to Andromeda galaxy).
 
 - 2. Identify all absorption components available at redshift z = z_qso,
      and assign them to the corresponding reliability category (see above).
@@ -147,22 +147,29 @@ efficient.
 Basic IGMGuesses usage
 ======================
 
+Panels description
+------------------
+
 Once IGMGuesses is launched from terminal, a GUI will appear with four
 main panels, these are:
 
 - **Velocity Windows** *(left)*: This is the main graphic display where different
   transitions of different ion are shown at a given redshift (see top).
   Transitions of the same ion are grouped by the same color
-  sorted by strength. You can add/remove columns or rows by using the
-  keystrokes `C`/`c` or `K`/`k`, respectively. You can also go to the
-  previous/next "page" using the keystrokes `-`/'='. Other navigation/display
-  options are available (by pressing `?` within IGMGuesses the full
+  sorted by strength. The model is plotted on top of the spectrum as a brown line.
+  The spectrum +- 1 sigma uncertainty is plotted around the zero level in arbitrary
+  units (re-scaled for clarity). Residuals are plotted around the zero level
+  in the same units as the uncertainty, which helps to assess the statistical
+  significance of absorption/emission features. You can add/remove columns or rows
+  by using the keystrokes 'C'/'c' or 'K'/'k', respectively. You can also go to the
+  previous/next "page" using the keystrokes '-'/'='. Other navigation/display
+  options are available (by pressing '?' within IGMGuesses the full
   option list will be generated in the terminal)
 
 - **Component Widget** *(top right)*: This is the widget that displays and
   controls the main parameter for modeling the currently selected absorption
   component, i.e. (N, b, z). You can slightly increase/decrease the current
-  values using the keystrokes `N`/`n`, `V`/'v' and `<`,`>`, respectively. You
+  values using the keystrokes 'N'/'n', 'V'/'v' and '<','>', respectively. You
   can also modify them directly by hand just editing the respective values on
   the widget itself. Reliability flags must be chosen from the available list (see
   above for definitions). A string comment can also be entered
@@ -183,6 +190,7 @@ main panels, these are:
   may not be available in the current spectrum, in order to select those available at
   the current redshift of interest from the current LineList you can use keystroke 'U'
   (update).
+
 
 
 
