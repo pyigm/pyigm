@@ -206,7 +206,15 @@ Adding/Removing/Selecting Components
   Still, a model of the component will be displayed encompassing *all* the transitions.
   Modification to the parameters can be done by keystrokes of manually using the widgets.
 
-  -
+  - **Removing a component**: Use 'D' to remove the *closest* (in velocity) component to
+  the cursor position in a given velocity window panel. You can also remove a component
+  regardless of whether is being displayed in the velocity window panels by selecting it
+  from the *Components List* widget and then pressing the keystroke 'd'.
+
+  - **Selecting a component**: Use 'S' to select a component from the velocity window
+  panel at the cursor position (you may need to click on the white area of the velocity
+  panel to make sure IGMGuesses recognizes you are selecting from the velocity panel).
+  You can also select a component directly from the *Components List* widget.
 
 
 
