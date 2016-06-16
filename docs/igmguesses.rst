@@ -118,5 +118,21 @@ line identification which has empirically proven to be very
 efficient.
 
 
-1. Identify all absorption features available at redshift z = 0,
+1. Identify all absorption components available at redshift z = 0,
 and assign them to the corresponding reliability category (see above).
+Depending on the (RA, Dec) of the QSO also inspect dv close to known
+structures (e.g. dv = -200 km/s for sightlines close to Andromeda galaxy).
+
+2. Identify all absorption components available at redshift z = z_qso,
+and assign them to the corresponding reliability category (see above).
+
+3. Identify HI components showing at least two transitions (e.g. Ly-alpha
+and Ly-beta, Ly-beta and Ly-gamma, etc), starting at z=z_qso until z=0, and
+assign them to the reliable category. This classification includes the full
+Lyman series transitions of the component available in the spectrum.
+
+4. Identify all possible metal absorption components within a reasonable
+rest-frame velocity window (dv) from each HI redshift found in the previous
+step and assign them to the corresponding reliability category (see above).
+
+5. Assume all the unidentified absorption features to be HI
