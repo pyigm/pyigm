@@ -192,5 +192,21 @@ main panels, these are:
   (update).
 
 
+Adding/Removing/Selecting Components
+------------------------------------
+
+- **Adding a component**: Click on the *Velocity Window* associated to the
+  relevant ion transition and define the rest-frame velocity limits by pressing
+  'A' twice (one for each limit). IGMGuesses will use the pixel information within
+  those limits to fit a Voigt profile (convolved with a Gaussian of FWHM as given
+  in the initialization; see above) in order to estimate the (N,b,z) parameters.
+  It only uses the pixels in the selected transition of the given ion for
+  guessing the model parameters. Thus, it is recommended to select a transition
+  that is not saturated, blended or in a poor S/N spectral region, when possible.
+  Still, a model of the component will be displayed encompassing *all* the transitions.
+  Modification to the parameters can be done by keystrokes of manually using the widgets.
+
+  -
+
 
 
