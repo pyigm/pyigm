@@ -149,6 +149,8 @@ L         : toggle between displaying/hiding labels of currently
             self.outfil = 'IGM_model.json'
         else:
             self.outfil = outfil
+        if n_max_tuple is None:
+            n_max_tuple = 5
         if min_ew is None:
             min_ew = 0.005  # AA
         if min_strength is None:
@@ -164,7 +166,7 @@ L         : toggle between displaying/hiding labels of currently
 
         # Load spectrum
         spec, spec_fil = ltgu.read_spec(ispec)
-        # Should do coordiantes properly eventually
+        # Should do coordinates properly eventually
         self.coord = zero_coord
         # Normalize
         if spec.co_is_set:

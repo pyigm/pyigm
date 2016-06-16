@@ -23,8 +23,8 @@ these initial guesses should be then used for subsequent Voigt profile
 fitting. Still, IGMGuesses does provide an easy handling of blends,
 which can become a problem for high-redshift or high-S/N data.
 
-Usage
-=====
+Running IGMGuesses
+==================
 
 IGMGuesses should be called from terminal using the script `pyigm_igmguesses`::
 
@@ -42,22 +42,22 @@ linetools' `lt_continuumfit` script (see https://github.com/linetools/linetools)
 Optional arguments
 ++++++++++++++++++
 
-    =============================================== ================================================================================
-    Argument                                        Description
-    =============================================== ================================================================================
+    =============================================== ================================================================================ ==============
+    Argument                                        Description                                                                      Default
+    =============================================== ================================================================================ ==============
     -h, --help                                      Show the help message and exit
-    -o OUT_FILE, --out_file OUT_FILE                Output JSON file with absorption model [Default is called IGM_model.json]
-    -p PREVIOUS_FILE, --previous_file PREVIOUS_FILE Input JSON file with absorption model [Previously generated]
-    --fwhm FWHM                                     FWHM Gaussian smoothing for fitting (in pixels) [Default is 3]
-    --n_max_tuple N_MAX_TUPLE                       Maximum number of transitions per ion species to display
-    --min_strength MIN_STRENGTH                     Minimum strength for transitions to be displayed; choose values between (0,14.7)
-    --min_ew MIN_EW                                 Minimum EW (in AA) for transitions to be shown/stored within a component.
+    -o OUT_FILE, --out_file OUT_FILE                Output JSON file with absorption model                                           IGM_model.json
+    -p PREVIOUS_FILE, --previous_file PREVIOUS_FILE Input JSON file with absorption model (if any)
+    --fwhm FWHM                                     FWHM Gaussian smoothing for fitting (in pixels)                                  3
+    --n_max_tuple N_MAX_TUPLE                       Maximum number of transitions per ion species to display                         5
+    --min_strength MIN_STRENGTH                     Minimum strength for transitions to be displayed; choose values between (0,14.7) 0
+    --min_ew MIN_EW                                 Minimum EW (in AA) for transitions to be shown/stored within a component.        0.005
                                                     This is useful to get rid of very weak transitions from the model
-    =============================================== ================================================================================
+    =============================================== ================================================================================ ==============
 
 The number of transitions displayed by default can be excessive for many
-(especially low-redshift) spectra, so using the argument "--n_max_tuple 5"
-can be a decent starting option.
+(especially low-redshift) spectra, so using the default argument "--n_max_tuple 5"
+is a decent starting option.
 
 
 Component definition
@@ -107,8 +107,6 @@ Unknown (not implemented yet): This category is for those absorption
 features that cannot be explained with current information.
 
 
-
-
 Line identification algorithm
 =============================
 
@@ -139,4 +137,11 @@ z=z_qso down to z=0, and assign them to the 'possible' category. Then repeat
 step 4.
 
 
+Basic IGMGuesses usage
+======================
 
+Once IGMGuesses is launched from terminal, a GUI will appear with four
+main panels, these are:
+
+1. Velocity Windows: This is the main graphic display where different
+transitions
