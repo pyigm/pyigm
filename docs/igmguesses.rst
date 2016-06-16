@@ -117,7 +117,6 @@ here we provide a simple algorithm for a systematic absorption
 line identification which has empirically proven to be very
 efficient.
 
-
 1. Identify all absorption components available at redshift z = 0,
 and assign them to the corresponding reliability category (see above).
 Depending on the (RA, Dec) of the QSO also inspect dv close to known
@@ -128,11 +127,16 @@ and assign them to the corresponding reliability category (see above).
 
 3. Identify HI components showing at least two transitions (e.g. Ly-alpha
 and Ly-beta, Ly-beta and Ly-gamma, etc), starting at z=z_qso until z=0, and
-assign them to the reliable category. This classification includes the full
+assign them to the 'certain' category. This classification includes the full
 Lyman series transitions of the component available in the spectrum.
 
 4. Identify all possible metal absorption components within a reasonable
 rest-frame velocity window (dv) from each HI redshift found in the previous
 step and assign them to the corresponding reliability category (see above).
 
-5. Assume all the unidentified absorption features to be HI
+5. Assume all the unidentified absorption features to be HI Lya starting from
+z=z_qso down to z=0, and assign them to the 'possible' category. Then repeat
+step 4.
+
+
+
