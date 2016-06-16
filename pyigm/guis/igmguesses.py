@@ -97,8 +97,8 @@ for the following keystroke commands to work:
 
 i,o       : zoom in/out x limits
 I,O       : zoom in/out x limits (larger re-scale)
-y         : zoom out y limits
-Y         : guess y limits
+Y         : zoom out y limits
+y         : guess y limits
 t,b       : set y top/bottom limit
 l,r       : set left/right x limit
 [,]       : pan left/right
@@ -110,10 +110,10 @@ f         : move to the first page
 Space bar : set redshift from cursor position
 ^         : set redshift by hand
 T         : update available transitions at current redshift from `Strong` LineList
-U         : update available transitions at current redshift from `ISM` LineList
+M         : update available transitions at current redshift from `ISM` LineList
 H         : update to HI Lyman series LineList at current redshift
             (type `T` or `U` to get metals back)
-s         : restrict to subset of lines on spectrum for current redshift
+U         : restrict to subset of lines on spectrum for current redshift
 A         : set limits for fitting an absorption component
             from cursor position (need to be pressed twice:
             once for each left and right limits)
@@ -871,12 +871,12 @@ class IGGVelPlotWidget(QtGui.QWidget):
             #self.parent.update_available_lines(linelist=self.llist['Strong'])
             self.idx_line = 0
             self.init_lines()
-        if event.key == 'U':  # Update ISM
+        if event.key == 'M':  # Update ISM
             # self.llist['List'] = 'ISM'
             self.parent.update_available_lines(linelist=self.llist['ISM'])
             self.idx_line = 0
             self.init_lines()
-        if event.key == 's':  # Select a subset of the available lines
+        if event.key == 'U':  # Select a subset of the available lines
             self.parent.update_available_lines(linelist=self.llist['List'])
             self.idx_line = 0
             self.init_lines()
@@ -1507,6 +1507,7 @@ def mask_comp_lines(comp, min_ew = 0.003*u.AA, verbose=False):
     # QtCore.pyqtRemoveInputHook()
     # pdb.set_trace()
     # QtCore.pyqtRestoreInputHook()
+
 
 def set_fontsize(ax,fsz):
     """
