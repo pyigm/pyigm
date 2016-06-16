@@ -95,6 +95,7 @@ package_info['package_data'][PACKAGENAME] += data_files
 entry_points = {}
 entry_points['console_scripts'] = [
     'pyigm_mtlmcmc = pyigm.scripts.pyigm_mtlmcmc:main',
+    'pyigm_igmguesses = pyigm.scripts.pyigm_igmguesses:main',
 #    'astropy-package-template-example = packagename.example_mod:main',
 ]
 
