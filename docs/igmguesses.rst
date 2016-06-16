@@ -57,7 +57,7 @@ Optional arguments
                                                     shown/stored within a component. This is useful 0.005
                                                     for getting rid of very weak transitions from
                                                     the model
-    =============================================== ================================================================================ ==============
+    =============================================== =============================================== ==============
 
 The number of transitions displayed by default can be excessive for many
 (especially low-redshift) spectra, so using the default argument "--n_max_tuple 5"
