@@ -8,8 +8,6 @@ IGMGuesses GUI
 
 .. index:: IGMGuesses
 
-[NT and JB will fill in here.]
-
 Overview
 ========
 
@@ -42,7 +40,7 @@ linetools' `lt_continuumfit` script (see https://github.com/linetools/linetools)
 Optional arguments
 ++++++++++++++++++
 
-    =============================================== =============================================== ==============
+    ============================================== =============================================== ==============
     Argument                                        Description                                     Default
     =============================================== =============================================== ==============
     -h, --help                                      Show the help message and exit
@@ -67,6 +65,7 @@ values depending on your scientific needs.
 
 Component definition
 ====================
+
 We remind the user that IGMGuesses works on a "absorption component"
 basis as given by linetools. Thus, absorption features seen in a spectrum
 are the result of the superposition of single or multiple absorption
@@ -107,6 +106,9 @@ levels of reliability for a component identification, defined as follows.
 
 - **Uncertain (label c)**: These correspond to those components that
   based on the user experience are likely to be an incorrect identification.
+  Hopefully components identified in this category will be later replaced by a
+  better identification. These could include an unphysical narrow line, artifacts,
+  etc.
 
 - **Unknown (not implemented yet)**: This category is for those absorption
   features that cannot be explained with current information.
@@ -148,5 +150,39 @@ Basic IGMGuesses usage
 Once IGMGuesses is launched from terminal, a GUI will appear with four
 main panels, these are:
 
-1. Velocity Windows: This is the main graphic display where different
-transitions
+- **Velocity Windows** *(left)*: This is the main graphic display where different
+  transitions of different ion are shown at a given redshift (see top).
+  Transitions of the same ion are grouped by the same color
+  sorted by strength. You can add/remove columns or rows by using the
+  keystrokes `C`/`c` or `K`/`k`, respectively. You can also go to the
+  previous/next "page" using the keystrokes `-`/'='. Other navigation/display
+  options are available (by pressing `?` within IGMGuesses the full
+  option list will be generated in the terminal)
+
+- **Component Widget** *(top right)*: This is the widget that displays and
+  controls the main parameter for modeling the currently selected absorption
+  component, i.e. (N, b, z). You can slightly increase/decrease the current
+  values using the keystrokes `N`/`n`, `V`/'v' and `<`,`>`, respectively. You
+  can also modify them directly by hand just editing the respective values on
+  the widget itself. Reliability flags must be chosen from the available list (see
+  above for definitions). A string comment can also be entered
+
+- **Components List** *(middle right)*: This widget displays and allows to
+  navigate between currently defined components. The name of the component
+  includes the redshift and ion species. By selecting a component from this list,
+  its parameters can be modified from the *Component Widget* but in order to move
+  to the corresponding redshift one needs to manually navigate to it (by using the
+  keystroke `^` or the Space Bar; see below)
+
+- **Line List** *(bottom right)*: This widget displays the current parent LineList
+  (see linetools LineList Class for further details)
+  where ion transitions are selected from. By selecting/unselecting them you can
+  control which transitions are displayed in the *Velocity Windows*. Built in LineList
+  can be loaded by keystrokes 'H' (HI Lyman series), 'T' (Common Strong IGM transitions),
+  'M' (All known ISM transitions). Of course, depending on redshift some transitions may or
+  may not be available in the current spectrum, in order to select those available at
+  the current redshift of interest from the current LineList you can use keystroke 'U'
+  (update).
+
+
+
