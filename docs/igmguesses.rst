@@ -121,25 +121,25 @@ line identification which has empirically proven to be very
 efficient.
 
 - 1. Identify all absorption components available at redshift z = 0,
-and assign them to the corresponding reliability category (see above).
-Depending on the (RA, Dec) of the QSO also inspect dv close to known
-structures (e.g. dv = -200 km/s for sightlines close to Andromeda galaxy).
+     and assign them to the corresponding reliability category (see above).
+     Depending on the (RA, Dec) of the QSO also inspect dv close to known
+     structures (e.g. dv = -200 km/s for sightlines close to Andromeda galaxy).
 
 - 2. Identify all absorption components available at redshift z = z_qso,
-and assign them to the corresponding reliability category (see above).
+     and assign them to the corresponding reliability category (see above).
 
 - 3. Identify HI components showing at least two transitions (e.g. Ly-alpha
-and Ly-beta, Ly-beta and Ly-gamma, etc), starting at z=z_qso until z=0, and
-assign them to the 'certain' category. This classification includes the full
-Lyman series transitions of the component available in the spectrum.
+     and Ly-beta, Ly-beta and Ly-gamma, etc), starting at z=z_qso until z=0, and
+     assign them to the 'certain' category. This classification includes the full
+     Lyman series transitions of the component available in the spectrum.
 
 - 4. Identify all possible metal absorption components within a reasonable
-rest-frame velocity window (dv) from each HI redshift found in the previous
-step and assign them to the corresponding reliability category (see above).
+     rest-frame velocity window (dv) from each HI redshift found in the previous
+     step and assign them to the corresponding reliability category (see above).
 
 - 5. Assume all the unidentified absorption features to be HI Lya starting from
-z=z_qso down to z=0, and assign them to the 'possible' category. Then repeat
-step 4.
+     z=z_qso down to z=0, and assign them to the 'possible' category. Then repeat
+     step (iv).
 
 
 Basic IGMGuesses usage
