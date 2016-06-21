@@ -2,8 +2,10 @@
 """
 from __future__ import print_function, absolute_import, division, unicode_literals
 
+
 import glob
 import json
+import pdb
 
 from linetools import utils as ltu
 
@@ -52,6 +54,9 @@ def load_sys_files(inp, type, ref=None, sys_path=False):
             # Extract
             f = tar.extractfile(member)
             tdict = json.load(f)
+            # Add keys (for backwards compatability)
+            if ('NHI' in tdict.keys()) and ('flag_NHI' not in tdict.keys()):
+                tdict['flag_NHI'] = 1
             # Generate
             abssys = system.from_dict(tdict)
             survey._abs_sys.append(abssys)

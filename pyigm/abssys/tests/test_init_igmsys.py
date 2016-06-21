@@ -16,7 +16,7 @@ import pdb
 def test_init():
     # Simple properties
     radec = SkyCoord(ra=123.1143*u.deg, dec=-12.4321*u.deg)
-    igmsys = IGMSystem('MgII', radec, 1.244, [-500,500]*u.km/u.s, NHI=16.)
+    igmsys = IGMSystem(radec, 1.244, [-500,500]*u.km/u.s, NHI=16., abs_type='MgII')
     # Test
     np.testing.assert_allclose(igmsys.zabs,1.244)
 

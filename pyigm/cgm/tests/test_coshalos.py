@@ -53,7 +53,7 @@ def test_load_sngl_dwarf():
 def test_load_survey():
     # Class
     cos_halos = COSHalos(debug=True)
-    assert len(cos_halos.cgm_abs) == 5
+    assert len(cos_halos.cgm_abs) == 4
     # Load
     #cos_halos.load_mega()  # Only reads one file for the test, actually
     #cos_halos.load_mega(skip_ions=True)

@@ -139,7 +139,7 @@ class LLSSystem(IGMSystem):
         if vlim is None:
             vlim = [-500.,500.]*u.km/u.s
         # Generate with type
-        IGMSystem.__init__(self, 'LLS', radec, zabs, vlim, NHI=NHI, **kwargs)
+        IGMSystem.__init__(self, radec, zabs, vlim, NHI=NHI, abs_type='LLS', **kwargs)
 
         # Set tau_LL
         self.tau_LL = (10.**self.NHI)*ltaa.photo_cross(1, 1, 1*u.Ry).to('cm**2').value

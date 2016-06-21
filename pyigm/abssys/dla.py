@@ -3,6 +3,7 @@
 from __future__ import print_function, absolute_import, division, unicode_literals
 
 import pdb
+import numpy as np
 
 from astropy import units as u
 from astropy.coordinates import SkyCoord
@@ -84,6 +85,7 @@ class DLASystem(IGMSystem):
 
         return slf
 
+    '''
     @classmethod
     def from_dict(cls, idict):
         """ Generate a DLASystem from a dict
@@ -105,6 +107,7 @@ class DLASystem(IGMSystem):
             slf.add_component(component)
         # Return
         return slf
+    '''
 
     def __init__(self, radec, zabs, vlim, NHI, **kwargs):
         """Standard init
@@ -118,7 +121,7 @@ class DLASystem(IGMSystem):
         if vlim is None:
             vlim = [-500., 500.]*u.km/u.s
         # Generate with type
-        IGMSystem.__init__(self, 'DLA', radec, zabs, vlim, NHI=NHI, **kwargs)
+        IGMSystem.__init__(self, radec, zabs, vlim, NHI=NHI, abs_type='DLA', **kwargs)
 
     def get_ions(self, use_Nfile=False, idict=None, update_zvlim=True,
                  linelist=None, verbose=True):
@@ -146,7 +149,7 @@ class DLASystem(IGMSystem):
             # Build components
             components = ltiu.build_components_from_dict(self._clmdict,
                                                          coord=self.coord,
-                                                         skip_vel=True)
+                                                         chk_vel=False)
             # Read .ion file and fill in components
             ion_fil = self.tree+self._clmdict['ion_fil']
             self._indiv_ionclms = igmau.read_ion_file(ion_fil, components)
