@@ -75,7 +75,7 @@ class LLSSystem(IGMSystem):
         return slf
 
     @classmethod
-    def from_dict(cls, idict):
+    def from_dict(cls, idict, **kwargs):
         """ Generate an LLSSystem from a dict
 
         Parameters

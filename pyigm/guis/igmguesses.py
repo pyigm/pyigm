@@ -623,15 +623,18 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
     # Add a component
     def add_component(self, inp, vlim=None, zcomp=None, update_model=True):
-        '''Generate a component and fit with Voigt profiles
+        """Generate a component and fit with Voigt profiles
 
         Parameters:
         ------------
         inp : wrest or Component
+        vlim : Quantity array, optional
+          Velocity limits in km/s
+        zcomp : float, optional
         update_model: bool, optional
           Whether to update the model. It is useful to set it to
           False when reading the previous file to increase speed.
-        '''
+        """
         if isinstance(inp, AbsComponent):
             new_comp = inp
         else:  # wrest
@@ -910,7 +913,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
             #QtCore.pyqtRestoreInputHook()
             self.wrest = wrest
             self.avmnx = comp.vlim - dvz_mks*u.km/u.s
-            self.add_component(wrest)
+            self.add_component(wrest, zcomp=comp.zcomp, vlim=comp.vlim)
             self.wrest = 0.
 
         # Fiddle with analysis pixel mask
