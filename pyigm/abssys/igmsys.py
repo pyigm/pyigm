@@ -170,7 +170,7 @@ class AbsSubSystem(object):
         for component in self._components:
             outdict['components'][component.name] = component.to_dict()
         # Polish
-        outdict = ltu.jsonify_dict(outdict)
+        outdict = ltu.jsonify(outdict)
         # Return
         return outdict
 

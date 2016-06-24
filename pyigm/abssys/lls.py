@@ -219,7 +219,7 @@ class LLSSystem(IGMSystem):
           dict containing the IonClms info
         use_Nfile : bool, optional
           Parse ions from a .clm file (JXP historical)
-          NOTE: This ignores velocity constraints on components (i.e. skip_vel=True)
+          NOTE: This ignores velocity constraints on components (i.e. chk_vel=False)
         update_zvlim : bool, optional
           Update zvlim from lines in .clm (as applicable)
         linelist : LineList
@@ -237,7 +237,7 @@ class LLSSystem(IGMSystem):
                 self.subsys[lbl]._clmdict = igmau.read_clmfile(clm_fil, linelist=linelist)
                 # Build components from lines
                 components = ltiu.build_components_from_dict(self.subsys[lbl]._clmdict,
-                                                             coord=self.coord, skip_vel=True)
+                                                             coord=self.coord, chk_vel=False)
                 self.subsys[lbl]._components = components
                 # Update z, vlim
                 if update_zvlim:
@@ -378,7 +378,7 @@ class LLSSystem(IGMSystem):
                         self.subsys[lbl]._clmdict = inp[lbl]  # Not so necessary
                         components = ltiu.build_components_from_dict(self.subsys[lbl]._clmdict,
                                                                  coord=self.coord,
-                                                                 skip_vel=True)
+                                                                 chk_vel=True)
                         self.subsys[lbl]._components = components
                         # Update vlim
                         self.update_vlim(sub_system=lbl)
