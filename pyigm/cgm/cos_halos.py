@@ -487,6 +487,7 @@ class COSHalos(CGMAbsSurvey):
 
         JXP on 12 Oct 2015
         """
+        from linetools.spectra import utils as ltsu
         # Init
         cgm_abs = self[inp]
         # Directories
@@ -503,7 +504,7 @@ class COSHalos(CGMAbsSurvey):
             lris_files.sort()
             specb = lsio.readspec(lris_files[0]) 
             specr = lsio.readspec(lris_files[1]) 
-            spec = specb.splice(specr)
+            spec = ltsu.splice_two(specb, specr)
         else:
             raise ValueError('Not sure what happened')
 
@@ -631,11 +632,13 @@ class COSHalos(CGMAbsSurvey):
         galids = np.array([cgm_abs.galaxy.gal_id for cgm_abs in self.cgm_abs])
         #
         mt = np.where( (fields == field) & (galids == galid))[0]
-        if len(mt) != 1:
+        if len(mt) == 0:
             warnings.warn('CosHalos: CGM not found')
             return None
-        else:
+        elif len(mt) == 1:
             return self.cgm_abs[mt[0]]
+        else:
+            raise ValueError("Multiple hits.  Should not happen")
 
 
 def update_cos_halos(self):
