@@ -42,7 +42,6 @@ def run_mcmc(args):
     for ii in range(len(sets)):
         if(data['ion'][sets[ii]] == 'HI'):
             #isolate hydrogen and info
-            #print ii, sets[ii], data['ion'][sets[ii]], sy
             obsinfo={'NHI':data['logn'][sets[ii]],'eNHI':data['elogn'][sets[ii]],'hiflag':data['flag'][sets[ii]],
                      'z':data['zabs'][sets[ii]],'errz':data['ezabs'][sets[ii]],'name':sy.strip()}
         else:

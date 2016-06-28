@@ -111,7 +111,7 @@ class Emceebones(object):
         """ First, do some bookeeping like finding ions and preparing the grid
         Parameters
         ----------
-        data :
+        data : list of tuples
           observations
         infodata :
         model :
@@ -153,8 +153,9 @@ class Emceebones(object):
 
         Parameters
         ----------
-        data
-        model
+        data :
+          observations
+        model : pickle file
 
         Returns
         -------
@@ -317,11 +318,12 @@ class Emceebones(object):
 
         print('All done with system {}!'.format(self.info['name']))
 
-    def __call__(self):
+    def setup_emc(self):
+        """ As named
+        Returns
+        -------
 
-        print('Preparing emcee...')
-
-        #now init the emcee utlility class
+        """
         emc=Emceeutils()
 
         #simple pass of utility variables to emcee
@@ -338,11 +340,23 @@ class Emceebones(object):
         emc.mod_axistag=self.mod_axistag
         emc.mod_axisval=self.mod_axisval
         emc.effnhi=self.effnhi
-
-        #if in use, pass the HI grid to compute effective NHI
+        #
         if(emc.effnhi):
             emc.nhigrid=self.nhigrid
+        # Save internally
+        self.emc = emc
+        #
+        return
 
+    def __call__(self):
+
+        print('Preparing emcee...')
+
+        #now init the emcee utlility class
+        self.setup_emc()
+        emc = self.emc  # For backwards compatability
+
+        #if in use, pass the HI grid to compute effective NHI
         #now initialise the interpolator
         emc.init_interpolators()
 
