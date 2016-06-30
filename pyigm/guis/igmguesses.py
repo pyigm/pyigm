@@ -174,9 +174,11 @@ L         : toggle between displaying/hiding labels of currently
         else:
             raise ValueError("Please provide a spectrum with a continuum estimation. "
                              "You can do this using linetool's `lt_continuumfit` script.")
+
         # make sure there are no nans in uncertainty, which affects the display of residuals
-        # import pdb; pdb.set_trace()
-        spec.data['sig'][0] = np.where(spec.data['sig'][0].mask, 0, spec.data['sig'][0])
+        # removed because now it is handled by XSpectrum1D masked array representations
+        # These commented lines should eventually be removed
+        # spec.data['sig'][0] = np.where(spec.data['sig'][0].mask, 0, spec.data['sig'][0])
 
         # These attributes will store good/bad pixels for subsequent Voigt Profile fitting
         # spec.good_pixels = np.zeros(len(spec.wavelength),dtype=int)
@@ -509,7 +511,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         self.avmnx = np.array([0.,0.])*u.km/u.s
         self.model = XSpectrum1D.from_tuple(
             (spec.wavelength, np.ones(len(spec.wavelength))))
-
+        
         self.plot_residuals = plot_residuals
         #Define arrays for plotting residuals
         if self.plot_residuals:
