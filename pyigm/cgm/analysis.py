@@ -54,7 +54,7 @@ def dndx_rvir(Lrng=(0.001, 10), beta=0.2, rvir_Lstar=250.*u.kpc,
     x = alpha + 1 + beta
     # Integrate
     dNdx_rvir = (dndx_const * phi_str_cgs * (np.pi * rvir_Lstar**2) * (
-        gamma(x) * ( gammainc(x,Lrng[1]) - gammainc(x,Lval)))).decompose()
+        gamma(x) * ( gammainc(x,Lrng[1]) - gammainc(x,Lval)))).decompose().value
 
     # Return
     return Lval, dNdx_rvir
