@@ -14,9 +14,11 @@ from astropy import constants as const
 from astropy.cosmology import Planck15
 
 def dndx_rvir(Lrng=(0.001, 10), beta=0.2, rvir_Lstar=250.*u.kpc,
-         phi_str = 1.49/u.Mpc**3, alpha = -1.05, Mstar = -20.44,
+         phi_str_pref = 1.49, alpha = -1.05, Mstar = -20.44,
          cosmo=None):  #  ; M* - 5 log h
     """ Estimate dN/dX for a set of CGM assuming unit covering fraction
+    Following Prochaska+11
+
     Use beta=0 and rvir_Lstar=300kpc for a constant CGM to 300kpc
 
     Parameters
@@ -26,11 +28,12 @@ def dndx_rvir(Lrng=(0.001, 10), beta=0.2, rvir_Lstar=250.*u.kpc,
     beta : float, optional
       Parameterization of rvir with L
        r_vir = 250 kpc * (L/L*)^beta
-    phi_str, alpha, Mstar : Quantity, float, float
+    phi_str, alpha, Mstar : float, float, float
         Blanton lum function
           Phi(M) = 0.4 log(10) Phi* 10^(-0.4 [M-M*][alpha+1]) exp(-
                     ; 10^(-0.4[M-M*] ) )
           Phi(L) = Phi* (L/L*)^alpha exp(-L/L*)
+          Phi* has units of h^3 Mpc^-3
     cosmo : Cosmology, optional
       Defaults to Planck15
 
@@ -47,9 +50,9 @@ def dndx_rvir(Lrng=(0.001, 10), beta=0.2, rvir_Lstar=250.*u.kpc,
         cosmo = Planck15
     hubb = cosmo.H0.value / 100.
     # Constants
-    phi_str_cgs = (phi_str * 1e-2 * hubb)
+    phi_str_cgs = (phi_str_pref * 1e-2 * hubb**3) / u.Mpc**3
     dndx_const = (const.c / cosmo.H0).cgs
-    # CGM extends to rvir with power-law dependence
+    # Cumulative
     Lval = np.linspace(Lrng[0], Lrng[1], 1000)
     x = alpha + 1 + beta
     # Integrate
