@@ -10,6 +10,7 @@ from astropy import units as u
 from astropy.units import Quantity
 from astropy.coordinates import SkyCoord
 from astropy import constants as const
+from astropy.cosmology import Planck15
 
 import pyigm.field.utils as pfu
 
@@ -30,7 +31,7 @@ class IgmGalaxyField(object):
 
     """
 
-    # Initialize 
+    # Initialize
     def __init__(self, radec, name=None, cosmo=None, verbose=False):
         # coord
         if isinstance(radec, (tuple)):
@@ -47,7 +48,7 @@ class IgmGalaxyField(object):
 
         # Cosmology
         if cosmo is None:
-            from astropy.cosmology import Planck15 as cosmo
+            cosmo = Planck15
             if verbose is True:
                 print('IgmGalxyField: Using Planck15 cosmology')
         self.cosmo = cosmo
