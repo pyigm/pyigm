@@ -105,7 +105,25 @@ class CGMAbsSys(object):
         # Return
         return slf
 
-    def __init__(self, galaxy, igm_sys, cosmo=None, name=None, rho=None, PA=None, ang_sep=None):
+    def __init__(self, galaxy, igm_sys, cosmo=None, name=None, rho=None, PA=None,
+                 ang_sep=None, chk_lowz=True):
+        """
+        Parameters
+        ----------
+        galaxy
+        igm_sys
+        cosmo
+        name
+        rho
+        PA
+        ang_sep
+        chk_lowz : bool, optional
+          Demand that z>0.05  [for impact parameter calculation]
+
+        Returns
+        -------
+
+        """
         # Checks
         if not isinstance(galaxy, Galaxy):
             raise IOError('CGMAbsSys instantiated with a Galaxy')
@@ -117,7 +135,7 @@ class CGMAbsSys(object):
         self.igm_sys = igm_sys
 
         # Raise error for redshifts not in the Hubble flow
-        if galaxy.z < 0.05:
+        if (galaxy.z < 0.05) and chk_lowz:
             raise NotImplementedError("Not prepared for such low redshift.  Need to implement corrections.")
 
         # Calculate rho

@@ -63,7 +63,7 @@ class COSHalos(CGMAbsSurvey):
         if load:
             self.load_sys(**kwargs)
 
-    def load_single_fits(self, inp, skip_ions=False, verbose=True):
+    def load_single_fits(self, inp, skip_ions=False, verbose=True, **kwargs):
         """ Load a single COS-Halos sightline
         Appends to cgm_abs list
 
@@ -119,7 +119,7 @@ class COSHalos(CGMAbsSurvey):
                             abs_type='CGM')
         igm_sys.zqso = galx['ZQSO'][0]
         # Instantiate
-        cgabs = CGMAbsSys(gal, igm_sys, name=gal.field+'_'+gal.gal_id)
+        cgabs = CGMAbsSys(gal, igm_sys, name=gal.field+'_'+gal.gal_id, **kwargs)
         # EBV
         cgabs.ebv = galx['EBV'][0]
         # Ions
@@ -239,9 +239,14 @@ class COSHalos(CGMAbsSurvey):
         self.cgm_abs[-1].igm_sys._ionN = dat_tab
         # NHI
         HI = (dat_tab['Z'] == 1) & (dat_tab['ion'] == 1)
-        self.cgm_abs[-1].igm_sys.NHI = dat_tab[HI]['logN'][0]
-        self.cgm_abs[-1].igm_sys.sig_NHI = dat_tab[HI]['sig_logN'][0]
-        self.cgm_abs[-1].igm_sys.flag_NHI = dat_tab[HI]['flag_N'][0]
+        if np.sum(HI) > 0:
+            self.cgm_abs[-1].igm_sys.NHI = dat_tab[HI]['logN'][0]
+            self.cgm_abs[-1].igm_sys.sig_NHI = dat_tab[HI]['sig_logN'][0]
+            self.cgm_abs[-1].igm_sys.flag_NHI = dat_tab[HI]['flag_N'][0]
+        else:
+            warnings.warn("No HI measurement for {}".format(self.cgm_abs[-1]))
+            self.cgm_abs[-1].igm_sys.flag_NHI = 0
+
         #if self.cgm_abs[-1].name == 'J0950+4831_177_27':
         #    pdb.set_trace()
 
@@ -259,13 +264,15 @@ class COSHalos(CGMAbsSurvey):
         # Loop
         if test is True:
             cos_files = glob.glob(self.fits_path+'/J09*.fits.gz')  # For testing
-        else:
+        elif 'Dwarfs' in self.fits_path:  # COS-Dwarfs
+            cos_files = glob.glob(self.fits_path+'/*.fits')
+        else:  # COS-Halos
             cos_files = glob.glob(self.fits_path+'/J*.fits.gz')
         # Read
         for fil in cos_files:
             self.load_single_fits(fil, **kwargs)
         # Werk+14
-        if self.werk14_cldy is not None:
+        if ('Halos' in self.fits_path) and (self.werk14_cldy is not None):
             self.load_werk14()
 
     def load_werk14(self):
