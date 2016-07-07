@@ -260,7 +260,7 @@ class COSHalos(CGMAbsSurvey):
         pckl_fil : string
           Name of file for pickling
         """
-        warnings.warn("This module will be DEPRECATED")
+        warnings.warn("This method will be DEPRECATED")
         # Loop
         if test is True:
             cos_files = glob.glob(self.fits_path+'/J09*.fits.gz')  # For testing
@@ -300,7 +300,6 @@ class COSHalos(CGMAbsSurvey):
                                         np.log10(self.werk14_cldy['NH_HIGH'][mtc][0])]
             else:
                 print('No Werk+14 Cloudy solution for {:s}'.format(cgm_abs.name))
-
 
     def load_sys(self, tfile=None, empty=True, debug=False, **kwargs):
         """ Load the COS-Halos survey from JSON files
@@ -352,8 +351,8 @@ class COSHalos(CGMAbsSurvey):
             self.cgm_abs.append(cgmsys)
         tar.close()
         # Werk+14
-        if self.werk14_cldy is not None:
-            self.load_werk14()
+        if ('Halos' in self.fits_path) and (self.werk14_cldy is not None):
+                self.load_werk14()
 
     def load_mtl_pdfs(self, ZH_fil, keep_all=False):
         """ Load the metallicity PDFs from an input file (usually hdf5)
