@@ -94,7 +94,8 @@ class CGMAbsSys(object):
         # IGM system
         igm_sys = IGMSystem.from_dict(idict['igm_sys'], **kwargs)
         # Keywords
-        kwargs2 = dict(name=idict['Name'])
+        kwargs2 = kwargs.copy()
+        kwargs2['name'] = idict['Name']
         if 'cosmo' in idict.keys():
             kwargs2['cosmo'] = getattr(cosmology, idict['cosmo'])
             if use_angrho:
@@ -106,7 +107,7 @@ class CGMAbsSys(object):
         return slf
 
     def __init__(self, galaxy, igm_sys, cosmo=None, name=None, rho=None, PA=None,
-                 ang_sep=None, chk_lowz=True):
+                 ang_sep=None, chk_lowz=True, **kwargs):
         """
         Parameters
         ----------
