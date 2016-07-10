@@ -17,6 +17,8 @@ from astropy.table import Table, Column
 from linetools.spectra import io as lsio
 from linetools.spectralline import AbsLine
 from linetools.analysis import absline as ltaa
+#from linetools.analysis.abskin import AbsKin
+from linetools.analysis import abskin as laak
 from linetools.isgm.abscomponent import AbsComponent
 
 from pyigm.metallicity.pdf import MetallicityPDF, DensityPDF, GenericPDF
@@ -411,6 +413,7 @@ class COSHalos(CGMAbsSurvey):
         kin_file: str
           Name of kinematics output file [First made for John Forbes]
         """
+        reload(laak)
     
         if flg == 0: # Load
             if kin_file is None:
@@ -434,10 +437,10 @@ class COSHalos(CGMAbsSurvey):
             fgal = zip(self.field, self.gal_id)
             for qq,cgm_abs in enumerate(self.cgm_abs):
                 # Match to kin_init
-                mt = np.where( (cgm_abs.field == kin_init['QSO']) &
-                               (cgm_abs.gal_id == kin_init['Galaxy']) )[0]
+                mt = np.where((kin_init['QSO'] == cgm_abs.field) &
+                               (kin_init['Galaxy'] == cgm_abs.gal_id))[0]
                 if len(mt) == 0:
-                    print('load_kin: No kinematics for {:s}, {:s}'.format(cgm_abs.field,
+                    warnings.warn('load_kin: No kinematics for {:s}, {:s}'.format(cgm_abs.field,
                                                                           cgm_abs.gal_id))
                     continue
                 mt = mt[0]
@@ -447,16 +450,18 @@ class COSHalos(CGMAbsSurvey):
                     wrest = kin_init['mtl_wr'][mt]*u.AA 
                     if wrest.value <= 1:
                         pdb.set_trace()
-                    spec = self.load_bg_cos_spec( qq, wrest )
+                    spec = self.load_bg_cos_spec(qq, wrest)
                     vmnx = (kin_init['L_vmn'][mt]*u.km/u.s, kin_init['L_vmx'][mt]*u.km/u.s)
                     # Process
-                    cgm_abs.abs_sys.kin['Metal'] = KinAbs(wrest, vmnx)
-                    cgm_abs.abs_sys.kin['Metal'].fill_kin(spec, per=0.07)
+                    mkin = laak.AbsKin(wrest, cgm_abs.igm_sys.zabs, vmnx)
+                    mkin.fill_kin(spec, per=0.07)
+                    cgm_abs.igm_sys.kin['Metal'] = mkin.data.copy()
                     # Save spec
-                    cgm_abs.abs_sys.kin['Metal'].spec = spec
+                    #cgm_abs.igm_sys.kin['Metal']['spec'] = spec
                 else:
                     # Fill with zeros (for the keys)
-                    cgm_abs.abs_sys.kin['Metal'] = KinAbs(0.*u.AA, (0., 0.))
+                    dkin = laak.AbsKin(0.*u.AA, 0., (0., 0.))
+                    cgm_abs.igm_sys.kin['Metal'] = dkin.data.copy()
 
                 # HI
                 if kin_init['flgH'][mt] > 0:
@@ -464,14 +469,18 @@ class COSHalos(CGMAbsSurvey):
                     if wrest.value <= 1:
                         pdb.set_trace()
                     spec = self.load_bg_cos_spec( qq, wrest )
+                    if spec is None:
+                        pdb.set_trace()
                     vmnx = (kin_init['HIvmn'][mt]*u.km/u.s, kin_init['HIvmx'][mt]*u.km/u.s) 
                     # Process
-                    cgm_abs.abs_sys.kin['HI'] = KinAbs(wrest, vmnx)
-                    cgm_abs.abs_sys.kin['HI'].fill_kin(spec, per=0.07)
-                    cgm_abs.abs_sys.kin['HI'].spec = spec
+                    HIkin = laak.AbsKin(wrest, cgm_abs.igm_sys.zabs, vmnx)
+                    HIkin.fill_kin(spec, per=0.07)
+                    cgm_abs.igm_sys.kin['HI'] = HIkin.data.copy()
+                    #cgm_abs.igm_sys.kin['HI']['spec'] = spec
                 else:
                     # Fill with zeros (for the keys)
-                    cgm_abs.abs_sys.kin['HI'] = KinAbs(0.*u.AA, (0., 0.))
+                    dkin = laak.AbsKin(0.*u.AA, 0., (0., 0.))
+                    cgm_abs.igm_sys.kin['HI'] = dkin.data.copy()
 
 
             #tmp = cos_halos.abs_kin('Metal')['Dv']
@@ -714,14 +723,16 @@ class COSDwarfs(COSHalos):
         self.survey = 'COS-Dwarfs'
         self.ref = 'Bordoloi+14'
         if cdir is None:
-            self.cdir = os.environ.get('DROPBOX_DIR')+'/COS-Dwarfs/'
+            self.cdir = os.environ.get('COSHALOS_DATA')
+            #self.cdir = os.environ.get('DROPBOX_DIR')+'/COS-Dwarfs/'
         if fits_path is None:
             self.fits_path = os.path.abspath(os.environ.get('DROPBOX_DIR')+'/COS-Dwarfs/Targets/FITS')
         else:
             self.fits_path = fits_path
         # Kinematics
         if kin_init_file is None:
-            self.kin_init_file = os.path.abspath(os.environ.get('DROPBOX_DIR')+'/COS-Dwarfs/Kin/cosdwarfs_kin_driver.dat') 
+            #self.kin_init_file = os.path.abspath(os.environ.get('DROPBOX_DIR')+'/COS-Dwarfs/Kin/cosdwarfs_kin_driver.dat')
+            self.kin_init_file = self.cdir+'/Kin/cosdwarfs_kin_driver.dat'
         else:
             self.kin_init_file = kin_init_file
 
