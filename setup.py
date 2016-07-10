@@ -25,7 +25,7 @@ try:
     from ConfigParser import ConfigParser
 except ImportError:
     from configparser import ConfigParser
-conf = config.ConfigParser()
+conf = ConfigParser()
 conf.read(['setup.cfg'])
 metadata = dict(conf.items('metadata'))
 
