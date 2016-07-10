@@ -482,10 +482,6 @@ class COSHalos(CGMAbsSurvey):
                     dkin = laak.AbsKin(0.*u.AA, 0., (0., 0.))
                     cgm_abs.igm_sys.kin['HI'] = dkin.data.copy()
 
-
-            #tmp = cos_halos.abs_kin('Metal')['Dv']
-            #xdb.set_trace()
-    # 
     def load_gal_spec(self, inp):
         """ Load the galaxy spectrum
 
