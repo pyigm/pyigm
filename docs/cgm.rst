@@ -118,3 +118,17 @@ CGMAbsSys objects, Galaxy objects, and then IGMSystem objects. ::
    z_array = cgmsurvey.z  # Grabs galaxy redshifts
    coord = cgmsurvey.coord # Grabs galaxy coordinates
 
+Miscelaneous
+------------
+
+There are a few methods related to CGM analysis available.
+
+dN/dX
++++++
+
+Calculate dN/dX given a cosmology and a paremterization of the
+halos.  Code of interest is cgm.analysis.dndx_rvir::
+
+   dNdX = cgm.analysis.dndx_rvir()
+
+
