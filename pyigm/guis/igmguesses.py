@@ -50,6 +50,8 @@ COLOR_MODEL = '#999966'
 COLORS = ['#0066FF','#339933','#CC3300','#660066','#FF9900','#B20047']
 zero_coord = SkyCoord(ra=0.*u.deg, dec=0.*u.deg)  # Coords
 
+import sys
+sys.setrecursionlimit(150)
 
 # GUI for fitting LLS in a spectrum
 class IGMGuessesGui(QtGui.QMainWindow):
@@ -189,18 +191,24 @@ L         : toggle between displaying/hiding labels of currently
             (spec.wavelength, np.ones(len(spec.wavelength))))
 
         # LineList (Grab ISM, Strong and HI as defaults)
+        print('Loading built in LineList: ISM, HI and Strong.')
         self.llist = ltgu.set_llist('ISM')
         self.llist['HI'] = LineList('HI')
-        self.llist['HI']._data = self.llist['HI']._data[::-1] # invert order of Lyman series
         self.llist['Strong'] = LineList('Strong')
         # self.llist['H2'] = LineList('H2')
+        # Setup available LineList; this will be the default one
+        # which will be updated using a given base Linelist (e.g. 'ISM', 'Strong', 'HI')
+        self.llist['available'] = LineList('ISM')
+        # Sort them conveniently
+        self.llist['ISM'].sortdata(['abundance', 'rel_strength'], reverse=True)
+        self.llist['HI'].sortdata('rel_strength', reverse=True)
+        self.llist['Strong'].sortdata('rel_strength', reverse=True)
+        self.llist['Strong'].sortdata(['abundance', 'rel_strength'], reverse=True)
+        # Append the new ones
         self.llist['Lists'].append('HI')
         self.llist['Lists'].append('Strong')
-        # self.llist['Lists'].append('H2')
-        # Setup available LineList; this will be the default one
-        # which will be updated using a given base Linelist (e.g. 'ISM', 'HI')
-        self.llist['available'] = LineList('ISM')
         self.llist['Lists'].append('available')
+        # self.llist['Lists'].append('H2')
 
         # Define initial redshift
         z = 0.0
@@ -259,29 +267,36 @@ L         : toggle between displaying/hiding labels of currently
         print(self.help_message)
 
     def update_available_lines(self, linelist):
-        """Grab the available lines in the spectrum at the current
-        redshift with the current linelist (a given LineList object)
+        """Grab the available LineList in the spectrum at the current
+        redshift with the current parent linelist (another
+        given LineList object)
         """
 
+        print('Updating available transitions from parent LineList: {}, '
+              'using n_max_tuple={} and min_strength={:.2f}'.format(linelist.list, self.n_max_tuple, self.min_strength))
         z = self.velplot_widg.z
         wvmin = self.velplot_widg.spec.wvmin
         wvmax = self.velplot_widg.spec.wvmax
         wvlims = (wvmin / (1. + z), wvmax / (1. + z))
+
         transitions = linelist.available_transitions(
-            wvlims, n_max=None, n_max_tuple=self.n_max_tuple, min_strength=self.min_strength)
+            wvlims, n_max_tuple=self.n_max_tuple, min_strength=self.min_strength)
 
-        if transitions is not None:
+        if transitions is None:
+            print('  There are no transitions available!')
+            print('  You will probably need to modify your redshift.')
+            return
+        elif isinstance(transitions, dict):
+            names = [transitions['name']]
+        else: # transitions should be a QTable
             names = list(np.array(transitions['name']))
-        else:
-            print('There are no transitions available!')
-            print('You will probably need to modify your redshift..')
-            names = []
         if len(names) > 0:
-            self.llist['available'] = linelist.subset_lines(reset_data=True, subset=names)
+            self.llist['available'] = linelist.subset_lines(subset=names, reset_data=True, verbose=True,
+                                                            sort_by='as_given')
             self.llist['List'] = 'available'
-        else:
-            self.llist['List'] = 'Strong'
-
+        else: # This should never happen
+            raise ValueError('Something is odd in update_available_lines! Please debug.')
+        print('Done.')
 
     def on_list_change(self):
         self.update_boxes()
@@ -646,9 +661,17 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 zcomp = 0.5 * (zmin + zmax)
             if vlim is None:
                 vlim = self.avmnx - 0.5 * (self.avmnx[1] + self.avmnx[0])
-            # Create component from lines available in the ISM LineList, it makes more sense
-            linelist = self.llist['ISM']
-            new_comp = create_component(zcomp, inp, linelist, vlim=vlim, spec=self.spec)
+
+            # Create component from lines available in most complete relevant LineList,
+            # in order to avoid missing something
+            current_parent_linelist = self.llist[self.llist['List']].list
+            if current_parent_linelist in ['ISM', 'Strong', 'EUV', 'HI']:
+                linelist_aux = self.llist['ISM']
+            elif current_parent_linelist in ['CO', 'H2']:
+                linelist_aux = self.llist[current_parent_linelist]
+
+            # add the component
+            new_comp = create_component(zcomp, inp, linelist_aux, vlim=vlim, spec=self.spec)
 
         # Fit
         #print('doing fit for {:g}'.format(wrest))
@@ -874,18 +897,22 @@ class IGGVelPlotWidget(QtGui.QWidget):
             # self.parent.update_available_lines(linelist=self.llist['HI'])
             self.idx_line = 0
             self.init_lines()
+            print('Current LineList set to `HI`.')
         if event.key == 'T':  # Update Strong
             self.llist['List'] = 'Strong'
-            #self.parent.update_available_lines(linelist=self.llist['Strong'])
+            # self.parent.update_available_lines(linelist=self.llist['Strong'])
             self.idx_line = 0
             self.init_lines()
+            print('Current LineList set to `Strong`.')
         if event.key == 'M':  # Update ISM
-            # self.llist['List'] = 'ISM'
-            self.parent.update_available_lines(linelist=self.llist['ISM'])
+            self.llist['List'] = 'ISM'
+            # self.parent.update_available_lines(linelist=self.llist['ISM'])
             self.idx_line = 0
             self.init_lines()
+            print('Current LineList set to `ISM`.')
         if event.key == 'U':  # Select a subset of the available lines
-            self.parent.update_available_lines(linelist=self.llist['List'])
+            current_linelist = self.llist[self.llist['List']]
+            self.parent.update_available_lines(linelist=current_linelist)
             self.idx_line = 0
             self.init_lines()
 
@@ -1445,7 +1472,7 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
         # Restrict to those with spectral coverage!
         if (trans['wrest']*(1+z) < wvmin) or (trans['wrest']*(1+z) > wvmax):
             continue
-        aline = AbsLine(trans['wrest'])  #, linelist=self.linelist))
+        aline = AbsLine(trans['wrest'],  linelist=linelist)
         aline.attrib['z'] = z
         aline.analy['vlim'] = vlim
         abslines.append(aline)
