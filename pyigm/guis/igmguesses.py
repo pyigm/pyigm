@@ -45,11 +45,10 @@ from linetools.guis import simple_widgets as ltgsm
 from linetools import utils as ltu
 
 # Global variables; defined as globals mainly to increase speed
-c_mks = const.c.to('km/s').value
+c_kms = const.c.to('km/s').value
 COLOR_MODEL = '#999966'
 COLORS = ['#0066FF','#339933','#CC3300','#660066','#FF9900','#B20047']
 zero_coord = SkyCoord(ra=0.*u.deg, dec=0.*u.deg)  # Coords
-
 
 # GUI for fitting LLS in a spectrum
 class IGMGuessesGui(QtGui.QMainWindow):
@@ -189,18 +188,24 @@ L         : toggle between displaying/hiding labels of currently
             (spec.wavelength, np.ones(len(spec.wavelength))))
 
         # LineList (Grab ISM, Strong and HI as defaults)
+        print('Loading built in LineList: ISM, HI and Strong.')
         self.llist = ltgu.set_llist('ISM')
         self.llist['HI'] = LineList('HI')
-        self.llist['HI']._data = self.llist['HI']._data[::-1] # invert order of Lyman series
         self.llist['Strong'] = LineList('Strong')
         # self.llist['H2'] = LineList('H2')
+        # Setup available LineList; this will be the default one
+        # which will be updated using a given base Linelist (e.g. 'ISM', 'Strong', 'HI')
+        self.llist['available'] = LineList('ISM')
+        # Sort them conveniently
+        self.llist['ISM'].sortdata(['abundance', 'ion_name', 'rel_strength'], reverse=True)
+        self.llist['HI'].sortdata('rel_strength', reverse=True)
+        self.llist['Strong'].sortdata('rel_strength', reverse=True)
+        self.llist['Strong'].sortdata(['abundance', 'ion_name', 'rel_strength'], reverse=True)
+        # Append the new ones
         self.llist['Lists'].append('HI')
         self.llist['Lists'].append('Strong')
-        # self.llist['Lists'].append('H2')
-        # Setup available LineList; this will be the default one
-        # which will be updated using a given base Linelist (e.g. 'ISM', 'HI')
-        self.llist['available'] = LineList('ISM')
         self.llist['Lists'].append('available')
+        # self.llist['Lists'].append('H2')
 
         # Define initial redshift
         z = 0.0
@@ -259,35 +264,41 @@ L         : toggle between displaying/hiding labels of currently
         print(self.help_message)
 
     def update_available_lines(self, linelist):
-        """Grab the available lines in the spectrum at the current
-        redshift with the current linelist (a given LineList object)
+        """Grab the available LineList in the spectrum at the current
+        redshift with the current parent linelist (another
+        given LineList object)
         """
+
+        print('Updating available transitions from parent LineList: {}, '
+              'using n_max_tuple={} and min_strength={:.1f}'.format(linelist.list, self.n_max_tuple, self.min_strength))
 
         z = self.velplot_widg.z
         wvmin = self.velplot_widg.spec.wvmin
         wvmax = self.velplot_widg.spec.wvmax
         wvlims = (wvmin / (1. + z), wvmax / (1. + z))
+
         transitions = linelist.available_transitions(
-            wvlims, n_max=None, n_max_tuple=self.n_max_tuple, min_strength=self.min_strength)
+            wvlims, n_max_tuple=self.n_max_tuple, min_strength=self.min_strength)
 
-        if transitions is not None:
+        if transitions is None:
+            print('  There are no transitions available!')
+            print('  You will probably need to modify your redshift.')
+            return
+        elif isinstance(transitions, dict):
+            names = [transitions['name']]
+        else: # transitions should be a QTable
             names = list(np.array(transitions['name']))
-        else:
-            print('There are no transitions available!')
-            print('You will probably need to modify your redshift..')
-            names = []
         if len(names) > 0:
-            self.llist['available'] = linelist.subset_lines(reset_data=True, subset=names)
+            self.llist['available'] = linelist.subset_lines(subset=names, reset_data=True, verbose=True,
+                                                            sort_by='as_given')
             self.llist['List'] = 'available'
-        else:
-            self.llist['List'] = 'Strong'
-
+        print('Done.')
 
     def on_list_change(self):
         self.update_boxes()
 
     def create_status_bar(self):
-        self.status_text = QtGui.QLabel("IGMGuessesGui")
+        self.status_text = QtGui.QLabel("IGMGuessesGUI: Please press '?' to display help message in terminal.")
         self.statusBar().addWidget(self.status_text, 1)
 
     def delete_component(self, component):
@@ -300,7 +311,7 @@ L         : toggle between displaying/hiding labels of currently
 
         # Mask
         # for line in component.lines:
-        #     wvmnx = line.wrest * (1 + component.zcomp) * (1 + component.vlim.value / c_mks)
+        #     wvmnx = line.wrest * (1 + component.zcomp) * (1 + component.vlim.value / c_kms)
         #     gdp = np.where((self.velplot_widg.spec.wavelength > wvmnx[0])&
         #         (self.velplot_widg.spec.wavelength < wvmnx[1]))[0]
         #     self.velplot_widg.spec.good_pixels[gdp] = 0
@@ -642,13 +653,21 @@ class IGGVelPlotWidget(QtGui.QWidget):
         else:  # wrest
             # Center z and reset vmin/vmax
             if zcomp is None:
-                zmin, zmax = self.z + (1 + self.z) * (self.avmnx.value / c_mks)
+                zmin, zmax = self.z + (1 + self.z) * (self.avmnx.value / c_kms)
                 zcomp = 0.5 * (zmin + zmax)
             if vlim is None:
                 vlim = self.avmnx - 0.5 * (self.avmnx[1] + self.avmnx[0])
-            # Create component from lines available in the ISM LineList, it makes more sense
-            linelist = self.llist['ISM']
-            new_comp = create_component(zcomp, inp, linelist, vlim=vlim, spec=self.spec)
+
+            # Create component from lines available in most complete relevant LineList,
+            # in order to avoid missing something
+            current_parent_linelist = self.llist[self.llist['List']].list
+            if current_parent_linelist in ['ISM', 'Strong', 'EUV', 'HI']:
+                linelist_aux = self.llist['ISM']
+            elif current_parent_linelist in ['CO', 'H2']:
+                linelist_aux = self.llist[current_parent_linelist]
+
+            # add the component
+            new_comp = create_component(zcomp, inp, linelist_aux, vlim=vlim, spec=self.spec)
 
         # Fit
         #print('doing fit for {:g}'.format(wrest))
@@ -666,7 +685,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
             # for line in aux_comp_list:
                 # print('masking {:g}'.format(line.wrest))
-                # wvmnx = line.wrest*(1+new_comp.zcomp)*(1 + vlim.value / c_mks)
+                # wvmnx = line.wrest*(1+new_comp.zcomp)*(1 + vlim.value / c_kms)
                 # gdp = np.where((self.spec.wavelength>wvmnx[0])&
                 #     (self.spec.wavelength<wvmnx[1]))[0]
                 # if len(gdp) > 0:
@@ -705,8 +724,8 @@ class IGGVelPlotWidget(QtGui.QWidget):
         # Restrict parameter space
         fitvoigt.logN.min = 10.
         fitvoigt.b.min = 1.
-        fitvoigt.z.min = component.zcomp + component.vlim[0].value * (1 + component.zcomp) / c_mks
-        fitvoigt.z.max = component.zcomp + component.vlim[1].value * (1 + component.zcomp) / c_mks
+        fitvoigt.z.min = component.zcomp + component.vlim[0].value * (1 + component.zcomp) / c_kms
+        fitvoigt.z.max = component.zcomp + component.vlim[1].value * (1 + component.zcomp) / c_kms
 
         # Fit
         fitter = fitting.LevMarLSQFitter()
@@ -807,11 +826,11 @@ class IGGVelPlotWidget(QtGui.QWidget):
             elif event.key == 'R': # Refit
                 self.fit_component(self.parent.fiddle_widg.component)
             elif event.key == '1':
-                dvz_mks = c_mks * (self.z - comp.zcomp) / (1 + self.z)
-                comp.vlim[0] = (event.xdata + dvz_mks)*u.km/u.s
+                dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
+                comp.vlim[0] = (event.xdata + dvz_kms)*u.km/u.s
             elif event.key == '2':
-                dvz_mks = c_mks * (self.z - comp.zcomp) / (1 + self.z)
-                comp.vlim[1] = (event.xdata + dvz_mks)*u.km/u.s
+                dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
+                comp.vlim[1] = (event.xdata + dvz_kms)*u.km/u.s
             # Updates (this captures them all and redraws)
             self.parent.fiddle_widg.update_component()
 
@@ -830,7 +849,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
             #QtCore.pyqtRemoveInputHook()
             #pdb.set_trace()
             #QtCore.pyqtRestoreInputHook()
-            dvz = np.array([c_mks * (self.z - components[mt].zcomp) / (1+self.z) for mt in mtc])
+            dvz = np.array([c_kms * (self.z - components[mt].zcomp) / (1+self.z) for mt in mtc])
             # Find minimum
             mindvz = np.argmin(np.abs(dvz+event.xdata))
             if event.key == 'S':
@@ -840,7 +859,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
         ## Reset z
         if event.key == ' ': # space to move redshift
-            self.z = self.z + event.xdata * (1 + self.z) / c_mks
+            self.z = self.z + event.xdata * (1 + self.z) / c_kms
             # Drawing
             self.psdict['x_minmax'] = self.vmnx.value
 
@@ -874,24 +893,40 @@ class IGGVelPlotWidget(QtGui.QWidget):
             # self.parent.update_available_lines(linelist=self.llist['HI'])
             self.idx_line = 0
             self.init_lines()
+            s = "current parent LineList set to 'HI'."
+            print(s)
+            self.parent.statusBar().showMessage('IGMGuessesGUI: '+ s)
         if event.key == 'T':  # Update Strong
             self.llist['List'] = 'Strong'
-            #self.parent.update_available_lines(linelist=self.llist['Strong'])
+            # self.parent.update_available_lines(linelist=self.llist['Strong'])
             self.idx_line = 0
             self.init_lines()
+            s = "current parent LineList set to 'Strong'."
+            print(s)
+            self.parent.statusBar().showMessage('IGMGuessesGUI: '+ s)
         if event.key == 'M':  # Update ISM
-            # self.llist['List'] = 'ISM'
-            self.parent.update_available_lines(linelist=self.llist['ISM'])
+            self.llist['List'] = 'ISM'
+            # self.parent.update_available_lines(linelist=self.llist['ISM'])
             self.idx_line = 0
             self.init_lines()
+            s = "current parent LineList set to 'ISM'."
+            print(s)
+            self.parent.statusBar().showMessage('IGMGuessesGUI: '+ s)
         if event.key == 'U':  # Select a subset of the available lines
-            self.parent.update_available_lines(linelist=self.llist['List'])
+            current_linelist = self.llist[self.llist['List']]
+            parent_linelist = self.llist[current_linelist.list]
+            # QtCore.pyqtRemoveInputHook()
+            # pdb.set_trace()
+            # QtCore.pyqtRestoreInputHook()
+            self.parent.update_available_lines(linelist=parent_linelist)
             self.idx_line = 0
             self.init_lines()
+            s = "current LineList set to a subset of '{}' at z={:.3f}.".format(current_linelist.list, self.z)
+            self.parent.statusBar().showMessage('IGMGuessesGUI: '+ s)
 
         ## Add component
         if event.key == 'A': # Add to lines
-            if self.out_of_bounds(wvobs * (1 + event.xdata / c_mks)):
+            if self.out_of_bounds(wvobs * (1 + event.xdata / c_kms)):
                 return
             if self.flag_add is False:
                 self.vtmp = event.xdata
@@ -909,12 +944,12 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 print('Need to generate a component first!')
                 return
             comp = self.parent.fiddle_widg.component
-            dvz_mks = c_mks * (self.z - comp.zcomp) / (1 + self.z)
+            dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
             #QtCore.pyqtRemoveInputHook()
             #pdb.set_trace()
             #QtCore.pyqtRestoreInputHook()
             self.wrest = wrest
-            self.avmnx = comp.vlim - dvz_mks*u.km/u.s
+            self.avmnx = comp.vlim - dvz_kms*u.km/u.s
             self.add_component(wrest, zcomp=comp.zcomp, vlim=comp.vlim)
             self.wrest = 0.
 
@@ -924,11 +959,11 @@ class IGGVelPlotWidget(QtGui.QWidget):
             # X = Add to mask
             if self.flag_mask is False:
                 self.wrest = wrest
-                self.wtmp = wvobs * (1 + event.xdata / c_mks)
+                self.wtmp = wvobs * (1 + event.xdata / c_kms)
                 self.vtmp = event.xdata
                 self.flag_mask = True
             else:
-                wtmp2 = wvobs * (1 + event.xdata / c_mks)
+                wtmp2 = wvobs * (1 + event.xdata / c_kms)
                 twvmnx = [np.minimum(self.wtmp,wtmp2), np.maximum(self.wtmp,wtmp2)]
                 # Modify mask
                 mskp = np.where((self.spec.wavelength>twvmnx[0])&
@@ -1084,8 +1119,8 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 self.ax.plot( [0., 0.], [-1e9, 1e9], ':', color='gray')
                 # Velocity
                 wvobs = (1+self.z) * wrest
-                wvmnx = wvobs*(1 + np.array(self.psdict['x_minmax']) / c_mks)
-                velo = (self.spec.wavelength/wvobs - 1.) * c_mks * u.km/u.s
+                wvmnx = wvobs*(1 + np.array(self.psdict['x_minmax']) / c_kms)
+                velo = (self.spec.wavelength/wvobs - 1.) * c_kms * u.km/u.s
 
                 # Plot spectrum and model
                 # flux = self.spec.flux
@@ -1115,7 +1150,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                     # Any lines inside?
                     mtw = np.where((line_wvobs > wvmnx[0]) & (line_wvobs<wvmnx[1]))[0]
                     for imt in mtw:
-                        v = c_mks * (line_wvobs[imt]/wvobs - 1)
+                        v = c_kms * (line_wvobs[imt]/wvobs - 1)
                         self.ax.text(v, 0.5, line_lbl[imt], color=COLOR_MODEL, backgroundcolor='w',
                             bbox={'pad':0,'edgecolor':'none', 'facecolor':'w'}, size='xx-small',
                                 rotation=90.,ha='center',va='center')
@@ -1154,17 +1189,17 @@ class IGGVelPlotWidget(QtGui.QWidget):
                         #QtCore.pyqtRemoveInputHook()
                         #pdb.set_trace()
                         #QtCore.pyqtRestoreInputHook()
-                        dvz_mks = c_mks * (self.z - comp.zcomp) / (1 + self.z)
-                        if dvz_mks < np.max(np.abs(self.psdict['x_minmax'])):
+                        dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
+                        if dvz_kms < np.max(np.abs(self.psdict['x_minmax'])):
                             if comp is self.parent.fiddle_widg.component:
                                 lw = 1.5
                             else:
                                 lw = 1.
                             # Plot
                             for vlim in comp.vlim:
-                                self.ax.plot([vlim.value-dvz_mks]*2,self.psdict['y_minmax'],
+                                self.ax.plot([vlim.value-dvz_kms]*2,self.psdict['y_minmax'],
                                     '--', color='r',linewidth=lw)
-                            self.ax.plot([-1.*dvz_mks]*2,[1.0,1.05],
+                            self.ax.plot([-1.*dvz_kms]*2,[1.0,1.05],
                                 '-', color='grey',linewidth=lw)
 
                 # Fonts
@@ -1445,7 +1480,7 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
         # Restrict to those with spectral coverage!
         if (trans['wrest']*(1+z) < wvmin) or (trans['wrest']*(1+z) > wvmax):
             continue
-        aline = AbsLine(trans['wrest'])  #, linelist=self.linelist))
+        aline = AbsLine(trans['wrest'],  linelist=linelist)
         aline.attrib['z'] = z
         aline.analy['vlim'] = vlim
         abslines.append(aline)
