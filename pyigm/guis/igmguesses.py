@@ -197,10 +197,10 @@ L         : toggle between displaying/hiding labels of currently
         # which will be updated using a given base Linelist (e.g. 'ISM', 'Strong', 'HI')
         self.llist['available'] = LineList('ISM')
         # Sort them conveniently
-        self.llist['ISM'].sortdata(['abundance', 'rel_strength'], reverse=True)
+        self.llist['ISM'].sortdata(['abundance', 'ion_name', 'rel_strength'], reverse=True)
         self.llist['HI'].sortdata('rel_strength', reverse=True)
         self.llist['Strong'].sortdata('rel_strength', reverse=True)
-        self.llist['Strong'].sortdata(['abundance', 'rel_strength'], reverse=True)
+        self.llist['Strong'].sortdata(['abundance', 'ion_name', 'rel_strength'], reverse=True)
         # Append the new ones
         self.llist['Lists'].append('HI')
         self.llist['Lists'].append('Strong')
@@ -270,7 +270,8 @@ L         : toggle between displaying/hiding labels of currently
         """
 
         print('Updating available transitions from parent LineList: {}, '
-              'using n_max_tuple={} and min_strength={:.2f}'.format(linelist.list, self.n_max_tuple, self.min_strength))
+              'using n_max_tuple={} and min_strength={:.1f}'.format(linelist.list, self.n_max_tuple, self.min_strength))
+
         z = self.velplot_widg.z
         wvmin = self.velplot_widg.spec.wvmin
         wvmax = self.velplot_widg.spec.wvmax
@@ -297,7 +298,7 @@ L         : toggle between displaying/hiding labels of currently
         self.update_boxes()
 
     def create_status_bar(self):
-        self.status_text = QtGui.QLabel("IGMGuessesGui")
+        self.status_text = QtGui.QLabel("IGMGuessesGUI: Please press '?' to display help message in terminal.")
         self.statusBar().addWidget(self.status_text, 1)
 
     def delete_component(self, component):
@@ -892,24 +893,36 @@ class IGGVelPlotWidget(QtGui.QWidget):
             # self.parent.update_available_lines(linelist=self.llist['HI'])
             self.idx_line = 0
             self.init_lines()
-            print('Current LineList set to `HI`.')
+            s = "current parent LineList set to 'HI'."
+            print(s)
+            self.parent.statusBar().showMessage('IGMGuessesGUI: '+ s)
         if event.key == 'T':  # Update Strong
             self.llist['List'] = 'Strong'
             # self.parent.update_available_lines(linelist=self.llist['Strong'])
             self.idx_line = 0
             self.init_lines()
-            print('Current LineList set to `Strong`.')
+            s = "current parent LineList set to 'Strong'."
+            print(s)
+            self.parent.statusBar().showMessage('IGMGuessesGUI: '+ s)
         if event.key == 'M':  # Update ISM
             self.llist['List'] = 'ISM'
             # self.parent.update_available_lines(linelist=self.llist['ISM'])
             self.idx_line = 0
             self.init_lines()
-            print('Current LineList set to `ISM`.')
+            s = "current parent LineList set to 'ISM'."
+            print(s)
+            self.parent.statusBar().showMessage('IGMGuessesGUI: '+ s)
         if event.key == 'U':  # Select a subset of the available lines
             current_linelist = self.llist[self.llist['List']]
-            self.parent.update_available_lines(linelist=current_linelist)
+            parent_linelist = self.llist[current_linelist.list]
+            # QtCore.pyqtRemoveInputHook()
+            # pdb.set_trace()
+            # QtCore.pyqtRestoreInputHook()
+            self.parent.update_available_lines(linelist=parent_linelist)
             self.idx_line = 0
             self.init_lines()
+            s = "current LineList set to a subset of '{}' at z={:.3f}.".format(current_linelist.list, self.z)
+            self.parent.statusBar().showMessage('IGMGuessesGUI: '+ s)
 
         ## Add component
         if event.key == 'A': # Add to lines
