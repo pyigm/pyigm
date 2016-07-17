@@ -17,7 +17,6 @@ from astropy.table import Table, Column
 from linetools.spectra import io as lsio
 from linetools.spectralline import AbsLine
 from linetools.analysis import absline as ltaa
-#from linetools.analysis.abskin import AbsKin
 from linetools.analysis import abskin as laak
 from linetools.isgm.abscomponent import AbsComponent
 
@@ -451,17 +450,21 @@ class COSHalos(CGMAbsSurvey):
                     if wrest.value <= 1:
                         pdb.set_trace()
                     spec = self.load_bg_cos_spec(qq, wrest)
-                    vmnx = (kin_init['L_vmn'][mt]*u.km/u.s, kin_init['L_vmx'][mt]*u.km/u.s)
+                    vmnx = (kin_init['L_vmn'][mt], kin_init['L_vmx'][mt])*u.km/u.s
                     # Process
-                    mkin = laak.AbsKin(wrest, cgm_abs.igm_sys.zabs, vmnx)
-                    mkin.fill_kin(spec, per=0.07)
-                    cgm_abs.igm_sys.kin['Metal'] = mkin.data.copy()
+                    aline = AbsLine(wrest)
+                    aline.analy['spec'] = spec
+                    aline.analy['vlim'] = vmnx
+                    aline.attrib['z'] = cgm_abs.igm_sys.zabs
+                    fx, sig, cdict = aline.cut_spec()
+                    # Kin
+                    stau = laak.generate_stau(cdict['velo'], fx, sig)
+                    cgm_abs.igm_sys.kin['Metal'] = laak.pw97_kin(cdict['velo'], stau, per=0.07)
+                    cgm_abs.igm_sys.kin['Metal'].update(laak.cgm_kin(cdict['velo'], stau, per=0.07))
                     # Save spec
                     #cgm_abs.igm_sys.kin['Metal']['spec'] = spec
                 else:
-                    # Fill with zeros (for the keys)
-                    dkin = laak.AbsKin(0.*u.AA, 0., (0., 0.))
-                    cgm_abs.igm_sys.kin['Metal'] = dkin.data.copy()
+                    cgm_abs.igm_sys.kin['Metal'] = {}
 
                 # HI
                 if kin_init['flgH'][mt] > 0:
@@ -471,16 +474,20 @@ class COSHalos(CGMAbsSurvey):
                     spec = self.load_bg_cos_spec( qq, wrest )
                     if spec is None:
                         pdb.set_trace()
-                    vmnx = (kin_init['HIvmn'][mt]*u.km/u.s, kin_init['HIvmx'][mt]*u.km/u.s) 
+                    vmnx = (kin_init['HIvmn'][mt], kin_init['HIvmx'][mt])*u.km/u.s
                     # Process
-                    HIkin = laak.AbsKin(wrest, cgm_abs.igm_sys.zabs, vmnx)
-                    HIkin.fill_kin(spec, per=0.07)
-                    cgm_abs.igm_sys.kin['HI'] = HIkin.data.copy()
-                    #cgm_abs.igm_sys.kin['HI']['spec'] = spec
+                    aline = AbsLine(wrest)
+                    aline.analy['spec'] = spec
+                    aline.analy['vlim'] = vmnx
+                    aline.attrib['z'] = cgm_abs.igm_sys.zabs
+                    fx, sig, cdict = aline.cut_spec()
+                    # Kin
+                    stau = laak.generate_stau(cdict['velo'], fx, sig)
+                    cgm_abs.igm_sys.kin['HI'] = laak.pw97_kin(cdict['velo'], stau, per=0.07)
+                    cgm_abs.igm_sys.kin['HI'].update(laak.cgm_kin(cdict['velo'], stau, per=0.07))
                 else:
                     # Fill with zeros (for the keys)
-                    dkin = laak.AbsKin(0.*u.AA, 0., (0., 0.))
-                    cgm_abs.igm_sys.kin['HI'] = dkin.data.copy()
+                    cgm_abs.igm_sys.kin['HI'] = {}
 
     def load_gal_spec(self, inp):
         """ Load the galaxy spectrum
