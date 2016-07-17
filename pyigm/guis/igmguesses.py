@@ -45,13 +45,10 @@ from linetools.guis import simple_widgets as ltgsm
 from linetools import utils as ltu
 
 # Global variables; defined as globals mainly to increase speed
-c_mks = const.c.to('km/s').value
+c_kms = const.c.to('km/s').value
 COLOR_MODEL = '#999966'
 COLORS = ['#0066FF','#339933','#CC3300','#660066','#FF9900','#B20047']
 zero_coord = SkyCoord(ra=0.*u.deg, dec=0.*u.deg)  # Coords
-
-import sys
-sys.setrecursionlimit(150)
 
 # GUI for fitting LLS in a spectrum
 class IGMGuessesGui(QtGui.QMainWindow):
@@ -315,7 +312,7 @@ L         : toggle between displaying/hiding labels of currently
 
         # Mask
         # for line in component.lines:
-        #     wvmnx = line.wrest * (1 + component.zcomp) * (1 + component.vlim.value / c_mks)
+        #     wvmnx = line.wrest * (1 + component.zcomp) * (1 + component.vlim.value / c_kms)
         #     gdp = np.where((self.velplot_widg.spec.wavelength > wvmnx[0])&
         #         (self.velplot_widg.spec.wavelength < wvmnx[1]))[0]
         #     self.velplot_widg.spec.good_pixels[gdp] = 0
@@ -657,7 +654,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         else:  # wrest
             # Center z and reset vmin/vmax
             if zcomp is None:
-                zmin, zmax = self.z + (1 + self.z) * (self.avmnx.value / c_mks)
+                zmin, zmax = self.z + (1 + self.z) * (self.avmnx.value / c_kms)
                 zcomp = 0.5 * (zmin + zmax)
             if vlim is None:
                 vlim = self.avmnx - 0.5 * (self.avmnx[1] + self.avmnx[0])
@@ -689,7 +686,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
             # for line in aux_comp_list:
                 # print('masking {:g}'.format(line.wrest))
-                # wvmnx = line.wrest*(1+new_comp.zcomp)*(1 + vlim.value / c_mks)
+                # wvmnx = line.wrest*(1+new_comp.zcomp)*(1 + vlim.value / c_kms)
                 # gdp = np.where((self.spec.wavelength>wvmnx[0])&
                 #     (self.spec.wavelength<wvmnx[1]))[0]
                 # if len(gdp) > 0:
@@ -728,8 +725,8 @@ class IGGVelPlotWidget(QtGui.QWidget):
         # Restrict parameter space
         fitvoigt.logN.min = 10.
         fitvoigt.b.min = 1.
-        fitvoigt.z.min = component.zcomp + component.vlim[0].value * (1 + component.zcomp) / c_mks
-        fitvoigt.z.max = component.zcomp + component.vlim[1].value * (1 + component.zcomp) / c_mks
+        fitvoigt.z.min = component.zcomp + component.vlim[0].value * (1 + component.zcomp) / c_kms
+        fitvoigt.z.max = component.zcomp + component.vlim[1].value * (1 + component.zcomp) / c_kms
 
         # Fit
         fitter = fitting.LevMarLSQFitter()
@@ -830,11 +827,11 @@ class IGGVelPlotWidget(QtGui.QWidget):
             elif event.key == 'R': # Refit
                 self.fit_component(self.parent.fiddle_widg.component)
             elif event.key == '1':
-                dvz_mks = c_mks * (self.z - comp.zcomp) / (1 + self.z)
-                comp.vlim[0] = (event.xdata + dvz_mks)*u.km/u.s
+                dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
+                comp.vlim[0] = (event.xdata + dvz_kms)*u.km/u.s
             elif event.key == '2':
-                dvz_mks = c_mks * (self.z - comp.zcomp) / (1 + self.z)
-                comp.vlim[1] = (event.xdata + dvz_mks)*u.km/u.s
+                dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
+                comp.vlim[1] = (event.xdata + dvz_kms)*u.km/u.s
             # Updates (this captures them all and redraws)
             self.parent.fiddle_widg.update_component()
 
@@ -853,7 +850,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
             #QtCore.pyqtRemoveInputHook()
             #pdb.set_trace()
             #QtCore.pyqtRestoreInputHook()
-            dvz = np.array([c_mks * (self.z - components[mt].zcomp) / (1+self.z) for mt in mtc])
+            dvz = np.array([c_kms * (self.z - components[mt].zcomp) / (1+self.z) for mt in mtc])
             # Find minimum
             mindvz = np.argmin(np.abs(dvz+event.xdata))
             if event.key == 'S':
@@ -863,7 +860,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
         ## Reset z
         if event.key == ' ': # space to move redshift
-            self.z = self.z + event.xdata * (1 + self.z) / c_mks
+            self.z = self.z + event.xdata * (1 + self.z) / c_kms
             # Drawing
             self.psdict['x_minmax'] = self.vmnx.value
 
@@ -918,7 +915,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
         ## Add component
         if event.key == 'A': # Add to lines
-            if self.out_of_bounds(wvobs * (1 + event.xdata / c_mks)):
+            if self.out_of_bounds(wvobs * (1 + event.xdata / c_kms)):
                 return
             if self.flag_add is False:
                 self.vtmp = event.xdata
@@ -936,12 +933,12 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 print('Need to generate a component first!')
                 return
             comp = self.parent.fiddle_widg.component
-            dvz_mks = c_mks * (self.z - comp.zcomp) / (1 + self.z)
+            dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
             #QtCore.pyqtRemoveInputHook()
             #pdb.set_trace()
             #QtCore.pyqtRestoreInputHook()
             self.wrest = wrest
-            self.avmnx = comp.vlim - dvz_mks*u.km/u.s
+            self.avmnx = comp.vlim - dvz_kms*u.km/u.s
             self.add_component(wrest, zcomp=comp.zcomp, vlim=comp.vlim)
             self.wrest = 0.
 
@@ -951,11 +948,11 @@ class IGGVelPlotWidget(QtGui.QWidget):
             # X = Add to mask
             if self.flag_mask is False:
                 self.wrest = wrest
-                self.wtmp = wvobs * (1 + event.xdata / c_mks)
+                self.wtmp = wvobs * (1 + event.xdata / c_kms)
                 self.vtmp = event.xdata
                 self.flag_mask = True
             else:
-                wtmp2 = wvobs * (1 + event.xdata / c_mks)
+                wtmp2 = wvobs * (1 + event.xdata / c_kms)
                 twvmnx = [np.minimum(self.wtmp,wtmp2), np.maximum(self.wtmp,wtmp2)]
                 # Modify mask
                 mskp = np.where((self.spec.wavelength>twvmnx[0])&
@@ -1111,8 +1108,8 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 self.ax.plot( [0., 0.], [-1e9, 1e9], ':', color='gray')
                 # Velocity
                 wvobs = (1+self.z) * wrest
-                wvmnx = wvobs*(1 + np.array(self.psdict['x_minmax']) / c_mks)
-                velo = (self.spec.wavelength/wvobs - 1.) * c_mks * u.km/u.s
+                wvmnx = wvobs*(1 + np.array(self.psdict['x_minmax']) / c_kms)
+                velo = (self.spec.wavelength/wvobs - 1.) * c_kms * u.km/u.s
 
                 # Plot spectrum and model
                 # flux = self.spec.flux
@@ -1142,7 +1139,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                     # Any lines inside?
                     mtw = np.where((line_wvobs > wvmnx[0]) & (line_wvobs<wvmnx[1]))[0]
                     for imt in mtw:
-                        v = c_mks * (line_wvobs[imt]/wvobs - 1)
+                        v = c_kms * (line_wvobs[imt]/wvobs - 1)
                         self.ax.text(v, 0.5, line_lbl[imt], color=COLOR_MODEL, backgroundcolor='w',
                             bbox={'pad':0,'edgecolor':'none', 'facecolor':'w'}, size='xx-small',
                                 rotation=90.,ha='center',va='center')
@@ -1181,17 +1178,17 @@ class IGGVelPlotWidget(QtGui.QWidget):
                         #QtCore.pyqtRemoveInputHook()
                         #pdb.set_trace()
                         #QtCore.pyqtRestoreInputHook()
-                        dvz_mks = c_mks * (self.z - comp.zcomp) / (1 + self.z)
-                        if dvz_mks < np.max(np.abs(self.psdict['x_minmax'])):
+                        dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
+                        if dvz_kms < np.max(np.abs(self.psdict['x_minmax'])):
                             if comp is self.parent.fiddle_widg.component:
                                 lw = 1.5
                             else:
                                 lw = 1.
                             # Plot
                             for vlim in comp.vlim:
-                                self.ax.plot([vlim.value-dvz_mks]*2,self.psdict['y_minmax'],
+                                self.ax.plot([vlim.value-dvz_kms]*2,self.psdict['y_minmax'],
                                     '--', color='r',linewidth=lw)
-                            self.ax.plot([-1.*dvz_mks]*2,[1.0,1.05],
+                            self.ax.plot([-1.*dvz_kms]*2,[1.0,1.05],
                                 '-', color='grey',linewidth=lw)
 
                 # Fonts
