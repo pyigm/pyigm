@@ -502,8 +502,6 @@ class COSHalos(CGMAbsSurvey):
         ----------
         spec : XSpectrum1D
           Splices the blue and red side for LRIS
-
-        JXP on 12 Oct 2015
         """
         from linetools.spectra import utils as ltsu
         # Init
