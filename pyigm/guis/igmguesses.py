@@ -291,8 +291,6 @@ L         : toggle between displaying/hiding labels of currently
             self.llist['available'] = linelist.subset_lines(subset=names, reset_data=True, verbose=True,
                                                             sort_by='as_given')
             self.llist['List'] = 'available'
-        else: # This should never happen
-            raise ValueError('Something is odd in update_available_lines! Please debug.')
         print('Done.')
 
     def on_list_change(self):
