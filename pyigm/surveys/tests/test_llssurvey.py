@@ -24,7 +24,7 @@ def test_read_hdlls_dr1_simple():
     assert hdlls.nsys == 157
 
 @remote_data
-def test_read_hdlls_dr1():
+def test_read_hdlls_dr1():   # This might actually be local now..
     hdlls = LLSSurvey.load_HDLLS()
     assert hdlls.nsys == 157
 
@@ -48,7 +48,7 @@ def test_dat_list():
 
 
 def test_sdss():
-    """ Test SDSS DR7
+    """ Test SDSS DR7 -- This is very slow..
     """
     # All
     sdss_dr7_all = LLSSurvey.load_SDSS_DR7(sample='all')

@@ -17,8 +17,6 @@ class IGMSystem(AbsSystem):
 
     Parameters
     ----------
-    abstype : str
-      Type of IGM System, e.g. LLS, DLA, MgII
     radec : tuple or coordinate
         RA/Dec of the sightline or astropy.coordinate
     zabs : float
@@ -26,14 +24,16 @@ class IGMSystem(AbsSystem):
     vlim : Quantity array (2)
       Velocity limits of the system
       Defaulted to +/- 500 km/s if None
+    abstype : str, optional
+      Type of IGM System, e.g. LLS, DLA, MgII
     **kwargs : keywords
       passed to AbsSystem.__init__
     """
-    def __init__(self, abstype, radec, zabs, vlim, ZH=0., **kwargs):
+    def __init__(self, radec, zabs, vlim, ZH=0., abs_type='IGMSystem', **kwargs):
         """Standard init
         """
         # Generate with type
-        AbsSystem.__init__(self, abstype, radec, zabs, vlim, **kwargs)
+        AbsSystem.__init__(self, radec, zabs, vlim, abs_type=abs_type, **kwargs)
         # Init
         self.ZH = ZH
 
@@ -170,7 +170,7 @@ class AbsSubSystem(object):
         for component in self._components:
             outdict['components'][component.name] = component.to_dict()
         # Polish
-        outdict = ltu.jsonify_dict(outdict)
+        outdict = ltu.jsonify(outdict)
         # Return
         return outdict
 

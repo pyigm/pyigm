@@ -75,7 +75,7 @@ class LLSSystem(IGMSystem):
         return slf
 
     @classmethod
-    def from_dict(cls, idict):
+    def from_dict(cls, idict, **kwargs):
         """ Generate an LLSSystem from a dict
 
         Parameters
@@ -139,7 +139,7 @@ class LLSSystem(IGMSystem):
         if vlim is None:
             vlim = [-500.,500.]*u.km/u.s
         # Generate with type
-        IGMSystem.__init__(self, 'LLS', radec, zabs, vlim, NHI=NHI, **kwargs)
+        IGMSystem.__init__(self, radec, zabs, vlim, NHI=NHI, abs_type='LLS', **kwargs)
 
         # Set tau_LL
         self.tau_LL = (10.**self.NHI)*ltaa.photo_cross(1, 1, 1*u.Ry).to('cm**2').value
@@ -219,7 +219,7 @@ class LLSSystem(IGMSystem):
           dict containing the IonClms info
         use_Nfile : bool, optional
           Parse ions from a .clm file (JXP historical)
-          NOTE: This ignores velocity constraints on components (i.e. skip_vel=True)
+          NOTE: This ignores velocity constraints on components (i.e. chk_vel=False)
         update_zvlim : bool, optional
           Update zvlim from lines in .clm (as applicable)
         linelist : LineList
@@ -237,7 +237,7 @@ class LLSSystem(IGMSystem):
                 self.subsys[lbl]._clmdict = igmau.read_clmfile(clm_fil, linelist=linelist)
                 # Build components from lines
                 components = ltiu.build_components_from_dict(self.subsys[lbl]._clmdict,
-                                                             coord=self.coord, skip_vel=True)
+                                                             coord=self.coord, chk_vel=False)
                 self.subsys[lbl]._components = components
                 # Update z, vlim
                 if update_zvlim:
@@ -322,7 +322,7 @@ class LLSSystem(IGMSystem):
         from linetools.analysis import voigt as lav
 
         # Energies in LLS rest-frame
-        wv_rest = spec.dispersion / (self.zabs+1)
+        wv_rest = spec.wavelength / (self.zabs+1)
         energy = wv_rest.to(u.eV, equivalencies=u.spectral())
 
         # Get photo_cross and calculate tau
@@ -332,7 +332,7 @@ class LLSSystem(IGMSystem):
         if 'lls_lines' not in self.__dict__.keys():
             self.fill_lls_lines()
 
-        tau_Lyman = lav.voigt_from_abslines(spec.dispersion, self.lls_lines, ret='tau')
+        tau_Lyman = lav.voigt_from_abslines(spec.wavelength, self.lls_lines, ret='tau')
 
         # Combine
         tau_model = tau_LL + tau_Lyman
@@ -378,7 +378,7 @@ class LLSSystem(IGMSystem):
                         self.subsys[lbl]._clmdict = inp[lbl]  # Not so necessary
                         components = ltiu.build_components_from_dict(self.subsys[lbl]._clmdict,
                                                                  coord=self.coord,
-                                                                 skip_vel=True)
+                                                                 chk_vel=True)
                         self.subsys[lbl]._components = components
                         # Update vlim
                         self.update_vlim(sub_system=lbl)

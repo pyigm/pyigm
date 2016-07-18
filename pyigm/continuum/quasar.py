@@ -6,7 +6,6 @@ import numpy as np
 import os
 import imp
 import pdb
-import copy
 
 from scipy.interpolate import interp1d
 
@@ -62,7 +61,7 @@ def get_telfer_spec(zqso=0., igm=False, fN_gamma=None,
         import multiprocessing
         fN_model = FNModel.default_model()
         # Expanding range of zmnx (risky)
-        fN_model.zmnx = (0.,5.)
+        fN_model.zmnx = (0.,5.5)
         if fN_gamma is not None:
             fN_model.gamma = fN_gamma
         # Setup inputs
@@ -79,7 +78,7 @@ def get_telfer_spec(zqso=0., igm=False, fN_gamma=None,
         adict = []
         for wrest in telfer_spec.wavelength[igm_wv].value:
             tdict = dict(ilambda=wrest, zem=zqso, fN_model=fN_model,
-                         wrest=copy.deepcopy(twrest))
+                         wrest=twrest.copy())
             adict.append(tdict)
         # Run
         if nproc > 1:
@@ -88,13 +87,17 @@ def get_telfer_spec(zqso=0., igm=False, fN_gamma=None,
         else:
             ateff = map(pyift.map_lymanew, adict)
         # Apply
-        telfer_spec.flux[igm_wv] *= np.exp(-1.*np.array(ateff))
+        new_flux = telfer_spec.flux.value
+        new_flux[igm_wv] *= np.exp(-1.*np.array(ateff))
         # Flatten?
         if LL_flatten:
             wv_LL = np.where(np.abs(telfer_spec.wavelength/(1+zqso)-914.*u.AA)<3.*u.AA)[0]
-            f_LL = np.median(telfer_spec.flux[wv_LL])
+            f_LL = np.median(new_flux[wv_LL])
             wv_low = np.where(telfer_spec.wavelength/(1+zqso)<911.7*u.AA)[0]
-            telfer_spec.flux[wv_low] = f_LL
+            new_flux[wv_low] = f_LL
+        # Regenerate spectrum
+        telfer_spec = XSpectrum1D.from_tuple(
+                (np.array(telfer['wrest'])*(1+zqso), new_flux))
 
     # Return
     return telfer_spec
@@ -255,8 +258,9 @@ def wfc3_continuum(wfc3_indx=None, zqso=0., wave=None,
         idx = wfc3_indx
 
     # Generate spectrum
-    wfc_spec = XSpectrum1D.from_tuple((wfc_models[idx]['WREST'].flatten()*(1+zqso),
-        wfc_models[idx]['FLUX'].flatten()))
+    wfc_spec = XSpectrum1D.from_tuple((
+        wfc_models[idx]['WREST'].data.flatten()*(1+zqso),
+        wfc_models[idx]['FLUX'].data.flatten()))
     # Smooth
     wfc_smooth = wfc_spec.gauss_smooth(fwhm=smooth)
 

@@ -122,3 +122,14 @@ It is likely to be used mostly to read in existing data::
    fn_file = pyigm_path+'/data/fN/fN_constraints_z2.5_vanilla.fits'
    fN_cs = FNConstraint.from_fitsfile(fn_file)
 
+Mock Forest
+===========
+
+One may generate mock spectra of the Lya forest with the mockforest
+module.  One inputs a wavelength array, source redshift, and FNModel
+and the mock spectrum is generated::
+
+   mock_spec, HI_comps, _ = pyigm.mockforest.mk_mock(wave, zem, fN_model)
+
+
+

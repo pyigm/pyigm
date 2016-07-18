@@ -43,7 +43,7 @@ LONG_DESCRIPTION = package.__doc__
 builtins._ASTROPY_PACKAGE_NAME_ = PACKAGENAME
 
 # VERSION should be PEP386 compatible (http://www.python.org/dev/peps/pep-0386)
-VERSION = '0.0.dev'
+VERSION = '0.1.dev'
 
 # Indicates if this version is a release version
 RELEASE = 'dev' not in VERSION
@@ -95,6 +95,7 @@ package_info['package_data'][PACKAGENAME] += data_files
 entry_points = {}
 entry_points['console_scripts'] = [
     'pyigm_mtlmcmc = pyigm.scripts.pyigm_mtlmcmc:main',
+    'pyigm_igmguesses = pyigm.scripts.pyigm_igmguesses:main',
 #    'astropy-package-template-example = packagename.example_mod:main',
 ]
 
