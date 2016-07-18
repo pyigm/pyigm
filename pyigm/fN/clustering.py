@@ -11,7 +11,9 @@ import matplotlib.pyplot as plt
 
 
 def get_xy(ncenters, ndim, rstate):
-    """ Generate 'xyz' positions in a 'sphere' with brute force
+    """ Generate 'xyz' positions in a n-dimension 'sphere' with
+    brute force.
+
     Parameters
     ----------
     ncenters : int
