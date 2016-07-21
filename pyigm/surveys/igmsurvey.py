@@ -390,6 +390,13 @@ class IGMSurvey(object):
         else:
             raise ValueError('abs_survey: Needs developing!')
 
+    def write_survey(self):
+        """
+        Returns
+        -------
+
+        """
+        
     def __getattr__(self, k):
         """ Generate an array of attribute 'k' from the IGMSystems
 
