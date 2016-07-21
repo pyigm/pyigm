@@ -8,6 +8,7 @@ import numpy as np
 import pdb
 import pymc
 
+from pyigm.fN import plots
 from pyigm.fN.fnmodel import FNModel
 from pyigm.fN.constraints import FNConstraint
 from pyigm.fN import tau_eff
@@ -106,16 +107,17 @@ def set_pymc_var(fN_model,lim=2.):
     # Deal with model Type
     if fN_model.fN_mtype == 'Hspline': 
         # Loop on parameters to create an array of pymc Stochatsic variable objects
-        nparm = len(fN_model.param)
-        rand = 0.2*(np.random.rand(nparm)-0.5) 
+        nparm = len(fN_model.param['sply'])
+        rand = 0.2*(np.random.rand(nparm)-0.5)
+        #pdb.set_trace()
         for ii in range(nparm):
             nm = str('p')+str(ii)
             doc = str('SplinePointNHI_')+str(fN_model.pivots[ii])
             #iparm = np.append(iparm, pymc.Uniform(nm, lower=fN_model.param[ii]-lim,
             #                                    upper=fN_model.param[ii]+lim, doc=doc))
-            #xdb.set_trace()
-            iparm = np.append(iparm, pymc.Normal(nm, mu=fN_model.param[ii]*(1+rand[ii]), tau=1./0.025, doc=doc))
+            iparm = np.append(iparm, pymc.Normal(nm, mu=fN_model.param['sply'][ii]*(1+rand[ii]), tau=1./0.025, doc=doc))
     elif fN_model.fN_mtype == 'Gamma':  # Inoue+14
+        raise ValueError("NOT UPDATED FOR THIS")
         rand = 0.2*(np.random.rand(4)-0.5) 
         fN_model.param[2][0] = 10.
         #fN_model.param[2][0] = fN_model.param[2][0]*(1.+rand[0])
@@ -134,7 +136,7 @@ def set_pymc_var(fN_model,lim=2.):
     return iparm
 
 
-def run(fN_cs, fN_model, parm, email, debug=False):
+def run(fN_cs, fN_model, parm, debug=False):
     """ Run the MCMC
 
     Parameters
@@ -142,7 +144,6 @@ def run(fN_cs, fN_model, parm, email, debug=False):
     fN_cs
     fN_model
     parm
-    email
     debug : bool, optional
 
     Returns
@@ -205,39 +206,40 @@ def run(fN_cs, fN_model, parm, email, debug=False):
     """
     Generate the Models
     """
-
-    # Define f(N) model for PyMC
     @pymc.deterministic(plot=False)
     def pymc_fn_model(parm=parm):
+        # Define f(N) model for PyMC
         # Set parameters
-        fN_model.upd_param(parm)
+        aparm = np.array([parm[i] for i in range(parm.size)])
+        fN_model.update_parameters(aparm)
         #
-        log_fNX = fN_model.eval( fN_input, 0. )
+        log_fNX = fN_model.evaluate( fN_input, 0. )
         #
         return log_fNX
     pymc_list.append(pymc_fn_model)
 
-    # Define teff model for PyMC
     if flg_teff:
+        # Define teff model for PyMC
         @pymc.deterministic(plot=False)
         def pymc_teff_model(parm=parm):
             # Set parameters
-            fN_model.upd_param(parm)
+            aparm = np.array([parm[i] for i in range(parm.size)])
+            fN_model.update_parameters(aparm)
             # Calculate teff
-            model_teff = tau_eff.ew_teff_lyman(1215.6701*(1+teff_input[0]), teff_input[0]+0.1,
+            model_teff = tau_eff.lyman_ew(1215.6701*(1+teff_input[0]), teff_input[0]+0.1,
                                                fN_model, NHI_MIN=teff_input[1], NHI_MAX=teff_input[2])
             return model_teff
         pymc_list.append(pymc_teff_model)
 
-    # Define l(X)_LLS model for PyMC
     if flg_LLS:
+        # Define l(X)_LLS model for PyMC
         @pymc.deterministic(plot=False)
         def pymc_lls_model(parm=parm): 
             # Set parameters 
-            fN_model.upd_param(parm)
+            aparm = np.array([parm[i] for i in range(parm.size)])
+            fN_model.update_parameters(aparm)
             # Calculate l(X)
-            lX = fN_model.calc_lox(LLS_input[0], 
-                                    17.19+np.log10(LLS_input[1]), 22.) 
+            lX = fN_model.calculate_lox(LLS_input[0], 17.19+np.log10(LLS_input[1]), 22.)
             return lX
         pymc_list.append(pymc_lls_model)
 
@@ -377,16 +379,24 @@ def save_figures(MC, email, fN_model):
     pymc.Matplot.plot(MC)
     pymc.Matplot.savefig(completepng2name)
 
-##########################################
-#  Drives the full MCMC experience
-##########################################
+
 def mcmc_main(email, datasources, extrasources, flg_model=0, flg_plot=0):
-    '''
-    flg_model = Flag controlling the f(N) model fitted
+    """
+    Parameters
+    ----------
+    email
+    datasources
+    extrasources
+    flg_model : int
+     Flag controlling the f(N) model fitted
        0: JXP spline
        1: Inoue+14 functional form
-    '''
-    
+    flg_plot
+
+    Returns
+    -------
+
+    """
     import argparse
 
     # PARSE 
@@ -414,7 +424,7 @@ def mcmc_main(email, datasources, extrasources, flg_model=0, flg_plot=0):
     
     # Check plot
     if flg_plot:
-        xifd.tst_fn_data(fN_model=fN_model)
+        plots.tst_fn_data(fN_model=fN_model)
 
     # Run
     MC = run(fN_data, fN_model, parm, email)
@@ -426,17 +436,70 @@ def mcmc_main(email, datasources, extrasources, flg_model=0, flg_plot=0):
     #if flg_plot:
         #xifd.tst_fn_data(fN_model=fN_model)
 
-#####
-if __name__ == '__main__':
-    import sys
 
-    if len(sys.argv) == 1: # TESTING
-        sys.argv.append('0')  # Spline model
-        mcmc_main(flg_plot=1)
-    else:
-        mcmc_main()
+def chain_stats(chain_file, burn_frac=0.3, cl=0.683):
+    """ Turn an MCMC chain into stats
+    Port of x_mcmc_chain_stats from XIDL
 
-    # Set model
-    #xdb.set_trace()
-    print('mcmc: All done')
+    Parameters:
+      chain_file: string
+          Name of MCMC file
+      burn_frac: float (0.3)
+          Fraction of chain to burn
+      cl: float (0.683)
+          Confidence interval
+
+    Returns:
+      A dictionary with the key outputs
+
+    JXP 07 Nov 2014
+    """
+    from astropy.io import fits
+
+    # Read
+    hdu = fits.open(chain_file)
+    chain = hdu[0].data
+    like = hdu[1].data
+
+    # Param
+    nparm = chain.shape[-1]
+    if len(chain.shape) < 3: nchain = 1
+    else: nchain = chain.shape[0]
+
+    # Output
+    outp = {}
+
+    # Burn
+    burn = int( np.round(chain.shape[1] * burn_frac ) )
+    chain = chain[:,burn:,:]    # Burn
+    like = like[:,burn:]    # Burn
+    sz = chain.shape
+
+    # Reshape
+    if len(sz) == 3:
+        chain = chain.reshape(sz[0]*sz[1],sz[2])
+        chain = chain.transpose()
+        sz = chain.shape
+        like = like.flatten()
+
+    # Maximize
+    imx = np.argmax(like)
+    outp['best_p'] = chain[:,imx]
+    outp['sig'] = np.zeros((sz[0],2))
+
+    # Confidence limits (68%)
+    cnt = 0
+    for row in chain: #qq=0L,nparm-1 do begin
+        #; Sort
+        srt = np.sort(row)
+        # Simple CDF
+        lowv = srt[np.round(sz[1]*(1-cl)/2.)]
+        outp['sig'][cnt,0] = np.fabs(outp['best_p'][cnt] - lowv)
+        #
+        hiv = srt[np.round(sz[1]*(1.-((1-cl)/2.)))]
+        outp['sig'][cnt,1] = np.fabs(hiv-outp['best_p'][cnt])
+        cnt += 1
+
+    return outp
+
 

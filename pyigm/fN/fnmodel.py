@@ -13,7 +13,6 @@ from astropy import units as u
 from astropy import constants as const
 from astropy import cosmology
 
-
 from pyigm import utils as pyigmu
 
 # Path for pyigm
@@ -60,6 +59,8 @@ class FNModel(object):
           Cosmology for some calculations
         """
         if use_mcmc:
+            from pyigm.fN import mcmc
+            #raise ValueError("DEPRECATED")
             # MCMC Analysis (might put these on a website)
             chain_file = (os.environ.get('DROPBOX_DIR')+
                         'IGM/fN/MCMC/mcmc_spline_k13r13o13n12_8.fits.gz')
@@ -68,7 +69,9 @@ class FNModel(object):
             # Build a model
             NHI_pivots = [12., 15., 17.0, 18.0, 20.0, 21., 21.5, 22.]
             fN_model = cls('Hspline', zmnx=(0.5,3.0),
-                            pivots=NHI_pivots, param=outp['best_p'])
+                            pivots=NHI_pivots,
+                           param=dict(sply=np.array(outp['best_p'].flatten()))) # fN_data['FN']).flatten()))
+                           #param=outp['best_p'])
         else:
             # Input the f(N) at z=2.4 from Prochaska+14
             fN_file = (pyigm_path+'/data/fN/fN_spline_z24.fits.gz')
@@ -162,7 +165,7 @@ class FNModel(object):
           Parameters for the f(N) model to update to
         """
         if self.mtype == 'Hspline':
-            self.param['sply'] = parm
+            self.param['sply'] = np.array(parm)
             # Need to update the model too
             self.model = scii.PchipInterpolator(self.pivots, self.param['sply'])
         elif self.mtype == 'Gamma':

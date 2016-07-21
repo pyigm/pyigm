@@ -158,7 +158,6 @@ def tst_fn_data(fN_model=None, model_two=None, data_list=None, outfil=None):
         plt.show()
 
 
-
 if __name__ == '__main__':
 
     flg_fig = 0
