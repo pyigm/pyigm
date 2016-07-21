@@ -7,6 +7,10 @@ import numpy as np
 import imp
 import pdb
 
+from pyigm.fN.fnmodel import FNModel
+from pyigm.fN.constraints import FNConstraint
+from pyigm.fN import tau_eff
+
 # Path for pyigm
 pyigm_path = imp.find_module('pyigm')[1]
 
@@ -23,8 +27,6 @@ def tst_fn_data(fN_model=None, model_two=None, data_list=None, outfil=None):
     data_list
     outfil
     """
-    raise NotImplementedError("NOT READY FOR pyigm YET")
-
     import matplotlib as mpl
     mpl.rcParams['font.family'] = 'STIXGeneral-Regular' # Not for PDF
     mpl.rcParams['lines.linewidth'] = 2
@@ -32,27 +34,10 @@ def tst_fn_data(fN_model=None, model_two=None, data_list=None, outfil=None):
     from matplotlib import pyplot as plt
     #from matplotlib.backends.backend_pdf import PdfPages
 
-    # Output
-    #if outfil != None:
-    #    pp = PdfPages(outfil)
-
-    #mpl.rcParams['font.family'] = 'stixgeneral'  # For PDF
-
     # fN data
-    #fn_file = os.environ.get('XIDL_DIR')+'IGM/fN_empirical/fn_constraints_z2.5_vanilla.fits'
-    #k13r13_file = os.environ.get('XIDL_DIR')+'IGM/fN_empirical/fn_constraints_K13R13_vanilla.fits'
-    #n12_file = os.environ.get('XIDL_DIR')+'IGM/fN_empirical/fn_constraints_N12_vanilla.fits'
-    fn_file = xa_path+'/igm/fN/fn_constraints_z2.5_vanilla.fits'
-    k13r13_file = xa_path+'/igm/fN/fn_constraints_K13R13_vanilla.fits'
-    n12_file = xa_path+'/igm/fN/fn_constraints_N12_vanilla.fits'
-    all_fN_cs = fn_data_from_fits([fn_file,k13r13_file, n12_file])
-    #ascii_file = xa_path+'/igm/fN/asciidatan12'
-    #ascii_data = fN_data_from_ascii_file(ascii_file)
-    #all_fN_cs.append(ascii_data)
+    all_fN_cs = FNConstraint.load_defaults()
 
     # Remove K12
-    #data_list = ['K13R13','OPB07', 'N12']
-    #outfil = 'tmp.png'
     if data_list is None:
         fN_cs = [fN_c for fN_c in all_fN_cs if ((fN_c.ref != 'K02') & (fN_c.ref != 'PW09'))]
     else:
@@ -72,11 +57,8 @@ def tst_fn_data(fN_model=None, model_two=None, data_list=None, outfil=None):
         if fN_c.fN_dtype == 'fN':
             # Length
             ip = range(fN_c.data['NPT'])
-            #xdb.set_trace()
             val = np.where(fN_c.data['FN'][ip] > -90)[0]
-            #xdb.set_trace()
             if len(val) > 0:
-                #xdb.set_trace()
                 ipv = np.array(ip)[val]
                 xval = np.median(fN_c.data['BINS'][:,ipv],0)
                 xerror = [ fN_c.data['BINS'][1,ipv]-xval, xval-fN_c.data['BINS'][0,ipv] ]
@@ -86,7 +68,6 @@ def tst_fn_data(fN_model=None, model_two=None, data_list=None, outfil=None):
     main.legend(loc='lower left', numpoints=1)
 
     # Model?
-    #print(fN_model.param)
     if fN_model is not None:
         xplt = 12.01 + 0.01*np.arange(1100)
         yplt = fN_model.evaluate(xplt, 2.4)
@@ -97,31 +78,24 @@ def tst_fn_data(fN_model=None, model_two=None, data_list=None, outfil=None):
         yplt = model_two.evaluate(xplt, 2.4)
         main.plot(xplt,yplt,'-',color='gray')
 
-
-    #xdb.set_trace()
-
     # Extras
     #mpl.rcParams['lines.capthick'] = 2
 
     inset = fig.add_axes( [0.55, 0.6, 0.25, 0.25] ) # xypos, xy-size
     inset.set_ylabel('Value') # LHS
     inset.xaxis.set_major_locator(plt.FixedLocator(range(5)))
-    #lbl1 = r'$\tau_{\rm eff}^{\rm Ly\alpha}'
     inset.xaxis.set_major_formatter(plt.FixedFormatter(['',r'$\tau_{\rm eff}^{\rm Ly\alpha}$',
                                                         r'$\ell(X)_{\rm LLS}$',
                                                         r'$\lambda_{\rm mfp}^{912}$', '']))
     inset.set_ylim(0., 0.6)
 
-    ## #######
     # tau_eff
     flg_teff = 1
     try:
         itau = fN_dtype.index('teff') # Passes back the first one
     except:
-        #raise ValueError('fN.data: Missing teff type')
         flg_teff = 0
 
-    #xdb.set_trace()
     if flg_teff:
         teff=float(fN_cs[itau].data['TEFF'])
         D_A = 1. - np.exp(-1. * teff)
@@ -131,7 +105,7 @@ def tst_fn_data(fN_model=None, model_two=None, data_list=None, outfil=None):
         inset.errorbar(1, teff, sig_teff, fmt='_', capthick=2)
         # Model
         if fN_model is not None:
-            model_teff = pyiteff.lyman_ew(1215.6701*(1+fN_cs[itau].zeval), fN_cs[itau].zeval+0.1,
+            model_teff = tau_eff.lyman_ew(1215.6701*(1+fN_cs[itau].zeval), fN_cs[itau].zeval+0.1,
                                           fN_model, NHI_MIN=fN_cs[itau].data['NHI_MNX'][0],
                                           NHI_MAX=fN_cs[itau].data['NHI_MNX'][1])
             inset.plot(1, model_teff, 'ko')
@@ -185,3 +159,17 @@ def tst_fn_data(fN_model=None, model_two=None, data_list=None, outfil=None):
 
 
 
+if __name__ == '__main__':
+
+    flg_fig = 0
+    #flg_fig += 2**0   # Without model
+    flg_fig += 2**1   # With model
+
+    # Without model
+    if (flg_fig % 2**1) >= 2**0:
+        tst_fn_data()
+
+    # With model
+    if (flg_fig % 2**2) >= 2**1:
+        fN_default = FNModel.default_model()
+        tst_fn_data(fN_model=fN_default)
