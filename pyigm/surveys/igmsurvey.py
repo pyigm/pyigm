@@ -396,7 +396,7 @@ class IGMSurvey(object):
         -------
 
         """
-        
+
     def __getattr__(self, k):
         """ Generate an array of attribute 'k' from the IGMSystems
 
