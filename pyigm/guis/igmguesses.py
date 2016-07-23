@@ -109,7 +109,7 @@ f         : move to the first page
 Space bar : set redshift from cursor position
 ^         : set redshift by hand
 T         : update available transitions at current redshift from `Strong` LineList
-M         : update available transitions at current redshift from `ISM` LineList
+F         : update available transitions at current redshift from the full `ISM` LineList
 H         : update to HI Lyman series LineList at current redshift
             (type `T` or `M` to get metals back)
 U         : restrict to subset of lines on spectrum for current redshift
@@ -131,6 +131,7 @@ X,x       : add/remove `bad pixels` (for avoiding using them in subsequent
             VP fitting; works as `A` command, i.e. need to define two limits)
 L         : toggle between displaying/hiding labels of currently
             identified lines
+M         : toggle between displaying/hiding the current absorption model
 %         : guess a transition and redshift for a given feature at
             the cursor's position
 ?         : print this help message
@@ -491,7 +492,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         14-Aug-2015 by JXP
     """
     def __init__(self, ispec, z, parent=None, llist=None, norm=True,
-                 vmnx=[-500., 500.]*u.km/u.s, fwhm=0.,plot_residuals=True):
+                 vmnx=[-500., 500.]*u.km/u.s, fwhm=0., plot_residuals=True):
         '''
         spec = Spectrum1D
         Norm: Bool (False)
@@ -518,6 +519,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         self.flag_add = False
         self.flag_idlbl = False
         self.flag_mask = False
+        self.flag_plotmodel = True
         self.wrest = 0.
         self.avmnx = np.array([0.,0.])*u.km/u.s
         self.model = XSpectrum1D.from_tuple(
@@ -888,7 +890,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
             self.init_lines()
 
         # Select the base LineList from keystroke
-        if event.key == 'H':  # update HI
+        if event.key == 'H':  # Load HI
             self.llist['List'] = 'HI'
             # self.parent.update_available_lines(linelist=self.llist['HI'])
             self.idx_line = 0
@@ -896,7 +898,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
             s = "current parent LineList set to 'HI'."
             print(s)
             self.parent.statusBar().showMessage('IGMGuessesGUI: '+ s)
-        if event.key == 'T':  # Update Strong
+        if event.key == 'T':  # Load Strong
             self.llist['List'] = 'Strong'
             # self.parent.update_available_lines(linelist=self.llist['Strong'])
             self.idx_line = 0
@@ -904,7 +906,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
             s = "current parent LineList set to 'Strong'."
             print(s)
             self.parent.statusBar().showMessage('IGMGuessesGUI: '+ s)
-        if event.key == 'M':  # Update ISM
+        if event.key == 'F':  # Load Full ISM
             self.llist['List'] = 'ISM'
             # self.parent.update_available_lines(linelist=self.llist['ISM'])
             self.idx_line = 0
@@ -912,7 +914,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
             s = "current parent LineList set to 'ISM'."
             print(s)
             self.parent.statusBar().showMessage('IGMGuessesGUI: '+ s)
-        if event.key == 'U':  # Select a subset of the available lines
+        if event.key == 'U':  # Update subset of the available lines
             current_linelist = self.llist[self.llist['List']]
             parent_linelist = self.llist[current_linelist.list]
             # QtCore.pyqtRemoveInputHook()
@@ -979,7 +981,11 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
         # Labels
         if event.key == 'L': # Toggle ID lines
-            self.flag_idlbl = ~self.flag_idlbl
+            self.flag_idlbl = not self.flag_idlbl
+
+        # Plot model
+        if event.key == 'M': # Toggle plot model
+            self.flag_plotmodel = not self.flag_plotmodel
 
         """
         # AODM plot
@@ -998,10 +1004,6 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
         if event.key == '?':
             print(self.help_message)
-
-            #QtCore.pyqtRemoveInputHook()
-            #pdb.set_trace()
-            #QtCore.pyqtRestoreInputHook()
 
         #if wrest is not None: # Single window
         #    flg = 3
@@ -1123,13 +1125,11 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 velo = (self.spec.wavelength/wvobs - 1.) * c_kms * u.km/u.s
 
                 # Plot spectrum and model
-                # flux = self.spec.flux
-                # flux = self.spec.data[0]['flux'] / self.spec.data[0]['co']  # this is slightly faster
                 self.ax.plot(velo, self.spec.flux, '-', color=color, drawstyle='steps-mid', lw=0.5)
-                # Model
-                # flux_model = self.model.flux
-                # flux_model = self.model.data[0]['flux']  # this is slightly faster
-                self.ax.plot(velo, self.model.flux, '-', color=COLOR_MODEL, lw=0.5)
+
+                if self.flag_plotmodel:
+                    print('Im here')
+                    self.ax.plot(velo, self.model.flux, '-', color=COLOR_MODEL, lw=0.5)
 
                 #Error & residuals
                 if self.plot_residuals:
