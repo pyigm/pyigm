@@ -135,9 +135,10 @@ V,v       : slightly increase/decrease b-value in initial guess
 R         : refit
 X,x       : add/remove `bad pixels` (for avoiding using them in subsequent
             VP fitting; works as `A` command, i.e. need to define two limits)
-L         : toggle between displaying/hiding labels of currently
-            identified lines
-M         : toggle between displaying/hiding the current absorption model
+L         : toggle displaying/hiding labels of currently identified lines
+M         : toggle displaying/hiding the current absorption model
+P         : toggle on/off "colorful" display, where components of different
+            reliabilities are plotted in different colors
 %         : guess a transition and redshift for a given feature at
             the cursor's position
 ?         : print this help message
@@ -582,7 +583,8 @@ class IGGVelPlotWidget(QtGui.QWidget):
         self.sub_xy = [3,2]
         self.subxy_state = 'In'
 
-        self.fig.subplots_adjust(hspace=0.0, wspace=0.1, left=0.04, right=0.975)
+        self.fig.subplots_adjust(hspace=0.0, wspace=0.1, left=0.04,
+                                 right=0.975, top=0.9, bottom=0.07)
         
         vbox = QtGui.QVBoxLayout()
         vbox.addWidget(self.canvas)
@@ -1072,7 +1074,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
             #QtCore.pyqtRestoreInputHook()
 
             # Labels and colors for reliability
-            if (self.flag_idlbl):
+            if (self.flag_idlbl) or (self.flag_colorful):
                 line_wvobs = []
                 line_lbl = []
                 line_color = []
@@ -1180,7 +1182,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                              size='x-small', ha='left', va='center', backgroundcolor='w',
                              bbox={'pad':0, 'edgecolor':'none', 'facecolor':'w'})
                 # labels for individual components
-                if self.flag_idlbl:
+                if (self.flag_idlbl) or (self.flag_colorful):
                     # Any lines inside?
                     mtw = np.where((line_wvobs > wvmnx[0]) & (line_wvobs<wvmnx[1]))[0]
                     for imt in mtw:
@@ -1189,9 +1191,10 @@ class IGGVelPlotWidget(QtGui.QWidget):
                             color_label = line_color[imt]
                         else:
                             color_label = COLOR_MODEL
-                        self.ax.text(v, 0.5, line_lbl[imt], color=color_label, backgroundcolor='w',
-                            bbox={'pad':0,'edgecolor':'none', 'facecolor':'w'}, size='xx-small',
-                                rotation=90.,ha='center',va='center')
+                        if self.flag_idlbl:
+                            self.ax.text(v, 0.5, line_lbl[imt], color=color_label, backgroundcolor='w',
+                                bbox={'pad':0,'edgecolor':'none', 'facecolor':'w'}, size='xx-small',
+                                    rotation=90.,ha='center',va='center')
                         if (self.flag_plotmodel) and (self.flag_colorful):
                             cond = (self.model.wavelength.value >= line_wvobs_lims[imt][0]) & \
                                     (self.model.wavelength.value <= line_wvobs_lims[imt][1])
