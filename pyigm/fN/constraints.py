@@ -34,6 +34,7 @@ class FNConstraint(object):
            'fN' -- Standard f(N) evaluation
            'MFP' -- MFP
            'LLS' -- LLS incidence 
+           'DLA' -- DLA incidence
            'teff' -- tau effective
            'beta' -- slope constraint
     flavor : str
@@ -47,6 +48,9 @@ class FNConstraint(object):
         Redshift where the constraint is evaluated
     data : dict
         Dictionary containing the constraints
+        'MFP' -- MFP, SIG_MFP  (pMpc)
+        'LLS' -- LX, SIG_LX
+        'DLA' -- LX, SIG_LX
     """
 
     @classmethod
@@ -159,14 +163,30 @@ class FNConstraint(object):
         return all_fN_cs
 
     # Initialize with type
-    def __init__(self, fN_dtype, zeval=0., ref='', flavor='', cosmo=None):
-        if fN_dtype not in ['fN', 'MFP', 'LLS', 'teff', 'beta']:
+    def __init__(self, fN_dtype, zeval=0., ref='', flavor='', cosmo=None,
+                 data=None):
+        """
+        Parameters
+        ----------
+        fN_dtype : str
+        zeval : float, optional
+        ref : str, optional
+        flavor : str, optional
+        cosmo : astropy.cosmology
+        data : dict, optional
+
+        """
+        if fN_dtype not in ['fN', 'MFP', 'LLS', 'DLA', 'teff', 'beta']:
             raise IOError('Bad f(N) constraint')
         self.fN_dtype = fN_dtype
         self.zeval = zeval
         self.ref = ref
         self.flavor = flavor
         self.cosmo = cosmo
+        if data is None:
+            self.data = {}
+        else:
+            self.data = data
 
 
     def __repr__(self):
