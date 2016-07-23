@@ -7,6 +7,7 @@ import os, imp
 import numpy as np
 import pdb
 import pymc
+#import MCMC_errors
 
 from pyigm.fN import plots
 from pyigm.fN.fnmodel import FNModel
@@ -346,20 +347,34 @@ def print_errors(MC):
         #ival += 1
     return all_pval
     
-def save_figures(MC, email, fN_model):
+def save_figures(MC, fN_model, email=None):
+    """
+    Parameters
+    ----------
+    MC
+    fN_model
+    email
+
+    Returns
+    -------
+
+    """
     #xdb.set_trace()
     #######################################
     #   SAVE THE RESULTS
     #######################################
     #Creates new directory for output
-    t = strftime("%Y-%m-%d %H:%M:%S", gmtime())
-    newpath = 'C:/Xastropy Output Files/' + email
-    if not os.path.exists(newpath): os.makedirs(newpath)
+    t = strftime("%Y-%m-%d%H%M%S", gmtime())
+    #newpath = 'C:/Xastropy Output Files/' + email
+    #if not os.path.exists(newpath): os.makedirs(newpath)
     
     #creates ascii file with the best values and their errors 
     #and saves to correct directory
-    asciifilename = email + t + 'asciifile'
-    completeAsciiName = os.path.join(newpath, asciifilename+".ascii") 
+    if email is not None:
+        asciifilename = email + t
+    else:
+        asciifilename = 'mcmc_' + t
+    completeAsciiName = os.path.join(asciifilename+".ascii")
     f = open(completeAsciiName, 'w+')
     best_pval = print_errors(MC)
     #db.set_trace()
@@ -374,8 +389,11 @@ def save_figures(MC, email, fN_model):
     #g.close()
     
     #creates PNG file with bottom plot (individual distributions?)
-    png2filename= email + t + 'png2'
-    completepng2name= os.path.join(newpath, png2filename + ".png")
+    if email is not None:
+        png2filename = email + t
+    else:
+        png2filename = 'mcmc_' + t
+    completepng2name= os.path.join(png2filename + ".png")
     pymc.Matplot.plot(MC)
     pymc.Matplot.savefig(completepng2name)
 
