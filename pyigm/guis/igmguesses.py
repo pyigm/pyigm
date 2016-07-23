@@ -47,6 +47,9 @@ from linetools import utils as ltu
 # Global variables; defined as globals mainly to increase speed
 c_kms = const.c.to('km/s').value
 COLOR_MODEL = '#999966'
+COLOR_RELIABLE = 'g'
+COLOR_PROBABLE = 'b'
+COLOR_UNCERTAIN = 'r'
 COLORS = ['#0066FF','#339933','#CC3300','#660066','#FF9900','#B20047']
 zero_coord = SkyCoord(ra=0.*u.deg, dec=0.*u.deg)  # Coords
 
@@ -108,11 +111,14 @@ K,k       : add/remove row
 f         : move to the first page
 Space bar : set redshift from cursor position
 ^         : set redshift by hand
-T         : update available transitions at current redshift from `Strong` LineList
-F         : update available transitions at current redshift from the full `ISM` LineList
+T         : update available transitions at current redshift from the
+            `Strong` LineList
+F         : update available transitions at current redshift from the
+            full `ISM` LineList
 H         : update to HI Lyman series LineList at current redshift
-            (type `T` or `M` to get metals back)
-U         : restrict to subset of lines on spectrum for current redshift
+            (type `T` or `F` to get metals back)
+U         : restrict to subset of available lines from the parent LineList
+            at current redshift
 A         : set limits for fitting an absorption component
             from cursor position (need to be pressed twice:
             once for each left and right limits)
@@ -218,7 +224,7 @@ M         : toggle between displaying/hiding the current absorption model
         self.fiddle_widg = FiddleComponentWidget(parent=self)
         self.comps_widg = ComponentListWidget([], parent=self)
         self.velplot_widg = IGGVelPlotWidget(spec, z, 
-            parent=self, llist=self.llist, fwhm=self.fwhm,plot_residuals=self.plot_residuals)
+            parent=self, llist=self.llist, fwhm=self.fwhm, plot_residuals=self.plot_residuals)
         self.wq_widg = ltgsm.WriteQuitWidget(parent=self)
 
 
@@ -241,7 +247,7 @@ M         : toggle between displaying/hiding the current absorption model
         vbox.addWidget(self.slines_widg)
         vbox.addWidget(self.wq_widg)
         anly_widg.setLayout(vbox)
-        
+
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(self.velplot_widg)
         hbox.addWidget(anly_widg)
@@ -520,6 +526,8 @@ class IGGVelPlotWidget(QtGui.QWidget):
         self.flag_idlbl = False
         self.flag_mask = False
         self.flag_plotmodel = True
+        self.flag_colorful = False
+
         self.wrest = 0.
         self.avmnx = np.array([0.,0.])*u.km/u.s
         self.model = XSpectrum1D.from_tuple(
@@ -582,7 +590,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         self.setLayout(vbox)
 
         # Draw on init
-        self.on_draw()
+        self.on_draw(replot=False) # False only for init
 
     # Load them up for display
     def init_lines(self):
@@ -979,13 +987,17 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 self.flag_mask = False
                 self.wrest = 0.
 
-        # Labels
-        if event.key == 'L': # Toggle ID lines
+        # Plot component labels?
+        if event.key == 'L':  # Toggle ID lines
             self.flag_idlbl = not self.flag_idlbl
 
-        # Plot model
-        if event.key == 'M': # Toggle plot model
+        # Plot model?
+        if event.key == 'M':  # Toggle plot model
             self.flag_plotmodel = not self.flag_plotmodel
+
+        # Colorful mode?
+        if event.key == 'P':  # Toggle colorful mode
+            self.flag_colorful = not self.flag_colorful
 
         """
         # AODM plot
@@ -1011,7 +1023,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
             flg = 1
         if event.key in ['Y']:
             rescale = False
-        if event.key in ['c','C','k','K', 'R', '(']:
+        if event.key in ['c','C','k','K', 'R', '(', 'H', 'F', 'T', 'U']:
             fig_clear = True
 
         if flg==1: # Default is to redraw
@@ -1048,7 +1060,8 @@ class IGGVelPlotWidget(QtGui.QWidget):
             if fig_clear:
                 self.fig.clf()
             # Title
-            self.fig.suptitle('z={:.5f}'.format(self.z),fontsize='large')
+            self.fig.suptitle('{}\nz={:.5f}'.format(self.spec.filename, self.z),
+                              fontsize='large', ha='center')
             # Components
             components = self.parent.comps_widg.all_comp 
             iwrest = np.array([comp.init_wrest.value for comp in components])*u.AA
@@ -1058,22 +1071,40 @@ class IGGVelPlotWidget(QtGui.QWidget):
             #pdb.set_trace()
             #QtCore.pyqtRestoreInputHook()
 
-            # Labels
-            if self.flag_idlbl:
+            # Labels and colors for reliability
+            if (self.flag_idlbl):
                 line_wvobs = []
                 line_lbl = []
+                line_color = []
+                line_wvobs_lims = []
                 for comp in components:
                     if comp.attrib['Reliability'] == 'None':
                         la = ''
-                    else: 
+                    else:
                         la = comp.attrib['Reliability']
                     for ii, line in enumerate(comp._abslines):
                         if comp.mask_abslines[ii] == 0:  # do not plot these masked out lines
                             continue
-                        line_wvobs.append(line.wrest.value*(line.attrib['z']+1))
+                        zline = line.attrib['z']
+                        wrest = line.wrest.value
+                        line_wvobs.append(wrest * (1 + zline))
+                        dzlims = ltu.give_dz(line.analy['vlim'], zline)
+                        line_wvobs_lims.append(wrest * (1 + zline + dzlims))
+                        print(dzlims)
                         line_lbl.append(line.name+',{:.3f}{:s}'.format(line.attrib['z'],la))
+                        if la == 'a':
+                            line_color.append(COLOR_RELIABLE)
+                        elif la == 'b':
+                            line_color.append(COLOR_PROBABLE)
+                        elif la == 'c':
+                            line_color.append(COLOR_UNCERTAIN)
+                        else:
+                            line_color.append(COLOR_MODEL)
+                # save them as numpy arrays
                 line_wvobs = np.array(line_wvobs)*u.AA
                 line_lbl = np.array(line_lbl)
+                line_color = np.array(line_color)
+                line_wvobs_lims = np.array(line_wvobs_lims)
 
             # Subplots
             nplt = self.sub_xy[0]*self.sub_xy[1]
@@ -1119,6 +1150,10 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
                 # Zero velocity line
                 self.ax.plot( [0., 0.], [-1e9, 1e9], ':', color='gray')
+                # Unity flux level line
+                self.ax.plot( [-1e9, 1e9], [1, 1], ':', color='b', lw=0.5)
+
+
                 # Velocity
                 wvobs = (1+self.z) * wrest
                 wvmnx = wvobs*(1 + np.array(self.psdict['x_minmax']) / c_kms)
@@ -1126,9 +1161,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
                 # Plot spectrum and model
                 self.ax.plot(velo, self.spec.flux, '-', color=color, drawstyle='steps-mid', lw=0.5)
-
                 if self.flag_plotmodel:
-                    print('Im here')
                     self.ax.plot(velo, self.model.flux, '-', color=COLOR_MODEL, lw=0.5)
 
                 #Error & residuals
@@ -1137,7 +1170,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                     self.ax.plot(velo, -self.residual_limit, 'k-',drawstyle='steps-mid',lw=0.5)
                     self.ax.plot(velo, self.residual, '.',color='grey',ms=2)
 
-                # Labels
+                # Labels for axes and ion names
                 if (((jj+1) % self.sub_xy[0]) == 0) or ((jj+1) == len(all_idx)):
                     self.ax.set_xlabel('Relative Velocity (km/s)')
                 else:
@@ -1146,14 +1179,23 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 self.ax.text(0.01, 0.15, lbl, color=color, transform=self.ax.transAxes,
                              size='x-small', ha='left', va='center', backgroundcolor='w',
                              bbox={'pad':0, 'edgecolor':'none', 'facecolor':'w'})
+                # labels for individual components
                 if self.flag_idlbl:
                     # Any lines inside?
                     mtw = np.where((line_wvobs > wvmnx[0]) & (line_wvobs<wvmnx[1]))[0]
                     for imt in mtw:
                         v = c_kms * (line_wvobs[imt]/wvobs - 1)
-                        self.ax.text(v, 0.5, line_lbl[imt], color=COLOR_MODEL, backgroundcolor='w',
+                        if self.flag_colorful:
+                            color_label = line_color[imt]
+                        else:
+                            color_label = COLOR_MODEL
+                        self.ax.text(v, 0.5, line_lbl[imt], color=color_label, backgroundcolor='w',
                             bbox={'pad':0,'edgecolor':'none', 'facecolor':'w'}, size='xx-small',
                                 rotation=90.,ha='center',va='center')
+                        if (self.flag_plotmodel) and (self.flag_colorful):
+                            cond = (self.model.wavelength.value >= line_wvobs_lims[imt][0]) & \
+                                    (self.model.wavelength.value <= line_wvobs_lims[imt][1])
+                            self.ax.plot(velo[cond], self.model.flux[cond], '-', color=color_label, lw=0.5)
 
                 # Plot good pixels
                 # if np.sum(self.spec.good_pixels) > 0.:
