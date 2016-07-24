@@ -27,7 +27,7 @@ from PyQt4 import QtCore
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 # Matplotlib Figure object
 from matplotlib.figure import Figure
-
+from matplotlib.text import Annotation
 
 from astropy.units import Quantity
 from astropy import units as u
@@ -584,7 +584,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         self.subxy_state = 'In'
 
         self.fig.subplots_adjust(hspace=0.0, wspace=0.1, left=0.04,
-                                 right=0.975, top=0.9, bottom=0.07)
+                                 right=0.975, top=0.91, bottom=0.07)
         
         vbox = QtGui.QVBoxLayout()
         vbox.addWidget(self.canvas)
@@ -1057,13 +1057,13 @@ class IGGVelPlotWidget(QtGui.QWidget):
     def on_draw(self, replot=True, in_wrest=None, rescale=True, fig_clear=False):
         """ Redraws the figure
         """
-        #
+
         if replot is True:
             if fig_clear:
                 self.fig.clf()
-            # Title
-            self.fig.suptitle('{}\nz={:.5f}'.format(self.spec.filename, self.z),
-                              fontsize='large', ha='center')
+            # Title by redshift
+            self.fig.suptitle('z={:.5f}'.format(self.z), fontsize='large', ha='center')
+
             # Components
             components = self.parent.comps_widg.all_comp 
             iwrest = np.array([comp.init_wrest.value for comp in components])*u.AA
@@ -1074,6 +1074,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
             #QtCore.pyqtRestoreInputHook()
 
             # Labels and colors for reliability
+            # todo: potential for speed up here... e.g. by giving more attributes to components
             if (self.flag_idlbl) or (self.flag_colorful):
                 line_wvobs = []
                 line_lbl = []
@@ -1090,10 +1091,9 @@ class IGGVelPlotWidget(QtGui.QWidget):
                         zline = line.attrib['z']
                         wrest = line.wrest.value
                         line_wvobs.append(wrest * (1 + zline))
-                        dzlims = ltu.give_dz(line.analy['vlim'], zline)
-                        line_wvobs_lims.append(wrest * (1 + zline + dzlims))
-                        print(dzlims)
-                        line_lbl.append(line.name+',{:.3f}{:s}'.format(line.attrib['z'],la))
+                        line_lbl.append(line.name+',{:.3f}{:s}'.format(line.attrib['z'], la))
+                        line_wvobs_lims.append(line.analy['wvlim'])
+
                         if la == 'a':
                             line_color.append(COLOR_RELIABLE)
                         elif la == 'b':
@@ -1106,7 +1106,10 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 line_wvobs = np.array(line_wvobs)*u.AA
                 line_lbl = np.array(line_lbl)
                 line_color = np.array(line_color)
-                line_wvobs_lims = np.array(line_wvobs_lims)
+                line_wvobs_lims = np.array(line_wvobs_lims)*u.AA
+                # QtCore.pyqtRemoveInputHook()
+                # pdb.set_trace()
+                # QtCore.pyqtRestoreInputHook()
 
             # Subplots
             nplt = self.sub_xy[0]*self.sub_xy[1]
@@ -1157,8 +1160,8 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
 
                 # Velocity
-                wvobs = (1+self.z) * wrest
-                wvmnx = wvobs*(1 + np.array(self.psdict['x_minmax']) / c_kms)
+                wvobs = (1 + self.z) * wrest
+                wvmnx = wvobs * (1 + np.array(self.psdict['x_minmax']) / c_kms)
                 velo = (self.spec.wavelength/wvobs - 1.) * c_kms * u.km/u.s
 
                 # Plot spectrum and model
@@ -1184,7 +1187,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 # labels for individual components
                 if (self.flag_idlbl) or (self.flag_colorful):
                     # Any lines inside?
-                    mtw = np.where((line_wvobs > wvmnx[0]) & (line_wvobs<wvmnx[1]))[0]
+                    mtw = np.where((line_wvobs > wvmnx[0]) & (line_wvobs < wvmnx[1]))[0]
                     for imt in mtw:
                         v = c_kms * (line_wvobs[imt]/wvobs - 1)
                         if self.flag_colorful:
@@ -1196,8 +1199,10 @@ class IGGVelPlotWidget(QtGui.QWidget):
                                 bbox={'pad':0,'edgecolor':'none', 'facecolor':'w'}, size='xx-small',
                                     rotation=90.,ha='center',va='center')
                         if (self.flag_plotmodel) and (self.flag_colorful):
-                            cond = (self.model.wavelength.value >= line_wvobs_lims[imt][0]) & \
-                                    (self.model.wavelength.value <= line_wvobs_lims[imt][1])
+                            # plotting absline with color better done in wobs -> velo space
+                            dvmin = c_kms * ((line_wvobs_lims[imt][0] - line_wvobs[imt]) / wvobs)
+                            dvmax = c_kms * ((line_wvobs_lims[imt][1] - line_wvobs[imt]) / wvobs)
+                            cond = (velo.value >= v + dvmin) & (velo.value <= v + dvmax)
                             self.ax.plot(velo[cond], self.model.flux[cond], '-', color=color_label, lw=0.5)
 
                 # Plot good pixels
@@ -1235,14 +1240,14 @@ class IGGVelPlotWidget(QtGui.QWidget):
                         #pdb.set_trace()
                         #QtCore.pyqtRestoreInputHook()
                         dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
-                        if dvz_kms < np.max(np.abs(self.psdict['x_minmax'])):
+                        if dvz_kms < 1.5*np.max(np.abs(self.psdict['x_minmax'])):  # 1.5 to make sure the plot is still there at the edges of the axis
                             if comp is self.parent.fiddle_widg.component:
                                 lw = 1.5
                             else:
                                 lw = 1.
                             # Plot
                             for vlim in comp.vlim:
-                                self.ax.plot([vlim.value-dvz_kms]*2,self.psdict['y_minmax'],
+                                self.ax.plot([vlim.value-dvz_kms]*2, self.psdict['y_minmax'],
                                     '--', color='r',linewidth=lw)
                             self.ax.plot([-1.*dvz_kms]*2,[1.0,1.05],
                                 '-', color='grey',linewidth=lw)
@@ -1528,6 +1533,8 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
         aline = AbsLine(trans['wrest'],  linelist=linelist)
         aline.attrib['z'] = z
         aline.analy['vlim'] = vlim
+        dz_aux = ltu.give_dz(vlim, z)
+        aline.analy['wvlim'] = trans['wrest'] * (1 + z + dz_aux)
         abslines.append(aline)
     if abslines[0].data['Ej'].value > 0.:
         stars = '*'*(len(abslines[0].name.split('*'))-1)
