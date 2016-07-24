@@ -1158,7 +1158,6 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 # Unity flux level line
                 self.ax.plot( [-1e9, 1e9], [1, 1], ':', color='b', lw=0.5)
 
-
                 # Velocity
                 wvobs = (1 + self.z) * wrest
                 wvmnx = wvobs * (1 + np.array(self.psdict['x_minmax']) / c_kms)
@@ -1184,6 +1183,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 self.ax.text(0.01, 0.15, lbl, color=color, transform=self.ax.transAxes,
                              size='x-small', ha='left', va='center', backgroundcolor='w',
                              bbox={'pad':0, 'edgecolor':'none', 'facecolor':'w'})
+
                 # labels for individual components
                 if (self.flag_idlbl) or (self.flag_colorful):
                     # Any lines inside?
@@ -1203,7 +1203,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                             dvmin = c_kms * ((line_wvobs_lims[imt][0] - line_wvobs[imt]) / wvobs)
                             dvmax = c_kms * ((line_wvobs_lims[imt][1] - line_wvobs[imt]) / wvobs)
                             cond = (velo.value >= v + dvmin) & (velo.value <= v + dvmax)
-                            self.ax.plot(velo[cond], self.model.flux[cond], '-', color=color_label, lw=0.5)
+                            self.ax.plot(velo[cond], self.model.flux[cond], '-', color=color_label, lw=1)
 
                 # Plot good pixels
                 # if np.sum(self.spec.good_pixels) > 0.:
