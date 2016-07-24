@@ -583,7 +583,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         self.subxy_state = 'In'
 
         self.fig.subplots_adjust(hspace=0.0, wspace=0.1, left=0.04,
-                                 right=0.975, top=0.91, bottom=0.07)
+                                 right=0.975, top=0.9, bottom=0.07)
         
         vbox = QtGui.QVBoxLayout()
         vbox.addWidget(self.canvas)
@@ -1061,7 +1061,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
             if fig_clear:
                 self.fig.clf()
             # Title by redshift
-            self.fig.suptitle('z={:.5f}'.format(self.z), fontsize='large', ha='center')
+            self.fig.suptitle('{}\nz={:.5f}'.format(self.spec.filename,self.z), fontsize='medium', ha='center')
 
             # Components
             components = self.parent.comps_widg.all_comp 
