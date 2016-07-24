@@ -27,7 +27,6 @@ from PyQt4 import QtCore
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 # Matplotlib Figure object
 from matplotlib.figure import Figure
-from matplotlib.text import Annotation
 
 from astropy.units import Quantity
 from astropy import units as u
