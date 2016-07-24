@@ -1533,7 +1533,7 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
         aline = AbsLine(trans['wrest'],  linelist=linelist)
         aline.attrib['z'] = z
         aline.analy['vlim'] = vlim
-        dz_aux = ltu.give_dz(vlim, z)
+        dz_aux = ltu.z_from_v(z, vlim) - z
         aline.analy['wvlim'] = trans['wrest'] * (1 + z + dz_aux)
         abslines.append(aline)
     if abslines[0].data['Ej'].value > 0.:
@@ -1574,7 +1574,6 @@ def sync_comp_lines(comp):
         line.attrib['logN'] = comp.attrib['logN']
         line.attrib['b'] = comp.attrib['b']
         line.attrib['z'] = comp.attrib['z']
-
 
 def mask_comp_lines(comp, min_ew = 0.003*u.AA, verbose=False):
     """ Mask out lines that are weaker than
