@@ -712,9 +712,6 @@ class IGGVelPlotWidget(QtGui.QWidget):
         if update_model:
             self.update_model()
 
-        # go somehow to on_click() stance
-
-
     def fit_component(self, component):
         '''Fit the component and save values'''
         from astropy.modeling import fitting
