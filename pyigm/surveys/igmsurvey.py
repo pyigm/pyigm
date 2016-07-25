@@ -24,8 +24,7 @@ from pyigm.abssys.utils import class_by_type
 
 
 class IGMSurvey(object):
-    """
-    Class for a survey of absorption line systems.
+    """ Class for a survey of absorption line systems.
 
     Attributes
     ----------
