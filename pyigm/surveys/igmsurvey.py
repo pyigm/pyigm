@@ -390,12 +390,45 @@ class IGMSurvey(object):
         else:
             raise ValueError('abs_survey: Needs developing!')
 
-    def write_survey(self):
-        """
+    def write_survey(self, outfile='tmp.tar', tmpdir = 'IGM_JSON'):
+        """ Generates a gzipped tarball of JSON files, one per system
+
+        Parameters
+        ----------
+        outfile : str, optional
+        tmpdir : str, optional
+
         Returns
         -------
 
         """
+        import os, io
+        import subprocess
+        try:
+            os.mkdir(tmpdir)
+        except OSError:
+            pass
+        jfiles = []
+
+        # Loop on systems
+        for igm_abs in self._abs_sys:
+            # Dict
+            idict = igm_abs.to_dict()
+            # Temporary JSON file
+            json_fil = tmpdir+'/'+igm_abs.name+'.json'
+            jfiles.append(json_fil)
+            with io.open(json_fil, 'w', encoding='utf-8') as f:
+                #try:
+                f.write(unicode(json.dumps(idict, sort_keys=True, indent=4,
+                                           separators=(',', ': '))))
+        # Tar
+        subprocess.call(['tar', '-czf', outfile, tmpdir])
+        print('Wrote: {:s}'.format(outfile))
+
+        # Clean up
+        for jfile in jfiles:
+            os.remove(jfile)
+        os.rmdir(tmpdir)
 
     def __getattr__(self, k):
         """ Generate an array of attribute 'k' from the IGMSystems
