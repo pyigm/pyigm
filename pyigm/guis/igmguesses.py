@@ -857,14 +857,17 @@ class IGGVelPlotWidget(QtGui.QWidget):
             mtc = np.where(wrest == iwrest)[0]
             if len(mtc) == 0:
                 return
-            #QtCore.pyqtRemoveInputHook()
-            #pdb.set_trace()
-            #QtCore.pyqtRestoreInputHook()
+            # QtCore.pyqtRemoveInputHook()
+            # pdb.set_trace()
+            # QtCore.pyqtRestoreInputHook()
             dvz = np.array([c_kms * (self.z - components[mt].zcomp) / (1+self.z) for mt in mtc])
             # Find minimum
             mindvz = np.argmin(np.abs(dvz+event.xdata))
             if event.key == 'S':
                 self.parent.fiddle_widg.init_component(components[mtc[mindvz]])
+                # update the selection in Component Widget:
+                idx = mtc[mindvz]
+                self.parent.comps_widg.complist_widget.setCurrentRow(idx+1) # +1 because None counts
             elif event.key == 'D': # Delete nearest component to cursor
                 self.parent.delete_component(components[mtc[mindvz]])
 
@@ -1034,8 +1037,6 @@ class IGGVelPlotWidget(QtGui.QWidget):
         elif flg==3: # Layer (no clear)
             self.on_draw(in_wrest=wrest, rescale=rescale)
 
-
-
     # Click of main mouse button
     def on_click(self,event):
         try:
@@ -1044,8 +1045,9 @@ class IGGVelPlotWidget(QtGui.QWidget):
         except ValueError:
             return
         if event.button == 1: # Draw line
-            self.ax.plot( [event.xdata,event.xdata], self.psdict['y_minmax'], ':', color='green')
-            self.on_draw(replot=False) 
+            # remove this ugly green line
+            # self.ax.plot( [event.xdata,event.xdata], self.psdict['y_minmax'], ':', color='green')
+            # self.on_draw(replot=False)
     
             # Print values
             try:
@@ -1442,9 +1444,13 @@ class ComponentListWidget(QtGui.QWidget):
         try:
             txt = item[0].text()
         except:
-            QtCore.pyqtRemoveInputHook()
-            pdb.set_trace()
-            QtCore.pyqtRestoreInputHook()
+            # This seems to happen when the user forgets
+            # to click on the white regions in the velocity
+            # plots, before doing a command. Seems harmeless.
+            return
+            # QtCore.pyqtRemoveInputHook()
+            # pdb.set_trace()
+            # QtCore.pyqtRestoreInputHook()
         if txt == 'None':
             if self.parent is not None:
                 self.parent.updated_compslist(None)
@@ -1508,9 +1514,10 @@ class ComponentListWidget(QtGui.QWidget):
         idx = self.all_items.index(comp_name)
         del self.all_items[idx]
         self.all_comp.pop(idx)
-        self.complist_widget.item(len(self.all_items)).setSelected(True)
 
-        tmp = self.complist_widget.takeItem(idx+1) # 1 for None
+        tmp = self.complist_widget.takeItem(idx+1)  # +1 because of None counts in widget list but no in component list
+
+        self.complist_widget.item(len(self.all_items)).setSelected(True)
         self.on_list_change()
 
 
