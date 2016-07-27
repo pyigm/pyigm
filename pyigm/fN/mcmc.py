@@ -48,7 +48,7 @@ def set_fn_model(flg=0):
             imin = np.argmin(np.abs(NHI-tfN_model.pivots))
             param.append(tfN_model.param['sply'][imin])
         # Init
-        sfN_model = FNModel('Hspline', zmnx=(0.5,3.0), pivots=NHI_pivots,
+        sfN_model = FNModel('Hspline', zmnx=(0.5,5.5), pivots=NHI_pivots,
                            param=dict(sply=np.array(param)))
     else:
         raise ValueError('mcmc.set_model: Not ready for this type of fN model {:d}'.format(flg))
@@ -285,17 +285,18 @@ def run(fN_cs, fN_model, parm, debug=False):
     """
     Generate the Models
     """
-    @pymc.deterministic(plot=False)
-    def pymc_fn_model(parm=parm):
-        # Define f(N) model for PyMC
-        # Set parameters
-        aparm = np.array([parm[i] for i in range(parm.size)])
-        fN_model.update_parameters(aparm)
-        #
-        log_fNX = fN_model.evaluate( fN_input, 0. )
-        #
-        return log_fNX
-    pymc_list.append(pymc_fn_model)
+    if flg_fN:
+        @pymc.deterministic(plot=False)
+        def pymc_fn_model(parm=parm):
+            # Define f(N) model for PyMC
+            # Set parameters
+            aparm = np.array([parm[i] for i in range(parm.size)])
+            fN_model.update_parameters(aparm)
+            #
+            log_fNX = fN_model.evaluate( fN_input, 0. )
+            #
+            return log_fNX
+        pymc_list.append(pymc_fn_model)
 
     if flg_teff:
         # Define teff model for PyMC
