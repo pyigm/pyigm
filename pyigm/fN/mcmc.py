@@ -5,10 +5,14 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 
 import os, imp
 import numpy as np
+import warnings
 import pdb
 import pymc
 #import MCMC_errors
 
+from astropy.table import Table
+
+import pyigm
 from pyigm.fN import plots
 from pyigm.fN.fnmodel import FNModel
 from pyigm.fN.constraints import FNConstraint
@@ -36,17 +40,30 @@ def set_fn_model(flg=0):
         sfN_model = FNModel.default_model(use_mcmc=True) # Hermite Spline
     elif flg==1:
         sfN_model = FNModel('Gamma')
-    else: 
+    elif flg==2:
+        tfN_model = FNModel.default_model()
+        NHI_pivots = [12., 15., 17.0, 20., 21.5, 22.]
+        param = []
+        for NHI in NHI_pivots:
+            imin = np.argmin(np.abs(NHI-tfN_model.pivots))
+            param.append(tfN_model.param['sply'][imin])
+        # Init
+        sfN_model = FNModel('Hspline', zmnx=(0.5,3.0), pivots=NHI_pivots,
+                           param=dict(sply=np.array(param)))
+    else:
         raise ValueError('mcmc.set_model: Not ready for this type of fN model {:d}'.format(flg))
     #
     return sfN_model
 
 
-def set_fn_data(sources=None, extra_fNc=[]):
+def set_fn_data(flg=2, sources=None, extra_fNc=[]):
     """ Load up f(N) data
 
     Parameters
     ----------
+    flg : int, optional
+      2 : z~2 constraints
+      5 : z~5 constraints
     sources : list, optional
       References for constraints
     extra_fNc : list, optional
@@ -55,35 +72,90 @@ def set_fn_data(sources=None, extra_fNc=[]):
     -------
     fN_data :: List of fN_Constraint Classes
     """
-    if sources is None:
-        sources = ['OPB07', 'OPW12', 'OPW13', 'K05', 'K13R13', 'N12']
-
-    fn_file = pyigm_path+'/data/fN/fn_constraints_z2.5_vanilla.fits'
-    k13r13_file = pyigm_path+'/data/fN/fn_constraints_K13R13_vanilla.fits'
-    n12_file = pyigm_path+'/data/fN/fn_constraints_N12_vanilla.fits'
-    all_fN_cs = FNConstraint.from_fitsfile([fn_file,k13r13_file,n12_file])
-
-    # Add on, e.g. user-supplied
-    if len(extra_fNc) > 0:
-        raise IOError("NOT READY FOR THIS YET")
-        #for src in extra_fNc:
-        #	all_fN_cs.append(xifd.fN_data_from_ascii_file(os.path.abspath(src)))
-
-    # Include good data sources
     fN_cs = []
-    for fN_c in all_fN_cs:
-        # In list?
-        if fN_c.ref in sources:
-            print('Using {:s} as a constraint'.format(fN_c.ref))
+    if flg == 2:
+        if sources is None:
+            sources = ['OPB07', 'OPW12', 'OPW13', 'K05', 'K13R13', 'N12']
+
+        fn_file = pyigm_path+'/data/fN/fn_constraints_z2.5_vanilla.fits'
+        k13r13_file = pyigm_path+'/data/fN/fn_constraints_K13R13_vanilla.fits'
+        n12_file = pyigm_path+'/data/fN/fn_constraints_N12_vanilla.fits'
+        all_fN_cs = FNConstraint.from_fitsfile([fn_file,k13r13_file,n12_file])
+
+        # Add on, e.g. user-supplied
+        if len(extra_fNc) > 0:
+            raise IOError("NOT READY FOR THIS YET")
+            #for src in extra_fNc:
+            #	all_fN_cs.append(xifd.fN_data_from_ascii_file(os.path.abspath(src)))
+
+        # Include good data sources
+        for fN_c in all_fN_cs:
+            # In list?
+            if fN_c.ref in sources:
+                print('Using {:s} as a constraint'.format(fN_c.ref))
+                # Append
+                fN_cs.append(fN_c)
+                # Pop
+                idx = sources.index(fN_c.ref)
+                sources.pop(idx)
+
+        # Check that all the desired sources were used
+        if len(sources) > 0:
+            pdb.set_trace()
+    elif flg == 5:
+        if sources is None:
+            sources = ['Worseck+14', 'Crighton+15', 'Crighton+16', 'Becker+13']
+
+        #all_fN_cs = FNConstraint.from_fitsfile([fn_file,k13r13_file,n12_file])
+
+        # MFP (Worseck+14)
+        fN_MFPa = FNConstraint('MFP', 4.56, ref='Worseck+14', flavor='\\lmfp', data=dict(MFP=22.2,SIG_MFP=2.3, COSM='VANILLA'))
+        fN_MFPb = FNConstraint('MFP', 4.86, ref='Worseck+14', flavor='\\lmfp', data=dict(MFP=15.1,SIG_MFP=1.8, COSM='VANILLA'))
+        fN_MFPc = FNConstraint('MFP', 5.16, ref='Worseck+14', flavor='\\lmfp', data=dict(MFP=10.3,SIG_MFP=1.6, COSM='VANILLA'))
+        fN_MFP = [fN_MFPa, fN_MFPb, fN_MFPc]
+        # LLS (Crighton+16)
+        fN_LLSa = FNConstraint('LLS', np.mean([3.75,4.40]), ref='Crighton+16', flavor='\\tlox', data=dict(LX=0.628,SIG_LX=0.095, TAU_LIM=2., COSM='VANILLA'))
+        fN_LLSb = FNConstraint('LLS', np.mean([4.40,4.70]), ref='Crighton+16', flavor='\\tlox', data=dict(LX=0.601,SIG_LX=0.102, TAU_LIM=2., COSM='VANILLA'))
+        fN_LLSc = FNConstraint('LLS', np.mean([4.70, 5.40]), ref='Crighton+16', flavor='\\tlox', data=dict(LX=0.928,SIG_LX=0.151, TAU_LIM=2., COSM='VANILLA'))
+        fN_LLS = [fN_LLSa, fN_LLSb, fN_LLSc]
+        # DLA (Crighton+15)
+        tau_lim = 10.**(20.3-17.19)
+        fN_DLAa = FNConstraint('DLA', np.mean([3.56,4.45]), ref='Crighton+15', flavor='\\tdlox',
+                               data=dict(LX=0.059, SIG_LX=0.018, COSM='VANILLA', TAU_LIM=tau_lim))
+        fN_DLAb = FNConstraint('DLA', np.mean([4.45,5.31]), ref='Crighton+15', flavor='\\tdlox',
+                               data=dict(LX=0.095, SIG_LX=0.022, COSM='VANILLA', TAU_LIM=tau_lim))
+        fN_DLA = [fN_DLAa, fN_DLAb]
+        # tau_eff (Becker+13)
+        b13_tab2 = Table.read(pyigm.__path__[0]+'/data/teff/becker13_tab2.dat', format='ascii')
+        fN_teff = []
+        for row in b13_tab2:
+            if row['z'] < 4.:
+                continue
+            # calculate
+            teff = -1*np.log(row['F'])
+            sigteff = row['s(F)']/row['F']
+            # Generate
+            fN = FNConstraint('teff', row['z'], ref='Becker+13', flavor='\\tlya',
+                              data=dict(Z_TEFF=row['z'], TEFF=teff, SIG_TEFF=sigteff, COSM='N/A', NHI_MNX=[11.,22.]))
             # Append
-            fN_cs.append(fN_c)
-            # Pop
-            idx = sources.index(fN_c.ref)
-            sources.pop(idx)
-    
-    # Check that all the desired sources were used
-    if len(sources) > 0:
-        pdb.set_trace()
+            fN_teff.append(fN)
+        # Collate
+        all_fN_cs = fN_MFP + fN_DLA + fN_teff + fN_LLS
+
+        # Include good data sources
+        for fN_c in all_fN_cs:
+            # In list?
+            if fN_c.ref in sources:
+                print('Using {:s} as a constraint'.format(fN_c.ref))
+                # Append
+                fN_cs.append(fN_c)
+                # Pop
+                idx = sources.index(fN_c.ref)
+                sources.pop(idx)
+
+        # Check that all the desired sources were used
+        if len(sources) > 0:
+            pdb.set_trace()
 
     return fN_cs
 
@@ -155,15 +227,23 @@ def run(fN_cs, fN_model, parm, debug=False):
     pymc_list = [parm]
 
     # Parse data and combine as warranted
+    flg_fN = 0
     all_NHI = []
     all_fN = []
     all_sigfN = []
     all_z = []
     flg_teff = 0
-    flg_LLS = 0
-    for fN_c in fN_cs: 
+    teff = []
+    teff_inputs = []
+    sig_teff = []
+    flg_lX = 0
+    lX_inputs = []
+    lX = []
+    sig_lX = []
+    for fN_c in fN_cs:
         # Standard f(N)
         if fN_c.fN_dtype == 'fN':
+            flg_fN += 1
             ip = range(fN_c.data['NPT'])
             val = np.where(fN_c.data['FN'][ip] > -90)[0] # Deal with limits later
             ipv = np.array(ip)[val]
@@ -179,30 +259,28 @@ def run(fN_cs, fN_model, parm, debug=False):
             for ii in range(len(ipv)):
                 all_z.append(fN_c.zeval)
         elif fN_c.fN_dtype == 'teff': # teff_Lya
-            if flg_teff:
-                raise ValueError('Only one teff allowed for now!')
-            else:
-                flg_teff = 1
-            teff=float(fN_c.data['TEFF'])
-            D_A = 1. - np.exp(-1. * teff)
+            flg_teff += 1
+            teff.append(float(fN_c.data['TEFF']))
             SIGDA_LIMIT = 0.1  # Allows for systemtics and b-value uncertainty
-            sig_teff = np.max([fN_c.data['SIG_TEFF'], (SIGDA_LIMIT*teff)])
+            sig_teff.append(np.max([fN_c.data['SIG_TEFF'], (SIGDA_LIMIT*teff[-1])]))
             teff_zeval = float(fN_c.data['Z_TEFF'])
-
             # Save input for later usage
-            teff_input = (teff_zeval, fN_c.data['NHI_MNX'][0], fN_c.data['NHI_MNX'][1])
-        elif fN_c.fN_dtype == 'l(X)': # teff_Lya
-            if flg_LLS:
-                raise ValueError('Only one teff allowed for now!')
-            else:
-                flg_LLS = 1
-            LLS_lx = fN_c.data['LX']
-            LLS_siglx = fN_c.data['SIG_LX']
-            LLS_input = (fN_c.zeval, fN_c.data['TAU_LIM'])
+            teff_inputs.append((teff_zeval, fN_c.data['NHI_MNX'][0], fN_c.data['NHI_MNX'][1]))
+        elif fN_c.fN_dtype in ['l(X)','LLS','DLA']:  # l(X)
+            flg_lX += 1
+            lX.append(fN_c.data['LX'])
+            sig_lX.append(fN_c.data['SIG_LX'])
+            # Save input for later usage
+            lX_inputs.append((fN_c.zeval, fN_c.data['TAU_LIM']))
+        elif fN_c.fN_dtype == 'MFP':
+            warnings.warn("Skipping MFP for now")
+            continue
+        else:
+            raise IOError("Not ready for fNConstraint of type {:s}".format(fN_c.fN_dtype))
             
-    # 
-    fN_input = (np.array(all_NHI), np.array(all_z))
-    #flg_teff = 0
+    #
+    if flg_fN:
+        fN_input = (np.array(all_NHI), np.array(all_z))
 
     """
     Generate the Models
@@ -227,44 +305,48 @@ def run(fN_cs, fN_model, parm, debug=False):
             aparm = np.array([parm[i] for i in range(parm.size)])
             fN_model.update_parameters(aparm)
             # Calculate teff
-            model_teff = tau_eff.lyman_ew(1215.6701*(1+teff_input[0]), teff_input[0]+0.1,
-                                               fN_model, NHI_MIN=teff_input[1], NHI_MAX=teff_input[2])
-            return model_teff
+            model_teff = []
+            for teff_input in teff_inputs:
+                model_teff.append(tau_eff.lyman_ew(1215.6701*(1+teff_input[0]), teff_input[0]+0.1,
+                                               fN_model, NHI_MIN=teff_input[1], NHI_MAX=teff_input[2]))
+            return np.array(model_teff)
         pymc_list.append(pymc_teff_model)
 
-    if flg_LLS:
-        # Define l(X)_LLS model for PyMC
+    if flg_lX:
+        # Define l(X) model for PyMC
         @pymc.deterministic(plot=False)
-        def pymc_lls_model(parm=parm): 
+        def pymc_lX_model(parm=parm):
             # Set parameters 
             aparm = np.array([parm[i] for i in range(parm.size)])
             fN_model.update_parameters(aparm)
             # Calculate l(X)
-            lX = fN_model.calculate_lox(LLS_input[0], 17.19+np.log10(LLS_input[1]), 22.)
-            return lX
-        pymc_list.append(pymc_lls_model)
+            model_lX = []
+            for lX_input in lX_inputs:
+                model_lX.append(fN_model.calculate_lox(lX_input[0], 17.19+np.log10(lX_input[1]), 22.))
+            return np.array(model_lX)
+        pymc_list.append(pymc_lX_model)
 
     """
     Generate the Data
     """
 
     # Define f(N) data for PyMC
-    fNvalue=np.array(all_fN)
-    #xdb.set_trace()
-    pymc_fN_data = pymc.Normal(str('fNdata'), mu=pymc_fn_model, tau=1.0/np.array(all_sigfN)**2,
-                               value=fNvalue, observed=True)
-    pymc_list.append(pymc_fN_data)
+    if flg_fN:
+        fNvalue=np.array(all_fN)
+        pymc_fN_data = pymc.Normal(str('fNdata'), mu=pymc_fn_model, tau=1.0/np.array(all_sigfN)**2,
+                                   value=fNvalue, observed=True)
+        pymc_list.append(pymc_fN_data)
 
     # Define teff data for PyMC
     if flg_teff:
         pymc_teff_data = pymc.Normal(str('teffdata'), mu=pymc_teff_model, tau=1.0/np.array(sig_teff)**2,
-                                value=teff, observed=True)
+                                value=np.array(teff), observed=True)
         pymc_list.append(pymc_teff_data)
 
     # Define l(X)_LLS model for PyMC
-    if flg_LLS:
-        pymc_lls_data = pymc.Normal(str('LLSdata'), mu=pymc_lls_model, tau=1.0/np.array(LLS_siglx)**2,
-                                value=LLS_lx, observed=True)
+    if flg_lX:
+        pymc_lls_data = pymc.Normal(str('lXdata'), mu=pymc_lX_model, tau=1.0/np.array(sig_lX)**2,
+                                value=np.array(lX), observed=True)
         pymc_list.append(pymc_lls_data)
 
 
