@@ -209,7 +209,8 @@ def set_pymc_var(fN_model,lim=2.):
     return iparm
 
 
-def run(fN_cs, fN_model, parm, debug=False):
+def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
+        outfile=None):
     """ Run the MCMC
 
     Parameters
@@ -218,11 +219,24 @@ def run(fN_cs, fN_model, parm, debug=False):
     fN_model
     parm
     debug : bool, optional
+    ntune : int, optional
+      Number of steps for tuning
+    nsample : int, optional
+      Number of steps
+    nburn : int, optional
+      Number of steps to burn (these are lost)
+    outfile : str, optional
+      File to write output.  Only allowed extension is hdf5
+
 
     Returns
     -------
 
     """
+    if outfile is not None:
+        ext = outfile.split('.')[-1]
+        if ext != 'hdf5':
+            raise IOError("Outfile must have an hdf5 extension")
     #
     pymc_list = [parm]
 
@@ -355,7 +369,10 @@ def run(fN_cs, fN_model, parm, debug=False):
     RUN THE MCMC
     """
 
-    MC = pymc.MCMC(pymc_list)#,verbose=2)
+    if outfile is not None:
+        MC = pymc.MCMC(pymc_list, db=str('hdf5'), dbname=str(outfile), dbmode=str('w'))
+    else:
+        MC = pymc.MCMC(pymc_list)#,verbose=2)
     # Force step method to be Metropolis!
     for ss in MC.stochastics-MC.observed_stochastics:
         MC.use_step_method(pymc.Metropolis, ss, proposal_sd=0.025, proposal_distribution='Normal')
@@ -363,13 +380,8 @@ def run(fN_cs, fN_model, parm, debug=False):
 
     # Run a total of 40000 samples, but ignore the first 10000.
     # Verbose just prints some details to screen.
-    #xdb.set_trace()
-    #MC.sample(20000, 3000, verbose=2, tune_interval=500)
-    #MC.sample(5000, 500, verbose=2, tune_interval=200)
-    #MC.sample(20000, 5000, verbose=2, tune_interval=500)
-    MC.sample(2000, 400, verbose=2, tune_interval=200)
-    #MC.isample(10000, 1000, verbose=2)
-    
+    MC.sample(nsample, nburn, verbose=2, tune_interval=ntune)
+
     if debug:
         pdb.set_trace()
         #xifd.tst_fn_data(fN_model=fN_model)
@@ -383,6 +395,7 @@ def run(fN_cs, fN_model, parm, debug=False):
     # Save the individual distributions to a file to check convergence
     #pymc.Matplot.plot(MC)
     #xdb.set_trace()
+
     return MC
 
 
