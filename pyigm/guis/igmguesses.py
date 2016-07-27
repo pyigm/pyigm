@@ -484,8 +484,6 @@ P         : toggle on/off "colorful" display, where components of different
             f.write(unicode(json.dumps(gd_dict, sort_keys=True, indent=4,
                                        separators=(',', ': '))))
 
-
-
     # Write + Quit
     def write_quit(self):
         self.write_out()
@@ -1016,6 +1014,11 @@ class IGGVelPlotWidget(QtGui.QWidget):
         # Colorful mode?
         if event.key == 'P':  # Toggle colorful mode
             self.flag_colorful = not self.flag_colorful
+
+        # print component info
+        if event.key == '@':  #  for develop; this will be deleted in future.
+            print('Computing blendings between components, it may take a while...\n')
+            blending_info(self.parent.comps_widg.all_comp)
 
         """
         # AODM plot
