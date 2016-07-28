@@ -42,7 +42,7 @@ def set_fn_model(flg=0):
         sfN_model = FNModel('Gamma')
     elif flg==2:
         tfN_model = FNModel.default_model()
-        NHI_pivots = [12., 15., 17.0, 20., 21.5, 22.]
+        NHI_pivots = [12., 15., 17.0, 21.0, 22.]
         param = []
         for NHI in NHI_pivots:
             imin = np.argmin(np.abs(NHI-tfN_model.pivots))
