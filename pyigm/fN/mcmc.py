@@ -105,6 +105,7 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[]):
     elif flg == 5:
         if sources is None:
             sources = ['Worseck+14', 'Crighton+15', 'Crighton+16', 'Becker+13']
+        chk_sources = sources[:]
 
         #all_fN_cs = FNConstraint.from_fitsfile([fn_file,k13r13_file,n12_file])
 
@@ -150,11 +151,15 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[]):
                 # Append
                 fN_cs.append(fN_c)
                 # Pop
-                idx = sources.index(fN_c.ref)
-                sources.pop(idx)
+                try:
+                    idx = chk_sources.index(fN_c.ref)
+                except ValueError:
+                    pass
+                else:
+                    chk_sources.pop(idx)
 
         # Check that all the desired sources were used
-        if len(sources) > 0:
+        if len(chk_sources) > 0:
             pdb.set_trace()
 
     return fN_cs
