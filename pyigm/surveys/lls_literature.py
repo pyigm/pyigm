@@ -997,6 +997,19 @@ def lehner13():
         with open(tab_fil, "wb") as code:
             code.write(f.read())
 
+def wotta16():
+    """ Generate sys files from IDL save files
+    Returns
+    -------
+    """
+    from scipy.io import readsav
+    # Non-excluded
+    all = readsav(pyigm_path+'/data/LLS/Literature/wotta16_final.save')
+
+    # Build Lehner+13
+    assert False # Need RA/DEC
+
+
 #####
 def log_sum(logN):
     '''Sum up logN values return the log
