@@ -417,7 +417,6 @@ class IGMSurvey(object):
             json_fil = tmpdir+'/'+igm_abs.name+'.json'
             jfiles.append(json_fil)
             with io.open(json_fil, 'w', encoding='utf-8') as f:
-                #try:
                 f.write(unicode(json.dumps(idict, sort_keys=True, indent=4,
                                            separators=(',', ': '))))
         # Tar
