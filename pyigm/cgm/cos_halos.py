@@ -294,7 +294,6 @@ class COSHalos(CGMAbsSurvey):
             else:
                 print('No Werk+14 Cloudy solution for {:s}'.format(cgm_abs.name))
 
-
     def load_sys(self, tfile=None, empty=True, debug=False, **kwargs):
         """ Load the COS-Halos survey from JSON files
 
