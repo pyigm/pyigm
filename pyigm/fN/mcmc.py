@@ -125,7 +125,7 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[]):
                                data=dict(LX=0.059, SIG_LX=0.018, COSM='VANILLA', TAU_LIM=tau_lim))
         fN_DLAb = FNConstraint('DLA', np.mean([4.45,5.31]), ref='Crighton+15', flavor='\\tdlox',
                                data=dict(LX=0.095, SIG_LX=0.022, COSM='VANILLA', TAU_LIM=tau_lim))
-        fN_DLAc = FNConstraint('fN', 4.5, ref='Crighton+15', flavor='f(N)',
+        fN_DLAc = FNConstraint('fN', np.mean([3.6,5.2]), ref='Crighton+15', flavor='f(N)',
                                data=dict(COSM='VANILLA', NPT=5,
                                          FN=np.array([-22.1247392 , -22.12588672, -22.51361414, -22.7732822 , -23.76709909]),
                                          SIG_FN=np.array([[ 0.24127323,  0.17599877,  0.17613792,  0.14095363,  0.30129492],
