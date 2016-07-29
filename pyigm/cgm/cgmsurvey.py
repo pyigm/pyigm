@@ -136,10 +136,6 @@ class CGMAbsSurvey(object):
         # Return
         return tbl
 
-
-
-
-    # Kinematics (for convenience)
     def abs_kin(self, lbl):
         """  Create a Table of the Kinematic info
 
