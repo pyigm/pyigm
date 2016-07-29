@@ -294,12 +294,10 @@ class IGMSurvey(object):
         # Find the first entry with a non-zero length table
         for kk,abs_sys in enumerate(self._abs_sys):
             if len(abs_sys._ionN) > 0:
-                pdb.set_trace()
                 break
         #
         keys = [u'name', ] + self.abs_sys()[kk]._ionN.keys()
         t = Table(self.abs_sys()[kk]._ionN[0:1]).copy()   # Avoids mixin trouble
-        pdb.set_trace()
         t.add_column(Column(['dum']*len(t), name='name', dtype='<U32'))
         t = t[keys]
         if 'Ej' not in keys:
