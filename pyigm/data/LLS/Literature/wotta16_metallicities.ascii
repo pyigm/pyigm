@@ -1,6 +1,6 @@
 Target        z_em       RA              DEC            z_abs      logNHI  elogNHI    vmin   vmax    logNMgII ep_logNMgII em_logNMgII    [X/H] ep_[X/H] em_[X/H]       68%[X/H]_low  68%[X/H]_high   95%[X/H]_low  95%[X/H]_high
-#;;Note that for the two cases where we added two MgII components, I've included the FULL velocity range covering BOTH components here
-#;;W16 below ([Mg/H])
+#Note that for the two cases where we added two MgII components, I've included the FULL velocity range covering BOTH components here
+#W16 below ([Mg/H])
 J0800+4212    0.99407    +08:00:03.90    +42:12:53.2    0.598      16.95   0.20       -100   +100    11.75   0.17   0.30                 -1.99   0.3    0.3               -2.13          -1.85              -2.24            -1.62
 J0804+2743    1.21924    +08:04:24.97    +27:43:23.2    0.9106     17.45   0.10       -103   +79     12.27   0.06   0.08                 -1.96   0.13   0.13              -2.12          -1.79              -2.24            -1.52
 J0806+1442    1.21268    +08:06:30.30    +14:42:42.4    1.0943     17.40   0.20       -26    +16     13.51   +1     +1                   -0.64   +1     +1               >-0.80        \nodata             >-0.92          \nodata
