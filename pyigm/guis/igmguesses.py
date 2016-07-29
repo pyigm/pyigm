@@ -38,6 +38,7 @@ from linetools.lists.linelist import LineList
 from linetools.spectra.xspectrum1d import XSpectrum1D
 from linetools.spectralline import AbsLine
 from linetools.isgm.abscomponent import AbsComponent
+from linetools.isgm import utils as ltiu
 from linetools.guis import utils as ltgu
 from linetools.guis import line_widgets as ltgl
 from linetools.guis import simple_widgets as ltgsm
@@ -380,12 +381,14 @@ P         : toggle on/off "colorful" display, where components of different
         # Components
         print('Reading the components from previous file. It may take a while...')
         ntot = len(igmg_dict['cmps'].keys())
-        # ncomp = 0
         for ii, key in enumerate(igmg_dict['cmps'].keys()):
 
             if 'lines' in igmg_dict['cmps'][key].keys():
                 comp = AbsComponent.from_dict(igmg_dict['cmps'][key], linelist=self.llist['ISM'], coord=self.coord,
                                               chk_sep=False, chk_data=False, chk_vel=False)
+                # QtCore.pyqtRemoveInputHook()
+                # pdb.set_trace()
+                # QtCore.pyqtRestoreInputHook()
                 comp_init_attrib(comp)
                 comp.init_wrest = igmg_dict['cmps'][key]['wrest']*u.AA
                 try:
@@ -394,16 +397,14 @@ P         : toggle on/off "colorful" display, where components of different
                     warnings.warn("Setting all abslines to 2")
                     comp.mask_abslines = 2*np.ones(len(comp._abslines)).astype(int)
                 self.velplot_widg.add_component(comp, update_model=False)
-                # ncomp += 1
-                # print('new', ncomp)
+
             else:  # for compatibility, should be deprecated
                 self.velplot_widg.add_component(
                         igmg_dict['cmps'][key]['wrest']*u.AA,
                         zcomp=igmg_dict['cmps'][key]['zcomp'],
                         vlim=igmg_dict['cmps'][key]['vlim']*u.km/u.s,
                         update_model=False)
-                # ncomp += 1
-                # print('old', ncomp)
+
 
             # Name
             self.velplot_widg.current_comp.name = key
@@ -420,6 +421,7 @@ P         : toggle on/off "colorful" display, where components of different
             sync_comp_lines(self.velplot_widg.current_comp)
             mask_comp_lines(self.velplot_widg.current_comp, min_ew=self.min_ew)
 
+            # print message regarding progress on reading components
             import sys
             progress = int(ii * 100. / ntot)
             sys.stdout.write('Progress: {}%\r'.format(progress))
@@ -439,11 +441,11 @@ P         : toggle on/off "colorful" display, where components of different
                         fwhm=self.fwhm, bad_pixels=[])
 
         # Write components out
-        # We need a deep copy here because ._abslines will be modify before writting
+        # We need a deep copy here because ._abslines will be modified before writting
         # but we want to keep the original ._abslines list in case column density
-        # increases.
+        # increases and the lines that were masked out because of EW should reappear.
         comps_aux = copy.deepcopy(self.comps_widg.all_comp)
-        for kk,comp in enumerate(comps_aux):
+        for kk, comp in enumerate(comps_aux):
             # get rid of masked abslines for writting out to hard drive
             abslines_aux = []
             mask_abslines_aux = []
@@ -661,6 +663,16 @@ class IGGVelPlotWidget(QtGui.QWidget):
         """
         if isinstance(inp, AbsComponent):
             new_comp = inp
+            # compatibility with older versions
+            cond = new_comp._abslines[0].analy['wvlim'] == [0,0]*u.AA
+            if np.sum(cond)>0:
+                #sync wvlims
+                for aline in new_comp._abslines:
+                    z = aline.attrib['z']
+                    vlim = aline.analy['vlim']
+                    dz_aux = ltu.z_from_v(z, vlim)
+                    aline.analy['wvlim'] = aline.wrest * (1 + dz_aux)
+
         else:  # wrest
             # Center z and reset vmin/vmax
             if zcomp is None:
@@ -1003,6 +1015,11 @@ class IGGVelPlotWidget(QtGui.QWidget):
         if event.key == 'P':  # Toggle colorful mode
             self.flag_colorful = not self.flag_colorful
 
+        # print component info
+        if event.key == '@':  #  for develop; this will be deleted in future.
+            print('Computing blendings between components, it may take a while...\n')
+            blending_info(self.parent.comps_widg.all_comp)
+
         """
         # AODM plot
         if event.key == ':':  # 
@@ -1195,10 +1212,12 @@ class IGGVelPlotWidget(QtGui.QWidget):
                             color_label = line_color[imt]
                         else:
                             color_label = COLOR_MODEL
+
                         if self.flag_idlbl:
                             self.ax.text(v, 0.5, line_lbl[imt], color=color_label, backgroundcolor='w',
                                 bbox={'pad':0,'edgecolor':'none', 'facecolor':'w'}, size='xx-small',
                                     rotation=90.,ha='center',va='center')
+
                         if (self.flag_plotmodel) and (self.flag_colorful):
                             # plotting absline with color better done in wobs -> velo space
                             dvmin = c_kms * ((line_wvobs_lims[imt][0] - line_wvobs[imt]) / wvobs)
@@ -1581,6 +1600,7 @@ def sync_comp_lines(comp):
         line.attrib['b'] = comp.attrib['b']
         line.attrib['z'] = comp.attrib['z']
 
+
 def mask_comp_lines(comp, min_ew = 0.003*u.AA, verbose=False):
     """ Mask out lines that are weaker than
     equivalent width threshold."""
@@ -1623,3 +1643,29 @@ def set_fontsize(ax,fsz):
     for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] +
                 ax.get_xticklabels() + ax.get_yticklabels()):
         item.set_fontsize(fsz)
+
+
+# Some info about the blending between components
+def blending_info(components):
+    grouped_comps = ltiu.group_coincident_compoments(components, output_type='list')
+    isolated = []
+    grouped = []
+    for group in grouped_comps:
+        if len(group) == 1:
+            isolated += [group[0]]
+        else:
+            grouped += [group]
+
+    grouped = [isolated] + grouped
+    for ii, group in enumerate(grouped):
+        if ii == 0:
+            print('The following components are isolated in wvobs space:')
+            s = ' Isolated: '
+        else:
+            s = 'Group{}: '.format(ii)
+        for comp in group:
+            s += '{}, '.format(comp.name)
+        s = s[:-2] + '.\n'
+        if ii == 1:
+            print('The following components overlap in wvobs space:')
+        print(s)
