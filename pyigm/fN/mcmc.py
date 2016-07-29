@@ -42,7 +42,7 @@ def set_fn_model(flg=0):
         sfN_model = FNModel('Gamma')
     elif flg==2:
         tfN_model = FNModel.default_model()
-        NHI_pivots = [12., 15., 17.0, 21.0, 22.]
+        NHI_pivots = [11., 15., 17.0, 20.0, 21.5, 22.]
         param = []
         for NHI in NHI_pivots:
             imin = np.argmin(np.abs(NHI-tfN_model.pivots))
@@ -125,7 +125,15 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[]):
                                data=dict(LX=0.059, SIG_LX=0.018, COSM='VANILLA', TAU_LIM=tau_lim))
         fN_DLAb = FNConstraint('DLA', np.mean([4.45,5.31]), ref='Crighton+15', flavor='\\tdlox',
                                data=dict(LX=0.095, SIG_LX=0.022, COSM='VANILLA', TAU_LIM=tau_lim))
-        fN_DLA = [fN_DLAa, fN_DLAb]
+        fN_DLAc = FNConstraint('fN', 4.5, ref='Crighton+15', flavor='f(N)',
+                               data=dict(COSM='VANILLA', NPT=5,
+                                         FN=np.array([-22.1247392 , -22.12588672, -22.51361414, -22.7732822 , -23.76709909]),
+                                         SIG_FN=np.array([[ 0.24127323,  0.17599877,  0.17613792,  0.14095363,  0.30129492],
+                                                        [ 0.21437162,  0.15275017,  0.12551036,  0.12963855,  0.17654378]]),
+                                         BINS=np.array([[ 20.175,  20.425,  20.675,  20.925,  21.05 ],
+                                                        [ 20.675,  20.925,  21.175,  21.425,  22.05 ]])))
+
+        fN_DLA = [fN_DLAa, fN_DLAb, fN_DLAc]
         # tau_eff (Becker+13)
         b13_tab2 = Table.read(pyigm.__path__[0]+'/data/teff/becker13_tab2.dat', format='ascii')
         fN_teff = []
@@ -137,7 +145,8 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[]):
             sigteff = row['s(F)']/row['F']
             # Generate
             fN = FNConstraint('teff', row['z'], ref='Becker+13', flavor='\\tlya',
-                              data=dict(Z_TEFF=row['z'], TEFF=teff, SIG_TEFF=sigteff, COSM='N/A', NHI_MNX=[11.,22.]))
+                              data=dict(Z_TEFF=row['z'], TEFF=teff, SIG_TEFF=sigteff,
+                                        COSM='N/A', NHI_MNX=[11.,22.]))
             # Append
             fN_teff.append(fN)
         # Collate
