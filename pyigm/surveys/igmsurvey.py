@@ -272,8 +272,7 @@ class IGMSurvey(object):
 
     # Get ions
     def ions(self, iZion, Ej=0., skip_null=False):
-        """
-        Generate a Table of columns and so on
+        """ Generate a Table of columns and so on
         Restrict to those systems where flg_clm > 0
 
         Parameters
