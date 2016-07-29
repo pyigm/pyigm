@@ -50,7 +50,7 @@ other: measurement error on a detection
 
 
 Here they all are, listed as they were saved:
-;;
+;
 ;;NL points
 sightlineNL,zNL,nhiNL,enhiNL,nmgiiNL,ep_nmgiiNL,em_nmgiiNL, $
 metNL,ep_metNL,em_metNL,$
