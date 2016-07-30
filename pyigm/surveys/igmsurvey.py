@@ -272,8 +272,7 @@ class IGMSurvey(object):
 
     # Get ions
     def ions(self, iZion, Ej=0., skip_null=False):
-        """
-        Generate a Table of columns and so on
+        """ Generate a Table of columns and so on
         Restrict to those systems where flg_clm > 0
 
         Parameters
@@ -289,12 +288,16 @@ class IGMSurvey(object):
         -------
         Table of values for the Survey
         """
-        if len(self.abs_sys()[0]._ionN) == 0:
+        if self.abs_sys()[0]._ionN is None:
             raise IOError("ionN table not set.  Use fill_ionN")
+        # Find the first entry with a non-zero length table
+        for kk,abs_sys in enumerate(self._abs_sys):
+            if len(abs_sys._ionN) > 0:
+                break
         #
-        keys = [u'name', ] + self.abs_sys()[0]._ionN.keys()
-        t = Table(self.abs_sys()[0]._ionN[0:1]).copy()   # Avoids mixin trouble
-        t.add_column(Column(['dum'], name='name', dtype='<U32'))
+        keys = [u'name', ] + self.abs_sys()[kk]._ionN.keys()
+        t = Table(self.abs_sys()[kk]._ionN[0:1]).copy()   # Avoids mixin trouble
+        t.add_column(Column(['dum']*len(t), name='name', dtype='<U32'))
         t = t[keys]
         if 'Ej' not in keys:
             warnings.warn("Ej not in your ionN table.  Ignoring. Be careful..")
@@ -417,7 +420,6 @@ class IGMSurvey(object):
             json_fil = tmpdir+'/'+igm_abs.name+'.json'
             jfiles.append(json_fil)
             with io.open(json_fil, 'w', encoding='utf-8') as f:
-                #try:
                 f.write(unicode(json.dumps(idict, sort_keys=True, indent=4,
                                            separators=(',', ': '))))
         # Tar
@@ -489,7 +491,10 @@ class IGMSurvey(object):
                 raise NotImplementedError("Need to deal with this")
         # Combine systems
         combined._abs_sys = self._abs_sys + other._abs_sys
-        combined.mask = np.concatenate((self.mask, other.mask))
+        if self.mask is not None:
+            combined.mask = np.concatenate((self.mask, other.mask))
+        else:
+            combined.mask = None
 
         # Sightlines?
         if self.sightlines is not None:
@@ -555,146 +560,4 @@ def lst_to_array(lst, mask=None):
         tbl = Table(clms, names=attrib)
         # Return
         return tbl
-
-    # Mask
-    def update_mask(self, mask, increment=False):
-        """ Update the Mask for the abs_sys
-
-        Parameters
-        ----------
-        mask : array (usually Boolean)
-           Mask of systems 
-        increment : bool, optional
-           Increment the mask (i.e. keep False as False)
-        """
-        if len(mask) == len(self._abs_sys):  # Boolean mask
-            if increment is False:
-                self.mask = mask
-            else:
-                self.mask = self.mask & mask
-        else:
-            raise ValueError('abs_survey: Needs developing!')
-
-    def __getattr__(self, k):
-        """ Generate an array of attribute 'k' from the IGMSystems
-
-        Mask is applied
-
-        Parameters
-        ----------
-        k : str
-          Attribute
-
-        Returns
-        -------
-        numpy array
-        """
-        try:
-            lst = [getattr(abs_sys, k) for abs_sys in self._abs_sys]
-        except ValueError:
-            raise ValueError("Attribute does not exist")
-        # Special cases
-        if k == 'coord':
-            ra = [coord.ra for coord in lst]
-            dec = [coord.dec for coord in lst]
-            lst = SkyCoord(ra=ra, dec=dec)
-            return lst[self.mask]
-        # Recast as an array
-        return lst_to_array(lst, mask=self.mask)
-
-    def __add__(self, other, toler=2*u.arcsec):
-        """ Combine one or more IGMSurvey objects
-
-        Routine does a number of checks on the abstype,
-        the uniqueness of the sightlines and systems, etc.
-
-        Parameters
-        ----------
-        other : IGMSurvey
-        toler : Angle or Quantity
-          Tolerance for uniqueness
-
-        Returns
-        -------
-        combined : IGMSurvey
-
-        """
-        # Check the Surveys are the same type
-        if self.abs_type != other.abs_type:
-            raise IOError("Combined surveys need to be same abs_type")
-
-        # Init
-        combined = IGMSurvey(self.abs_type)
-        combined.ref = self.ref + ',' + other.ref
-
-        # Check for unique systems
-        other_coord =other.coord
-        for abssys in self._abs_sys:
-            if np.sum((abssys.coord.separation(other_coord) < toler) & (
-                        np.abs(abssys.zabs-other.zabs) < (1000*(1+abssys.zabs)/3e5))) > 0:
-                raise NotImplementedError("Need to deal with this")
-        # Combine systems
-        combined._abs_sys = self._abs_sys + other._abs_sys
-        combined.mask = np.concatenate((self.mask, other.mask))
-
-        # Sightlines?
-        if self.sightlines is not None:
-            slf_scoord = SkyCoord(ra=self.sightlines['RA']*u.deg,
-                                  dec=self.sightlines['DEC']*u.deg)
-            oth_scoord = SkyCoord(ra=other.sightlines['RA']*u.deg,
-                                  dec=other.sightlines['DEC']*u.deg)
-            idx, d2d, d3d = coords.match_coordinates_sky(slf_scoord,
-                                                     oth_scoord, nthneighbor=1)
-            mt = d2d < toler
-            if np.sum(mt) > 0:
-                raise NotImplementedError("Need to deal with this")
-            else:
-                # Combine systems
-                combined.sightlines = vstack([self.sightlines,
-                                              other.sightlines])
-        # Return
-        return combined
-
-    def __repr__(self):
-        if self.flist is not None:
-            return '<IGMSurvey: {:s} {:s}, nsys={:d}, type={:s}, ref={:s}>'.format(
-                self.tree, self.flist, self.nsys, self.abs_type, self.ref)
-        else:
-            repr = '<IGMSurvey: nsys={:d}, type={:s}, ref={:s}'.format(
-                self.nsys, self.abs_type, self.ref)
-            if self.sightlines is not None:
-                repr = repr + ', nsightlines={:d}'.format(len(self.sightlines))
-            repr = repr +'>'
-            return repr
-
-
-class GenericIGMSurvey(IGMSurvey):
-    """A simple absorption line survey
-    """
-    def __init__(self, **kwargs):
-        IGMSurvey.__init__(self, 'Generic', **kwargs)
-
-
-def lst_to_array(lst, mask=None):
-    """ Simple method to convert a list to an array
-
-    Allows for a list of Quantity objects
-
-    Parameters
-    ----------
-    lst : list
-      Should be number or Quantities
-    mask : boolean array, optional
-
-    Returns
-    -------
-    array or Quantity array
-
-    """
-    if mask is None:
-        mask = np.array([True]*len(lst))
-    if isinstance(lst[0], Quantity):
-        return Quantity(lst)[mask]
-    else:
-        return np.array(lst)[mask]
 
