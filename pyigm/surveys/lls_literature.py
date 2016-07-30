@@ -979,6 +979,36 @@ def battisti12():
     fin_slls = [ills for ills in all_lls if ills.NHI < 20.3]
     return fin_slls
 
+def lehner13():
+    """Lenher et al. 2013
+    Low z LLS
+    HST
+    Metals parsed from Table 2
+    """
+    # Grab ASCII file from ApJ
+    tab_fil = pyigm_path+"/data/LLS/Literature/lehner13_tab2.ascii"
+    chk_fil = glob.glob(tab_fil)
+    if len(chk_fil) > 0:
+        tab_fil = chk_fil[0]
+    else:
+        url = 'http://iopscience.iop.org/0004-637X/770/2/138/suppdata/apj472363t2_mrt.txt'
+        print('LLSSurvey: Grabbing table file from {:s}'.format(url))
+        f = urllib2.urlopen(url)
+        with open(tab_fil, "wb") as code:
+            code.write(f.read())
+
+def wotta16():
+    """ Generate sys files from IDL save files
+    Returns
+    -------
+    """
+    from scipy.io import readsav
+    # Non-excluded
+    all = readsav(pyigm_path+'/data/LLS/Literature/wotta16_final.save')
+
+    # Build Lehner+13
+    assert False # Need RA/DEC
+
 
 #####
 def log_sum(logN):

@@ -293,6 +293,9 @@ class COSHalos(CGMAbsSurvey):
                                         np.log10(self.werk14_cldy['NH_HIGH'][mtc][0])]
             else:
                 print('No Werk+14 Cloudy solution for {:s}'.format(cgm_abs.name))
+            # Hand edit for J0914+2823_41_27
+            if cgm_abs.name == 'J0914+2823_41_27':
+                igm_sys.werk14_ZH = -0.8
 
     def load_sys(self, tfile=None, empty=True, debug=False, **kwargs):
         """ Load the COS-Halos survey from JSON files
