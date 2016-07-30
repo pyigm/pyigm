@@ -111,7 +111,6 @@ class LLSSystem(IGMSystem):
 
     def __init__(self, radec, zabs, vlim, **kwargs):
         """Standard init
-
         NHI keyword is required
 
         Parameters
