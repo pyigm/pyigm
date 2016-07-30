@@ -481,7 +481,10 @@ class IGMSurvey(object):
 
         # Init
         combined = IGMSurvey(self.abs_type)
-        combined.ref = self.ref + ',' + other.ref
+        if self.ref is not None:
+            combined.ref = self.ref + ',' + other.ref
+        else:
+            combined.red = None
 
         # Check for unique systems
         other_coord =other.coord
