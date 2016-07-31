@@ -326,7 +326,7 @@ def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
             aparm = np.array([parm[i] for i in range(parm.size)])
             fN_model.update_parameters(aparm)
             #
-            log_fNX = fN_model.evaluate( fN_input, 0. )
+            log_fNX = fN_model.evaluate(fN_input, 0.)
             #
             return log_fNX
         pymc_list.append(pymc_fn_model)
