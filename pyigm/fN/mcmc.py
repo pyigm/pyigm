@@ -42,14 +42,18 @@ def set_fn_model(flg=0):
         sfN_model = FNModel('Gamma')
     elif flg==2:
         tfN_model = FNModel.default_model()
+        zpivot = 4.4
         NHI_pivots = [11., 15., 17.0, 20.0, 21.5, 22.]
         param = []
         for NHI in NHI_pivots:
             imin = np.argmin(np.abs(NHI-tfN_model.pivots))
-            param.append(tfN_model.param['sply'][imin])
+            # Adjust for zpivot
+            adj_parm = tfN_model.param['sply'][imin] + np.log10((
+                (1+zpivot)/(1+tfN_model.zpivot))**tfN_model.gamma)
+            param.append(adj_parm)
         # Init
         sfN_model = FNModel('Hspline', zmnx=(0.5,5.5), pivots=NHI_pivots,
-                           param=dict(sply=np.array(param)))
+                            zpivot=zpivot, param=dict(sply=np.array(param)))
     else:
         raise ValueError('mcmc.set_model: Not ready for this type of fN model {:d}'.format(flg))
     #
@@ -224,7 +228,7 @@ def set_pymc_var(fN_model,lim=2.):
 
 
 def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
-        outfile=None):
+        outfile=None, **kwargs):
     """ Run the MCMC
 
     Parameters
@@ -233,14 +237,10 @@ def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
     fN_model
     parm
     debug : bool, optional
-    ntune : int, optional
-      Number of steps for tuning
     nsample : int, optional
       Number of steps
     nburn : int, optional
       Number of steps to burn (these are lost)
-    outfile : str, optional
-      File to write output.  Only allowed extension is hdf5
 
 
     Returns
@@ -251,6 +251,11 @@ def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
         ext = outfile.split('.')[-1]
         if ext != 'hdf5':
             raise IOError("Outfile must have an hdf5 extension")
+        # Set up keywords
+        mcmc_kwargs = {}
+        mcmc_kwargs['db'] = str('hdf5')
+        mcmc_kwargs['dbmode']=str('w')
+        mcmc_kwargs['dbname']=str(outfile)
     #
     pymc_list = [parm]
 
@@ -384,7 +389,8 @@ def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
     """
 
     if outfile is not None:
-        MC = pymc.MCMC(pymc_list, db=str('hdf5'), dbname=str(outfile), dbmode=str('w'))
+        MC = pymc.MCMC(pymc_list, **mcmc_kwargs)
+        #db=str('hdf5'), dbname=str(outfile), dbmode=str('w'))
     else:
         MC = pymc.MCMC(pymc_list)#,verbose=2)
     # Force step method to be Metropolis!
@@ -394,7 +400,7 @@ def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
 
     # Run a total of 40000 samples, but ignore the first 10000.
     # Verbose just prints some details to screen.
-    MC.sample(nsample, nburn, verbose=2, tune_interval=ntune)
+    MC.sample(nsample, nburn, verbose=2, **kwargs)
 
     if debug:
         pdb.set_trace()
