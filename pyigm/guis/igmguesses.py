@@ -663,15 +663,13 @@ class IGGVelPlotWidget(QtGui.QWidget):
         """
         if isinstance(inp, AbsComponent):
             new_comp = inp
-            # compatibility with older versions
+            # compatibility with older versions, should be removed eventually...
             cond = new_comp._abslines[0].analy['wvlim'] == [0,0]*u.AA
             if np.sum(cond)>0:
                 #sync wvlims
                 for aline in new_comp._abslines:
-                    z = aline.attrib['z']
                     vlim = aline.analy['vlim']
-                    dz_aux = ltu.z_from_v(z, vlim)
-                    aline.analy['wvlim'] = aline.wrest * (1 + dz_aux)
+                    aline.limits.set(vlim)
 
         else:  # wrest
             # Center z and reset vmin/vmax
@@ -728,10 +726,10 @@ class IGGVelPlotWidget(QtGui.QWidget):
         '''Fit the component and save values'''
         from astropy.modeling import fitting
         # Generate Fit line
-        fit_line = AbsLine(component.init_wrest, linelist=self.llist[self.llist['List']])
-        fit_line.analy['vlim'] = component.vlim
+        fit_line = AbsLine(component.init_wrest, linelist=self.llist[self.llist['List']], z=component.zcomp)
+        fit_line.limits.set(component.vlim)
         fit_line.analy['spec'] = self.spec
-        fit_line.attrib['z'] = component.zcomp
+
         fit_line.measure_aodm(normalize=False)  # Already normalized
 
         # Guesses
@@ -1112,7 +1110,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                         wrest = line.wrest.value
                         line_wvobs.append(wrest * (1 + zline))
                         line_lbl.append(line.name+',{:.3f}{:s}'.format(line.attrib['z'], la))
-                        line_wvobs_lims.append(line.analy['wvlim'])
+                        line_wvobs_lims.append(line.limits.wvlim)
 
                         if la == 'a':
                             line_color.append(COLOR_RELIABLE)
@@ -1557,11 +1555,8 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
         # Restrict to those with spectral coverage!
         if (trans['wrest']*(1+z) < wvmin) or (trans['wrest']*(1+z) > wvmax):
             continue
-        aline = AbsLine(trans['wrest'],  linelist=linelist)
-        aline.attrib['z'] = z
-        aline.analy['vlim'] = vlim
-        dz_aux = ltu.z_from_v(z, vlim) - z
-        aline.analy['wvlim'] = trans['wrest'] * (1 + z + dz_aux)
+        aline = AbsLine(trans['wrest'],  linelist=linelist, z=z)
+        aline.limits.set(vlim)
         abslines.append(aline)
     if abslines[0].data['Ej'].value > 0.:
         stars = '*'*(len(abslines[0].name.split('*'))-1)
