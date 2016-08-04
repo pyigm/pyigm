@@ -1112,7 +1112,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                         wrest = line.wrest.value
                         line_wvobs.append(wrest * (1 + zline))
                         line_lbl.append(line.name+',{:.3f}{:s}'.format(line.attrib['z'], la))
-                        line_wvobs_lims.append(line.analy['wvlim'])
+                        line_wvobs_lims.append(line.limits.wvlim)
 
                         if la == 'a':
                             line_color.append(COLOR_RELIABLE)
