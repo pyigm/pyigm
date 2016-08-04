@@ -663,15 +663,13 @@ class IGGVelPlotWidget(QtGui.QWidget):
         """
         if isinstance(inp, AbsComponent):
             new_comp = inp
-            # compatibility with older versions
+            # compatibility with older versions, should be removed eventually...
             cond = new_comp._abslines[0].analy['wvlim'] == [0,0]*u.AA
             if np.sum(cond)>0:
                 #sync wvlims
                 for aline in new_comp._abslines:
-                    z = aline.attrib['z']
                     vlim = aline.analy['vlim']
-                    dz_aux = ltu.z_from_v(z, vlim)
-                    aline.analy['wvlim'] = aline.wrest * (1 + dz_aux)
+                    aline.limits.set(vlim)
 
         else:  # wrest
             # Center z and reset vmin/vmax
