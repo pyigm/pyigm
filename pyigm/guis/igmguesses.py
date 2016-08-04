@@ -896,15 +896,17 @@ class IGGVelPlotWidget(QtGui.QWidget):
             self.psdict['x_minmax'] = self.vmnx.value
 
         # Choose line
-        if event.key == "%":
+        if event.key == '%':
             # GUI
-            self.select_line_widg = ltgl.SelectLineWidget(
-                self.llist[self.llist['List']]._data)
+            aux_table = self.llist[self.llist['List']]._data  # is a table of lines
+            z_aux = wvobs/aux_table['wrest'] - 1.
+            aux_table['redshift'] = z_aux.value  # adding aux_z to the aux_table
+            self.select_line_widg = ltgl.SelectLineWidget(aux_table)
             self.select_line_widg.exec_()
             line = self.select_line_widg.line
             if line.strip() == 'None':
                 return
-            #
+
             quant = line.split('::')[1].lstrip()
             spltw = quant.split(' ')
             wrest = Quantity(float(spltw[0]), unit=spltw[1])
