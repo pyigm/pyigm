@@ -728,10 +728,10 @@ class IGGVelPlotWidget(QtGui.QWidget):
         '''Fit the component and save values'''
         from astropy.modeling import fitting
         # Generate Fit line
-        fit_line = AbsLine(component.init_wrest, linelist=self.llist[self.llist['List']])
-        fit_line.analy['vlim'] = component.vlim
+        fit_line = AbsLine(component.init_wrest, linelist=self.llist[self.llist['List']], z=component.zcomp)
+        fit_line.limits.set(component.vlim)
         fit_line.analy['spec'] = self.spec
-        fit_line.attrib['z'] = component.zcomp
+
         fit_line.measure_aodm(normalize=False)  # Already normalized
 
         # Guesses
@@ -1557,11 +1557,8 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
         # Restrict to those with spectral coverage!
         if (trans['wrest']*(1+z) < wvmin) or (trans['wrest']*(1+z) > wvmax):
             continue
-        aline = AbsLine(trans['wrest'],  linelist=linelist)
-        aline.attrib['z'] = z
-        aline.analy['vlim'] = vlim
-        dz_aux = ltu.z_from_v(z, vlim) - z
-        aline.analy['wvlim'] = trans['wrest'] * (1 + z + dz_aux)
+        aline = AbsLine(trans['wrest'],  linelist=linelist, z=z)
+        aline.limits.set(vlim)
         abslines.append(aline)
     if abslines[0].data['Ej'].value > 0.:
         stars = '*'*(len(abslines[0].name.split('*'))-1)
