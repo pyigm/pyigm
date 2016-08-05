@@ -431,6 +431,9 @@ P         : toggle on/off "colorful" display, where components of different
         self.velplot_widg.update_model()
         self.fiddle_widg.init_component(self.velplot_widg.current_comp)
 
+        # testing
+        from_igmguesses_to_joevp(self.previous_file, 'test.txt')
+
 
     def write_out(self):
         """ Write to a JSON file"""
@@ -664,7 +667,10 @@ class IGGVelPlotWidget(QtGui.QWidget):
         if isinstance(inp, AbsComponent):
             new_comp = inp
             # compatibility with older versions
-            cond = new_comp._abslines[0].analy['wvlim'] == [0,0]*u.AA
+            try:
+                cond = new_comp._abslines[0].analy['wvlim'] == [0,0]*u.AA
+            except:
+                cond = new_comp._abslines[0].limits.wvlim == [0,0]*u.AA
             if np.sum(cond)>0:
                 #sync wvlims
                 for aline in new_comp._abslines:
@@ -1692,9 +1698,18 @@ def from_igmguesses_to_joevp(infile, outfile):
     with open(infile) as data_file:
         igmg_dict = json.load(data_file)
 
+    # open new file to write out
+    f = open(outfile, 'w')
+
     # Components
     for ii, key in enumerate(igmg_dict['cmps'].keys()):
-        pass
+        comp = AbsComponent.from_dict(igmg_dict['cmps'][key], chk_sep=False, chk_data=False, chk_vel=False)
+        flags = (ii,ii,ii)
 
+        b_val = igmg_dict['cmps'][key]['bfit']*u.km/u.s
+        s = comp.repr_joevp(igmg_dict['spec_file'], b=b_val, flags=flags)
+        f.write(s)
+        # import pdb; pdb.set_trace()
+    f.close()
 
 
