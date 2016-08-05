@@ -67,8 +67,8 @@ Component definition
 ====================
 
 We remind the user that IGMGuesses works on a "absorption component"
-basis as given by linetools. Thus, absorption features seen in a spectrum
-are the result of the superposition of single or multiple absorption
+basis as given by linetools AbsComponent object. Thus, absorption features
+seen in a spectrum are the result of the superposition of single or multiple absorption
 components. An absorption component is described by the tuple (ion, N, b, z),
 where ion is the ion species (e.g. HI, CIV, CIII, SiII), N is the column density,
 b is the Doppler parameter, z is the redshift. Be aware that this definition may be
@@ -246,8 +246,9 @@ There are two ways that you can navigate in redshift space:
 Model visualization
 -------------------
 
-The union of all components provides the overall model for the given spectrum. Such model is
-by default displayed as a brown line. Other options for model visualization include:
+The superposition of all absorption components identified provides the overall model
+for the given spectrum. Such model is by default displayed as a brown line.
+Other options for model visualization include:
 
     - **Colorful display**: use 'P' to toggle on/off colorful display in which each
     component of the model is plotted by different colors depending on their assigned
