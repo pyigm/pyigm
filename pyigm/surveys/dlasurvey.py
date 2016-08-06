@@ -335,7 +335,7 @@ class DLASurvey(IGMSurvey):
         sample : str, optional
           DLA sample
             stat : Statistical sample
-            all : All LLS
+            all : All DLA
             nonstat : Non-statistical sample
 
         Returns

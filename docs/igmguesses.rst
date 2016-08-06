@@ -184,12 +184,14 @@ main panels, these are:
 - **Line List** *(bottom right)*: This widget displays the current parent LineList
   (see linetools LineList Class for further details)
   where ion transitions are selected from. By selecting/unselecting them you can
-  control which transitions are displayed in the *Velocity Windows*. Built in LineList
+  control which transitions are displayed in the *Velocity Windows*. Built-in LineList
   can be loaded by keystrokes 'H' (HI Lyman series), 'T' (Common Strong IGM transitions),
-  'M' (All known ISM transitions). Of course, depending on redshift some transitions may or
-  may not be available in the current spectrum, in order to select those available at
-  the current redshift of interest from the current LineList you can use keystroke 'U'
-  (update).
+  'F' (Full list of ISM known transitions). Of course, depending on redshift some
+  transitions may or may not be available in the current spectrum; in order to select
+  those available at the current redshift of interest from the current LineList
+  you can use keystroke 'U' (update). By doing 'U' it will also restrict the
+  subset of lines satisfying  `n_max_tuple` and `min_strength` as given in the
+  initialization (see Table above).
 
 
 Adding/Removing/Selecting/Editing Components
