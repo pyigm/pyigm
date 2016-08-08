@@ -393,7 +393,7 @@ P         : toggle on/off "colorful" display, where components of different
                 comp.init_wrest = igmg_dict['cmps'][key]['wrest']*u.AA
                 try:
                     comp.mask_abslines = igmg_dict['cmps'][key]['mask_abslines']
-                except KeyError:  # For compatatbility
+                except KeyError:  # For compatibility
                     warnings.warn("Setting all abslines to 2")
                     comp.mask_abslines = 2*np.ones(len(comp._abslines)).astype(int)
                 self.velplot_widg.add_component(comp, update_model=False)
@@ -484,10 +484,10 @@ P         : toggle on/off "colorful" display, where components of different
                                        separators=(',', ': '))))
         print('Wrote: {:s}'.format(self.outfil))
 
-        # Write joevp files
-        joevp_output = self.outfil.replace('.json', '.joevp')
-        from_igmguesses_to_joevp(self.outfil, joevp_output)
-        print('Wrote: {:s}'.format(joevp_output))
+        # Write joebvp files; for developing.
+        joebvp_output = self.outfil.replace('.json', '.joebvp')
+        from_igmguesses_to_joebvp(self.outfil, joebvp_output)
+        print('Wrote: {:s}'.format(joebvp_output))
 
     # Write + Quit
     def write_quit(self):
@@ -658,7 +658,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
         Parameters:
         ------------
-        inp : wrest or Component
+        inp : wrest or AbsComponent
         vlim : Quantity array, optional
           Velocity limits in km/s
         zcomp : float, optional
@@ -666,7 +666,17 @@ class IGGVelPlotWidget(QtGui.QWidget):
           Whether to update the model. It is useful to set it to
           False when reading the previous file to increase speed.
         """
+        # this is mostly from reading previous IGM_model
         if isinstance(inp, AbsComponent):
+
+            # get rid of lines outside spectral coverage, if any
+            # Todo: one may want to reconsider this, specially if more spectral coverage is obtained
+            new_abslines = []
+            for absline in inp._abslines:
+                wobs = absline.wrest * (1 + absline.attrib['z'])
+                if (wobs > self.spec.wvmin) and (wobs < self.spec.wvmax):
+                    new_abslines += [absline]
+            inp._abslines = new_abslines
             new_comp = inp
 
             # compatibility with older versions
@@ -681,6 +691,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                     vlim = aline.analy['vlim']
                     aline.limits.set(vlim)
 
+        # This is mostly for adding new components from GUI
         else:  # wrest
             # Center z and reset vmin/vmax
             if zcomp is None:
@@ -1563,7 +1574,7 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
         wvmin, wvmax = 0.*u.AA, 1e9*u.AA
     for trans in all_trans:
         # Restrict to those with spectral coverage!
-        if (trans['wrest']*(1+z) < wvmin) or (trans['wrest']*(1+z) > wvmax):
+        if (trans['wrest'] * (1 + z) < wvmin) or (trans['wrest'] * (1 + z) > wvmax):
             continue
         aline = AbsLine(trans['wrest'],  linelist=linelist, z=z)
         aline.limits.set(vlim)
@@ -1579,16 +1590,22 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
     # Attributes
     comp_init_attrib(comp)
 
+    # QtCore.pyqtRemoveInputHook()
+    # pdb.set_trace()
+    # QtCore.pyqtRestoreInputHook()
+
     # Mask abslines within a component
     # 0: Do not use
     # 1: Use for display only
     # 2: Use for subsequent VP fitting
+    # 3: Out of wavelength range
     comp.mask_abslines = 2*np.ones(len(comp._abslines)).astype(int)
 
     # Component name
     comp.name = 'z{:.5f}_{:s}'.format(
             comp.zcomp, comp._abslines[0].data['name'].split(' ')[0])
     return comp
+
 
 def comp_init_attrib(comp):
     # Attributes
@@ -1627,6 +1644,7 @@ def mask_comp_lines(comp, min_ew = 0.003*u.AA, verbose=False):
             if comp.mask_abslines[ii] == 0: # if it already masked out, unmask it
                 comp.mask_abslines[ii] = 2
 
+
     # Sanity check
     if np.sum(comp.mask_abslines) == 0:
         print('Warning: Comp {} does not have any line with EW>{} A! You should consider a '
@@ -1659,6 +1677,8 @@ def blending_info(components):
         for absline in comp._abslines:
             absline.limits.set(comp.vlim)
 
+    # eliminate
+
     grouped_comps = ltiu.group_coincident_compoments(components, output_type='list')
     isolated = []
     grouped = []
@@ -1667,10 +1687,10 @@ def blending_info(components):
             isolated += [group[0]]
         else:
             grouped += [group]
-    # write to .joevp output
-    from_abscomponents_to_joevp(isolated[0], 'isolated.joevp')
-    for ii, group in enumerate(groups):
-        from_abscomponents_to_joevp(group, 'group_{}.joevp'.format(ii+1))
+    # write to .joenvp output
+    from_abscomponents_to_joebvp(isolated, 'isolated.joebvp')
+    for ii, group in enumerate(grouped):
+        from_abscomponents_to_joebvp(group, 'group_{}.joebvp'.format(ii+1))
 
     grouped = [isolated] + grouped
     for ii, group in enumerate(grouped):
@@ -1688,20 +1708,20 @@ def blending_info(components):
 
 
 # Write JOEVPFIT output from IGM_model.json
-def from_igmguesses_to_joevp(infile, outfile):
+def from_igmguesses_to_joebvp(infile, outfile):
     """Reads .json file generated by IGMGuesses and translates it to
-    input file(s) for joevpfit (.joevp).
+    input file(s) for joebvpfit (.joebvp).
 
     Parameters
     ----------
     infile : str
         Name of the .json file from IGMGuesses
     outfile : str
-        Name of the .joevp file
+        Name of the .joebvp file
 
     Returns:
         A translated version of .json IGMGuesses output
-        file that `joevp` understands.
+        file that `joebvp` understands.
     """
     import json
     # Read the JSON file
@@ -1721,28 +1741,33 @@ def from_igmguesses_to_joevp(infile, outfile):
         # add vlim to lines manually; this should be removed once .from_dict() method accounts for it.
         for absline in comp._abslines:
             absline.limits.set(comp.vlim)
-        flags = (ii,ii,ii)
+            if absline.wrest * (1 + absline.attrib['z']) < 1134.*u.AA:
+                QtCore.pyqtRemoveInputHook()
+                import pdb; pdb.set_trace()
+                QtCore.pyqtRestoreInputHook()
+
+        flags = (ii+2,ii+2,ii+2)
 
         b_val = igmg_dict['cmps'][key]['bfit']*u.km/u.s
-        s = comp.repr_joevp(igmg_dict['spec_file'], b=b_val, flags=flags)
+        s = comp.repr_joebvp(igmg_dict['spec_file'], b_default=b_val, flags=flags)
         f.write(s)
     f.close()
 
 # Write JOEVPFIT output from list of abscomponents
-def from_abscomponents_to_joevp(components, outfile):
+def from_abscomponents_to_joebvp(components, outfile):
     """Reads .json file generated by IGMGuesses and translates it to
-    input file(s) for joevpfit (.joevp).
+    input file(s) for joebvpfit (.joebvp).
 
     Parameters
     ----------
     components : list of AbsComponents
         List of abscomponents
     outfile : str
-        Name of the .joevp file
+        Name of the .joebvp file
 
     Returns:
         An input file for subsequent VP fitting
-        that JOEVP understands.
+        that JOEBVP understands.
     """
     # Open new file to write out
     f = open(outfile, 'w')
@@ -1750,20 +1775,17 @@ def from_abscomponents_to_joevp(components, outfile):
     # Print header
     s = 'specfile|restwave|zsys|col|bval|vel|nflag|bflag|vflag|vlim1|vlim2|wobs1|wobs2|trans\n'
     f.write(s)
-    QtCore.pyqtRemoveInputHook()
-    import pdb
-    pdb.set_trace()
-    QtCore.pyqtRestoreInputHook()
 
     # Components
-    for ii, key in enumerate(components):
-        import pdb; pdb.set_trace()
+    for ii, comp in enumerate(components):
         # add vlim to lines manually; this should be removed once .from_dict() method accounts for it.
         for absline in comp._abslines:
             absline.limits.set(comp.vlim)
-        flags = (ii,ii,ii)
-
-        b_val = igmg_dict['cmps'][key]['bfit']*u.km/u.s
-        s = comp.repr_joevp(igmg_dict['spec_file'], b=b_val, flags=flags)
+        flags = (ii+2,ii+2,ii+2)
+        # QtCore.pyqtRemoveInputHook()
+        # import pdb; pdb.set_trace()
+        # QtCore.pyqtRestoreInputHook()
+        b_val = comp.attrib['b']
+        s = comp.repr_joebvp('3C273.fits', b_default=b_val, flags=flags)
         f.write(s)
     f.close()
