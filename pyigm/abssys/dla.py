@@ -155,7 +155,7 @@ class DLASystem(IGMSystem):
             self._indiv_ionclms = igmau.read_ion_file(ion_fil, components)
             # Parse .all file
             all_file = ion_fil.split('.ion')[0]+'.all'
-            self.all_file=all_file  #MF: useful to have
+            self.all_file=all_file  #MF: useful
             _ = igmau.read_all_file(all_file, components=components)
             # Build table
             self._ionN = ltiu.iontable_from_components(components, ztbl=self.zabs)
