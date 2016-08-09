@@ -484,11 +484,6 @@ P         : toggle on/off "colorful" display, where components of different
                                        separators=(',', ': '))))
         print('Wrote: {:s}'.format(self.outfil))
 
-        # Write joebvp files; for developing.
-        # joebvp_output = self.outfil.replace('.json', '.joebvp')
-        # from_igmguesses_to_joebvp(self.outfil, joebvp_output)
-        # print('Wrote: {:s}'.format(joebvp_output))
-
     # Write + Quit
     def write_quit(self):
         self.write_out()
@@ -1039,7 +1034,12 @@ class IGGVelPlotWidget(QtGui.QWidget):
         # print component info
         if event.key == '@':  #  for develop; this will be deleted in future.
             print('Computing blendings between components, it may take a while...\n')
-            blending_info(self.parent.comps_widg.all_comp, self.spec_fil)
+            # Write joebvp files; for developing.
+            blending_info(self.parent.comps_widg.all_comp, self.spec_fil)  # this one writes them internally. Should be cleaned.
+
+            joebvp_output = self.outfil.replace('.json', '.joebvp')
+            from_igmguesses_to_joebvp(self.outfil, joebvp_output)
+            print('Wrote: {:s}'.format(joebvp_output))
 
         """
         # AODM plot
@@ -1722,27 +1722,10 @@ def from_igmguesses_to_joebvp(infile, outfile):
     with open(infile) as data_file:
         igmg_dict = json.load(data_file)
 
-    # Open new file to write out
-    f = open(outfile, 'w')
-
-    # Print header
-    s = 'specfile|restwave|zsys|col|bval|vel|nflag|bflag|vflag|vlim1|vlim2|wobs1|wobs2|trans\n'
-    f.write(s)
-
     # Components
+    comp_list = []
     for ii, key in enumerate(igmg_dict['cmps'].keys()):
         comp = AbsComponent.from_dict(igmg_dict['cmps'][key], chk_sep=False, chk_data=False, chk_vel=True)
-        # add vlim to lines manually; this should be removed once .from_dict() method accounts for it.
-        for absline in comp._abslines:
-            absline.limits.set(comp.vlim)
-            if absline.wrest * (1 + absline.attrib['z']) < 1134.*u.AA:
-                QtCore.pyqtRemoveInputHook()
-                import pdb; pdb.set_trace()
-                QtCore.pyqtRestoreInputHook()
+        comp_list += [comp]
 
-        flags = (ii+2,ii+2,ii+2)
-
-        b_val = igmg_dict['cmps'][key]['bfit']*u.km/u.s
-        s = comp.repr_joebvp(igmg_dict['spec_file'], b_default=b_val, flags=flags)
-        f.write(s)
-    f.close()
+    ltiu.joebvp_from_components(comp_list, igmg_dict['spec_file'], outfile)
