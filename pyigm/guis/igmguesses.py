@@ -865,9 +865,11 @@ class IGGVelPlotWidget(QtGui.QWidget):
             elif event.key == '1':
                 dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
                 comp.vlim[0] = (event.xdata + dvz_kms)*u.km/u.s
+                sync_comp_lines(comp, only_lims=True)
             elif event.key == '2':
                 dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
                 comp.vlim[1] = (event.xdata + dvz_kms)*u.km/u.s
+                sync_comp_lines(comp, only_lims=True)
             # Updates (this captures them all and redraws)
             self.parent.fiddle_widg.update_component()
 
@@ -1616,13 +1618,17 @@ def comp_init_attrib(comp):
                'Reliability': 'None'}
 
 
-def sync_comp_lines(comp):
+def sync_comp_lines(comp, only_lims=False):
     """Synchronize attributes of the lines and updates
     """
     for line in comp._abslines:
-        line.attrib['logN'] = comp.attrib['logN']
-        line.attrib['b'] = comp.attrib['b']
-        line.attrib['z'] = comp.attrib['z']
+        if only_lims:
+            line.limits.set(comp.vlim)
+        else:
+            line.attrib['logN'] = comp.attrib['logN']
+            line.attrib['b'] = comp.attrib['b']
+            line.attrib['z'] = comp.attrib['z']
+
 
 
 def mask_comp_lines(comp, min_ew = 0.003*u.AA, verbose=False):
