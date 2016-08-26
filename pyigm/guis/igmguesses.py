@@ -1039,8 +1039,8 @@ class IGGVelPlotWidget(QtGui.QWidget):
             # Write joebvp files; for developing.
             blending_info(self.parent.comps_widg.all_comp, self.spec_fil)  # this one writes them internally. Should be cleaned.
 
-            joebvp_output = self.outfil.replace('.json', '.joebvp')
-            from_igmguesses_to_joebvp(self.outfil, joebvp_output)
+            joebvp_output = self.parent.outfil.replace('.json', '.joebvp')
+            from_igmguesses_to_joebvp(self.parent.outfil, joebvp_output)
             print('Wrote: {:s}'.format(joebvp_output))
 
         """
