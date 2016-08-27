@@ -9,12 +9,11 @@ from abc import ABCMeta
 import warnings
 import pdb
 
-from astropy import coordinates as coords
 from astropy.io import ascii
 from astropy import units as u
 from astropy.table import QTable, Column, Table, vstack
 from astropy.units.quantity import Quantity
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import SkyCoord, match_coordinates_sky
 
 from linetools.spectra import io as lsio
 from linetools.isgm import utils as ltiu
@@ -71,6 +70,8 @@ class IGMSurvey(object):
             slf._abs_sys.append(class_by_type(slf.abs_type).from_datfile(dat_file, tree=slf.tree))
         print('Read {:d} files from {:s} in the tree {:s}'.format(
             slf.nsys, slf.flist, slf.tree))
+        # Mask
+        slf.init_mask()
 
         return slf
 
@@ -150,8 +151,6 @@ class IGMSurvey(object):
         self.ref = ref
         self._abs_sys = []
         self.sightlines = None
-
-        #
 
         # Mask
         self.mask = None
@@ -498,6 +497,7 @@ class IGMSurvey(object):
             combined.mask = np.concatenate((self.mask, other.mask))
         else:
             combined.mask = None
+            combined.init_mask()
 
         # Sightlines?
         if self.sightlines is not None:
@@ -505,7 +505,7 @@ class IGMSurvey(object):
                                   dec=self.sightlines['DEC']*u.deg)
             oth_scoord = SkyCoord(ra=other.sightlines['RA']*u.deg,
                                   dec=other.sightlines['DEC']*u.deg)
-            idx, d2d, d3d = coords.match_coordinates_sky(slf_scoord,
+            idx, d2d, d3d = match_coordinates_sky(slf_scoord,
                                                          oth_scoord, nthneighbor=1)
             mt = d2d < toler
             if np.sum(mt) > 0:

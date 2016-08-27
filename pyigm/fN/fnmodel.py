@@ -39,7 +39,7 @@ class FNModel(object):
     zpivot : float, optional
           Pivot for redshift evolution (2.4)
     gamma : float, optional
-          Power law for dN/dX, not dN/dz (1.5)
+          Power law dependence for dN/dX, not dN/dz (1.5)
     """
     @classmethod
     def default_model(cls, use_mcmc=False, cosmo=None):
@@ -513,7 +513,8 @@ class FNModel(object):
     ##
     # Output
     def __repr__(self):
-        return ('<{:s}: {:s} zmnx=({:g},{:g})>'.format(
-                self.__class__.__name__, self.mtype, self.zmnx[0], self.zmnx[1]))
+        return ('<{:s}: {:s} zmnx=({:g},{:g}) zpivot={:g}, gamma={:g}>'.format(
+                self.__class__.__name__, self.mtype, self.zmnx[0], self.zmnx[1],
+                self.zpivot, self.gamma))
 
 

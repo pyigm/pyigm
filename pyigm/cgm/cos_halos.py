@@ -107,8 +107,8 @@ class COSHalos(CGMAbsSurvey):
         gal.halo_mass = summ['LOGMHALO'][0]
         gal.stellar_mass = summ['LOGMFINAL'][0]
         gal.rvir = galx['RVIR'][0]
-        gal.MH = galx['ABUN'][0]
-        gal.flag_MH = galx['ABUN_FLAG'][0]
+        gal.ZH = galx['ABUN'][0]
+        gal.flag_ZH = galx['ABUN_FLAG'][0]
         gal.sdss_phot = [galx[key][0] for key in ['SDSSU','SDSSG','SDSSR','SDSSI','SDSSZ']]
         gal.sdss_phot_sig = [galx[key][0] for key in ['SDSSU_ERR','SDSSG_ERR','SDSSR_ERR','SDSSI_ERR','SDSSZ_ERR']]
         gal.sfr = (galx['SFR_UPLIM'][0], galx['SFR'][0],
