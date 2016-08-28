@@ -23,7 +23,7 @@ from time import gmtime, strftime
 pyigm_path = imp.find_module('pyigm')[1]
 
 
-def set_fn_model(flg=0):
+def set_fn_model(flg=0, use_p14=False):
     """ Load up f(N) model
 
     Parameters
@@ -44,13 +44,18 @@ def set_fn_model(flg=0):
         tfN_model = FNModel.default_model()
         zpivot = 4.4
         NHI_pivots = [11., 15., 17.0, 20.0, 21.5, 22.]
-        param = []
-        for NHI in NHI_pivots:
-            imin = np.argmin(np.abs(NHI-tfN_model.pivots))
-            # Adjust for zpivot
-            adj_parm = tfN_model.param['sply'][imin] + np.log10((
-                (1+zpivot)/(1+tfN_model.zpivot))**tfN_model.gamma)
-            param.append(adj_parm)
+        if use_p14:
+            param = []
+            for NHI in NHI_pivots:
+                imin = np.argmin(np.abs(NHI-tfN_model.pivots))
+                # Adjust for zpivot
+                adj_parm = tfN_model.param['sply'][imin] + np.log10((
+                    (1+zpivot)/(1+tfN_model.zpivot))**tfN_model.gamma)
+                param.append(adj_parm)
+        else:
+            param = [-8.45, -13.959, -18.06, -21.000, -23.735, -24.88]
+            if len(param) != len(NHI_pivots):
+                raise ValueError("Incorrect number of parameters")
         # Init
         sfN_model = FNModel('Hspline', zmnx=(0.5,5.5), pivots=NHI_pivots,
                             zpivot=zpivot, param=dict(sply=np.array(param)))
@@ -206,7 +211,8 @@ def set_pymc_var(fN_model,lim=2.):
             doc = str('SplinePointNHI_')+str(fN_model.pivots[ii])
             #iparm = np.append(iparm, pymc.Uniform(nm, lower=fN_model.param[ii]-lim,
             #                                    upper=fN_model.param[ii]+lim, doc=doc))
-            iparm = np.append(iparm, pymc.Normal(nm, mu=fN_model.param['sply'][ii]*(1+rand[ii]), tau=1./0.025, doc=doc))
+            #iparm = np.append(iparm, pymc.Normal(nm, mu=fN_model.param['sply'][ii]*(1+rand[ii]), tau=1./0.025, doc=doc))
+            iparm = np.append(iparm, pymc.Normal(nm, mu=fN_model.param['sply'][ii], tau=1./0.025, doc=doc))
     elif fN_model.fN_mtype == 'Gamma':  # Inoue+14
         raise ValueError("NOT UPDATED FOR THIS")
         rand = 0.2*(np.random.rand(4)-0.5) 
@@ -326,7 +332,7 @@ def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
             aparm = np.array([parm[i] for i in range(parm.size)])
             fN_model.update_parameters(aparm)
             #
-            log_fNX = fN_model.evaluate(fN_input, 0.)
+            log_fNX = fN_model.evaluate(fN_input, None)
             #
             return log_fNX
         pymc_list.append(pymc_fn_model)
@@ -363,7 +369,6 @@ def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
     """
     Generate the Data
     """
-
     # Define f(N) data for PyMC
     if flg_fN:
         fNvalue=np.array(all_fN)
