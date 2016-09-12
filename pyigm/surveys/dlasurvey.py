@@ -62,6 +62,7 @@ class DLASurvey(IGMSurvey):
         sys_files = pyigm_path+"/data/DLA/H100/H100_DLA_sys.tar.gz"
 
         if load_sys:  # This approach takes ~120s
+            print('H100: Loading systems.  This takes ~120s')
             if isys_path is not None:
                 dla_survey = pyisu.load_sys_files(isys_path, 'DLA', sys_path=True)
             else:
@@ -107,6 +108,7 @@ class DLASurvey(IGMSurvey):
 
         # Spectra?
         if grab_spectra:
+            pdb.set_trace()  # USE IGMSPEC!!
             specfils = glob.glob(spath+'H100_J*.fits')
             if len(specfils) < 100:
                 import tarfile
