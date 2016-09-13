@@ -61,11 +61,12 @@ def p11():
             if row['MAG'][2] > 0.:
                 # Lya
                 lya = AbsLine(1215.67*u.AA, z=float(row['MAG'][3]))
-                lya.attrib['EW'] = row['MAG'][4]
+                lya.attrib['EW'] = row['MAG'][4]/1e3*u.AA
                 if row['MAG'][5] >= 99.:
                     lya.attrib['flag_EW'] = 3
                 else:
                     lya.attrib['flag_EW'] = 1
+                lya.attrib['sig_EW'] = row['MAG'][5]/1e3*u.AA
                 # Ref
                 lya.attrib['Ref'] = int(row['MAG'][2])
                 # HI component
@@ -90,7 +91,8 @@ def p11():
                         ovi1031.attrib['flag_EW'] = 3
                     else:
                         ovi1031.attrib['flag_EW'] = 1
-                    ovi1031.attrib['EW'] = row['MAGERR'][4]
+                    ovi1031.attrib['EW'] = row['MAGERR'][4]/1e3*u.AA
+                    ovi1031.attrib['sig_EW'] = row['MAGERR'][5]/1e3*u.AA
                 # OVI component
                 if row['MAGERR'][9] <= 0.:
                     flagN = 3
@@ -110,7 +112,8 @@ def p11():
             cgmabs = CGMAbsSys(gal, igmsys, chk_lowz=False)
             p11.cgm_abs.append(cgmabs)
     # Write
-    p11.to_json_tarball('P11.tar')
+    out_file = pyigm.__path__[0]+'/data/CGM/P11/P11_sys.tar'
+    p11.to_json_tarball(out_file)
 
 
 def main(flg):
