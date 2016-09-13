@@ -111,7 +111,7 @@ def p11():
             # CGM
             cgmabs = CGMAbsSys(gal, igmsys, chk_lowz=False)
             p11.cgm_abs.append(cgmabs)
-    # Write
+    # Write tarball
     out_file = pyigm.__path__[0]+'/data/CGM/P11/P11_sys.tar'
     p11.to_json_tarball(out_file)
 
