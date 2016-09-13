@@ -10,7 +10,7 @@ import pdb
 
 
 def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpol=False,
-                test=False):
+                test=False, ret_flags=['NH']):
     """ Use the outputs from a MCMC chain output file to generate an  array of log10 N_H values
     Parameters
     ----------
@@ -22,6 +22,10 @@ def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpo
     NH_interpol : RegularGridInterpolator, optional
       Input to speed up
     test : bool, optional
+    ret_flag : int, optional
+      Return bitwise flag
+      1 = NH_values
+      2 = NHI_values
 
     Returns
     -------
@@ -78,7 +82,13 @@ def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpo
     if test:
         pdb.set_trace()
     # Finish
-    return NH_values
+    retval = []
+    for option in ret_flags:
+        if option == 'NH':
+            retval.append(NH_values)
+        if option == 'NHI':
+            retval.append(pdfs[:,0].flatten())
+    return retval
 
 
 
