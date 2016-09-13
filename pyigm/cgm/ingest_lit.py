@@ -119,7 +119,7 @@ def p11():
 def main(flg):
 
     if (flg % 2**1) >= 2**0:
-        p11()
+        p11()  # Prochaska et al. 2011
 
 # Command line execution
 if __name__ == '__main__':
