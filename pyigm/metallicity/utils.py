@@ -10,7 +10,7 @@ import pdb
 
 
 def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpol=False,
-                test=False, ret_flags=['NH']):
+                test=False, ret_flags=['NH'], debug=False):
     """ Use the outputs from a MCMC chain output file to generate an  array of log10 N_H values
     Parameters
     ----------
@@ -72,11 +72,13 @@ def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpo
     fh5.close()
 
     # Here we go!
+    if debug:
+        pdb.set_trace()
     NH_values = NH_interpol(pdfs)
 
     # Systematic error (recommended)
     if sys_error > 0.:
-        rand = np.random.normal(size=NH_values.size)
+        rand = np.random.normal(size=NH_values.size) * sys_error
         NH_values += rand
 
     if test:
