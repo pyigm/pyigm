@@ -37,7 +37,7 @@ def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpo
     from scipy import interpolate
 
     # Read the model grid
-    if modl is None:
+    if (modl is None) and (NH_interpol is None):
         model_file = os.getenv('DROPBOX_DIR')+'/cosout/grid_minextended.pkl'
         fil=open(model_file)
         modl=pickle.load(fil)
