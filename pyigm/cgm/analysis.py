@@ -8,6 +8,15 @@ import warnings
 import pdb
 
 from scipy.special import gamma, gammainc
+try:
+    import mpmath
+except ImportError:
+    warnings.warn("I hope your exponent is positive..")
+    from scipy.special import gammainc
+    gflg=False
+else:
+    from mpmath import gammainc
+    gflg=True
 
 from astropy import units as u
 from astropy import constants as const
@@ -56,8 +65,15 @@ def dndx_rvir(Lrng=(0.001, 10), beta=0.2, rvir_Lstar=250.*u.kpc,
     Lval = np.linspace(Lrng[0], Lrng[1], 1000)
     x = alpha + 1 + beta
     # Integrate
+    if gflg:
+        igmma = np.zeros_like(Lval)
+        i0 = float(gammainc(x,Lrng[1]))
+        for kk,iLval in enumerate(Lval):
+            igmma[kk] = i0 - float(gammainc(x,iLval))
+    else:
+        igmma = gammainc(x,Lrng[1]) - gammainc(x,Lval)
     dNdx_rvir = (dndx_const * phi_str_cgs * (np.pi * rvir_Lstar**2) * (
-        gamma(x) * ( gammainc(x,Lrng[1]) - gammainc(x,Lval)))).decompose().value
+        gamma(x) * igmma)).decompose().value
 
     # Return
     return Lval, dNdx_rvir
