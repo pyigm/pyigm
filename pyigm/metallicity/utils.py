@@ -78,7 +78,11 @@ def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpo
     # Deal with NHI off the grid?
     off = None
     if min_NHI is not None:
+        # Checks
+        if min_NHI > 16:
+            warnings.warn("Approaching the optically thick limit.  Be warned..")
         assert tags[0] == 'col'
+        #
         minNHI_pdf = np.min(pdfs[:,0])  # ASSUME NHI is in 0, aka col
         if minNHI_pdf < min_NHI:
             warnings.warn("Some NHI values are off the grid.  Correcting..")
