@@ -10,7 +10,7 @@ import pdb
 
 
 def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpol=False,
-                test=False, ret_flags=['NH'], debug=False):
+                test=False, ret_flags=['NH'], debug=False, min_NHI=None):
     """ Use the outputs from a MCMC chain output file to generate an  array of log10 N_H values
     Parameters
     ----------
@@ -22,6 +22,9 @@ def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpo
     NH_interpol : RegularGridInterpolator, optional
       Input to speed up
     test : bool, optional
+    min_NHI : float, optional
+      Minimum NHI of the grid.  If input, correct any values to this level
+      and then correct back
     ret_flag : int, optional
       Return bitwise flag
       1 = NH_values
@@ -69,12 +72,31 @@ def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpo
     # PDFs
     fh5 = h5py.File(hdf_file, 'r')
     pdfs = fh5['outputs']['pdfs'].value
+    tags = fh5['outputs/tags'].value
     fh5.close()
+
+    # Deal with NHI off the grid?
+    off = None
+    if min_NHI is not None:
+        # Checks
+        if min_NHI > 16:
+            warnings.warn("Approaching the optically thick limit.  Be warned..")
+        assert tags[0] == 'col'
+        #
+        minNHI_pdf = np.min(pdfs[:,0])  # ASSUME NHI is in 0, aka col
+        if minNHI_pdf < min_NHI:
+            warnings.warn("Some NHI values are off the grid.  Correcting..")
+            off = min_NHI - minNHI_pdf
+            pdfs[:,0] += off
 
     # Here we go!
     if debug:
         pdb.set_trace()
     NH_values = NH_interpol(pdfs)
+
+    # Offset back?
+    if off is not None:
+        NH_values -= off
 
     # Systematic error (recommended)
     if sys_error > 0.:
