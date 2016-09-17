@@ -22,7 +22,7 @@ from astropy import units as u
 from astropy import constants as const
 from astropy.cosmology import Planck15
 
-def dndx_rvir(Lrng=(0.001, 10), beta=0.2, rvir_Lstar=250.*u.kpc,
+def dndx_rvir(Lrng=(0.001, 10), nL=1000, beta=0.2, rvir_Lstar=250.*u.kpc,
          phi_str_pref = 1.49, alpha = -1.05, Mstar = -20.44,
          cosmo=None):  #  ; M* - 5 log h
     """ Estimate dN/dX for a set of CGM assuming unit covering fraction
@@ -34,6 +34,8 @@ def dndx_rvir(Lrng=(0.001, 10), beta=0.2, rvir_Lstar=250.*u.kpc,
     ----------
     Lrng : tuple, optional
       Range to integrate luminosity in terms of L*
+    nL : int, optional
+      Number of evaluations of L in that interval
     beta : float, optional
       Parameterization of rvir with L
        r_vir = 250 kpc * (L/L*)^beta
@@ -62,7 +64,7 @@ def dndx_rvir(Lrng=(0.001, 10), beta=0.2, rvir_Lstar=250.*u.kpc,
     phi_str_cgs = (phi_str_pref * 1e-2 * hubb**3) / u.Mpc**3
     dndx_const = (const.c / cosmo.H0).cgs
     # Cumulative
-    Lval = np.linspace(Lrng[0], Lrng[1], 1000)
+    Lval = np.linspace(Lrng[0], Lrng[1], nL)
     x = alpha + 1 + beta
     # Integrate
     if gflg:
