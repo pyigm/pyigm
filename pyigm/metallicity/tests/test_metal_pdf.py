@@ -21,6 +21,7 @@ def test_init_pdf():
     # Class
     mpdf = MetallicityPDF(ZH, pdf)
 
+
 def test_stats():
     # Dummy data
     ZH  = np.linspace(-5, 0., 25)
@@ -32,6 +33,7 @@ def test_stats():
     #
     np.testing.assert_allclose(mpdf.medianZH, -1.5967047485449448)
 
+
 def test_cl():
     # Dummy data
     ZH  = np.linspace(-5, 0., 25)
@@ -41,6 +43,7 @@ def test_cl():
     cl_lim = mpdf.confidence_limits(0.68)
 
     np.testing.assert_allclose(cl_lim, (-1.7738954485146285, -1.4708227781158598))
+
 
 def test_add():
     # Dummy data

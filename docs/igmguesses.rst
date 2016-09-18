@@ -67,8 +67,8 @@ Component definition
 ====================
 
 We remind the user that IGMGuesses works on a "absorption component"
-basis as given by linetools. Thus, absorption features seen in a spectrum
-are the result of the superposition of single or multiple absorption
+basis as given by linetools AbsComponent object. Thus, absorption features
+seen in a spectrum are the result of the superposition of single or multiple absorption
 components. An absorption component is described by the tuple (ion, N, b, z),
 where ion is the ion species (e.g. HI, CIV, CIII, SiII), N is the column density,
 b is the Doppler parameter, z is the redshift. Be aware that this definition may be
@@ -88,13 +88,15 @@ Because the identification of absorption lines in a given spectrum
 is not always 100% certain, in IGMGuesses we have incorporated three
 levels of reliability for a component identification, defined as follows.
 
-- **Certain (label a)**: These include components with multiple
+- **Certain (flag a)**: These include components with multiple
   transitions where at least two of them are available and visible
   in the spectrum, and showing the expected ratios and kinematic
   structure. Common absorption seen at `z=0` fall in this category,
   as well as strong HI showing multiple Lyman series transitions.
+  Use 'P' to toggle on/off colorful display of components and
+  this will appear in green.
 
-- **Possible (label b)**: These include components from single
+- **Probable (flag b)**: These include components from single
   transition ions that are at the same redshift (within a reasonable
   velocity window) from another certain component (e.g. CIII at the
   same redshift than a certain HI). Another case where this category
@@ -102,13 +104,15 @@ levels of reliability for a component identification, defined as follows.
   transitions but that for some reason only 1 transition is clearly seen
   (e.g. due to heavy blends, poor S/N, wavelength coverage, etc). Examples of these
   could be weak HI where only HI Lya is visible, or a OVI component where one of
-  the transition is blended with something else thus not certain.
+  the transition is blended with something else thus not certain. Use 'P' to
+  toggle on/off colorful display of components and this will appear in blue.
 
-- **Uncertain (label c)**: These correspond to those components that
+- **Uncertain (flag c)**: These correspond to those components that
   based on the user experience are likely to be an incorrect identification.
   Hopefully components identified in this category will be later replaced by a
   better identification. These could include an unphysical narrow line, artifacts,
-  etc.
+  etc. Use 'P' to toggle on/off colorful display of components and
+  this will appear in red.
 
 - **Unknown (not implemented yet)**: This category is for those absorption
   features that cannot be explained with current information.
@@ -237,3 +241,21 @@ There are two ways that you can navigate in redshift space:
     of the cursor.
 
     - **By hand**: Use '^' to select the redshift by hand. A pop-up widget should appear.
+
+
+Model visualization
+-------------------
+
+The superposition of all absorption components identified provides the overall model
+for the given spectrum. Such model is by default displayed as a brown line.
+Other options for model visualization include:
+
+    - **Colorful display**: use 'P' to toggle on/off colorful display in which each
+    component of the model is plotted by different colors depending on their assigned
+    reliability (see above).
+
+    - **Show/hide labels**: use 'L' to toggle on/off the label of each identified component.
+    The label is composed by the ion transition, its redshift, and its reliability flag
+    (see above)
+
+    - **Show/hide model**: use 'M' to toggle on/off the model being displayed.

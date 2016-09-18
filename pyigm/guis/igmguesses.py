@@ -393,7 +393,7 @@ P         : toggle on/off "colorful" display, where components of different
                 comp.init_wrest = igmg_dict['cmps'][key]['wrest']*u.AA
                 try:
                     comp.mask_abslines = igmg_dict['cmps'][key]['mask_abslines']
-                except KeyError:  # For compatatbility
+                except KeyError:  # For compatibility
                     warnings.warn("Setting all abslines to 2")
                     comp.mask_abslines = 2*np.ones(len(comp._abslines)).astype(int)
                 self.velplot_widg.add_component(comp, update_model=False)
@@ -479,10 +479,10 @@ P         : toggle on/off "colorful" display, where components of different
         gd_dict = ltu.jsonify(out_dict)
 
         # Write file
-        print('Wrote: {:s}'.format(self.outfil))
         with io.open(self.outfil, 'w', encoding='utf-8') as f:
             f.write(unicode(json.dumps(gd_dict, sort_keys=True, indent=4,
                                        separators=(',', ': '))))
+        print('Wrote: {:s}'.format(self.outfil))
 
     # Write + Quit
     def write_quit(self):
@@ -653,7 +653,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
         Parameters:
         ------------
-        inp : wrest or Component
+        inp : wrest or AbsComponent
         vlim : Quantity array, optional
           Velocity limits in km/s
         zcomp : float, optional
@@ -661,16 +661,32 @@ class IGGVelPlotWidget(QtGui.QWidget):
           Whether to update the model. It is useful to set it to
           False when reading the previous file to increase speed.
         """
+        # this is mostly from reading previous IGM_model
         if isinstance(inp, AbsComponent):
+
+            # get rid of lines outside spectral coverage, if any
+            # Todo: one may want to reconsider this, specially if more spectral coverage is obtained
+            new_abslines = []
+            for absline in inp._abslines:
+                wobs = absline.wrest * (1 + absline.attrib['z'])
+                if (wobs > self.spec.wvmin) and (wobs < self.spec.wvmax):
+                    new_abslines += [absline]
+            inp._abslines = new_abslines
             new_comp = inp
-            # compatibility with older versions, should be removed eventually...
-            cond = new_comp._abslines[0].analy['wvlim'] == [0,0]*u.AA
+
+            # compatibility with older versions
+            try:
+                cond = new_comp._abslines[0].analy['wvlim'] == [0,0]*u.AA
+            except:
+                cond = new_comp._abslines[0].limits.wvlim == [0,0]*u.AA
+
             if np.sum(cond)>0:
                 #sync wvlims
                 for aline in new_comp._abslines:
                     vlim = aline.analy['vlim']
                     aline.limits.set(vlim)
 
+        # This is mostly for adding new components from GUI
         else:  # wrest
             # Center z and reset vmin/vmax
             if zcomp is None:
@@ -849,9 +865,11 @@ class IGGVelPlotWidget(QtGui.QWidget):
             elif event.key == '1':
                 dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
                 comp.vlim[0] = (event.xdata + dvz_kms)*u.km/u.s
+                sync_comp_lines(comp, only_lims=True)
             elif event.key == '2':
                 dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
                 comp.vlim[1] = (event.xdata + dvz_kms)*u.km/u.s
+                sync_comp_lines(comp, only_lims=True)
             # Updates (this captures them all and redraws)
             self.parent.fiddle_widg.update_component()
 
@@ -1018,7 +1036,12 @@ class IGGVelPlotWidget(QtGui.QWidget):
         # print component info
         if event.key == '@':  #  for develop; this will be deleted in future.
             print('Computing blendings between components, it may take a while...\n')
-            blending_info(self.parent.comps_widg.all_comp)
+            # Write joebvp files; for developing.
+            blending_info(self.parent.comps_widg.all_comp, self.spec_fil)  # this one writes them internally. Should be cleaned.
+
+            joebvp_output = self.parent.outfil.replace('.json', '.joebvp')
+            from_igmguesses_to_joebvp(self.parent.outfil, joebvp_output)
+            print('Wrote: {:s}'.format(joebvp_output))
 
         """
         # AODM plot
@@ -1553,7 +1576,7 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
         wvmin, wvmax = 0.*u.AA, 1e9*u.AA
     for trans in all_trans:
         # Restrict to those with spectral coverage!
-        if (trans['wrest']*(1+z) < wvmin) or (trans['wrest']*(1+z) > wvmax):
+        if (trans['wrest'] * (1 + z) < wvmin) or (trans['wrest'] * (1 + z) > wvmax):
             continue
         aline = AbsLine(trans['wrest'],  linelist=linelist, z=z)
         aline.limits.set(vlim)
@@ -1569,16 +1592,22 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
     # Attributes
     comp_init_attrib(comp)
 
+    # QtCore.pyqtRemoveInputHook()
+    # pdb.set_trace()
+    # QtCore.pyqtRestoreInputHook()
+
     # Mask abslines within a component
     # 0: Do not use
     # 1: Use for display only
     # 2: Use for subsequent VP fitting
+    # 3: Out of wavelength range
     comp.mask_abslines = 2*np.ones(len(comp._abslines)).astype(int)
 
     # Component name
     comp.name = 'z{:.5f}_{:s}'.format(
             comp.zcomp, comp._abslines[0].data['name'].split(' ')[0])
     return comp
+
 
 def comp_init_attrib(comp):
     # Attributes
@@ -1589,13 +1618,17 @@ def comp_init_attrib(comp):
                'Reliability': 'None'}
 
 
-def sync_comp_lines(comp):
+def sync_comp_lines(comp, only_lims=False):
     """Synchronize attributes of the lines and updates
     """
     for line in comp._abslines:
-        line.attrib['logN'] = comp.attrib['logN']
-        line.attrib['b'] = comp.attrib['b']
-        line.attrib['z'] = comp.attrib['z']
+        if only_lims:
+            line.limits.set(comp.vlim)
+        else:
+            line.attrib['logN'] = comp.attrib['logN']
+            line.attrib['b'] = comp.attrib['b']
+            line.attrib['z'] = comp.attrib['z']
+
 
 
 def mask_comp_lines(comp, min_ew = 0.003*u.AA, verbose=False):
@@ -1616,6 +1649,7 @@ def mask_comp_lines(comp, min_ew = 0.003*u.AA, verbose=False):
         else:  # line is strong enough, do not mask out
             if comp.mask_abslines[ii] == 0: # if it already masked out, unmask it
                 comp.mask_abslines[ii] = 2
+
 
     # Sanity check
     if np.sum(comp.mask_abslines) == 0:
@@ -1643,7 +1677,8 @@ def set_fontsize(ax,fsz):
 
 
 # Some info about the blending between components
-def blending_info(components):
+def blending_info(components, specfile):
+
     grouped_comps = ltiu.group_coincident_compoments(components, output_type='list')
     isolated = []
     grouped = []
@@ -1652,6 +1687,10 @@ def blending_info(components):
             isolated += [group[0]]
         else:
             grouped += [group]
+    # write to .joenvp output
+    ltiu.joebvp_from_components(isolated, '3C273.fits', 'isolated.joebvp')
+    for ii, group in enumerate(grouped):
+        ltiu.joebvp_from_components(group, '3C273.fits', 'group_{}.joebvp'.format(ii+1))
 
     grouped = [isolated] + grouped
     for ii, group in enumerate(grouped):
@@ -1666,3 +1705,33 @@ def blending_info(components):
         if ii == 1:
             print('The following components overlap in wvobs space:')
         print(s)
+
+
+# Write JOEVPFIT output from IGM_model.json
+def from_igmguesses_to_joebvp(infile, outfile):
+    """Reads .json file generated by IGMGuesses and translates it to
+    input file(s) for joebvpfit (.joebvp).
+
+    Parameters
+    ----------
+    infile : str
+        Name of the .json file from IGMGuesses
+    outfile : str
+        Name of the .joebvp file
+
+    Returns:
+        A translated version of .json IGMGuesses output
+        file that `joebvp` understands.
+    """
+    import json
+    # Read the JSON file
+    with open(infile) as data_file:
+        igmg_dict = json.load(data_file)
+
+    # Components
+    comp_list = []
+    for ii, key in enumerate(igmg_dict['cmps'].keys()):
+        comp = AbsComponent.from_dict(igmg_dict['cmps'][key], chk_sep=False, chk_data=False, chk_vel=True)
+        comp_list += [comp]
+
+    ltiu.joebvp_from_components(comp_list, igmg_dict['spec_file'], outfile)
