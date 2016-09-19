@@ -1,0 +1,83 @@
+The file final_metallicities.save was created by ../Cloudy/makemetals.pro
+It contains the data:
+
+sightline   -- target name (e.g., J1717+2814)
+z           -- redshift of the LLS (in NL's & NLRC's cases) or the
+               MgII absorber (in CW's case)
+nhi         -- logN(HI) calculated by the Lyman serieslines (in NL's
+               & NLRC's cases) or the Lyman break (in CW's case)
+enhi        -- error on logN(HI)
+nmgii       -- logN(MgII) calculated by the apparent optical depth
+               method on the MgII absorbers
+ep_nmgii    -- positive error bar on logN(MgII)
+em_nmgii    -- negative error bar on logN(MgII)
+met         -- metallicity, calculated by [ions/HI] (in NL's case) or
+               [MgII/HI] (in CW's case)
+met...RC    -- metallicity, calculated by [MgII/HI] -- this is metNLRC
+               and metALLRC (CW does not need to be RC'd)
+ep_met      -- positive error bar on met
+em_met      -- negative error bar on met
+ep_met...RC -- positive error bar on met...RC
+em_met...RC -- negative error bar on met...RC
+ICmean      -- the mean (expectation value) ICF used; this is the
+               low-resolution method! (it uses logU=Gaussian
+               around ~ -3.1 from Lehner2013 data)
+IClogU3     -- ICF assuming logU=-3
+ICdiff      -- Simply ICmean-IClogU3
+IC68low     -- The lower bound (value, not delta) of the 68% confidence
+               interval on ICmean
+IC68high    -- The upper bound (value, not delta) of the 68% confidence
+               interval on ICmean
+IC95low     -- The lower bound (value, not delta) of the 95% confidence
+               interval on ICmean
+IC95high    -- The upper bound (value, not delta) of the 95% confidence
+               interval on ICmean
+
+
+There are EACH of the above variables for EACH of the samples:
+   NL, CW, ALL, NLRC, and ALLRC,
+where "ALL" are CW+NL, "NLRC" are the re-calculated metallicities of NL's
+sample using the low-res (HI and MgII-only) CW method, and "ALLRC" are CW+NLRC.
+For example, the positive error bars on CW's metallicities are "ep_metCW",
+while the negative error bars on ALL of the metallicities,
+with NL points re-calculated (RC) using CW's method is "em_metALLRC".
+
+
+Flags on the error bars denote:
++1: lower limit
+other: measurement error on a detection
+-1: upper limit (2-sigma)
+
+
+Here they all are, listed as they were saved:
+;
+;;NL points
+sightlineNL,zNL,nhiNL,enhiNL,nmgiiNL,ep_nmgiiNL,em_nmgiiNL, $
+metNL,ep_metNL,em_metNL,$
+;;
+;;NLRC
+sightlineNLRC,zNLRC,nhiNLRC,enhiNLRC,nmgiiNLRC,ep_nmgiiNLRC,em_nmgiiNLRC, $
+metNLRC,ep_metNLRC,em_metNLRC,$
+;;
+;;CBW points
+sightlineCW,zCW,nhiCW,enhiCW,nmgiiCW,ep_nmgiiCW,em_nmgiiCW, $
+metCW,ep_metCW,em_metCW,W2796CW,eW2796CW,W2803CW,eW2803CW,DetectorCW, $
+;;
+;;all points (CBW and NL)
+sightlineALL,zALL,nhiALL,enhiALL,nmgiiALL,ep_nmgiiALL,em_nmgiiALL,$
+metALL,ep_metALL,em_metALL, $
+;;
+;;ALLRC
+sightlineALLRC,zALLRC,nhiALLRC,enhiALLRC,nmgiiALLRC,ep_nmgiiALLRC,em_nmgiiALLRC,$
+metALLRC,ep_metALLRC,em_metALLRC, $
+;;
+;;Cloudy
+ICmeanCW, IClogU3CW, ICdiffCW, $
+IC68highCW,IC68lowCW,IC95highCW,IC95lowCW, $
+ICmeanNLRC, IClogU3NLRC, ICdiffNLRC, $
+IC68highNLRC,IC68lowNLRC,IC95highNLRC,IC95lowNLRC, $
+ICmeanALLRC, IClogU3ALLRC, ICdiffALLRC, $
+IC68highNLRC,IC68lowNLRC,IC95highNLRC,IC95lowNLRC, $
+
+
+
