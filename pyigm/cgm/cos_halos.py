@@ -149,7 +149,6 @@ class COSHalos(CGMAbsSurvey):
             all_ion.append(iont['ZION'][0][1])
             # AbsLines
             abslines = []
-            #for kk in range(iont['NTRANS']):
             ntrans = len(np.where(iont['LAMBDA'][0] > 1.)[0])
             for kk in range(ntrans):
                 flg = iont['FLG'][0][kk]
