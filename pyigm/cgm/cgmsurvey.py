@@ -10,6 +10,7 @@ import pdb
 import json, io
 
 from astropy.table import Table, Column
+from astropy.coordinates import SkyCoord
 
 from pyigm.utils import lst_to_array
 from pyigm.surveys.igmsurvey import GenericIGMSurvey
@@ -180,6 +181,12 @@ class CGMAbsSurvey(object):
                 except AttributeError:
                     print('cgm.core: Attribute not found!')
                     pdb.set_trace()
+        # Special cases
+        if k == 'coord':
+            ra = [coord.ra.value for coord in lst]
+            dec = [coord.dec.value for coord in lst]
+            lst = SkyCoord(ra=ra, dec=dec, unit='deg')
+            return lst[self.mask]
         # Return array
         return lst_to_array(lst, mask=self.mask)
 

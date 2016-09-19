@@ -451,9 +451,9 @@ class IGMSurvey(object):
             raise ValueError("Attribute does not exist")
         # Special cases
         if k == 'coord':
-            ra = [coord.ra for coord in lst]
-            dec = [coord.dec for coord in lst]
-            lst = SkyCoord(ra=ra, dec=dec)
+            ra = [coord.ra.value for coord in lst]
+            dec = [coord.dec.value for coord in lst]
+            lst = SkyCoord(ra=ra, dec=dec, unit='deg')
             return lst[self.mask]
         # Recast as an array
         return lst_to_array(lst, mask=self.mask)
