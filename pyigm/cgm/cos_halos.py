@@ -331,7 +331,7 @@ class COSHalos(CGMAbsSurvey):
             tarfiles = glob.glob(self.cdir+'cos-halos_systems.v*.tar.gz')
             tarfiles.sort()
             tfile = tarfiles[-1]
-        print("Be patient, using {:s} to load COS-Halos".format(tfile))
+        print("Be patient, using {:s} to load".format(tfile))
         # Empty
         if empty:
             self.cgm_abs = []
