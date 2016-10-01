@@ -13,6 +13,7 @@ from astropy.table import Table, Column
 
 from pyigm.utils import lst_to_array
 from pyigm.surveys.igmsurvey import GenericIGMSurvey
+from pyigm.cgm.cgm import CGMAbsSys
 
 class CGMAbsSurvey(object):
     """A CGM Survey class in absorption
@@ -24,9 +25,56 @@ class CGMAbsSurvey(object):
     ref : str, optional
       Reference(s)
     """
-    # Initialize with a .dat file
-    def __init__(self, survey='', ref=''):
 
+    @classmethod
+    def from_tarball(cls, tfile, debug=False, **kwargs):
+        """ Load the COS-Halos survey from a tarball of JSON files
+        Parameters
+        ----------
+        tfile : str
+
+        Returns
+        -------
+
+        """
+        import tarfile
+        import json
+        from linetools.lists.linelist import LineList
+        llist = LineList('ISM')
+
+        slf = cls(**kwargs)
+        # Load
+        tar = tarfile.open(tfile)
+        for kk, member in enumerate(tar.getmembers()):
+            if '.' not in member.name:
+                print('Skipping a likely folder: {:s}'.format(member.name))
+                continue
+            # Debug
+            if debug and (kk == 5):
+                break
+            # Extract
+            f = tar.extractfile(member)
+            tdict = json.load(f)
+            # Generate
+            cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, chk_data=False,
+                                         use_coord=True, use_angrho=True,
+                                         linelist=llist, **kwargs)
+            slf.cgm_abs.append(cgmsys)
+        tar.close()
+        # Return
+        return slf
+
+    def __init__(self, survey='', ref='', **kwargs):
+        """
+        Parameters
+        ----------
+        survey : str, optional
+        ref : str, optional
+
+        Returns
+        -------
+
+        """
         # Name of survey
         self.survey = survey
         self.ref = ref

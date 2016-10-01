@@ -13,6 +13,7 @@ Notebooks
    :maxdepth: 1
 
    CGM Examples <CGM_examples>
+   CGM P11 <CGM_P11>
 
 Overview
 ========
@@ -132,3 +133,9 @@ halos.  Code of interest is cgm.analysis.dndx_rvir::
    dNdX = cgm.analysis.dndx_rvir()
 
 
+Surveys Ingested
+----------------
+
+pyigm includes the data from COS-Halos, COS-Dwarfs, and the
+Las Campanas survey (Prochaska et al. 2011).  See the
+Notebooks for details on each.
