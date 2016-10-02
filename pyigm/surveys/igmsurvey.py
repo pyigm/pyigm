@@ -451,10 +451,13 @@ class IGMSurvey(object):
             raise ValueError("Attribute does not exist")
         # Special cases
         if k == 'coord':
-            ra = [coord.ra for coord in lst]
-            dec = [coord.dec for coord in lst]
-            lst = SkyCoord(ra=ra, dec=dec)
-            return lst[self.mask]
+            ra = [coord.ra.value for coord in lst]
+            dec = [coord.dec.value for coord in lst]
+            lst = SkyCoord(ra=ra, dec=dec, unit='deg')
+            if self.mask is not None:
+                return lst[self.mask]
+            else:
+                return lst
         # Recast as an array
         return lst_to_array(lst, mask=self.mask)
 
@@ -495,7 +498,7 @@ class IGMSurvey(object):
         # Combine systems
         combined._abs_sys = self._abs_sys + other._abs_sys
         if self.mask is not None:
-            combined.mask = np.concatenate((self.mask, other.mask))
+            combined.mask = np.concatenate((self.mask, other.mask)).flatten()
         else:
             combined.mask = None
 
