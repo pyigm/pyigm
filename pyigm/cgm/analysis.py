@@ -44,7 +44,7 @@ def dndx_rvir(Lrng=(0.001, 10), nL=1000, beta=0.2, rvir_Lstar=250.*u.kpc,
           Phi(M) = 0.4 log(10) Phi* 10^(-0.4 [M-M*][alpha+1]) exp(-
                     ; 10^(-0.4[M-M*] ) )
           Phi(L) = Phi* (L/L*)^alpha exp(-L/L*)
-          Phi* has units of h^3 Mpc^-3
+          Phi* has the funny units of 1e-2 h^3 Mpc^-3
     cosmo : Cosmology, optional
       Defaults to Planck15
 
