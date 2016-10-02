@@ -70,6 +70,19 @@ class GenericPDF(object):
         return mean
 
     @property
+    def gmean(self):
+        """ Calculate and return the geometric mean from the PDF
+
+        Weighted in log-space
+
+        Returns
+        -------
+        mean : float
+        """
+        gmean = np.sum((10**self.x)*self.pdf*self.dx)
+        return gmean
+
+    @property
     def median(self):
         """ Calculate and return median ZH from the PDF
 
