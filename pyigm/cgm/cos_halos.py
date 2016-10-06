@@ -25,6 +25,7 @@ from pyigm.cgm.cgmsurvey import CGMAbsSurvey
 from pyigm.field.galaxy import Galaxy
 from .cgm import CGMAbsSys
 from pyigm.abssys.igmsys import IGMSystem
+import pyigm
 
 class COSHalos(CGMAbsSurvey):
     """Inherits CGM Abs Survey
@@ -44,9 +45,7 @@ class COSHalos(CGMAbsSurvey):
         self.ref = 'Tumlinson+11; Werk+12; Tumlinson+13; Werk+13; Werk+14'
         #
         if cdir is None:
-            if os.environ.get('COSHALOS_DATA') is None:
-                raise ValueError("Need to set COSHALOS_DATA variable")
-            self.cdir = os.environ.get('COSHALOS_DATA')
+            self.cdir = pyigm.__path__[0]+'/data/CGM/COS_Halos/'
         else:
             self.cdir = cdir
         # Summary Tables
