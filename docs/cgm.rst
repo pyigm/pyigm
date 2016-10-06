@@ -13,6 +13,7 @@ Notebooks
    :maxdepth: 1
 
    CGM Examples <CGM_examples>
+   CGM P11 <CGM_P11>
 
 Overview
 ========
@@ -146,4 +147,5 @@ are included in the data directory.  You can read in the dataset with::
    coshalos = pch.COSHalos()
 
 See the Notebook in examples for further details.
+
 

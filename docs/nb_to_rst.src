@@ -15,3 +15,5 @@ ipython nbconvert examples/fNModel_examples.ipynb --to rst
 ipython nbconvert examples/IGMGalaxyField_examples.ipynb --to rst
 
 ipython nbconvert examples/CGM_examples.ipynb --to rst
+
+ipython nbconvert datasets/CGM_P11.ipynb --to rst
