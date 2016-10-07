@@ -69,11 +69,14 @@ def dndx_rvir(Lrng=(0.001, 10), nL=1000, beta=0.2, rvir_Lstar=250.*u.kpc,
     # Integrate
     if gflg:
         igmma = np.zeros_like(Lval)
-        i0 = float(gammainc(x,Lrng[1]))
+        i0 = 1.-float(gammainc(x,Lrng[1], regularized=True))
         for kk,iLval in enumerate(Lval):
-            igmma[kk] = i0 - float(gammainc(x,iLval))
+            igmma[kk] = i0 - (1-float(gammainc(x,iLval, regularized=True)))
     else:
         igmma = gammainc(x,Lrng[1]) - gammainc(x,Lval)
+    #from scipy.special import gammainc as gic
+    #ig2 = gic(x,Lrng[1]) - gic(x,Lval)
+    #pdb.set_trace()
     dNdx_rvir = (dndx_const * phi_str_cgs * (np.pi * rvir_Lstar**2) * (
         gamma(x) * igmma)).decompose().value
 
