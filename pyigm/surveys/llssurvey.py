@@ -97,6 +97,7 @@ class LLSSurvey(IGMSurvey):
     @classmethod
     def load_lowz(cls, grab_spectra=False, isys_path=None):
         """ LLS from Wotta+16 (includes Lehner+13)
+        Updated to include systems excluded by Wotta+16 (high NHI)
 
         Parameters
         ----------
