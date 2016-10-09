@@ -200,7 +200,10 @@ class LLSSystem(IGMSystem):
                         if val.__class__ == np.ndarray:
                             self.subsys[lbls[i]]._datdict[att[ii]] = np.array(map(float,tmpc.split()))
                         else:  # Single value
-                            self.subsys[lbls[i]]._datdict[att[ii]] = (map(type(val),[tmpc]))[0]
+                            try:
+                                self.subsys[lbls[i]]._datdict[att[ii]] = (map(type(val),[tmpc]))[0]
+                            except ValueError:
+                                pdb.set_trace()
                 # Set a few special ones as attributes
                 self.subsys[lbls[i]].NHI = self.subsys[lbls[i]]._datdict['NHI']
                 self.subsys[lbls[i]].sig_NHI = self.subsys[lbls[i]]._datdict['NHIsig']
