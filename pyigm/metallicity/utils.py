@@ -31,7 +31,8 @@ def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpo
       Return list
       'NH' = NH_values
       'NHI' = NHI_values
-      'NO' = NO_values
+      'NO' = NO_values  -- Assumes 8.69 but that might not be quite right
+      'NSi' = NSi_values  -- 7.51 from Asplund 2009 as used in most Cloudy grids
 
     Returns
     -------
@@ -108,7 +109,10 @@ def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpo
     # NO? -- Before systematic error
     if 'NO' in ret_flags:
         assert tags[2] == 'met'
-        NO_values = NH_values + pdfs[:,2] - 12 + 8.69
+        NO_values = NH_values + pdfs[:,2] - 12 + 8.69  # Might not be right
+    if 'NSi' in ret_flags:
+        assert tags[2] == 'met'
+        NSi_values = NH_values + pdfs[:,2] - 12 + 7.51
 
     # Systematic error (recommended)
     if sys_error > 0.:
@@ -126,6 +130,8 @@ def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpo
             retval.append(pdfs[:,0].flatten())
         if option == 'NO':
             retval.append(NO_values)
+        if option == 'NSi':
+            retval.append(NSi_values)
     return retval
 
 
