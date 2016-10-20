@@ -37,6 +37,7 @@ def parser(options=None):
     parser.add_argument("--min_strength", type=float, help="Minimum strength for transitions to be displayed; choose values (0,14.7)")
     parser.add_argument("--min_ew", type=float, help="Minimum EW (in AA) for transitions to be stored within a component. This\
                                                     is useful to get rid of extremely weak transitions from the model")
+    parser.add_argument("--vlim", type=float, help="Velocity limit (in km/s) for the display. This limit will apply to both sides")
 
     if options is None:
         args = parser.parse_args()
@@ -56,7 +57,8 @@ def main(args=None):
                         previous_file=pargs.previous_file,
                         n_max_tuple=pargs.n_max_tuple,
                         min_strength=pargs.min_strength,
-                        min_ew=pargs.min_ew)
+                        min_ew=pargs.min_ew,
+                        vlim_disp=[-1.*pargs.vlim, 1.*pargs.vlim])
     gui.show()
     app.exec_()
 

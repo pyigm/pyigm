@@ -65,7 +65,7 @@ class IGMGuessesGui(QtGui.QMainWindow):
     def __init__(self, ispec, parent=None, previous_file=None, 
         srch_id=True, outfil=None, fwhm=None,
         plot_residuals=True,n_max_tuple=None, min_strength=None,
-                 min_ew=None):
+                 min_ew=None, vlim_disp=[-500,500]):
         QtGui.QMainWindow.__init__(self, parent)
         """
         ispec : str
@@ -86,6 +86,8 @@ class IGMGuessesGui(QtGui.QMainWindow):
         min_ew : float, optional
             Minimum equivalent width (in AA) of lines to be stored within a components.
             This is useful for not storing extremely weak lines.
+        vlim_disp : list, optional
+            Minimum and maximum velocity limit (in km/s) for the display
 
 
         """
@@ -170,6 +172,7 @@ P         : toggle on/off "colorful" display, where components of different
         self.n_max_tuple = n_max_tuple
         self.min_strength = min_strength
         self.min_ew = min_ew * u.AA
+        self.vlim_disp = vlim_disp * u.km/u.s
 
         # Load spectrum
         spec, spec_fil = ltgu.read_spec(ispec)
@@ -225,7 +228,8 @@ P         : toggle on/off "colorful" display, where components of different
         self.fiddle_widg = FiddleComponentWidget(parent=self)
         self.comps_widg = ComponentListWidget([], parent=self)
         self.velplot_widg = IGGVelPlotWidget(spec, z, 
-            parent=self, llist=self.llist, fwhm=self.fwhm, plot_residuals=self.plot_residuals)
+            parent=self, llist=self.llist, fwhm=self.fwhm, plot_residuals=self.plot_residuals,
+            vmnx=self.vlim_disp)
         self.wq_widg = ltgsm.WriteQuitWidget(parent=self)
 
 
@@ -1477,7 +1481,6 @@ class ComponentListWidget(QtGui.QWidget):
         vbox.addWidget(self.complist_widget)
         self.setLayout(vbox)
 
-    # ##
     def on_list_change(self):
         '''
         Changed an item in the list
@@ -1488,7 +1491,7 @@ class ComponentListWidget(QtGui.QWidget):
         except:
             # This seems to happen when the user forgets
             # to click on the white regions in the velocity
-            # plots, before doing a command. Seems harmeless.
+            # plots, before doing a command. Seems harmless.
             return
             # QtCore.pyqtRemoveInputHook()
             # pdb.set_trace()
@@ -1677,9 +1680,44 @@ def set_fontsize(ax,fsz):
 
 
 # Some info about the blending between components
-def blending_info(components, specfile):
+def blending_info(components, specfile, min_vlim=100*u.km/u.s):
+    """Computes blending info, and store the components in files that group them together
+    depending on overlapping in wobs space. Very useful for speeding up automatic Voigt
+    profile fitting
 
-    grouped_comps = ltiu.group_coincident_compoments(components, output_type='list')
+    Parameters
+    ----------
+    components : list
+        A list of AbsComponents
+    specfile : str
+        Name of the spectrum file, it will be used for writing
+    min_vlim : Quantity
+        Minimum velocity limit for components for overlap considerations;
+        should be equal or larger than the LSF core
+
+    Returns
+    -------
+        Writes output files.
+
+    """
+
+    # create a copy of component list that has a minimum vlim incorporated
+    comps_copy = copy.copy(components)
+    for comp in comps_copy:
+        for line in comp._abslines:
+            # add minimum velocity limit consideration for blends; should be larger than the LSF core
+            vlim = line.limits.vlim
+            if np.fabs(vlim[0]) < min_vlim:
+                vlim[0] = -1 * min_vlim
+            if np.fabs(vlim[1]) < min_vlim:
+                vlim[1] = min_vlim
+            line.limits.set(vlim)
+
+    QtCore.pyqtRemoveInputHook()
+    pdb.set_trace()
+    QtCore.pyqtRestoreInputHook()
+
+    grouped_comps = ltiu.group_coincident_compoments(comps_copy, output_type='list')
     isolated = []
     grouped = []
     for group in grouped_comps:
