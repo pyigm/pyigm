@@ -7,6 +7,7 @@ from __future__ import (print_function, absolute_import, division, unicode_liter
 
 from PyQt4 import QtGui
 from pyigm.guis.igmguesses import IGMGuessesGui
+from astropy import units as u
 import pdb
 
 try:
@@ -50,6 +51,12 @@ def main(args=None):
     pargs = parser(options=args)
     import sys
 
+    if pargs.vlim is not None:
+        vlim_disp = [-1*pargs.vlim, 1.*pargs.vlim]*u.km/u.s
+    else:
+        vlim_disp = pargs.vlim
+
+
     app = QtGui.QApplication(sys.argv)
     gui = IGMGuessesGui(pargs.in_file,
                         outfil=pargs.out_file,
@@ -58,7 +65,7 @@ def main(args=None):
                         n_max_tuple=pargs.n_max_tuple,
                         min_strength=pargs.min_strength,
                         min_ew=pargs.min_ew,
-                        vlim_disp=[-1.*pargs.vlim, 1.*pargs.vlim])
+                        vlim_disp=vlim_disp)
     gui.show()
     app.exec_()
 

@@ -65,7 +65,7 @@ class IGMGuessesGui(QtGui.QMainWindow):
     def __init__(self, ispec, parent=None, previous_file=None, 
         srch_id=True, outfil=None, fwhm=None,
         plot_residuals=True,n_max_tuple=None, min_strength=None,
-                 min_ew=None, vlim_disp=[-500,500]):
+                 min_ew=None, vlim_disp=None):
         QtGui.QMainWindow.__init__(self, parent)
         """
         ispec : str
@@ -86,8 +86,8 @@ class IGMGuessesGui(QtGui.QMainWindow):
         min_ew : float, optional
             Minimum equivalent width (in AA) of lines to be stored within a components.
             This is useful for not storing extremely weak lines.
-        vlim_disp : list, optional
-            Minimum and maximum velocity limit (in km/s) for the display
+        vlim_disp : list of Quantity, optional
+            Minimum and maximum velocity limit for the display; e.g. [-500.,500.]*u.km/u.s
 
 
         """
@@ -172,7 +172,9 @@ P         : toggle on/off "colorful" display, where components of different
         self.n_max_tuple = n_max_tuple
         self.min_strength = min_strength
         self.min_ew = min_ew * u.AA
-        self.vlim_disp = vlim_disp * u.km/u.s
+        if vlim_disp is None:
+            vlim_disp = [-500.,500.] * u.km/u.s
+        self.vlim_disp = vlim_disp
 
         # Load spectrum
         spec, spec_fil = ltgu.read_spec(ispec)
@@ -1713,9 +1715,9 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s):
                 vlim[1] = min_vlim
             line.limits.set(vlim)
 
-    QtCore.pyqtRemoveInputHook()
-    pdb.set_trace()
-    QtCore.pyqtRestoreInputHook()
+    # QtCore.pyqtRemoveInputHook()
+    # pdb.set_trace()
+    # QtCore.pyqtRestoreInputHook()
 
     grouped_comps = ltiu.group_coincident_compoments(comps_copy, output_type='list')
     isolated = []
