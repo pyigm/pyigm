@@ -4,14 +4,12 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 
 
 import numpy as np
-import warnings
 import pdb
 
 from astropy import units as u
 from astropy.table import Table
 from astropy.coordinates import SkyCoord
 
-from linetools import utils as ltu
 from linetools.spectralline import AbsLine
 from linetools.isgm.abscomponent import AbsComponent
 
