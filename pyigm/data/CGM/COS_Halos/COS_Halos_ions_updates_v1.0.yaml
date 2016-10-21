@@ -1,0 +1,40 @@
+J0910+1014_34_46:
+  ion:
+    7,2:
+      'flag_N': 3
+J0928+6025_110_35:
+  trans:
+    FeIII 1122:
+      'flag_N': 1
+J0943+0531_227_19:
+  ion:
+    6,2:
+      'flag_N': 3
+    7,2:
+      'flag_N': 3
+J1016+4706_274_6:
+  trans:
+     FeII 1144:   # Must be a blend
+        'flag_N': 3
+J1233+4758_94_38:
+  ion:
+    6,3:
+      'flag_N': 0  # Blend+saturated
+J1342-0053_157_10:
+  trans:
+     OI 971:   # Blend
+        'flag_N': 3
+J1435+3604_68_12:
+  trans:
+     OI 971:   # Blend
+        'flag_N': 3
+J1619+3342_113_40:
+  ion:
+     6,2:  # Bad CII
+       'flag_N': 3
+J2345-0059_356_12:
+  trans:
+     SiIII 1206:   # Blend
+        'flag_N': 0
+     NII 1083:   # Blend
+        'flag_N': 3

@@ -4,14 +4,12 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 
 
 import numpy as np
-import warnings
 import pdb
 
 from astropy import units as u
 from astropy.table import Table
 from astropy.coordinates import SkyCoord
 
-from linetools import utils as ltu
 from linetools.spectralline import AbsLine
 from linetools.isgm.abscomponent import AbsComponent
 
@@ -81,6 +79,10 @@ def p11():
                                       Ntup=(flagN, row['MAG'][8], row['MAG'][9]))
                 HIcomp._abslines.append(lya)
                 igmsys._components.append(HIcomp)
+                # NHI
+                igmsys.NHI = HIcomp.logN
+                igmsys.flag_NHI = HIcomp.flag_N
+                igmsys.sig_NHI = HIcomp.sig_N
             # OVI
             if row['MAGERR'][2] > 0.:
                 # OVI 1031
