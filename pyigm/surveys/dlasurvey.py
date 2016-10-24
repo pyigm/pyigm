@@ -374,6 +374,7 @@ class DLASurvey(IGMSurvey):
     def __init__(self, **kwargs):
         IGMSurvey.__init__(self, 'DLA', **kwargs)
 
+
 def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
              zem_min=0., flg_zsrch=0, vmin=0.*u.km/u.s,
              LLS_CUT=None, partial=False, prox=False):
@@ -381,6 +382,9 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
 
     Parameters
     ----------
+    DLAs : DLASurvey
+    qsos : Table
+      keys must include RA, DEC, ZEM, Z_START
     vmin : Quantity
     vprox
     maxdz
@@ -401,7 +405,7 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
       True = statistical
     """
     from linetools.utils import z_from_v
-    from astropy.coordinates import SkyCoord
+    from astropy.coordinates import SkyCoord, match_coordinates_sky
 
     # DLA
     msk_smpl = DLAs.zem != DLAs.zem
@@ -410,22 +414,19 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
 
     # Make some lists
     qsos_coord = SkyCoord(ra=qsos['RA'], dec=qsos['DEC'])
+    dla_coord = DLAs.coord
+
+    idx, d2d, d3d = match_coordinates_sky(dla_coord, qsos_coord, nthneighbor=1)
+    close = d2d < 1.*u.arcsec
 
     for qq, idla in enumerate(DLAs._abs_sys):
         # In stat?
-        small_sep = idla.coord.separation(qsos_coord) < 3.6*u.arcsec
-        close_zem = np.abs(idla.zem-qsos['ZEM']) < 0.03
-        idx = np.where(small_sep & close_zem)[0]
-        if len(idx) == 0:
-            continue
-        elif len(idx) == 1:
-            #pdb.set_trace()
-            if ((idla.zabs >= zmin[idx]) &
-                (idla.zabs <= qsos[idx]['Z_END']) &
-                (qsos[idx]['FLG_BAL'] != 2)):
-                msk_smpl[qq] = True
-        else:
-            pdb.set_trace()
-            raise ValueError("Should not be here")
+        if close[qq]:
+            if np.abs(idla.zem-qsos['ZEM'][idx[qq]]) < 0.03:
+                if ((idla.zabs >= zmin[idx[qq]]) &
+                        (idla.zabs <= qsos['Z_END'][idx[qq]]) & (qsos[idx[qq]]['FLG_BAL'] != 2)):
+                        msk_smpl[qq] = True
+                        pdb.set_trace()
+    pdb.set_trace()
     # Return
     return msk_smpl

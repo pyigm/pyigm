@@ -428,7 +428,10 @@ class IGMSurvey(object):
 
         # Clean up
         for jfile in jfiles:
-            os.remove(jfile)
+            try:
+                os.remove(jfile)
+            except OSError:  # Likely a duplicate.  This can happen
+                pass
         os.rmdir(tmpdir)
 
     def __getattr__(self, k):
