@@ -194,7 +194,7 @@ class DLASurvey(IGMSurvey):
 
         # Stat
         # Generate mask
-        print('SDSS-DR5: Performing stats (~60s)')
+        print('SDSS-DR5: Performing stats')
         mask = dla_stat(dla_survey, newqsos)
         if sample == 'stat':
             dla_survey.mask = mask
@@ -379,6 +379,7 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
              zem_min=0., flg_zsrch=0, vmin=0.*u.km/u.s,
              LLS_CUT=None, partial=False, prox=False):
     """ Identify the statistical DLA in a survey
+    Note that this algorithm ignores any existing mask
 
     Parameters
     ----------
@@ -404,9 +405,13 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
     msk_smpl : bool array
       True = statistical
     """
+    import warnings
     from linetools.utils import z_from_v
     from astropy.coordinates import SkyCoord, match_coordinates_sky
-
+    # Check for mask
+    if DLAs.mask is not None:
+        warnings.warn("Resetting mask to None.  Be careful here")
+        DLAs.mask = None
     # DLA
     msk_smpl = DLAs.zem != DLAs.zem
     #zmax = z_from_v(qsos['ZEM'], vprox)
@@ -426,7 +431,5 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
                 if ((idla.zabs >= zmin[idx[qq]]) &
                         (idla.zabs <= qsos['Z_END'][idx[qq]]) & (qsos[idx[qq]]['FLG_BAL'] != 2)):
                         msk_smpl[qq] = True
-                        pdb.set_trace()
-    pdb.set_trace()
     # Return
     return msk_smpl

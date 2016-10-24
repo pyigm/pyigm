@@ -31,9 +31,11 @@ def test_sdss():
     sdss = DLASurvey.load_SDSS_DR5()
     assert len(sdss.NHI) == 737
 
+
 def test_read_h100_nosys():
     h100 = DLASurvey.load_H100(load_sys=False)
     assert h100.nsys == 100
+
 
 @remote_data
 def test_read_h100():
