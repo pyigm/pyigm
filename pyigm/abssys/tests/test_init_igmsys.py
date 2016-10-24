@@ -22,5 +22,6 @@ def test_init():
     #
     hisys = HISystem(radec, 1.244, [-500,500]*u.km/u.s, NHI=15.)
     np.testing.assert_allclose(hisys.NHI, 15.)
+    np.testing.assert_allclose(hisys.vlim[0].value, -500.)
 
 

@@ -3,7 +3,7 @@
 # TEST_UNICODE_LITERALS
 
 import numpy as np
-import os, pdb
+import os
 import pytest
 
 from pyigm.surveys.dlasurvey import DLASurvey
@@ -20,6 +20,16 @@ def data_path(filename):
 def test_init():
     dlas = DLASurvey(ref='null')
     assert dlas.abs_type == 'DLA'
+
+
+def test_sdss():
+    # All
+    sdss = DLASurvey.load_SDSS_DR5(sample='all')
+    # Testing
+    assert sdss.nsys == 1182
+    # Stat
+    sdss = DLASurvey.load_SDSS_DR5()
+    assert len(sdss.NHI) == 737
 
 def test_read_h100_nosys():
     h100 = DLASurvey.load_H100(load_sys=False)
@@ -47,12 +57,4 @@ def test_dat_list():
     assert dlas.nsys == 100
 
 
-def test_sdss():
-    # All
-    sdss = DLASurvey.load_SDSS_DR5(sample='all')
-    # Testing
-    assert sdss.nsys == 1182
-    # Stat
-    sdss = DLASurvey.load_SDSS_DR5()
-    assert len(sdss.NHI) == 737
 

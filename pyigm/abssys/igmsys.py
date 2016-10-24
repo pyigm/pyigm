@@ -32,6 +32,8 @@ class IGMSystem(AbsSystem):
     def __init__(self, radec, zabs, vlim, ZH=0., abs_type='IGMSystem', **kwargs):
         """Standard init
         """
+        if vlim is None:
+            vlim = [-500.,500.]*u.km/u.s
         # Generate with type
         AbsSystem.__init__(self, radec, zabs, vlim, abs_type=abs_type, **kwargs)
         # Init
