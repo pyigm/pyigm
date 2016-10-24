@@ -55,6 +55,7 @@ Optional arguments
                                                     shown/stored within a component. This is useful 0.005
                                                     for getting rid of very weak transitions from
                                                     the model
+    --vlim VLIM                                     Velocity limit (in km/s) for the display        500.
     =============================================== =============================================== ==============
 
 The number of transitions available for some ions  can be excessive for many,

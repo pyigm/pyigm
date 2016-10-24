@@ -13,6 +13,7 @@ Notebooks
    :maxdepth: 1
 
    CGM Examples <CGM_examples>
+   CGM P11 <CGM_P11>
 
 Overview
 ========
@@ -130,5 +131,21 @@ Calculate dN/dX given a cosmology and a paremterization of the
 halos.  Code of interest is cgm.analysis.dndx_rvir::
 
    dNdX = cgm.analysis.dndx_rvir()
+
+
+COS-Halos
+---------
+
+All of the measurements related to the COS-Halos survey
+`Werk et al. (2011) <http://adsabs.harvard.edu/abs/2012ApJS..198....3W>`_,
+`Tumlinson et al. (2013) <http://adsabs.harvard.edu/abs/2013ApJ...777...59T>`_,
+`Werk et al. (2013) <http://adsabs.harvard.edu/abs/2013ApJS..204...17W>`_
+Prochaska et al. (2016, in prep),
+are included in the data directory.  You can read in the dataset with::
+
+   from pyigm.cgm import cos_halos as pch
+   coshalos = pch.COSHalos()
+
+See the Notebook in examples for further details.
 
 
