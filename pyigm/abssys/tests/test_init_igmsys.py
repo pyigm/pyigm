@@ -9,7 +9,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 import numpy as np
 
-from pyigm.abssys.igmsys import IGMSystem
+from pyigm.abssys.igmsys import IGMSystem, HISystem
 
 import pdb
 
@@ -19,5 +19,8 @@ def test_init():
     igmsys = IGMSystem(radec, 1.244, [-500,500]*u.km/u.s, NHI=16., abs_type='MgII')
     # Test
     np.testing.assert_allclose(igmsys.zabs,1.244)
+    #
+    hisys = HISystem(radec, 1.244, [-500,500]*u.km/u.s, NHI=15.)
+    np.testing.assert_allclose(hisys.NHI, 15.)
 
 

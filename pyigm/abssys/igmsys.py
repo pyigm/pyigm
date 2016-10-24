@@ -75,7 +75,7 @@ class HISystem(IGMSystem):
     """Class for HI Lyman Absorption Line System
     """
     def __init__(self, radec, zabs, vlim, **kwargs):
-        IGMSystem.__init__(self, 'HI', radec, zabs, vlim, **kwargs)
+        IGMSystem.__init__(self, radec, zabs, vlim, abs_type='HI', **kwargs)
 
     def chk_component(self,component):
         """Require components are only of HI
