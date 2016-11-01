@@ -2,11 +2,11 @@
 """
 from __future__ import print_function, absolute_import, division, unicode_literals
 
+import warnings
 import pdb
 import numpy as np
 
 from astropy import units as u
-from astropy.coordinates import SkyCoord
 
 from linetools.isgm import utils as ltiu
 
@@ -122,6 +122,50 @@ class DLASystem(IGMSystem):
             vlim = [-500., 500.]*u.km/u.s
         # Generate with type
         IGMSystem.__init__(self, radec, zabs, vlim, NHI=NHI, abs_type='DLA', **kwargs)
+
+    def model_lya(self, spec, **kwargs):
+        """ Generate a model DLA on an input spectrum
+        Parameters
+        ----------
+        spec : XSpectrum1D
+        kwargs :
+          Passed to voigt_from_abslines
+
+        Returns
+        -------
+        dla_model : XSpectrum1D
+          Model spectrum with same wavelength as input spectrum
+          Assumes a normalized flux
+        lya_lines : list
+          List of AbsLine's that contributed to the DLA model
+
+        """
+        from linetools.spectralline import AbsLine
+        from linetools.analysis.voigt import voigt_from_abslines
+        # Scan abs lines
+        alines = self.list_of_abslines()
+        lya_lines = []
+        logNHIs = []
+        for aline in alines:
+            if aline.name == 'HI 1215':
+                lya_lines.append(aline)
+                logNHIs.append(np.log10(aline.attrib['N'].value))
+        if len(lya_lines) > 0: # Use the lines
+            # Check we have a DLA worth
+            if np.log10(np.sum(10**np.array(logNHIs))) < self.NHI:
+                raise ValueError("Total NHI of the Lya lines is less than NHI of the DLA!  Something is wrong..")
+        else: # Generate one
+            warnings.warn("Generating the Lya line from the system info, not abslines")
+            lya_line = AbsLine('HI 1215')
+            lya_line.attrib['z'] = self.zabs
+            lya_line.attrib['N'] = 10**self.NHI / u.cm**2
+            lya_line.attrib['b'] = 30 * u.km/u.s
+            #
+            lya_lines.append(lya_line)
+        # Voigt
+        vmodel = voigt_from_abslines(spec.wavelength, lya_lines, **kwargs)
+        return vmodel, lya_lines
+
 
     def get_ions(self, use_Nfile=False, idict=None, update_zvlim=True,
                  linelist=None, verbose=True):
