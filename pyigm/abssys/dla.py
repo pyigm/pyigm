@@ -123,19 +123,13 @@ class DLASystem(IGMSystem):
         # Generate with type
         IGMSystem.__init__(self, radec, zabs, vlim, NHI=NHI, abs_type='DLA', **kwargs)
 
-    def model_abs(self, spec, lya_only=False, add_lls=False, ignore_abslines=False, **kwargs):
+    def model_abs(self, spec, **kwargs):
         """ Generate a model of the absorption from the DLA on an input spectrum
+        This is a simple wrapper to pyigm.abssys.utils.hi_model
+
         Parameters
         ----------
         spec : XSpectrum1D
-        lya_only : bool, optional
-          Only generate Lya
-        ignore_abslines : bool, optional
-          Ignore any existing abslines in the object
-        add_lls : bool, optional
-          Add Lyman continuum absorption
-        kwargs :
-          Passed to voigt_from_abslines
 
         Returns
         -------
@@ -146,68 +140,10 @@ class DLASystem(IGMSystem):
           List of AbsLine's that contributed to the DLA model
 
         """
-        from linetools.spectra.xspectrum1d import XSpectrum1D
-        from linetools.spectralline import AbsLine
-        from linetools.analysis.voigt import voigt_from_abslines
-        from linetools.analysis.absline import photo_cross
-        # Scan abs lines
-        if not ignore_abslines
-            alines = []
-        else:
-            alines = self.list_of_abslines()
-        lyman_lines = []
-        lya_lines = []
-        logNHIs = []
-        # Scan alines
-        for aline in alines:
-            # Lya
-            if aline.name == 'HI 1215':
-                lya_lines.append(aline)
-                logNHIs.append(np.log10(aline.attrib['N'].value))
-            # Any HI
-            if 'HI' in aline.name:
-                lyman_lines.append(aline)
-        if len(lya_lines) > 0: # Use the lines
-            # Check we have a DLA worth
-            if np.log10(np.sum(10**np.array(logNHIs))) < self.NHI:
-                raise ValueError("Total NHI of the Lya lines is less than NHI of the DLA!  Something is wrong..")
-        else: # Generate one
-            warnings.warn("Generating the absorption lines from the system info, not abslines")
-            if lya_only:
-                lya_line = AbsLine('HI 1215')
-                lya_line.attrib['z'] = self.zabs
-                lya_line.attrib['N'] = 10**self.NHI / u.cm**2
-                lya_line.attrib['b'] = 30 * u.km/u.s
-                lyman_lines.append(lya_line)
-            else:
-                HIlines = LineList('HI')
-                wrest = HIlines._data['wrest']
-                for iwrest in wrest:
-                    # On the spectrum?
-                    if iwrest > spec.wvmin/(1+self.zabs):
-                        lyman_line = AbsLine(iwrest, linelist=HIlines)
-                        lyman_line.attrib['z'] = self.zabs
-                        lyman_line.attrib['N'] = 10**self.NHI / u.cm**2
-                        lyman_line.attrib['b'] = 30 * u.km/u.s
-                        lyman_lines.append(lyman_line)
-        # Voigt for abs lines
-        if add_lls:
-            tau_Lyman = voigt_from_abslines(spec.wavelength,lyman_lines, ret='tau', **kwargs)
-            wv_rest = spec.wavength / (1+self.zabs)
-            energy = wv_rest.to(u.eV, equivalencies=u.spectral())
-            # Get photo_cross and calculate tau
-            tau_LL = (10.**self.NHI / u.cm**2) * photo_cross(1,1,energy)
-            # Kludge
-            pix_LL = np.argmin(np.fabs(wv_rest- 911.3*u.AA))
-            pix_kludge = np.where((wv_rest > 911.5*u.AA) & (wv_rest < 912.8*u.AA))[0]
-            tau_LL[pix_kludge] = tau_LL[pix_LL]
-            # Generate the spectrum
-            flux = np.exp(-1*tau_LL)
-            vmodel = XSpectrum1D.from_tuple((spec.wavelength, flux))
-        else:
-            vmodel = voigt_from_abslines(spec.wavelength, lyman_lines, **kwargs)
-        # LLS?
-        return vmodel, lyman_lines
+        from pyigm.abssys.utils import hi_model
+        vmodel, lines = hi_model(self, spec, **kwargs)
+        # Return
+        return vmodel, lines
 
 
     def get_ions(self, use_Nfile=False, idict=None, update_zvlim=True,

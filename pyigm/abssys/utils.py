@@ -71,11 +71,15 @@ def dict_to_ions(idict):
     return table
 
 
-def hi_model(abssys, spec, lya_only=False, add_lls=False, ignore_abslines=False, bval=30*u.km/u.s, **kwargs):
-    """ Generate a model of the absorption from the absorption system on an input spectrum
+def hi_model(abssys, spec, lya_only=False, add_lls=False, ret_tau=False,
+             ignore_abslines=False, bval=30*u.km/u.s, **kwargs):
+    """ Generate a model of the absorption from the absorption system
+    on an input spectrum
+
     Parameters
     ----------
-    abssys : AbsSystem
+    abssys : AbsSystem or list
+      If list, must be a list of AbsSystem's
     spec : XSpectrum1D
     lya_only : bool, optional
       Only generate Lya
@@ -84,81 +88,108 @@ def hi_model(abssys, spec, lya_only=False, add_lls=False, ignore_abslines=False,
       NHI tag must be set
     add_lls : bool, optional
       Add Lyman continuum absorption
+    bval : Quantity, optional
+      Doppler parameter to use if abslines not adopted
+    ret_tau : bool, optional
+      Return only the optical depth (used for multiple systems)
     kwargs :
       Passed to voigt_from_abslines
 
     Returns
     -------
-    dla_model : XSpectrum1D
+    vmodel : XSpectrum1D or ndarray
       Model spectrum with same wavelength as input spectrum
       Assumes a normalized flux
+      Or optical depth array [used for multiple systems]
     lyman_lines : list
-      List of AbsLine's that contributed to the DLA model
+      List of AbsLine's that contributed to the model
 
     """
     from linetools.spectra.xspectrum1d import XSpectrum1D
     from linetools.spectralline import AbsLine
     from linetools.analysis.voigt import voigt_from_abslines
     from linetools.analysis.absline import photo_cross
-    # Scan abs lines
-    if not ignore_abslines:
-        alines = []
-    else:
-        alines = abssys.list_of_abslines()
-    lyman_lines = []
-    lya_lines = []
-    logNHIs = []
-    # Scan alines
-    for aline in alines:
-        # Lya
-        if aline.name == 'HI 1215':
-            lya_lines.append(aline)
-            logNHIs.append(np.log10(aline.attrib['N'].value))
-        # Any HI
-        if 'HI' in aline.name:
-            lyman_lines.append(aline)
-    if len(lya_lines) > 0: # Use the lines
-        # Check we have a DLA worth
-        if np.log10(np.sum(10**np.array(logNHIs))) < abssys.NHI:
-            raise ValueError("Total NHI of the Lya lines is less than NHI of the system!  Something is wrong..")
-    else: # Generate one
-        warnings.warn("Generating the absorption lines from the system info, not abslines")
-        if lya_only:
-            lya_line = AbsLine('HI 1215')
-            lya_line.attrib['z'] = abssys.zabs
-            lya_line.attrib['N'] = 10**abssys.NHI / u.cm**2
-            lya_line.attrib['b'] = bval
-            lyman_lines.append(lya_line)
-        else:
-            HIlines = LineList('HI')
-            wrest = HIlines._data['wrest']
-            for iwrest in wrest:
-                # On the spectrum?
-                if iwrest > spec.wvmin/(1+abssys.zabs):
-                    lyman_line = AbsLine(iwrest, linelist=HIlines)
-                    lyman_line.attrib['z'] = abssys.zabs
-                    lyman_line.attrib['N'] = 10**abssys.NHI / u.cm**2
-                    lyman_line.attrib['b'] = 30 * u.km/u.s
-                    lyman_lines.append(lyman_line)
-    # Voigt for abs lines
-    if add_lls:
-        tau_Lyman = voigt_from_abslines(spec.wavelength,lyman_lines, ret='tau', **kwargs)
-        wv_rest = spec.wavength / (1+abssys.zabs)
-        energy = wv_rest.to(u.eV, equivalencies=u.spectral())
-        # Get photo_cross and calculate tau
-        tau_LL = (10.**abssys.NHI / u.cm**2) * photo_cross(1,1,energy)
-        # Kludge
-        pix_LL = np.argmin(np.fabs(wv_rest- 911.3*u.AA))
-        pix_kludge = np.where((wv_rest > 911.5*u.AA) & (wv_rest < 912.8*u.AA))[0]
-        tau_LL[pix_kludge] = tau_LL[pix_LL]
-        # Generate the spectrum
-        tau_tot = tau_LL + tau_Lyman
-        flux = np.exp(-1*tau_tot)
+    # Input
+    if isinstance(abssys, list):
+        tau = None
+        all_lines = []
+        for iabssys in abssys:
+            itau, ly_lines = hi_model(iabssys, spec, lya_only=lya_only, add_lls=add_lls,
+                     ignore_abslines=ignore_abslines, bval=bval, ret_tau=True, **kwargs)
+            all_lines += ly_lines
+            if tau is None:
+                tau = itau
+            else:
+                tau += itau
+        # Flux
+        flux = np.exp(-1*tau)
         vmodel = XSpectrum1D.from_tuple((spec.wavelength, flux))
+        return vmodel, all_lines
     else:
-        vmodel = voigt_from_abslines(spec.wavelength, lyman_lines, **kwargs)
-    # LLS?
-    return vmodel, lyman_lines
+        # Scan abs lines
+        if not ignore_abslines:
+            alines = []
+        else:
+            alines = abssys.list_of_abslines()
+        lyman_lines = []
+        lya_lines = []
+        logNHIs = []
+        # Scan alines
+        for aline in alines:
+            # Lya
+            if aline.name == 'HI 1215':
+                lya_lines.append(aline)
+                logNHIs.append(np.log10(aline.attrib['N'].value))
+            # Any HI
+            if 'HI' in aline.name:
+                lyman_lines.append(aline)
+        if len(lya_lines) > 0: # Use the lines
+            # Check we have a DLA worth
+            if np.log10(np.sum(10**np.array(logNHIs))) < abssys.NHI:
+                raise ValueError("Total NHI of the Lya lines is less than NHI of the system!  Something is wrong..")
+        else: # Generate one
+            warnings.warn("Generating the absorption lines from the system info, not abslines")
+            if lya_only:
+                lya_line = AbsLine('HI 1215')
+                lya_line.attrib['z'] = abssys.zabs
+                lya_line.attrib['N'] = 10**abssys.NHI / u.cm**2
+                lya_line.attrib['b'] = bval
+                lyman_lines.append(lya_line)
+            else:
+                HIlines = LineList('HI')
+                wrest = HIlines._data['wrest']
+                for iwrest in wrest:
+                    # On the spectrum?
+                    if iwrest > spec.wvmin/(1+abssys.zabs):
+                        lyman_line = AbsLine(iwrest, linelist=HIlines)
+                        lyman_line.attrib['z'] = abssys.zabs
+                        lyman_line.attrib['N'] = 10**abssys.NHI / u.cm**2
+                        lyman_line.attrib['b'] = bval
+                        lyman_lines.append(lyman_line)
+        # tau for abs lines
+        tau_Lyman = voigt_from_abslines(spec.wavelength,lyman_lines, ret='tau', **kwargs)
+        # LLS?
+        if add_lls:
+            wv_rest = spec.wavelength / (1+abssys.zabs)
+            energy = wv_rest.to(u.eV, equivalencies=u.spectral())
+            # Get photo_cross and calculate tau
+            tau_LL = (10.**abssys.NHI / u.cm**2) * photo_cross(1,1,energy)
+            # Kludge
+            pix_LL = np.argmin(np.fabs(wv_rest- 911.3*u.AA))
+            pix_kludge = np.where((wv_rest > 911.5*u.AA) & (wv_rest < 912.8*u.AA))[0]
+            tau_LL[pix_kludge] = tau_LL[pix_LL]
+            # Generate the spectrum
+        else:
+            tau_LL = 0.
+        # Sum
+        tau_tot = tau_LL + tau_Lyman
+        if ret_tau:
+            vmodel = tau_tot
+        else:
+            flux = np.exp(-1*tau_tot)
+            vmodel = XSpectrum1D.from_tuple((spec.wavelength, flux))
+        # Return
+        return vmodel, lyman_lines
 
 def parse_datdict(datdict):
     """ Parse a datdict

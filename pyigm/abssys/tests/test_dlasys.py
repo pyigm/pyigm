@@ -17,10 +17,10 @@ import linetools
 
 from pyigm.abssys.dla import DLASystem
 
+
 def data_path(filename):
     data_dir = os.path.join(os.path.dirname(__file__), 'files')
     return os.path.join(data_dir, filename)
-
 
 
 def test_simple_dla_init():
@@ -44,19 +44,16 @@ def test_dat_init():
     np.testing.assert_allclose(dla.zabs, 2.309)
 
 
-def test_model_lya():
+def test_model_abs():
     # Simple system (without an absline)
     dla = DLASystem.from_json(data_path('J010311.38+131616.7_z2.309_ESI.json'))
     spec_fil = linetools.__path__[0]+'/spectra/tests/files/PH957_f.fits'
     spec = lsio.readspec(spec_fil)
-    model, lya_lines = dla.model_lya(spec)
+    model, lya_lines = dla.model_abs(spec)
     # Check core
     ipx = np.argmin(np.abs(spec.wavelength.value-(1+dla.zabs)*1215.67))
     assert model.flux[ipx].value < 1e-4
-    # Add an HI component and repeat
-    abscomp = AbsComponent.from_abslines(lya_lines)
-    dla._components.append(abscomp)
-    model2, lya_lines = dla.model_lya(spec)
+
 
 def test_parse_ion():
     # JXP .ion file
