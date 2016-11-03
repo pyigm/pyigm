@@ -160,13 +160,15 @@ def hi_model(abssys, spec, lya_only=False, add_lls=False, ret_tau=False,
                 wrest = HIlines._data['wrest']
                 for iwrest in wrest:
                     # On the spectrum?
-                    if iwrest > spec.wvmin/(1+abssys.zabs):
+                    if iwrest >= spec.wvmin/(1+abssys.zabs):
                         lyman_line = AbsLine(iwrest, linelist=HIlines)
                         lyman_line.attrib['z'] = abssys.zabs
                         lyman_line.attrib['N'] = 10**abssys.NHI / u.cm**2
                         lyman_line.attrib['b'] = bval
                         lyman_lines.append(lyman_line)
         # tau for abs lines
+        if len(lyman_lines) == 0:
+            pdb.set_trace()
         tau_Lyman = voigt_from_abslines(spec.wavelength,lyman_lines, ret='tau', **kwargs)
         # LLS?
         if add_lls:
