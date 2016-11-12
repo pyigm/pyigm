@@ -74,7 +74,7 @@ def dict_to_ions(idict):
 def hi_model(abssys, spec, lya_only=False, add_lls=False, ret_tau=False,
              ignore_abslines=False, bval=30*u.km/u.s, **kwargs):
     """ Generate a model of the absorption from the absorption system
-    on an input spectrum
+    on an input spectrum.
 
     Parameters
     ----------
