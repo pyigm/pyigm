@@ -765,8 +765,8 @@ class IGGVelPlotWidget(QtGui.QWidget):
                                 gamma=fit_line.data['gamma'].value, 
                                 f=fit_line.data['f'], fwhm=self.fwhm)
         # Restrict parameter space
-        fitvoigt.logN.min = 10.
-        fitvoigt.b.min = 1.
+        fitvoigt.logN.min = 12.
+        fitvoigt.b.min = 10.
         fitvoigt.z.min = component.zcomp + component.vlim[0].value * (1 + component.zcomp) / c_kms
         fitvoigt.z.max = component.zcomp + component.vlim[1].value * (1 + component.zcomp) / c_kms
 
@@ -1728,9 +1728,9 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s):
         else:
             grouped += [group]
     # write to .joenvp output
-    ltiu.joebvp_from_components(isolated, '3C273.fits', 'isolated.joebvp')
+    ltiu.joebvp_from_components(isolated, specfile, 'isolated.joebvp')
     for ii, group in enumerate(grouped):
-        ltiu.joebvp_from_components(group, '3C273.fits', 'group_{}.joebvp'.format(ii+1))
+        ltiu.joebvp_from_components(group, specfile, 'group_{}.joebvp'.format(ii+1))
 
     grouped = [isolated] + grouped
     for ii, group in enumerate(grouped):
