@@ -163,11 +163,16 @@ class IGMSurvey(object):
     @property
     def nsys(self):
         """ Number of systems
+
         Returns
         -------
         nsys : int
+          Number of statistical if mask is set
         """
-        return len(self._abs_sys)
+        if self.mask is not None:
+            return np.sum(self.mask)
+        else:
+            return len(self._abs_sys)
 
     def init_mask(self):
         """ Initialize the mask for abs_sys
@@ -428,7 +433,10 @@ class IGMSurvey(object):
 
         # Clean up
         for jfile in jfiles:
-            os.remove(jfile)
+            try:
+                os.remove(jfile)
+            except OSError:  # Likely a duplicate.  This can happen
+                pass
         os.rmdir(tmpdir)
 
     def __getattr__(self, k):
