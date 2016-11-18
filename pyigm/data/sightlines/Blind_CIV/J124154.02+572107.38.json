@@ -2,6 +2,7 @@
     "CreationDate": "2016-Nov-17",
     "DEC": 57.35205,
     "RA": 190.47508333333332,
+    "class": "IGMSightline",
     "components": {
         "CII_z0.14710": {
             "A": null,
@@ -13,6 +14,7 @@
                 6,
                 2
             ],
+            "class": "AbsComponent",
             "comment": "",
             "flag_N": 1,
             "lines": {},
@@ -34,6 +36,7 @@
                 6,
                 4
             ],
+            "class": "AbsComponent",
             "comment": "",
             "flag_N": 2,
             "lines": {},
@@ -55,6 +58,7 @@
                 1,
                 1
             ],
+            "class": "AbsComponent",
             "comment": "",
             "flag_N": 2,
             "lines": {},
@@ -76,6 +80,7 @@
                 8,
                 6
             ],
+            "class": "AbsComponent",
             "comment": "",
             "flag_N": 1,
             "lines": {},
@@ -97,6 +102,7 @@
                 14,
                 3
             ],
+            "class": "AbsComponent",
             "comment": "",
             "flag_N": 1,
             "lines": {},
@@ -118,6 +124,7 @@
                 14,
                 3
             ],
+            "class": "AbsComponent",
             "comment": "",
             "flag_N": 1,
             "lines": {},
@@ -139,6 +146,7 @@
                 14,
                 2
             ],
+            "class": "AbsComponent",
             "comment": "",
             "flag_N": 1,
             "lines": {},

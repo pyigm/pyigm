@@ -2,6 +2,7 @@
     "CreationDate": "2016-Nov-17",
     "DEC": 38.4843,
     "RA": 205.6300833333333,
+    "class": "IGMSightline",
     "components": {},
     "em_type": null,
     "name": "J134231.22+382903.48",

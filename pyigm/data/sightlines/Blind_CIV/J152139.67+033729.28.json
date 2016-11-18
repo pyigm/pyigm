@@ -2,6 +2,7 @@
     "CreationDate": "2016-Nov-17",
     "DEC": 3.6248,
     "RA": 230.41529166666663,
+    "class": "IGMSightline",
     "components": {
         "CIV_z0.09673": {
             "A": null,
@@ -13,6 +14,7 @@
                 6,
                 4
             ],
+            "class": "AbsComponent",
             "comment": "",
             "flag_N": 2,
             "lines": {},
@@ -34,6 +36,7 @@
                 1,
                 1
             ],
+            "class": "AbsComponent",
             "comment": "",
             "flag_N": 2,
             "lines": {},
