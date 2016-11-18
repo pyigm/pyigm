@@ -14,6 +14,7 @@ from astropy.coordinates import SkyCoord
 
 from ..cgm import CGM, CGMAbsSys
 from ..cgmsurvey import CGMAbsSurvey
+from ..utils import cgm_from_galaxy_igmsystems
 from pyigm.field.galaxy import Galaxy
 from pyigm.abssys.igmsys import IGMSystem
 from pyigm.igm.igmsightline import IGMSightline
@@ -62,4 +63,9 @@ def test_cgm_from_igmsystems():
     # Load sightlines
     sl_file = pyigm.__path__[0]+'/data/sightlines/Blind_CIV/J115120.46+543733.08.json'
     igmsl = IGMSightline.from_json(sl_file)
+    igmsys = igmsl.make_igmsystems()
+    # Galaxy
+    galaxy = Galaxy((178.84787, 54.65734), z=0.00283)
+    # Go
+    cgm_list = cgm_from_galaxy_igmsystems(galaxy, igmsys, chk_lowz=False)
     pytest.set_trace()
