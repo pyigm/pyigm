@@ -11,11 +11,31 @@ from astropy.coordinates import SkyCoord
 from linetools.isgm.abssightline import AbsSightline
 from linetools.isgm.abssystem import add_comps_from_dict
 from linetools.isgm.utils import build_systems_from_components
+from linetools import utils as ltu
 
 
 class IGMSightline(AbsSightline):
     """Class for IGM Absorption Sightline
     """
+    @classmethod
+    def from_json(cls, jsonfile, coord=None, **kwargs):
+        """ Instantiate from a JSON file
+
+        Parameters
+        ----------
+        jsonfile
+        coord
+        kwargs
+
+        Returns
+        -------
+
+        """
+        jdict = ltu.loadjson(jsonfile)
+        slf = cls.from_dict(jdict, coord=coord, **kwargs)
+        # Return
+        return slf
+
     @classmethod
     def from_dict(cls, idict, coord=None, **kwargs):
         """ Instantiate from a dict
