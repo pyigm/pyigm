@@ -28,7 +28,6 @@ def parser(options=None):
 def main(args=None):
     # Setup
     from linetools import utils as ltu
-    from astropy import units as u
 
     pargs = parser()
     # Read
