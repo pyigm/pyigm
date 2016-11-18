@@ -3,6 +3,8 @@ Uses AbsSightline from linetools
 """
 from __future__ import print_function, absolute_import, division, unicode_literals
 
+import pdb
+
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 
@@ -26,9 +28,13 @@ class IGMSightline(AbsSightline):
 
         """
         slf = cls(SkyCoord(ra=idict['RA'], dec=idict['DEC'], unit='deg'),
-                  idict['zem'], name=idict['Name'], **kwargs)
+                  idict['zem'], name=idict['name'], **kwargs)
         # Other
-        add_other_from_dict(slf, idict)
+        for key in idict.keys():
+            if key in ['RA', 'DEC', 'zem', 'name', 'components']:
+                continue
+            else:
+                setattr(slf, key, idict[key])
         # Components
         add_comps_from_dict(slf, idict, **kwargs)
 
