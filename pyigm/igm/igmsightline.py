@@ -10,6 +10,7 @@ from astropy.coordinates import SkyCoord
 
 from linetools.isgm.abssightline import AbsSightline
 from linetools.isgm.abssystem import add_comps_from_dict
+from linetools.isgm.utils import build_systems_from_components
 
 
 class IGMSightline(AbsSightline):
@@ -44,6 +45,23 @@ class IGMSightline(AbsSightline):
     def __init__(self, radec, zem, **kwargs):
         AbsSightline.__init__(self, radec, sl_type='IGM', **kwargs)
         self.zem = zem
+
+    def make_igmsystems(self, igmsystem=None):
+        """ Use the component list to generate a list of IGMSystems
+
+        Returns
+        -------
+        igm_systems : list
+          list of IGMSystem objects
+
+        """
+        if igmsystem is None:
+            from pyigm.abssys.igmsys import IGMSystem
+            igmsystem = IGMSystem
+        # Main call
+        igm_sys = build_systems_from_components(self._components, systype=igmsystem)
+        # Return
+        return igm_sys
 
     def __repr__(self):
         txt = '<{:s}: {:s} {:s}, zem={:f}'.format(
