@@ -4,12 +4,37 @@ Uses AbsSightline from linetools
 from __future__ import print_function, absolute_import, division, unicode_literals
 
 from astropy import units as u
+from astropy.coordinates import SkyCoord
+
 from linetools.isgm.abssightline import AbsSightline
+from linetools.isgm.abssystem import add_comps_from_dict
 
 
 class IGMSightline(AbsSightline):
     """Class for IGM Absorption Sightline
     """
+    @classmethod
+    def from_dict(cls, idict, coord=None, **kwargs):
+        """ Instantiate from a dict
+
+        Parameters
+        ----------
+        idict : dict
+
+        Returns
+        -------
+
+        """
+        slf = cls(SkyCoord(ra=idict['RA'], dec=idict['DEC'], unit='deg'),
+                  idict['zem'], name=idict['Name'], **kwargs)
+        # Other
+        add_other_from_dict(slf, idict)
+        # Components
+        add_comps_from_dict(slf, idict, **kwargs)
+
+        # Return
+        return slf
+
     def __init__(self, radec, zem, **kwargs):
         AbsSightline.__init__(self, radec, sl_type='IGM', **kwargs)
         self.zem = zem
