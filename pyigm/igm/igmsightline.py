@@ -66,7 +66,7 @@ class IGMSightline(AbsSightline):
         AbsSightline.__init__(self, radec, sl_type='IGM', **kwargs)
         self.zem = zem
 
-    def make_igmsystems(self, igmsystem=None):
+    def make_igmsystems(self, igmsystem=None, **kwargs):
         """ Use the component list to generate a list of IGMSystems
 
         Returns
@@ -79,7 +79,7 @@ class IGMSightline(AbsSightline):
             from pyigm.abssys.igmsys import IGMSystem
             igmsystem = IGMSystem
         # Main call
-        igm_sys = build_systems_from_components(self._components, systype=igmsystem)
+        igm_sys = build_systems_from_components(self._components, systype=igmsystem, **kwargs)
         # Return
         return igm_sys
 

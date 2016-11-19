@@ -63,7 +63,7 @@ def test_cgm_from_igmsystems():
     # Load sightlines
     sl_file = pyigm.__path__[0]+'/data/sightlines/Blind_CIV/J115120.46+543733.08.json'
     igmsl = IGMSightline.from_json(sl_file)
-    igmsys = igmsl.make_igmsystems()
+    igmsys = igmsl.make_igmsystems(vsys=400*u.km/u.s)
     # Galaxy
     galaxy = Galaxy((178.84787, 54.65734), z=0.00283)
     # Go
