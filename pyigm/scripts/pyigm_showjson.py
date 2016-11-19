@@ -26,7 +26,6 @@ def parser(options=None):
     return args
 
 def main(args=None):
-    # Setup
     from linetools import utils as ltu
 
     pargs = parser()
