@@ -43,6 +43,7 @@ def get_xy(ncenters, ndim, rstate):
     # Return the first ncenters
     return randxy[gdr2[0:ncenters],:]
 
+
 def sp_cluster(L, R, eta, l, ndim, seed=None):
     """
     Parameters
@@ -94,6 +95,7 @@ def sp_cluster(L, R, eta, l, ndim, seed=None):
     # Return
     return sp_dict
 
+
 def plot_1d(sp_dict):
     """ Check 1D output
     Parameters
@@ -141,7 +143,8 @@ def plot_circles(sp_dict):
     plt.show()
     plt.close()
 
-# ################
+
+# MAIN
 if __name__ == "__main__":
 
     flg_tst = 0
