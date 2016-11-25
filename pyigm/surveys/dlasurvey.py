@@ -62,6 +62,7 @@ class DLASurvey(IGMSurvey):
         sys_files = pyigm_path+"/data/DLA/H100/H100_DLA_sys.tar.gz"
 
         if load_sys:  # This approach takes ~120s
+            print('H100: Loading systems.  This takes ~120s')
             if isys_path is not None:
                 dla_survey = pyisu.load_sys_files(isys_path, 'DLA', sys_path=True)
             else:
@@ -107,6 +108,7 @@ class DLASurvey(IGMSurvey):
 
         # Spectra?
         if grab_spectra:
+            pdb.set_trace()  # USE IGMSPEC!!
             specfils = glob.glob(spath+'H100_J*.fits')
             if len(specfils) < 100:
                 import tarfile
@@ -192,7 +194,7 @@ class DLASurvey(IGMSurvey):
 
         # Stat
         # Generate mask
-        print('SDSS-DR5: Performing stats (~60s)')
+        print('SDSS-DR5: Performing stats')
         mask = dla_stat(dla_survey, newqsos)
         if sample == 'stat':
             dla_survey.mask = mask
@@ -372,13 +374,18 @@ class DLASurvey(IGMSurvey):
     def __init__(self, **kwargs):
         IGMSurvey.__init__(self, 'DLA', **kwargs)
 
+
 def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
              zem_min=0., flg_zsrch=0, vmin=0.*u.km/u.s,
              LLS_CUT=None, partial=False, prox=False):
     """ Identify the statistical DLA in a survey
+    Note that this algorithm ignores any existing mask
 
     Parameters
     ----------
+    DLAs : DLASurvey
+    qsos : Table
+      keys must include RA, DEC, ZEM, Z_START
     vmin : Quantity
     vprox
     maxdz
@@ -398,9 +405,13 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
     msk_smpl : bool array
       True = statistical
     """
+    import warnings
     from linetools.utils import z_from_v
-    from astropy.coordinates import SkyCoord
-
+    from astropy.coordinates import SkyCoord, match_coordinates_sky
+    # Check for mask
+    if DLAs.mask is not None:
+        warnings.warn("Resetting mask to None.  Be careful here")
+        DLAs.mask = None
     # DLA
     msk_smpl = DLAs.zem != DLAs.zem
     #zmax = z_from_v(qsos['ZEM'], vprox)
@@ -408,22 +419,17 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
 
     # Make some lists
     qsos_coord = SkyCoord(ra=qsos['RA'], dec=qsos['DEC'])
+    dla_coord = DLAs.coord
+
+    idx, d2d, d3d = match_coordinates_sky(dla_coord, qsos_coord, nthneighbor=1)
+    close = d2d < 1.*u.arcsec
 
     for qq, idla in enumerate(DLAs._abs_sys):
         # In stat?
-        small_sep = idla.coord.separation(qsos_coord) < 3.6*u.arcsec
-        close_zem = np.abs(idla.zem-qsos['ZEM']) < 0.03
-        idx = np.where(small_sep & close_zem)[0]
-        if len(idx) == 0:
-            continue
-        elif len(idx) == 1:
-            #pdb.set_trace()
-            if ((idla.zabs >= zmin[idx]) &
-                (idla.zabs <= qsos[idx]['Z_END']) &
-                (qsos[idx]['FLG_BAL'] != 2)):
-                msk_smpl[qq] = True
-        else:
-            pdb.set_trace()
-            raise ValueError("Should not be here")
+        if close[qq]:
+            if np.abs(idla.zem-qsos['ZEM'][idx[qq]]) < 0.03:
+                if ((idla.zabs >= zmin[idx[qq]]) &
+                        (idla.zabs <= qsos['Z_END'][idx[qq]]) & (qsos[idx[qq]]['FLG_BAL'] != 2)):
+                        msk_smpl[qq] = True
     # Return
     return msk_smpl

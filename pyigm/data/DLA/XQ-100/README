@@ -1,0 +1,11 @@
+XQ100_v1_2.fits.gz :: XQ100 meta file
+tb_XQ100_metals_to_json.dat :: Berg abundances
+xq100_dla_kin_trans.dat :: Kinematic transitions
+
+Sanchez-Ramriez 2016
+  sramirez16_table7.dat :: Table 7 measurements -- l(X), Omega
+  XQ100_zpath.fit :: QSOs
+
+DLA tarballs:
+  XQ100_dla_v1.0.tar.gz  -- NHI and abundances
+  XQ100_dla_v1.1.tar.gz  -- Kinematics

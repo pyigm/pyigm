@@ -163,11 +163,16 @@ class IGMSurvey(object):
     @property
     def nsys(self):
         """ Number of systems
+
         Returns
         -------
         nsys : int
+          Number of statistical if mask is set
         """
-        return len(self._abs_sys)
+        if self.mask is not None:
+            return np.sum(self.mask)
+        else:
+            return len(self._abs_sys)
 
     def init_mask(self):
         """ Initialize the mask for abs_sys
@@ -428,7 +433,10 @@ class IGMSurvey(object):
 
         # Clean up
         for jfile in jfiles:
-            os.remove(jfile)
+            try:
+                os.remove(jfile)
+            except OSError:  # Likely a duplicate.  This can happen
+                pass
         os.rmdir(tmpdir)
 
     def __getattr__(self, k):
@@ -451,10 +459,13 @@ class IGMSurvey(object):
             raise ValueError("Attribute does not exist")
         # Special cases
         if k == 'coord':
-            ra = [coord.ra for coord in lst]
-            dec = [coord.dec for coord in lst]
-            lst = SkyCoord(ra=ra, dec=dec)
-            return lst[self.mask]
+            ra = [coord.ra.value for coord in lst]
+            dec = [coord.dec.value for coord in lst]
+            lst = SkyCoord(ra=ra, dec=dec, unit='deg')
+            if self.mask is not None:
+                return lst[self.mask]
+            else:
+                return lst
         # Recast as an array
         return lst_to_array(lst, mask=self.mask)
 
@@ -495,7 +506,7 @@ class IGMSurvey(object):
         # Combine systems
         combined._abs_sys = self._abs_sys + other._abs_sys
         if self.mask is not None:
-            combined.mask = np.concatenate((self.mask, other.mask))
+            combined.mask = np.concatenate((self.mask, other.mask)).flatten()
         else:
             combined.mask = None
 
