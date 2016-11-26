@@ -638,7 +638,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
             for ii, line in enumerate(comp._abslines):
                 if comp.mask_abslines[ii] == 0: # Do not use these absorption lines
                     continue
-                wvobs = (1 + line.attrib['z']) * line.wrest
+                wvobs = (1 + line.z) * line.wrest
                 if (wvobs > wvmin) & (wvobs < wvmax):
                     line.attrib['N'] = 10.**line.attrib['logN'] / u.cm**2
                     gdlin.append(line)
@@ -870,12 +870,14 @@ class IGGVelPlotWidget(QtGui.QWidget):
             elif event.key == 'R': # Refit
                 self.fit_component(self.parent.fiddle_widg.component)
             elif event.key == '1':
-                dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
-                comp.vlim[0] = (event.xdata + dvz_kms)*u.km/u.s
+                # dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
+                dvz_kms = -1*ltu.give_dv(comp.zcomp, self.z)
+                comp.vlim[0] = (event.xdata*u.km/u.s + dvz_kms)
                 sync_comp_lines(comp, only_lims=True)
             elif event.key == '2':
-                dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
-                comp.vlim[1] = (event.xdata + dvz_kms)*u.km/u.s
+                # dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
+                dvz_kms = -1*ltu.give_dv(comp.zcomp, self.z)
+                comp.vlim[1] = (event.xdata*u.km/u.s + dvz_kms)
                 sync_comp_lines(comp, only_lims=True)
             # Updates (this captures them all and redraws)
             self.parent.fiddle_widg.update_component()
@@ -1053,7 +1055,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
         # print component info
         if event.key == '@':  #  for develop; this will be deleted in future.
-            print('Computing blendings between components, it may take a while...\n')
+            print('Computing blends between components, it may take a while...\n')
             # Write joebvp files; for developing.
             blending_info(self.parent.comps_widg.all_comp, self.spec_fil)  # this one writes them internally. Should be cleaned.
 
@@ -1147,10 +1149,10 @@ class IGGVelPlotWidget(QtGui.QWidget):
                     for ii, line in enumerate(comp._abslines):
                         if comp.mask_abslines[ii] == 0:  # do not plot these masked out lines
                             continue
-                        zline = line.attrib['z']
+                        zline = line.z
                         wrest = line.wrest.value
                         line_wvobs.append(wrest * (1 + zline))
-                        line_lbl.append(line.name+',{:.3f}{:s}'.format(line.attrib['z'], la))
+                        line_lbl.append(line.name+',{:.3f}{:s}'.format(line.z, la))
                         line_wvobs_lims.append(line.limits.wvlim)
 
                         if la == 'a':
@@ -1265,8 +1267,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                             # plotting absline with color better done in wobs -> velo space
                             # dvmin = c_kms * ((line_wvobs_lims[imt][0] - line_wvobs[imt]) / wvobs)
                             # dvmax = c_kms * ((line_wvobs_lims[imt][1] - line_wvobs[imt]) / wvobs)
-                            vmin = ltu.give_dv(line_wvobs_lims[imt][0]/wrest - 1., self.z)
-                            vmax = ltu.give_dv(line_wvobs_lims[imt][1]/wrest - 1., self.z)
+                            vmin, vmax = ltu.give_dv(line_wvobs_lims[imt]/wrest - 1., self.z)
                             # QtCore.pyqtRemoveInputHook()
                             # pdb.set_trace()
                             # QtCore.pyqtRestoreInputHook()
@@ -1653,8 +1654,7 @@ def sync_comp_lines(comp, only_lims=False):
         else:
             line.attrib['logN'] = comp.attrib['logN']
             line.attrib['b'] = comp.attrib['b']
-            line.attrib['z'] = comp.attrib['z']
-
+            line.setz(comp.attrib['z'])
 
 
 def mask_comp_lines(comp, min_ew = 0.003*u.AA, verbose=False):
