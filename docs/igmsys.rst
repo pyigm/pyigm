@@ -55,7 +55,7 @@ More commonly, one will instantiate with one or more AbsComponent objects::
     lya.analy['vlim'] = [-300.,300.]*u.km/u.s
     lyb = AbsLine(1025.7222*u.AA)
     lyb.analy['vlim'] = [-300.,300.]*u.km/u.s
-    lyb.setz(ya.attrib['z'])
+    lyb.setz(lya.attrib['z'])
     abscomp = AbsComponent.from_abslines([lya,lyb])
     abscomp.coord = radec
     # Finish
