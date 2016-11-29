@@ -377,7 +377,7 @@ def read_clmfile(clm_file, linelist=None, verbose=True):
         key = float(tmp[0].strip()) # Using a numpy float not string!
         # Generate
         clm_dict['lines'][key] = AbsLine(key*u.AA,closest=True,linelist=linelist, verbose=verbose)
-        clm_dict['lines'][key].set_z(clm_dict['zsys'])
+        clm_dict['lines'][key].setz(clm_dict['zsys'])
         clm_dict['lines'][key].analy['FLAGS'] = ionflg, int(tmp[3].strip())
         # By-hand
         if ionflg >= 8:
