@@ -26,5 +26,5 @@ def test_fluxmodel():
     spec = XSpectrum1D.from_tuple((wave*u.AA,np.ones(npix)))
     # Model
     model = lls.flux_model(spec)
-    np.testing.assert_allclose(model.flux[100].value,0.009424664763760516)
+    np.testing.assert_allclose(model.flux[100].value,0.009424664763760516, rtol=1e-5)
 
