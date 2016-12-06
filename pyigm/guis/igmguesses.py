@@ -44,7 +44,7 @@ from linetools.guis import line_widgets as ltgl
 from linetools.guis import simple_widgets as ltgsm
 from linetools import utils as ltu
 
-# Global variables; defined as globals mainly to increase speed
+# Global variables; defined as globals mainly to increase speed and convenience
 c_kms = const.c.to('km/s').value
 COLOR_MODEL = '#999966'
 COLOR_RELIABLE = 'g'
@@ -182,7 +182,7 @@ P         : toggle on/off "colorful" display, where components of different
         self.coord = zero_coord
         # Normalize
         if spec.co_is_set:
-            spec.normed = True
+            spec.normalize(co=spec.co)
         else:
             raise ValueError("Please provide a spectrum with a continuum estimation. "
                              "You can do this using linetool's `lt_continuumfit` script.")
@@ -205,21 +205,24 @@ P         : toggle on/off "colorful" display, where components of different
         self.llist = ltgu.set_llist('ISM')
         self.llist['HI'] = LineList('HI')
         self.llist['Strong'] = LineList('Strong')
-        # self.llist['H2'] = LineList('H2')
+
         # Setup available LineList; this will be the default one
         # which will be updated using a given base Linelist (e.g. 'ISM', 'Strong', 'HI')
         self.llist['available'] = LineList('ISM')
-        # Sort them conveniently
+
+        # Sort the linelists conveniently
         self.llist['ISM'].sortdata(['abundance', 'ion_name', 'rel_strength'], reverse=True)
         self.llist['HI'].sortdata('rel_strength', reverse=True)
-        self.llist['Strong'].sortdata('rel_strength', reverse=True)
         self.llist['Strong'].sortdata(['abundance', 'ion_name', 'rel_strength'], reverse=True)
-        # self.llist['H2'].sortdata(['rel_strength'], reverse=True)
+
         # Append the new ones
         self.llist['Lists'].append('HI')
         self.llist['Lists'].append('Strong')
         self.llist['Lists'].append('available')
-        # self.llist['Lists'].append('H2')
+        if 0: # for H2 testing
+            self.llist['H2'] = LineList('H2')
+            self.llist['H2'].sortdata(['rel_strength'], reverse=True)
+            self.llist['Lists'].append('H2')
 
         # Define initial redshift
         z = 0.0
@@ -871,12 +874,12 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 self.fit_component(self.parent.fiddle_widg.component)
             elif event.key == '1':
                 # dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
-                dvz_kms = -1*ltu.give_dv(comp.zcomp, self.z)
+                dvz_kms = -1*ltu.dv_from_z(comp.zcomp, self.z)
                 comp.vlim[0] = (event.xdata*u.km/u.s + dvz_kms)
                 sync_comp_lines(comp, only_lims=True)
             elif event.key == '2':
                 # dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
-                dvz_kms = -1*ltu.give_dv(comp.zcomp, self.z)
+                dvz_kms = -1*ltu.dv_from_z(comp.zcomp, self.z)
                 comp.vlim[1] = (event.xdata*u.km/u.s + dvz_kms)
                 sync_comp_lines(comp, only_lims=True)
             # Updates (this captures them all and redraws)
@@ -1223,7 +1226,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 wvobs = (1 + self.z) * wrest
                 wvmnx = wvobs * (1 + np.array(self.psdict['x_minmax']) / c_kms)
                 # velo = (self.spec.wavelength/wvobs - 1.) * c_kms * u.km/u.s
-                velo = ltu.give_dv(self.spec.wavelength/wrest - 1., self.z)
+                velo = ltu.dv_from_z(self.spec.wavelength/wrest - 1., self.z)
 
                 # Plot spectrum and model
                 self.ax.plot(velo, self.spec.flux, '-', color=color, drawstyle='steps-mid', lw=0.5)
@@ -1252,7 +1255,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                     mtw = np.where((line_wvobs > wvmnx[0]) & (line_wvobs < wvmnx[1]))[0]
                     for imt in mtw:
                         # v = c_kms * (line_wvobs[imt]/wvobs - 1)
-                        v = ltu.give_dv(line_wvobs[imt]/wrest - 1., self.z)
+                        v = ltu.dv_from_z(line_wvobs[imt]/wrest - 1., self.z)
                         if self.flag_colorful:
                             color_label = line_color[imt]
                         else:
@@ -1267,7 +1270,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                             # plotting absline with color better done in wobs -> velo space
                             # dvmin = c_kms * ((line_wvobs_lims[imt][0] - line_wvobs[imt]) / wvobs)
                             # dvmax = c_kms * ((line_wvobs_lims[imt][1] - line_wvobs[imt]) / wvobs)
-                            vmin, vmax = ltu.give_dv(line_wvobs_lims[imt]/wrest - 1., self.z)
+                            vmin, vmax = ltu.dv_from_z(line_wvobs_lims[imt]/wrest - 1., self.z)
                             # QtCore.pyqtRemoveInputHook()
                             # pdb.set_trace()
                             # QtCore.pyqtRestoreInputHook()
@@ -1310,7 +1313,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                         #pdb.set_trace()
                         #QtCore.pyqtRestoreInputHook()
                         # dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
-                        dvz_kms = ltu.give_dv(comp.zcomp, self.z).to('km/s').value
+                        dvz_kms = ltu.dv_from_z(comp.zcomp, self.z).to('km/s').value
                         if dvz_kms < 1.5*np.max(np.abs(self.psdict['x_minmax'])):  # 1.5 to make sure the plot is still there at the edges of the axis
                             if comp is self.parent.fiddle_widg.component:
                                 lw = 1.5
@@ -1608,8 +1611,11 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
         aline = AbsLine(trans['wrest'],  linelist=linelist, z=z)
         aline.limits.set(vlim)
         abslines.append(aline)
-    if abslines[0].data['Ej'].value > 0.:
-        stars = '*'*(len(abslines[0].name.split('*'))-1)
+    if linelist.list != 'H2':
+        if (abslines[0].data['Ej'].value > 0.):
+            stars = '*'*(len(abslines[0].name.split('*'))-1)
+        else:
+            stars = None
     else:
         stars = None
     # AbsComponent
