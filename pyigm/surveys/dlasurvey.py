@@ -12,7 +12,7 @@ import json
 from astropy.table import QTable, Column, Table, vstack
 from astropy import units as u
 #from astropy.coordinates import SkyCoord
-
+from linetools import utils as ltu
 from pyigm.surveys.igmsurvey import IGMSurvey
 from pyigm.surveys import utils as pyisu
 
@@ -406,7 +406,6 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
       True = statistical
     """
     import warnings
-    from linetools.utils import z_from_v
     from astropy.coordinates import SkyCoord, match_coordinates_sky
     # Check for mask
     if DLAs.mask is not None:
@@ -414,8 +413,8 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
         DLAs.mask = None
     # DLA
     msk_smpl = DLAs.zem != DLAs.zem
-    #zmax = z_from_v(qsos['ZEM'], vprox)
-    zmin = z_from_v(qsos['Z_START'], vmin)
+    #zmax = ltu.z_from_dv(vprox, qsos['ZEM'])
+    zmin = ltu.z_from_dv(vmin, qsos['Z_START'])
 
     # Make some lists
     qsos_coord = SkyCoord(ra=qsos['RA'], dec=qsos['DEC'])

@@ -450,7 +450,7 @@ def lls_stat(LLSs, qsos, vprox=3000.*u.km/u.s, maxdz=99.99,
     msk_smpl : bool array
       True = statistical
     """
-    from linetools.utils import z_from_v
+
     # Search redshift
     if flg_zsrch == 0:
         zsrch = qsos['ZT2']
@@ -465,7 +465,7 @@ def lls_stat(LLSs, qsos, vprox=3000.*u.km/u.s, maxdz=99.99,
 
     # LLS
     msk_smpl = LLSs.zem != LLSs.zem
-    zmax = z_from_v(qsos['ZEM'], vprox)
+    zmax = ltu.z_from_dv(vprox, qsos['ZEM'])
 
     # Make some lists
     lls_coord = LLSs.coord
