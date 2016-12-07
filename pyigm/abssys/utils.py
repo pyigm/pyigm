@@ -151,7 +151,7 @@ def hi_model(abssys, spec, lya_only=False, add_lls=False, ret_tau=False,
             warnings.warn("Generating the absorption lines from the system info, not abslines")
             if lya_only:
                 lya_line = AbsLine('HI 1215')
-                lya_line.attrib['z'] = abssys.zabs
+                lya_line.setz(abssys.zabs)
                 lya_line.attrib['N'] = 10**abssys.NHI / u.cm**2
                 lya_line.attrib['b'] = bval
                 lyman_lines.append(lya_line)
@@ -162,7 +162,8 @@ def hi_model(abssys, spec, lya_only=False, add_lls=False, ret_tau=False,
                     # On the spectrum?
                     if iwrest >= spec.wvmin/(1+abssys.zabs):
                         lyman_line = AbsLine(iwrest, linelist=HIlines)
-                        lyman_line.attrib['z'] = abssys.zabs
+                        lyman_line.setz(abssys.zabs)
+                        # lyman_line.attrib['z'] = abssys.zabs
                         lyman_line.attrib['N'] = 10**abssys.NHI / u.cm**2
                         lyman_line.attrib['b'] = bval
                         lyman_lines.append(lyman_line)
@@ -379,7 +380,8 @@ def read_clmfile(clm_file, linelist=None, verbose=True):
         key = float(tmp[0].strip()) # Using a numpy float not string!
         # Generate
         clm_dict['lines'][key] = AbsLine(key*u.AA,closest=True,linelist=linelist, verbose=verbose)
-        clm_dict['lines'][key].attrib['z'] = clm_dict['zsys']
+        # clm_dict['lines'][key].attrib['z'] = clm_dict['zsys']
+        clm_dict['lines'][key].setz(clm_dict['zsys'])
         clm_dict['lines'][key].analy['FLAGS'] = ionflg, int(tmp[3].strip())
         # By-hand
         if ionflg >= 8:
