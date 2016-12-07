@@ -47,6 +47,7 @@ from linetools import utils as ltu
 # Global variables; defined as globals mainly to increase speed and convenience
 c_kms = const.c.to('km/s').value
 COLOR_MODEL = '#999966'
+COLOR_EXTMODEL = 'y'
 COLOR_RELIABLE = 'g'
 COLOR_PROBABLE = 'b'
 COLOR_UNCERTAIN = 'r'
@@ -65,15 +66,15 @@ class IGMGuessesGui(QtGui.QMainWindow):
     def __init__(self, ispec, parent=None, previous_file=None, 
         srch_id=True, outfil=None, fwhm=None,
         plot_residuals=True,n_max_tuple=None, min_strength=None,
-                 min_ew=None, vlim_disp=None):
+                 min_ew=None, vlim_disp=None, external_model=None):
         QtGui.QMainWindow.__init__(self, parent)
         """
         ispec : str
             Name of the spectrum file to load
         previous_file: str, optional
-            Name of the previous IGMguesses json file
+            Name of the previous IGMGuesses .json file
         smooth: float, optional
-            Number of pixels to smooth on
+            Number of pixels to smooth on (Gaussian smoothing)
         plot_residuals : bool, optional
             Whether to plot residuals
         n_max_tuple : int, optional
@@ -88,12 +89,13 @@ class IGMGuessesGui(QtGui.QMainWindow):
             This is useful for not storing extremely weak lines.
         vlim_disp : list of Quantity, optional
             Minimum and maximum velocity limit for the display; e.g. [-500.,500.]*u.km/u.s
-
+        external_model : str
+            Name of an external model to load.
 
         """
         # TODO
         # 1. Fix convolve window size
-        # 2. Add COS LSF (?)
+        # 2. Add COS LSF (?) This seems non-practical
 
         self.help_message = """
 Click on any white region within the velocity plots
@@ -141,6 +143,7 @@ L         : toggle displaying/hiding labels of currently identified lines
 M         : toggle displaying/hiding the current absorption model
 P         : toggle on/off "colorful" display, where components of different
             reliabilities are plotted in different colors
+E         : toggle displaying/hiding the external absorption model
 %         : guess a transition and redshift for a given feature at
             the cursor's position
 ?         : print this help message
@@ -186,6 +189,12 @@ P         : toggle on/off "colorful" display, where components of different
         else:
             raise ValueError("Please provide a spectrum with a continuum estimation. "
                              "You can do this using linetool's `lt_continuumfit` script.")
+
+        # Load external model spectrum
+        if external_model is not None:
+            self.external_model, _ = ltgu.read_spec(external_model)
+        else:
+            self.external_model = None
 
         # make sure there are no nans in uncertainty, which affects the display of residuals
         # removed because now it is handled by XSpectrum1D masked array representations
@@ -235,7 +244,7 @@ P         : toggle on/off "colorful" display, where components of different
         self.comps_widg = ComponentListWidget([], parent=self)
         self.velplot_widg = IGGVelPlotWidget(spec, z, 
             parent=self, llist=self.llist, fwhm=self.fwhm, plot_residuals=self.plot_residuals,
-            vmnx=self.vlim_disp)
+            vmnx=self.vlim_disp, external_model=self.external_model)
         self.wq_widg = ltgsm.WriteQuitWidget(parent=self)
 
 
@@ -510,7 +519,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         14-Aug-2015 by JXP
     """
     def __init__(self, ispec, z, parent=None, llist=None, norm=True,
-                 vmnx=[-500., 500.]*u.km/u.s, fwhm=0., plot_residuals=True):
+                 vmnx=[-500., 500.]*u.km/u.s, fwhm=0., plot_residuals=True, external_model=None):
         '''
         spec = Spectrum1D
         Norm: Bool (False)
@@ -538,6 +547,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         self.flag_idlbl = False
         self.flag_mask = False
         self.flag_plotmodel = True
+        self.flag_plotextmodel = False
         self.flag_colorful = False
 
         self.wrest = 0.
@@ -552,6 +562,8 @@ class IGGVelPlotWidget(QtGui.QWidget):
             self.residual_limit = self.spec.sig * self.residual_normalization_factor
             self.residual = (self.spec.flux - self.model.flux) * self.residual_normalization_factor
 
+        # define external model
+        self.external_model = external_model
 
         self.psdict = {} # Dict for spectra plotting
         self.psdict['x_minmax'] = self.vmnx.value # Too much pain to use units with this
@@ -1056,6 +1068,15 @@ class IGGVelPlotWidget(QtGui.QWidget):
         if event.key == 'P':  # Toggle colorful mode
             self.flag_colorful = not self.flag_colorful
 
+        # Plot external model?
+        if event.key == 'E':  # Toggle plot external model
+            if self.external_model is None:
+                s = "No external model loaded. Please restart IGMGuesses with --external_model input."
+                print(s)
+                self.parent.statusBar().showMessage('IGMGuessesGUI: ' + s)
+            else:
+                self.flag_plotextmodel = not self.flag_plotextmodel
+
         # print component info
         if event.key == '@':  #  for develop; this will be deleted in future.
             print('Computing blends between components, it may take a while...\n')
@@ -1238,6 +1259,12 @@ class IGGVelPlotWidget(QtGui.QWidget):
                     self.ax.plot(velo, self.residual_limit, 'k-',drawstyle='steps-mid',lw=0.5)
                     self.ax.plot(velo, -self.residual_limit, 'k-',drawstyle='steps-mid',lw=0.5)
                     self.ax.plot(velo, self.residual, '.',color='grey',ms=2)
+
+                # Plot external model
+                if self.flag_plotextmodel:  # can only be True if self.external_model is not None.
+                    velo_external = ltu.dv_from_z(self.external_model.wavelength/wrest - 1., self.z)
+                    self.ax.plot(velo_external, self.external_model.flux, '-', color=COLOR_EXTMODEL, lw=1.0, alpha=0.5)
+
 
                 # Labels for axes and ion names
                 if (((jj+1) % self.sub_xy[0]) == 0) or ((jj+1) == len(all_idx)):
