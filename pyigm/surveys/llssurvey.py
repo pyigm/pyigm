@@ -465,7 +465,7 @@ def lls_stat(LLSs, qsos, vprox=3000.*u.km/u.s, maxdz=99.99,
 
     # LLS
     msk_smpl = LLSs.zem != LLSs.zem
-    zmax = ltu.z_from_dv(vprox, qsos['ZEM'])
+    zmax = ltu.z_from_dv(vprox*np.ones(len(qsos)), qsos['ZEM'].data)  # vprox must be array-like to be applied to each individual qsos['ZEM']
 
     # Make some lists
     lls_coord = LLSs.coord

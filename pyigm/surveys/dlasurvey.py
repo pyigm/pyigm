@@ -414,7 +414,7 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
     # DLA
     msk_smpl = DLAs.zem != DLAs.zem
     #zmax = ltu.z_from_dv(vprox, qsos['ZEM'])
-    zmin = ltu.z_from_dv(vmin, qsos['Z_START'])
+    zmin = ltu.z_from_dv(vmin*np.ones(len(qsos)), qsos['Z_START'].data) # vmin must be array-like to be applied to each individual qsos['Z_START']
 
     # Make some lists
     qsos_coord = SkyCoord(ra=qsos['RA'], dec=qsos['DEC'])
