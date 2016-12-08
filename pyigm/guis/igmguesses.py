@@ -47,7 +47,7 @@ from linetools import utils as ltu
 # Global variables; defined as globals mainly to increase speed and convenience
 c_kms = const.c.to('km/s').value
 COLOR_MODEL = '#999966'
-COLOR_EXTMODEL = 'y'
+COLOR_EXTMODEL =  '#D4AC0D'
 COLOR_RELIABLE = 'g'
 COLOR_PROBABLE = 'b'
 COLOR_UNCERTAIN = 'r'
@@ -554,16 +554,18 @@ class IGGVelPlotWidget(QtGui.QWidget):
         self.avmnx = np.array([0.,0.])*u.km/u.s
         self.model = XSpectrum1D.from_tuple(
             (spec.wavelength, np.ones(len(spec.wavelength))))
-        
-        self.plot_residuals = plot_residuals
+
+        # define external model
+        self.external_model = external_model
+
         #Define arrays for plotting residuals
+        self.plot_residuals = plot_residuals
         if self.plot_residuals:
             self.residual_normalization_factor = 0.02/np.median(self.spec.sig)
             self.residual_limit = self.spec.sig * self.residual_normalization_factor
             self.residual = (self.spec.flux - self.model.flux) * self.residual_normalization_factor
-
-        # define external model
-        self.external_model = external_model
+            if external_model is not None:
+                self.ext_res = (self.spec.flux - self.external_model.flux) * self.residual_normalization_factor
 
         self.psdict = {} # Dict for spectra plotting
         self.psdict['x_minmax'] = self.vmnx.value # Too much pain to use units with this
@@ -1249,21 +1251,24 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 # velo = (self.spec.wavelength/wvobs - 1.) * c_kms * u.km/u.s
                 velo = ltu.dv_from_z(self.spec.wavelength/wrest - 1., self.z)
 
+                # Errors
+                if self.plot_residuals:  # this could be always true
+                    self.ax.plot(velo, self.residual_limit, 'k-', drawstyle='steps-mid', lw=0.5)
+                    self.ax.plot(velo, -self.residual_limit, 'k-', drawstyle='steps-mid', lw=0.5)
+
+                # Plot external model
+                if self.flag_plotextmodel:  # can only be True if self.external_model is not None.
+                    velo_external = ltu.dv_from_z(self.external_model.wavelength / wrest - 1., self.z)
+                    self.ax.plot(velo_external, self.external_model.flux, '-', color=COLOR_EXTMODEL, lw=1.0)
+                    if self.plot_residuals:
+                        self.ax.plot(velo_external, self.ext_res, '.', color=COLOR_EXTMODEL, ms=2)
+
                 # Plot spectrum and model
                 self.ax.plot(velo, self.spec.flux, '-', color=color, drawstyle='steps-mid', lw=0.5)
                 if self.flag_plotmodel:
                     self.ax.plot(velo, self.model.flux, '-', color=COLOR_MODEL, lw=0.5)
-
-                #Error & residuals
-                if self.plot_residuals:
-                    self.ax.plot(velo, self.residual_limit, 'k-',drawstyle='steps-mid',lw=0.5)
-                    self.ax.plot(velo, -self.residual_limit, 'k-',drawstyle='steps-mid',lw=0.5)
-                    self.ax.plot(velo, self.residual, '.',color='grey',ms=2)
-
-                # Plot external model
-                if self.flag_plotextmodel:  # can only be True if self.external_model is not None.
-                    velo_external = ltu.dv_from_z(self.external_model.wavelength/wrest - 1., self.z)
-                    self.ax.plot(velo_external, self.external_model.flux, '-', color=COLOR_EXTMODEL, lw=1.0, alpha=0.5)
+                    if self.plot_residuals:
+                        self.ax.plot(velo, self.residual, '.', color=COLOR_MODEL, ms=2)
 
 
                 # Labels for axes and ion names
