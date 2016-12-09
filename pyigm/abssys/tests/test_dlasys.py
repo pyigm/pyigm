@@ -50,6 +50,7 @@ def test_model_abs():
     spec_fil = linetools.__path__[0]+'/spectra/tests/files/PH957_f.fits'
     spec = lsio.readspec(spec_fil)
     model, lya_lines = dla.model_abs(spec)
+    # import pdb; pdb.set_trace()
     # Check core
     ipx = np.argmin(np.abs(spec.wavelength.value-(1+dla.zabs)*1215.67))
     assert model.flux[ipx].value < 1e-4

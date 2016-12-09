@@ -44,9 +44,10 @@ from linetools.guis import line_widgets as ltgl
 from linetools.guis import simple_widgets as ltgsm
 from linetools import utils as ltu
 
-# Global variables; defined as globals mainly to increase speed
+# Global variables; defined as globals mainly to increase speed and convenience
 c_kms = const.c.to('km/s').value
 COLOR_MODEL = '#999966'
+COLOR_EXTMODEL =  '#D4AC0D'
 COLOR_RELIABLE = 'g'
 COLOR_PROBABLE = 'b'
 COLOR_UNCERTAIN = 'r'
@@ -65,15 +66,15 @@ class IGMGuessesGui(QtGui.QMainWindow):
     def __init__(self, ispec, parent=None, previous_file=None, 
         srch_id=True, outfil=None, fwhm=None,
         plot_residuals=True,n_max_tuple=None, min_strength=None,
-                 min_ew=None, vlim_disp=None):
+                 min_ew=None, vlim_disp=None, external_model=None):
         QtGui.QMainWindow.__init__(self, parent)
         """
         ispec : str
             Name of the spectrum file to load
         previous_file: str, optional
-            Name of the previous IGMguesses json file
+            Name of the previous IGMGuesses .json file
         smooth: float, optional
-            Number of pixels to smooth on
+            Number of pixels to smooth on (Gaussian smoothing)
         plot_residuals : bool, optional
             Whether to plot residuals
         n_max_tuple : int, optional
@@ -88,12 +89,13 @@ class IGMGuessesGui(QtGui.QMainWindow):
             This is useful for not storing extremely weak lines.
         vlim_disp : list of Quantity, optional
             Minimum and maximum velocity limit for the display; e.g. [-500.,500.]*u.km/u.s
-
+        external_model : str
+            Name of an external model to load.
 
         """
         # TODO
         # 1. Fix convolve window size
-        # 2. Add COS LSF (?)
+        # 2. Add COS LSF (?) This seems non-practical
 
         self.help_message = """
 Click on any white region within the velocity plots
@@ -141,6 +143,7 @@ L         : toggle displaying/hiding labels of currently identified lines
 M         : toggle displaying/hiding the current absorption model
 P         : toggle on/off "colorful" display, where components of different
             reliabilities are plotted in different colors
+E         : toggle displaying/hiding the external absorption model
 %         : guess a transition and redshift for a given feature at
             the cursor's position
 ?         : print this help message
@@ -182,10 +185,16 @@ P         : toggle on/off "colorful" display, where components of different
         self.coord = zero_coord
         # Normalize
         if spec.co_is_set:
-            spec.normed = True
+            spec.normalize(co=spec.co)
         else:
             raise ValueError("Please provide a spectrum with a continuum estimation. "
                              "You can do this using linetool's `lt_continuumfit` script.")
+
+        # Load external model spectrum
+        if external_model is not None:
+            self.external_model, _ = ltgu.read_spec(external_model)
+        else:
+            self.external_model = None
 
         # make sure there are no nans in uncertainty, which affects the display of residuals
         # removed because now it is handled by XSpectrum1D masked array representations
@@ -205,21 +214,24 @@ P         : toggle on/off "colorful" display, where components of different
         self.llist = ltgu.set_llist('ISM')
         self.llist['HI'] = LineList('HI')
         self.llist['Strong'] = LineList('Strong')
-        # self.llist['H2'] = LineList('H2')
+
         # Setup available LineList; this will be the default one
         # which will be updated using a given base Linelist (e.g. 'ISM', 'Strong', 'HI')
         self.llist['available'] = LineList('ISM')
-        # Sort them conveniently
+
+        # Sort the linelists conveniently
         self.llist['ISM'].sortdata(['abundance', 'ion_name', 'rel_strength'], reverse=True)
         self.llist['HI'].sortdata('rel_strength', reverse=True)
-        self.llist['Strong'].sortdata('rel_strength', reverse=True)
         self.llist['Strong'].sortdata(['abundance', 'ion_name', 'rel_strength'], reverse=True)
-        # self.llist['H2'].sortdata(['rel_strength'], reverse=True)
+
         # Append the new ones
         self.llist['Lists'].append('HI')
         self.llist['Lists'].append('Strong')
         self.llist['Lists'].append('available')
-        # self.llist['Lists'].append('H2')
+        if 0: # for H2 testing
+            self.llist['H2'] = LineList('H2')
+            self.llist['H2'].sortdata(['rel_strength'], reverse=True)
+            self.llist['Lists'].append('H2')
 
         # Define initial redshift
         z = 0.0
@@ -232,7 +244,7 @@ P         : toggle on/off "colorful" display, where components of different
         self.comps_widg = ComponentListWidget([], parent=self)
         self.velplot_widg = IGGVelPlotWidget(spec, z, 
             parent=self, llist=self.llist, fwhm=self.fwhm, plot_residuals=self.plot_residuals,
-            vmnx=self.vlim_disp)
+            vmnx=self.vlim_disp, external_model=self.external_model)
         self.wq_widg = ltgsm.WriteQuitWidget(parent=self)
 
 
@@ -507,7 +519,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         14-Aug-2015 by JXP
     """
     def __init__(self, ispec, z, parent=None, llist=None, norm=True,
-                 vmnx=[-500., 500.]*u.km/u.s, fwhm=0., plot_residuals=True):
+                 vmnx=[-500., 500.]*u.km/u.s, fwhm=0., plot_residuals=True, external_model=None):
         '''
         spec = Spectrum1D
         Norm: Bool (False)
@@ -535,20 +547,25 @@ class IGGVelPlotWidget(QtGui.QWidget):
         self.flag_idlbl = False
         self.flag_mask = False
         self.flag_plotmodel = True
+        self.flag_plotextmodel = False
         self.flag_colorful = False
 
         self.wrest = 0.
         self.avmnx = np.array([0.,0.])*u.km/u.s
         self.model = XSpectrum1D.from_tuple(
             (spec.wavelength, np.ones(len(spec.wavelength))))
-        
-        self.plot_residuals = plot_residuals
+
+        # define external model
+        self.external_model = external_model
+
         #Define arrays for plotting residuals
+        self.plot_residuals = plot_residuals
         if self.plot_residuals:
             self.residual_normalization_factor = 0.02/np.median(self.spec.sig)
             self.residual_limit = self.spec.sig * self.residual_normalization_factor
             self.residual = (self.spec.flux - self.model.flux) * self.residual_normalization_factor
-
+            if external_model is not None:
+                self.ext_res = (self.spec.flux - self.external_model.flux) * self.residual_normalization_factor
 
         self.psdict = {} # Dict for spectra plotting
         self.psdict['x_minmax'] = self.vmnx.value # Too much pain to use units with this
@@ -871,12 +888,12 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 self.fit_component(self.parent.fiddle_widg.component)
             elif event.key == '1':
                 # dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
-                dvz_kms = -1*ltu.give_dv(comp.zcomp, self.z)
+                dvz_kms = -1*ltu.dv_from_z(comp.zcomp, self.z)
                 comp.vlim[0] = (event.xdata*u.km/u.s + dvz_kms)
                 sync_comp_lines(comp, only_lims=True)
             elif event.key == '2':
                 # dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
-                dvz_kms = -1*ltu.give_dv(comp.zcomp, self.z)
+                dvz_kms = -1*ltu.dv_from_z(comp.zcomp, self.z)
                 comp.vlim[1] = (event.xdata*u.km/u.s + dvz_kms)
                 sync_comp_lines(comp, only_lims=True)
             # Updates (this captures them all and redraws)
@@ -1053,6 +1070,15 @@ class IGGVelPlotWidget(QtGui.QWidget):
         if event.key == 'P':  # Toggle colorful mode
             self.flag_colorful = not self.flag_colorful
 
+        # Plot external model?
+        if event.key == 'E':  # Toggle plot external model
+            if self.external_model is None:
+                s = "No external model loaded. Please restart IGMGuesses with --external_model input."
+                print(s)
+                self.parent.statusBar().showMessage('IGMGuessesGUI: ' + s)
+            else:
+                self.flag_plotextmodel = not self.flag_plotextmodel
+
         # print component info
         if event.key == '@':  #  for develop; this will be deleted in future.
             print('Computing blends between components, it may take a while...\n')
@@ -1223,18 +1249,27 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 wvobs = (1 + self.z) * wrest
                 wvmnx = wvobs * (1 + np.array(self.psdict['x_minmax']) / c_kms)
                 # velo = (self.spec.wavelength/wvobs - 1.) * c_kms * u.km/u.s
-                velo = ltu.give_dv(self.spec.wavelength/wrest - 1., self.z)
+                velo = ltu.dv_from_z(self.spec.wavelength/wrest - 1., self.z)
+
+                # Errors
+                if self.plot_residuals:  # this could be always true
+                    self.ax.plot(velo, self.residual_limit, 'k-', drawstyle='steps-mid', lw=0.5)
+                    self.ax.plot(velo, -self.residual_limit, 'k-', drawstyle='steps-mid', lw=0.5)
+
+                # Plot external model
+                if self.flag_plotextmodel:  # can only be True if self.external_model is not None.
+                    velo_external = ltu.dv_from_z(self.external_model.wavelength / wrest - 1., self.z)
+                    self.ax.plot(velo_external, self.external_model.flux, '-', color=COLOR_EXTMODEL, lw=1.0)
+                    if self.plot_residuals:
+                        self.ax.plot(velo_external, self.ext_res, '.', color=COLOR_EXTMODEL, ms=2)
 
                 # Plot spectrum and model
                 self.ax.plot(velo, self.spec.flux, '-', color=color, drawstyle='steps-mid', lw=0.5)
                 if self.flag_plotmodel:
                     self.ax.plot(velo, self.model.flux, '-', color=COLOR_MODEL, lw=0.5)
+                    if self.plot_residuals:
+                        self.ax.plot(velo, self.residual, '.', color=COLOR_MODEL, ms=2)
 
-                #Error & residuals
-                if self.plot_residuals:
-                    self.ax.plot(velo, self.residual_limit, 'k-',drawstyle='steps-mid',lw=0.5)
-                    self.ax.plot(velo, -self.residual_limit, 'k-',drawstyle='steps-mid',lw=0.5)
-                    self.ax.plot(velo, self.residual, '.',color='grey',ms=2)
 
                 # Labels for axes and ion names
                 if (((jj+1) % self.sub_xy[0]) == 0) or ((jj+1) == len(all_idx)):
@@ -1252,7 +1287,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                     mtw = np.where((line_wvobs > wvmnx[0]) & (line_wvobs < wvmnx[1]))[0]
                     for imt in mtw:
                         # v = c_kms * (line_wvobs[imt]/wvobs - 1)
-                        v = ltu.give_dv(line_wvobs[imt]/wrest - 1., self.z)
+                        v = ltu.dv_from_z(line_wvobs[imt]/wrest - 1., self.z)
                         if self.flag_colorful:
                             color_label = line_color[imt]
                         else:
@@ -1267,7 +1302,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                             # plotting absline with color better done in wobs -> velo space
                             # dvmin = c_kms * ((line_wvobs_lims[imt][0] - line_wvobs[imt]) / wvobs)
                             # dvmax = c_kms * ((line_wvobs_lims[imt][1] - line_wvobs[imt]) / wvobs)
-                            vmin, vmax = ltu.give_dv(line_wvobs_lims[imt]/wrest - 1., self.z)
+                            vmin, vmax = ltu.dv_from_z(line_wvobs_lims[imt]/wrest - 1., self.z)
                             # QtCore.pyqtRemoveInputHook()
                             # pdb.set_trace()
                             # QtCore.pyqtRestoreInputHook()
@@ -1310,7 +1345,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
                         #pdb.set_trace()
                         #QtCore.pyqtRestoreInputHook()
                         # dvz_kms = c_kms * (self.z - comp.zcomp) / (1 + self.z)
-                        dvz_kms = ltu.give_dv(comp.zcomp, self.z).to('km/s').value
+                        dvz_kms = ltu.dv_from_z(comp.zcomp, self.z).to('km/s').value
                         if dvz_kms < 1.5*np.max(np.abs(self.psdict['x_minmax'])):  # 1.5 to make sure the plot is still there at the edges of the axis
                             if comp is self.parent.fiddle_widg.component:
                                 lw = 1.5
@@ -1608,8 +1643,11 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
         aline = AbsLine(trans['wrest'],  linelist=linelist, z=z)
         aline.limits.set(vlim)
         abslines.append(aline)
-    if abslines[0].data['Ej'].value > 0.:
-        stars = '*'*(len(abslines[0].name.split('*'))-1)
+    if linelist.list != 'H2':
+        if (abslines[0].data['Ej'].value > 0.):
+            stars = '*'*(len(abslines[0].name.split('*'))-1)
+        else:
+            stars = None
     else:
         stars = None
     # AbsComponent
