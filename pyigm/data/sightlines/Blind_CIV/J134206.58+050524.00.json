@@ -1,0 +1,277 @@
+{
+    "CreationDate": "2016-Nov-18",
+    "DEC": 5.09,
+    "RA": 205.52741666666665,
+    "class": "IGMSightline",
+    "components": {
+        "CII_z0.13937": {
+            "A": null,
+            "DEC": 5.09,
+            "Ej": 0.0,
+            "Name": "CII_z0.13937",
+            "RA": 205.52741666666665,
+            "Zion": [
+                6,
+                2
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 14.26,
+            "sig_logN": 0.02,
+            "vlim": [
+                -45.254833995939045,
+                45.254833995939045
+            ],
+            "zcomp": 0.13936724521582194
+        },
+        "CII_z0.14009": {
+            "A": null,
+            "DEC": 5.09,
+            "Ej": 0.0,
+            "Name": "CII_z0.14009",
+            "RA": 205.52741666666665,
+            "Zion": [
+                6,
+                2
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 13.85,
+            "sig_logN": 0.04,
+            "vlim": [
+                -42.42640687119285,
+                42.42640687119285
+            ],
+            "zcomp": 0.14008970068199647
+        },
+        "CIV_z0.13926": {
+            "A": null,
+            "DEC": 5.09,
+            "Ej": 0.0,
+            "Name": "CIV_z0.13926",
+            "RA": 205.52741666666665,
+            "Zion": [
+                6,
+                4
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 13.85,
+            "sig_logN": 0.15,
+            "vlim": [
+                -26.870057685088806,
+                26.870057685088806
+            ],
+            "zcomp": 0.13925697569730056
+        },
+        "CIV_z0.13990": {
+            "A": null,
+            "DEC": 5.09,
+            "Ej": 0.0,
+            "Name": "CIV_z0.13990",
+            "RA": 205.52741666666665,
+            "Zion": [
+                6,
+                4
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 2,
+            "lines": {},
+            "logN": 14.3,
+            "sig_logN": 0.08,
+            "vlim": [
+                -91.92388155425118,
+                91.92388155425118
+            ],
+            "zcomp": 0.13989577842528647
+        },
+        "HI_z0.13993": {
+            "A": null,
+            "DEC": 5.09,
+            "Ej": 0.0,
+            "Name": "HI_z0.13993",
+            "RA": 205.52741666666665,
+            "Zion": [
+                1,
+                1
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 2,
+            "lines": {},
+            "logN": 14.67,
+            "sig_logN": 9999.0,
+            "vlim": [
+                -100.0,
+                100.0
+            ],
+            "zcomp": 0.13993
+        },
+        "OVI_z0.13934": {
+            "A": null,
+            "DEC": 5.09,
+            "Ej": 0.0,
+            "Name": "OVI_z0.13934",
+            "RA": 205.52741666666665,
+            "Zion": [
+                8,
+                6
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 14.43,
+            "sig_logN": 0.04,
+            "vlim": [
+                -100.0,
+                100.0
+            ],
+            "zcomp": 0.1393368260382988
+        },
+        "OVI_z0.13993": {
+            "A": null,
+            "DEC": 5.09,
+            "Ej": 0.0,
+            "Name": "OVI_z0.13993",
+            "RA": 205.52741666666665,
+            "Zion": [
+                8,
+                6
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 14.6,
+            "sig_logN": 0.03,
+            "vlim": [
+                -100.0,
+                100.0
+            ],
+            "zcomp": 0.1399261976028096
+        },
+        "SiIII_z0.13993": {
+            "A": null,
+            "DEC": 5.09,
+            "Ej": 0.0,
+            "Name": "SiIII_z0.13993",
+            "RA": 205.52741666666665,
+            "Zion": [
+                14,
+                3
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 2,
+            "lines": {},
+            "logN": 13.05,
+            "sig_logN": 9999.0,
+            "vlim": [
+                -100.0,
+                100.0
+            ],
+            "zcomp": 0.13993
+        },
+        "SiIII_z0.14007": {
+            "A": null,
+            "DEC": 5.09,
+            "Ej": 0.0,
+            "Name": "SiIII_z0.14007",
+            "RA": 205.52741666666665,
+            "Zion": [
+                14,
+                3
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 13.03,
+            "sig_logN": 0.07,
+            "vlim": [
+                -25.455844122715714,
+                25.455844122715714
+            ],
+            "zcomp": 0.14007068869604453
+        },
+        "SiII_z0.13931": {
+            "A": null,
+            "DEC": 5.09,
+            "Ej": 0.0,
+            "Name": "SiII_z0.13931",
+            "RA": 205.52741666666665,
+            "Zion": [
+                14,
+                2
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 13.41,
+            "sig_logN": 0.08,
+            "vlim": [
+                -60.81118318204309,
+                60.81118318204309
+            ],
+            "zcomp": 0.13930640686077567
+        },
+        "SiIV_z0.13927": {
+            "A": null,
+            "DEC": 5.09,
+            "Ej": 0.0,
+            "Name": "SiIV_z0.13927",
+            "RA": 205.52741666666665,
+            "Zion": [
+                14,
+                4
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 13.52,
+            "sig_logN": 0.04,
+            "vlim": [
+                -80.61017305526643,
+                80.61017305526643
+            ],
+            "zcomp": 0.13927218528606214
+        },
+        "SiIV_z0.14005": {
+            "A": null,
+            "DEC": 5.09,
+            "Ej": 0.0,
+            "Name": "SiIV_z0.14005",
+            "RA": 205.52741666666665,
+            "Zion": [
+                14,
+                4
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 13.22,
+            "sig_logN": 0.07,
+            "vlim": [
+                -43.84062043356595,
+                43.84062043356595
+            ],
+            "zcomp": 0.14005167671009255
+        }
+    },
+    "em_type": null,
+    "name": "J134206.58+050524",
+    "sl_type": "IGM",
+    "user": "xavier",
+    "zem": 0.266
+}
