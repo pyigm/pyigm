@@ -241,7 +241,7 @@ def mock_HIlines(HI_comps, wvmnx, tau0_min=5e-3):
     abs_lines = spectralline.many_abslines(all_wrest, HIlines)
     # Fill in the rest
     for jj,iparm in enumerate(parm):
-        abs_lines[jj].attrib['z'] = iparm[1]
+        abs_lines[jj].setz(iparm[1])
         abs_lines[jj].attrib['logN'] = iparm[2]
         abs_lines[jj].attrib['N'] = 10**iparm[2] / u.cm**2
         abs_lines[jj].attrib['b'] = iparm[3]

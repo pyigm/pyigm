@@ -50,6 +50,7 @@ def test_model_abs():
     spec_fil = linetools.__path__[0]+'/spectra/tests/files/PH957_f.fits'
     spec = lsio.readspec(spec_fil)
     model, lya_lines = dla.model_abs(spec)
+    # import pdb; pdb.set_trace()
     # Check core
     ipx = np.argmin(np.abs(spec.wavelength.value-(1+dla.zabs)*1215.67))
     assert model.flux[ipx].value < 1e-4
@@ -76,15 +77,18 @@ def test_dla_from_dict():
 def test_DLA_from_components():
     radec = SkyCoord(ra=123.1143*u.deg, dec=-12.4321*u.deg)
     # HI Lya, Lyb
-    lya = AbsLine(1215.670*u.AA)
+    lya = AbsLine(1215.670*u.AA, z=2.92939)
     lya.analy['vlim'] = [-300.,300.]*u.km/u.s
-    lya.attrib['z'] = 2.92939
+    lya.attrib['flag_N'] = 1
     lya.attrib['N'] = 3e20 / u.cm**2
-    lyb = AbsLine(1025.7222*u.AA)
+    lya.attrib['sig_N'] = 1 / u.cm**2
+    lyb = AbsLine(1025.7222*u.AA, z=lya.z)
     lyb.analy['vlim'] = [-300.,300.]*u.km/u.s
-    lyb.attrib['z'] = lya.attrib['z']
     lyb.attrib['N'] = 3e20 / u.cm**2
+    lyb.attrib['flag_N'] = 1
+    lyb.attrib['sig_N'] = 1 / u.cm**2
     abscomp = AbsComponent.from_abslines([lya,lyb])
+    abscomp.synthesize_colm()
     abscomp.coord = radec
     # Instantiate
     HIsys = DLASystem.from_components([abscomp])
