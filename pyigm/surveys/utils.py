@@ -14,19 +14,20 @@ from pyigm.abssys import utils as pyasu
 from .igmsurvey import IGMSurvey
 
 
-def load_sys_files(inp, type, ref=None, sys_path=False):
+def load_sys_files(inp, type, ref=None, sys_path=False, **kwargs):
     """ Load up a set of SYS files from the hard-drive (JSON files)
 
     Parameters
     ----------
     inp : str
+      Name of JSON tarball or if sys_path=True then the path to a folder of JSON files
     type : str
-      type of IGMSystem
+      type of IGMSystem, e.g. LLS
     ref : str, optional
       Reference label
     sys_path : str, optional
-      indicates that inp is a path to a set of SYS files
-      otherwise, it should be the filename of a tarball
+      indicates that inp is a path to a set of JSON SYS files
+      otherwise, inp should be the filename of a tarball of JSON files
 
     Returns
     -------
@@ -58,7 +59,7 @@ def load_sys_files(inp, type, ref=None, sys_path=False):
             if ('NHI' in tdict.keys()) and ('flag_NHI' not in tdict.keys()):
                 tdict['flag_NHI'] = 1
             # Generate
-            abssys = system.from_dict(tdict)
+            abssys = system.from_dict(tdict, chk_sep=False, **kwargs)   # Consider use_coord=True as default
             survey._abs_sys.append(abssys)
         tar.close()
     # Return

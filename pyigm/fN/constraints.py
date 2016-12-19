@@ -175,10 +175,16 @@ class FNConstraint(object):
                 self.zeval, self.ref))
 
 
-# ###################### ###############
-# ###################### ###############
-# Read from ASCII file
 def fN_data_from_ascii_file(infile):
+    """
+    Parameters
+    ----------
+    infile
+
+    Returns
+    -------
+
+    """
 
     assert False # Bad code
     #makes new fN constraint with data type fN
@@ -247,6 +253,5 @@ def fN_data_from_ascii_file(infile):
     fNc.data = dict(zip(names, values))
     
     return fNc
-
 
 

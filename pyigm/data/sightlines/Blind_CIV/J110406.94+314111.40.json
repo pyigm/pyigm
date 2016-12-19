@@ -1,0 +1,79 @@
+{
+    "CreationDate": "2016-Nov-18",
+    "DEC": 31.6865,
+    "RA": 166.02891666666665,
+    "class": "IGMSightline",
+    "components": {
+        "CIV_z0.06214": {
+            "A": null,
+            "DEC": 31.6865,
+            "Ej": 0.0,
+            "Name": "CIV_z0.06214",
+            "RA": 166.02891666666665,
+            "Zion": [
+                6,
+                4
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 14.28,
+            "sig_logN": 0.09,
+            "vlim": [
+                -25.455844122715714,
+                25.455844122715714
+            ],
+            "zcomp": 0.06214496277067784
+        },
+        "HI_z0.06174": {
+            "A": null,
+            "DEC": 31.6865,
+            "Ej": 0.0,
+            "Name": "HI_z0.06174",
+            "RA": 166.02891666666665,
+            "Zion": [
+                1,
+                1
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 13.53,
+            "sig_logN": 0.09,
+            "vlim": [
+                -50.91168824543143,
+                50.91168824543143
+            ],
+            "zcomp": 0.061744579149286
+        },
+        "HI_z0.06223": {
+            "A": null,
+            "DEC": 31.6865,
+            "Ej": 0.0,
+            "Name": "HI_z0.06223",
+            "RA": 166.02891666666665,
+            "Zion": [
+                1,
+                1
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 2,
+            "lines": {},
+            "logN": 14.25,
+            "sig_logN": 9999.0,
+            "vlim": [
+                -100.0,
+                100.0
+            ],
+            "zcomp": 0.06223
+        }
+    },
+    "em_type": null,
+    "name": "J110406.94+314111.4",
+    "sl_type": "IGM",
+    "user": "xavier",
+    "zem": 0.434
+}

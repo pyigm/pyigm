@@ -14,5 +14,5 @@ from ..analysis import dndx_rvir
 def test_dndx_rvir():
     # Simple properties
     Lval, dNdX = dndx_rvir(cosmo=Planck15)
-    np.testing.assert_allclose(dNdX[0], 33.81259, rtol=1e-5)
+    np.testing.assert_allclose(dNdX[0], 15.515609, rtol=1e-5)
 

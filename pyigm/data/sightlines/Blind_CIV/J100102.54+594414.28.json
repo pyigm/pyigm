@@ -1,0 +1,123 @@
+{
+    "CreationDate": "2016-Nov-18",
+    "DEC": 59.7373,
+    "RA": 150.26058333333333,
+    "class": "IGMSightline",
+    "components": {
+        "CII_z0.15026": {
+            "A": null,
+            "DEC": 59.7373,
+            "Ej": 0.0,
+            "Name": "CII_z0.15026",
+            "RA": 150.26058333333333,
+            "Zion": [
+                6,
+                2
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 13.41,
+            "sig_logN": 0.12,
+            "vlim": [
+                -41.01219330881976,
+                41.01219330881976
+            ],
+            "zcomp": 0.150258720582824
+        },
+        "CIV_z0.15031": {
+            "A": null,
+            "DEC": 59.7373,
+            "Ej": 0.0,
+            "Name": "CIV_z0.15031",
+            "RA": 150.26058333333333,
+            "Zion": [
+                6,
+                4
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 2,
+            "lines": {},
+            "logN": 14.25,
+            "sig_logN": 0.4,
+            "vlim": [
+                -12.727922061357857,
+                12.727922061357857
+            ],
+            "zcomp": 0.1503086044594891
+        },
+        "HI_z0.15037": {
+            "A": null,
+            "DEC": 59.7373,
+            "Ej": 0.0,
+            "Name": "HI_z0.15037",
+            "RA": 150.26058333333333,
+            "Zion": [
+                1,
+                1
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 2,
+            "lines": {},
+            "logN": 14.3,
+            "sig_logN": 9999.0,
+            "vlim": [
+                -100.0,
+                100.0
+            ],
+            "zcomp": 0.15037
+        },
+        "NV_z0.15035": {
+            "A": null,
+            "DEC": 59.7373,
+            "Ej": 0.0,
+            "Name": "NV_z0.15035",
+            "RA": 150.26058333333333,
+            "Zion": [
+                7,
+                5
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 13.59,
+            "sig_logN": 0.16,
+            "vlim": [
+                -8.485281374238571,
+                8.485281374238571
+            ],
+            "zcomp": 0.15034697667230842
+        },
+        "SiIII_z0.15039": {
+            "A": null,
+            "DEC": 59.7373,
+            "Ej": 0.0,
+            "Name": "SiIII_z0.15039",
+            "RA": 150.26058333333333,
+            "Zion": [
+                14,
+                3
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 12.47,
+            "sig_logN": 0.08,
+            "vlim": [
+                -31.112698372208094,
+                31.112698372208094
+            ],
+            "zcomp": 0.15039302332769158
+        }
+    },
+    "em_type": null,
+    "name": "J100102.54+594414.28",
+    "sl_type": "IGM",
+    "user": "xavier",
+    "zem": 0.746
+}

@@ -2,11 +2,11 @@
 """
 from __future__ import print_function, absolute_import, division, unicode_literals
 
+import warnings
 import pdb
 import numpy as np
 
 from astropy import units as u
-from astropy.coordinates import SkyCoord
 
 from linetools.isgm import utils as ltiu
 
@@ -123,6 +123,29 @@ class DLASystem(IGMSystem):
         # Generate with type
         IGMSystem.__init__(self, radec, zabs, vlim, NHI=NHI, abs_type='DLA', **kwargs)
 
+    def model_abs(self, spec, **kwargs):
+        """ Generate a model of the absorption from the DLA on an input spectrum
+        This is a simple wrapper to pyigm.abssys.utils.hi_model
+
+        Parameters
+        ----------
+        spec : XSpectrum1D
+
+        Returns
+        -------
+        dla_model : XSpectrum1D
+          Model spectrum with same wavelength as input spectrum
+          Assumes a normalized flux
+        lyman_lines : list
+          List of AbsLine's that contributed to the DLA model
+
+        """
+        from pyigm.abssys.utils import hi_model
+        vmodel, lines = hi_model(self, spec, **kwargs)
+        # Return
+        return vmodel, lines
+
+
     def get_ions(self, use_Nfile=False, idict=None, update_zvlim=True,
                  linelist=None, verbose=True):
         """Parse the ions for each Subsystem
@@ -155,7 +178,7 @@ class DLASystem(IGMSystem):
             self._indiv_ionclms = igmau.read_ion_file(ion_fil, components)
             # Parse .all file
             all_file = ion_fil.split('.ion')[0]+'.all'
-            self.all_file=all_file  #MF: useful to have
+            self.all_file=all_file  #MF: useful
             _ = igmau.read_all_file(all_file, components=components)
             # Build table
             self._ionN = ltiu.iontable_from_components(components, ztbl=self.zabs)

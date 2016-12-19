@@ -14,6 +14,7 @@ from linetools.spectralline import AbsLine
 from linetools.analysis import absline as ltaa
 from linetools.lists.linelist import LineList
 from linetools.isgm.abscomponent import AbsComponent
+from linetools.isgm.abssystem import AbsSystem
 from linetools.isgm import utils as ltiu
 
 from pyigm.abssys.igmsys import IGMSystem, AbsSubSystem
@@ -83,15 +84,14 @@ class LLSSystem(IGMSystem):
         idict : dict
           Usually read from the hard-drive
         """
+        from linetools.isgm.abssystem import add_comps_from_dict, add_other_from_dict
         kwargs = dict(zem=idict['zem'], NHI=idict['NHI'],
                       sig_NHI=idict['sig_NHI'], name=idict['Name'])
         slf = cls(SkyCoord(ra=idict['RA']*u.deg, dec=idict['DEC']*u.deg),
                   idict['zabs'], idict['vlim']*u.km/u.s, **kwargs)
-        # Components
-        components = ltiu.build_components_from_dict(idict)
-        for component in components:
-            # This is to insure the components follow the rules
-            slf.add_component(component)
+        #
+        add_other_from_dict(slf, idict)
+        add_comps_from_dict(slf, idict, **kwargs)
 
         # Subsystems
         if 'A' in idict.keys():
@@ -111,7 +111,6 @@ class LLSSystem(IGMSystem):
 
     def __init__(self, radec, zabs, vlim, **kwargs):
         """Standard init
-
         NHI keyword is required
 
         Parameters

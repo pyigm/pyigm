@@ -1,0 +1,101 @@
+{
+    "CreationDate": "2016-Nov-18",
+    "DEC": -7.9873,
+    "RA": 40.71191666666667,
+    "class": "IGMSightline",
+    "components": {
+        "CIV_z0.00469": {
+            "A": null,
+            "DEC": -7.9873,
+            "Ej": 0.0,
+            "Name": "CIV_z0.00469",
+            "RA": 40.71191666666667,
+            "Zion": [
+                6,
+                4
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 13.81,
+            "sig_logN": 0.08,
+            "vlim": [
+                -55.15432893255071,
+                55.15432893255071
+            ],
+            "zcomp": 0.004692914304935583
+        },
+        "HI_z0.00427": {
+            "A": null,
+            "DEC": -7.9873,
+            "Ej": 0.0,
+            "Name": "HI_z0.00427",
+            "RA": 40.71191666666667,
+            "Zion": [
+                1,
+                1
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 13.79,
+            "sig_logN": 0.12,
+            "vlim": [
+                -31.112698372208094,
+                31.112698372208094
+            ],
+            "zcomp": 0.0042739703100202735
+        },
+        "HI_z0.00477": {
+            "A": null,
+            "DEC": -7.9873,
+            "Ej": 0.0,
+            "Name": "HI_z0.00477",
+            "RA": 40.71191666666667,
+            "Zion": [
+                1,
+                1
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 2,
+            "lines": {},
+            "logN": 14.42,
+            "sig_logN": 9999.0,
+            "vlim": [
+                -100.0,
+                100.0
+            ],
+            "zcomp": 0.00477
+        },
+        "SiIV_z0.00475": {
+            "A": null,
+            "DEC": -7.9873,
+            "Ej": 0.0,
+            "Name": "SiIV_z0.00475",
+            "RA": 40.71191666666667,
+            "Zion": [
+                14,
+                4
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 13.04,
+            "sig_logN": 0.07,
+            "vlim": [
+                -42.42640687119285,
+                42.42640687119285
+            ],
+            "zcomp": 0.004749890688244065
+        }
+    },
+    "em_type": null,
+    "name": "J024250.86-075914.28",
+    "sl_type": "IGM",
+    "user": "xavier",
+    "zem": 0.377
+}
