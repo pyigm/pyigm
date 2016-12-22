@@ -228,7 +228,7 @@ E         : toggle displaying/hiding the external absorption model
         self.llist['Lists'].append('HI')
         self.llist['Lists'].append('Strong')
         self.llist['Lists'].append('available')
-        if 0: # for H2 testing
+        if 1: # for H2 testing
             self.llist['H2'] = LineList('H2')
             self.llist['H2'].sortdata(['rel_strength'], reverse=True)
             self.llist['Lists'].append('H2')
@@ -403,8 +403,13 @@ E         : toggle displaying/hiding the external absorption model
         for ii, key in enumerate(igmg_dict['cmps'].keys()):
 
             if 'lines' in igmg_dict['cmps'][key].keys():
-                comp = AbsComponent.from_dict(igmg_dict['cmps'][key], linelist=self.llist['ISM'], coord=self.coord,
-                                              chk_sep=False, chk_data=False, chk_vel=False)
+                try:
+                    comp = AbsComponent.from_dict(igmg_dict['cmps'][key], linelist=self.llist['ISM'], coord=self.coord,
+                                                  chk_sep=False, chk_data=False, chk_vel=False)
+                except ValueError: # H2 lines
+                    comp = AbsComponent.from_dict(igmg_dict['cmps'][key], linelist=self.llist['H2'], coord=self.coord,
+                                                  chk_sep=False, chk_data=False, chk_vel=False)
+
                 # QtCore.pyqtRemoveInputHook()
                 # pdb.set_trace()
                 # QtCore.pyqtRestoreInputHook()
@@ -1648,10 +1653,20 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
             stars = '*'*(len(abslines[0].name.split('*'))-1)
         else:
             stars = None
-    else:
-        stars = None
-    # AbsComponent
-    comp = AbsComponent.from_abslines(abslines, stars=stars)
+        # AbsComponent
+        comp = AbsComponent.from_abslines(abslines, stars=stars)
+    else:  # H2
+        Zion = (-1, -1)  # code for molecules
+        Ntuple = (17, -1, 1)  # initial guess for Ntuple (needs to be given for adding lines from linelist; see below)
+        comp = AbsComponent(zero_coord, Zion, z, vlim, Ntup=Ntuple)
+        # add handy attrib
+        comp.attrib['init_wrest'] = wrest
+        # add abslines
+        comp.add_abslines_from_linelist(llist='H2', wvlim=(wvmin, wvmax), min_Wr=None)
+        # QtCore.pyqtRemoveInputHook()
+        # pdb.set_trace()
+        # QtCore.pyqtRestoreInputHook()
+
     # Init_wrest
     comp.init_wrest = wrest
     # Attributes
