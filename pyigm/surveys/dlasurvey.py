@@ -144,7 +144,8 @@ class DLASurvey(IGMSurvey):
         sample : str, optional
           DLA sample
             stat : Statistical sample
-            all : All LLS
+            all : All DLA (NHI >= 20.3)
+            all_sys : All systems identified -- Returns an LLSSurvey instead
             nonstat : Non-statistical sample
 
 
@@ -153,6 +154,9 @@ class DLASurvey(IGMSurvey):
         dla_survey : DLASurvey
 
         """
+        from .llssurvey import LLSSurvey
+        import warnings
+
         # LLS File
         dla_fil = pyigm_path+'/data/DLA/SDSS_DR5/dr5_alldla.fits.gz'
         print('SDSS-DR5: Loading DLA file {:s}'.format(dla_fil))
@@ -163,10 +167,14 @@ class DLASurvey(IGMSurvey):
         dlas.rename_column('QSO_DEC', 'DEC')
 
         # Cut on NHI
-        gd_dla = dlas['NHI'] >= 20.3
+        if sample != 'all_sys':
+            gd_dla = dlas['NHI'] >= 20.3
+            dla_survey = cls.from_sfits(dlas[gd_dla])
+        else:
+            warnings.warn("Loading an LLSSurvey not a DLASurvey")
+            dla_survey = LLSSurvey.from_sfits(dlas)
 
         # Read
-        dla_survey = cls.from_sfits(dlas[gd_dla])
         dla_survey.ref = 'SDSS-DR5 (PW09)'
 
         # g(z) file
@@ -188,7 +196,7 @@ class DLASurvey(IGMSurvey):
         dla_survey.sightlines = newqsos
 
         # All?
-        if sample == 'all':
+        if sample in ['all', 'all_sys']:
             return dla_survey
 
 
