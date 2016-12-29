@@ -12,7 +12,7 @@ import json
 from astropy.table import QTable, Column, Table, vstack
 from astropy import units as u
 #from astropy.coordinates import SkyCoord
-
+from linetools import utils as ltu
 from pyigm.surveys.igmsurvey import IGMSurvey
 from pyigm.surveys import utils as pyisu
 
@@ -144,7 +144,8 @@ class DLASurvey(IGMSurvey):
         sample : str, optional
           DLA sample
             stat : Statistical sample
-            all : All LLS
+            all : All DLA (NHI >= 20.3)
+            all_sys : All systems identified -- Returns an LLSSurvey instead
             nonstat : Non-statistical sample
 
 
@@ -153,6 +154,9 @@ class DLASurvey(IGMSurvey):
         dla_survey : DLASurvey
 
         """
+        from .llssurvey import LLSSurvey
+        import warnings
+
         # LLS File
         dla_fil = pyigm_path+'/data/DLA/SDSS_DR5/dr5_alldla.fits.gz'
         print('SDSS-DR5: Loading DLA file {:s}'.format(dla_fil))
@@ -163,10 +167,14 @@ class DLASurvey(IGMSurvey):
         dlas.rename_column('QSO_DEC', 'DEC')
 
         # Cut on NHI
-        gd_dla = dlas['NHI'] >= 20.3
+        if sample != 'all_sys':
+            gd_dla = dlas['NHI'] >= 20.3
+            dla_survey = cls.from_sfits(dlas[gd_dla])
+        else:
+            warnings.warn("Loading an LLSSurvey not a DLASurvey")
+            dla_survey = LLSSurvey.from_sfits(dlas)
 
         # Read
-        dla_survey = cls.from_sfits(dlas[gd_dla])
         dla_survey.ref = 'SDSS-DR5 (PW09)'
 
         # g(z) file
@@ -188,7 +196,7 @@ class DLASurvey(IGMSurvey):
         dla_survey.sightlines = newqsos
 
         # All?
-        if sample == 'all':
+        if sample in ['all', 'all_sys']:
             return dla_survey
 
 
@@ -377,7 +385,8 @@ class DLASurvey(IGMSurvey):
 
 def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
              zem_min=0., flg_zsrch=0, vmin=0.*u.km/u.s,
-             LLS_CUT=None, partial=False, prox=False):
+             LLS_CUT=None, partial=False, prox=False,
+             zem_tol=0.03):
     """ Identify the statistical DLA in a survey
     Note that this algorithm ignores any existing mask
 
@@ -399,6 +408,8 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
       Analyze partial LLS? [pLLS]
     prox : bool, optional
       Proximate LLS? [PLLS]
+    zem_tol : float, optional
+      Tolerance in zem
 
     Returns
     -------
@@ -406,7 +417,6 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
       True = statistical
     """
     import warnings
-    from linetools.utils import z_from_v
     from astropy.coordinates import SkyCoord, match_coordinates_sky
     # Check for mask
     if DLAs.mask is not None:
@@ -414,8 +424,8 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
         DLAs.mask = None
     # DLA
     msk_smpl = DLAs.zem != DLAs.zem
-    #zmax = z_from_v(qsos['ZEM'], vprox)
-    zmin = z_from_v(qsos['Z_START'], vmin)
+    #zmax = ltu.z_from_dv(vprox, qsos['ZEM'])
+    zmin = ltu.z_from_dv(vmin*np.ones(len(qsos)), qsos['Z_START'].data) # vmin must be array-like to be applied to each individual qsos['Z_START']
 
     # Make some lists
     qsos_coord = SkyCoord(ra=qsos['RA'], dec=qsos['DEC'])
@@ -427,7 +437,7 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
     for qq, idla in enumerate(DLAs._abs_sys):
         # In stat?
         if close[qq]:
-            if np.abs(idla.zem-qsos['ZEM'][idx[qq]]) < 0.03:
+            if np.abs(idla.zem-qsos['ZEM'][idx[qq]]) < zem_tol:
                 if ((idla.zabs >= zmin[idx[qq]]) &
                         (idla.zabs <= qsos['Z_END'][idx[qq]]) & (qsos[idx[qq]]['FLG_BAL'] != 2)):
                         msk_smpl[qq] = True

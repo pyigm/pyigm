@@ -56,12 +56,14 @@ Optional arguments
                                                     for getting rid of very weak transitions from
                                                     the model
     --vlim VLIM                                     Velocity limit (in km/s) for the display        500.
+    --external_model                                Name of an external spectrum model fits file
     =============================================== =============================================== ==============
 
 The number of transitions available for some ions  can be excessive for many,
 especially low-redshift spectra (e.g. CI, CI**), so using the default argument
 "--n_max_tuple 5" is a decent starting option. Feel free however to try different
-values depending on your scientific needs.
+values depending on your scientific needs. If an external model is given, you can toggle
+displaying/hiding it using the keystroke 'E' (for external).
 
 
 Component definition
@@ -260,3 +262,5 @@ Other options for model visualization include:
     (see above)
 
     - **Show/hide model**: use 'M' to toggle on/off the model being displayed.
+
+    - **Show/hide external model**: use 'E' to toggle on/off the model being displayed.

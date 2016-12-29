@@ -1,5 +1,5 @@
 """ Class for IGM Absorption sightline
-Uses AbsSightline from linetools
+ Uses AbsSightline from linetools
 """
 from __future__ import print_function, absolute_import, division, unicode_literals
 
