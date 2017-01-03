@@ -5,6 +5,7 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import numpy as np
 import os, imp
 import warnings as warn
+import pdb
 
 from scipy.integrate import simps
 from scipy.interpolate import interp1d
@@ -14,6 +15,7 @@ from astropy import constants as const
 
 # Path
 pyigm_path = imp.find_module('pyigm')[1]
+Ryd = const.Ryd.to('eV', equivalencies=u.spectral())
 
 class CUBA(object):
     """
@@ -97,7 +99,6 @@ class CUBA(object):
           Default -- 1Ryd
         """
         # Init
-        Ryd = const.Ryd.to('eV', equivalencies=u.spectral())
         E_MAX = 1e10*Ryd
         if min_energy is None:
             min_energy = Ryd
@@ -114,6 +115,29 @@ class CUBA(object):
         phi = np.log(10.)*simps(integrand.value, log_energy)
         # Return with Units
         return phi / u.s / u.cm**2
+
+    def logU(self, zval, nH=1/u.cm**3, min_energy=1*Ryd):
+        """ Estimate the ionization parameter at the given redshift
+        for a default density of 1cc.
+
+        Parameters
+        ----------
+        zval : float
+        nH : Quantity, optional
+          Gas density
+        min_energy : Quantity, optional
+
+        Returns
+        -------
+        logU : float
+         log10 of the Ionization parameter, defined as U = Phi/c nH
+        """
+        Phi = self.phi(zval, min_energy=min_energy)
+        U = (Phi / const.c.cgs / nH).decompose()
+        if U.unit != u.dimensionless_unscaled:
+            raise IOError("Bad units in your logU calculation..")
+        else:
+            return np.log10(U.value)
 
     def zinterp_jnu(self, zval, use_nearest=False):
         """Interpolate the Jnu grid at a given redshift
