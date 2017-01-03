@@ -78,7 +78,7 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, R_max=300*u.kpc, dv_max=400*u
 
     # dv
     igm_z = np.array([igmsystem.zabs for igmsystem in igmsystems])
-    dv = ltu.v_from_z(galaxy.z, igm_z)
+    dv = ltu.dv_from_z(igm_z, galaxy.z)
 
     # Rules
     match = np.where((rho<R_max) & (np.abs(dv) < dv_max))[0]

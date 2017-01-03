@@ -68,4 +68,5 @@ def test_cgm_from_igmsystems():
     galaxy = Galaxy((178.84787, 54.65734), z=0.00283)
     # Go
     cgm_list = cgm_from_galaxy_igmsystems(galaxy, igmsys, chk_lowz=False)
-    pytest.set_trace()
+    assert len(cgm_list) == 1
+    np.testing.assert_allclose(cgm_list[0].rho.value, 127.8324005876)

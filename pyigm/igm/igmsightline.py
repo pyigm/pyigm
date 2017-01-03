@@ -18,31 +18,38 @@ class IGMSightline(AbsSightline):
     """Class for IGM Absorption Sightline
     """
     @classmethod
-    def from_json(cls, jsonfile, coord=None, **kwargs):
+    def from_json(cls, jsonfile, **kwargs):
         """ Instantiate from a JSON file
 
         Parameters
         ----------
-        jsonfile
-        coord
-        kwargs
+        jsonfile : str
+          Filename
+          See from_dict for required keys
+        kwargs : passed to from_dict
 
         Returns
         -------
 
         """
         jdict = ltu.loadjson(jsonfile)
-        slf = cls.from_dict(jdict, coord=coord, **kwargs)
+        slf = cls.from_dict(jdict, **kwargs)
         # Return
         return slf
 
     @classmethod
-    def from_dict(cls, idict, coord=None, **kwargs):
+    def from_dict(cls, idict, **kwargs):
         """ Instantiate from a dict
 
         Parameters
         ----------
         idict : dict
+          Required keys are:
+           'RA' -- float (deg)
+           'DEC' -- float(deg)
+           'zem' -- float
+           'name' -- str
+         Other keys are added as attributes to the IgmSightline object
 
         Returns
         -------
