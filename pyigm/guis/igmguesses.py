@@ -147,7 +147,7 @@ P         : toggle on/off "colorful" display, where components of different
 E         : toggle displaying/hiding the external absorption model
 %         : guess a transition and redshift for a given feature at
             the cursor's position
-&         : Launch an ExamineSpecWidget to view the spectrum and lines
+&         : Launch an ExamineSpecWidget to view the spectrum and any absorption systems
 ?         : print this help message
 """
 
