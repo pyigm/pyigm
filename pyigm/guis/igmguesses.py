@@ -42,6 +42,7 @@ from linetools.isgm import utils as ltiu
 from linetools.guis import utils as ltgu
 from linetools.guis import line_widgets as ltgl
 from linetools.guis import simple_widgets as ltgsm
+from linetools.guis import spec_widgets as ltgsp
 from linetools import utils as ltu
 
 # Global variables; defined as globals mainly to increase speed and convenience
@@ -146,6 +147,7 @@ P         : toggle on/off "colorful" display, where components of different
 E         : toggle displaying/hiding the external absorption model
 %         : guess a transition and redshift for a given feature at
             the cursor's position
+&         : Launch an ExamineSpecWidget to view the spectrum and lines
 ?         : print this help message
 """
 
@@ -931,6 +933,22 @@ class IGGVelPlotWidget(QtGui.QWidget):
             # Drawing
             self.psdict['x_minmax'] = self.vmnx.value
 
+        ## Launch ExamineSpecWidget
+        if event.key == '&':
+            # Create absorption systems
+            comps = self.parent.comps_widg.all_comp
+            if len(comps) > 0:
+                abs_sys = ltiu.build_systems_from_components(comps)
+            else:
+                abs_sys = None
+            #QtCore.pyqtRemoveInputHook()
+            #pdb.set_trace()
+            #QtCore.pyqtRestoreInputHook()
+            # Launch Gui
+            exspecgui = ShowExSpec(self.spec, abs_sys=abs_sys)
+            exspecgui.exec_()
+
+        ## Set redshift
         if event.key == '^':
             zgui = ltgsm.AnsBox('Enter redshift:',float)
             zgui.exec_()
@@ -1837,3 +1855,68 @@ def from_igmguesses_to_joebvp(infile, outfile):
         comp_list += [comp]
 
     ltiu.joebvp_from_components(comp_list, igmg_dict['spec_file'], outfile)
+
+
+class ShowExSpec(QtGui.QDialog):
+    """
+    """
+    def __init__(self, ispec, parent=None, **kwargs):
+        """
+        Parameters
+        ----------
+        lbl : str
+        format : str
+          Format for value
+        """
+        super(ShowExSpec, self).__init__(parent)
+
+        # Grab the pieces and tie together
+        self.pltline_widg = ltgl.PlotLinesWidget(status=None, init_z=0.)
+        self.pltline_widg.setMaximumWidth(300)
+        # Grab the Widget
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
+        self.spec_widg = ltgsp.ExamineSpecWidget(ispec, llist=self.pltline_widg.llist, zsys=0., **kwargs)
+        self.spec_widg.canvas.mpl_connect('button_press_event', self.on_click)
+        # Layout
+        rside = QtGui.QWidget()
+        rside.setMaximumWidth(300)
+        vbox = QtGui.QVBoxLayout()
+        qbtn = QtGui.QPushButton('Quit', self)
+        qbtn.clicked.connect(self.quit)
+        vbox.addWidget(self.pltline_widg)
+        vbox.addWidget(qbtn)
+        rside.setLayout(vbox)
+
+        hbox = QtGui.QHBoxLayout()
+        hbox.addWidget(self.spec_widg)
+        hbox.addWidget(rside)
+        self.setLayout(hbox)
+
+    def on_click(self, event):
+        """ Over-loads click events
+        """
+        if event.button == 3: # Set redshift
+            if self.pltline_widg.llist['List'] is None:
+                return
+            self.select_line_widg = ltgl.SelectLineWidget(
+                self.pltline_widg.llist[self.pltline_widg.llist['List']]._data)
+            self.select_line_widg.exec_()
+            line = self.select_line_widg.line
+            if line.strip() == 'None':
+                return
+            #
+            quant = line.split('::')[1].lstrip()
+            spltw = quant.split(' ')
+            wrest = Quantity(float(spltw[0]), unit=spltw[1])
+            z = event.xdata/wrest.value - 1.
+            self.pltline_widg.llist['z'] = z
+
+            self.pltline_widg.zbox.setText('{:.5f}'.format(self.pltline_widg.llist['z']))
+
+            # Draw
+            self.spec_widg.on_draw()
+
+    def quit(self):
+        self.close()
