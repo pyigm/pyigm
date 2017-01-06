@@ -14,8 +14,11 @@ from astropy.coordinates import SkyCoord
 
 from ..cgm import CGM, CGMAbsSys
 from ..cgmsurvey import CGMAbsSurvey
+from ..utils import cgm_from_galaxy_igmsystems
 from pyigm.field.galaxy import Galaxy
 from pyigm.abssys.igmsys import IGMSystem
+from pyigm.igm.igmsightline import IGMSightline
+import pyigm
 
 import pdb
 
@@ -55,3 +58,15 @@ def test_to_dict():
     with io.open('tmp.json', 'w', encoding='utf-8') as f:
         f.write(unicode(json.dumps(cdict, sort_keys=True, indent=4,
                                    separators=(',', ': '))))
+
+def test_cgm_from_igmsystems():
+    # Load sightlines
+    sl_file = pyigm.__path__[0]+'/data/sightlines/Blind_CIV/J115120.46+543733.08.json'
+    igmsl = IGMSightline.from_json(sl_file)
+    igmsys = igmsl.make_igmsystems(vsys=400*u.km/u.s)
+    # Galaxy
+    galaxy = Galaxy((178.84787, 54.65734), z=0.00283)
+    # Go
+    cgm_list = cgm_from_galaxy_igmsystems(galaxy, igmsys, chk_lowz=False)
+    assert len(cgm_list) == 1
+    np.testing.assert_allclose(cgm_list[0].rho.value, 127.8324005876)

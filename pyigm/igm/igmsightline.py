@@ -11,18 +11,45 @@ from astropy.coordinates import SkyCoord
 from linetools.isgm.abssightline import AbsSightline
 from linetools.isgm.abssystem import add_comps_from_dict
 from linetools.isgm.utils import build_systems_from_components
+from linetools import utils as ltu
 
 
 class IGMSightline(AbsSightline):
     """Class for IGM Absorption Sightline
     """
     @classmethod
-    def from_dict(cls, idict, coord=None, **kwargs):
+    def from_json(cls, jsonfile, **kwargs):
+        """ Instantiate from a JSON file
+
+        Parameters
+        ----------
+        jsonfile : str
+          Filename
+          See from_dict for required keys
+        kwargs : passed to from_dict
+
+        Returns
+        -------
+
+        """
+        jdict = ltu.loadjson(jsonfile)
+        slf = cls.from_dict(jdict, **kwargs)
+        # Return
+        return slf
+
+    @classmethod
+    def from_dict(cls, idict, **kwargs):
         """ Instantiate from a dict
 
         Parameters
         ----------
         idict : dict
+          Required keys are:
+           'RA' -- float (deg)
+           'DEC' -- float(deg)
+           'zem' -- float
+           'name' -- str
+         Other keys are added as attributes to the IgmSightline object
 
         Returns
         -------
@@ -46,7 +73,7 @@ class IGMSightline(AbsSightline):
         AbsSightline.__init__(self, radec, sl_type='IGM', **kwargs)
         self.zem = zem
 
-    def make_igmsystems(self, igmsystem=None):
+    def make_igmsystems(self, igmsystem=None, **kwargs):
         """ Use the component list to generate a list of IGMSystems
 
         Returns
@@ -59,7 +86,7 @@ class IGMSightline(AbsSightline):
             from pyigm.abssys.igmsys import IGMSystem
             igmsystem = IGMSystem
         # Main call
-        igm_sys = build_systems_from_components(self._components, systype=igmsystem)
+        igm_sys = build_systems_from_components(self._components, systype=igmsystem, **kwargs)
         # Return
         return igm_sys
 

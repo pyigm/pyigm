@@ -125,6 +125,7 @@ class CGMAbsSys(object):
         -------
 
         """
+        from .utils import calc_rho
         # Checks
         if not isinstance(galaxy, Galaxy):
             raise IOError('CGMAbsSys instantiated with a Galaxy')
@@ -147,11 +148,10 @@ class CGMAbsSys(object):
             self.cosmo = cosmo
 
         # Impact parameter and PA
-        if ang_sep is None:
-            ang_sep = self.igm_sys.coord.separation(self.galaxy.coord).to('arcsec')
         if rho is None:
-            kpc_amin = self.cosmo.kpc_comoving_per_arcmin(self.galaxy.z)  # kpc per arcmin
-            rho = ang_sep.to('arcmin') * kpc_amin / (1+self.galaxy.z)  # Physical
+            rho, iang = calc_rho(galaxy, igm_sys, self.cosmo, ang_sep=ang_sep)
+            if ang_sep is None:
+                ang_sep = iang
         self.rho = rho
         self.ang_sep = ang_sep
         self.PA = self.igm_sys.coord.position_angle(self.galaxy.coord)
