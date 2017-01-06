@@ -945,7 +945,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
             #pdb.set_trace()
             #QtCore.pyqtRestoreInputHook()
             # Launch Gui
-            exspecgui = ShowExSpec(self.spec, abs_sys=abs_sys)
+            exspecgui = ExSpecDialog(self.spec, abs_sys=abs_sys)
             exspecgui.exec_()
 
         ## Set redshift
@@ -1857,7 +1857,7 @@ def from_igmguesses_to_joebvp(infile, outfile):
     ltiu.joebvp_from_components(comp_list, igmg_dict['spec_file'], outfile)
 
 
-class ShowExSpec(QtGui.QDialog):
+class ExSpecDialog(QtGui.QDialog):
     """
     """
     def __init__(self, ispec, parent=None, **kwargs):
@@ -1868,7 +1868,7 @@ class ShowExSpec(QtGui.QDialog):
         format : str
           Format for value
         """
-        super(ShowExSpec, self).__init__(parent)
+        super(ExSpecDialog, self).__init__(parent)
 
         # Grab the pieces and tie together
         self.pltline_widg = ltgl.PlotLinesWidget(status=None, init_z=0.)
