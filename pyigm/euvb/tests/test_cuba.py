@@ -35,16 +35,16 @@ def test_phi():
     cuba = CUBA()
     phi = cuba.phi(2.1)
     #
-    np.testing.assert_allclose(phi.value, 95459.3988508)
+    np.testing.assert_allclose(phi.value, 381837.59540310985)
     assert(phi.unit == 1/u.s/u.cm**2)
     #
     phi = cuba.phi(2.1, min_energy=50.*u.eV)
-    np.testing.assert_allclose(phi.value, 8171.47189724)
+    np.testing.assert_allclose(phi.value, 4*8171.47189724)
 
 
 def test_logU():
     cuba = CUBA()
     logU = cuba.logU(0.2)
     #
-    np.testing.assert_allclose(logU, -6.73295862015)
+    np.testing.assert_allclose(logU, -6.13089862882)
 
