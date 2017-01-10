@@ -109,7 +109,7 @@ class CUBA(object):
         log_energy = np.log10(self.energy.to('eV')/Ryd)
         # Cut out high/low energies
         blue_energy = (self.energy >= min_energy) & (self.energy <= E_MAX)
-        integrand = np.pi*jnu.cgs/const.h.cgs
+        integrand = 4*np.pi*jnu.cgs/const.h.cgs # Note the factor of 4 pi
         integrand[~blue_energy] = 0.0
         # Integrate
         phi = np.log(10.)*simps(integrand.value, log_energy)
