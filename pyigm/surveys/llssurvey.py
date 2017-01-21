@@ -248,10 +248,12 @@ class LLSSurvey(IGMSurvey):
                 raise ValueError("Bad match")
             elif len(mt) > 1:  # Take closest
                 mt = np.argmin(sep)
+            else:
+                mt = mt[0]
             # Save
             lls.metallicity = MetallicityPDF(fh5['met']['left_edge_bins']+
                                              fh5['met']['left_edge_bins'].attrs['BINSIZE']/2.,
-                                             fh5['met'][mkeys[mt[0]]])
+                                             fh5['met'][mkeys[mt]])
 
         # Spectra?
         if grab_spectra:
