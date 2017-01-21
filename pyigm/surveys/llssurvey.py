@@ -251,7 +251,7 @@ class LLSSurvey(IGMSurvey):
             # Save
             lls.metallicity = MetallicityPDF(fh5['met']['left_edge_bins']+
                                              fh5['met']['left_edge_bins'].attrs['BINSIZE']/2.,
-                                             fh5['met'][mkeys[mt]])
+                                             fh5['met'][mkeys[mt[0]]])
 
         # Spectra?
         if grab_spectra:
