@@ -69,7 +69,7 @@ class IGMSightline(AbsSightline):
         # Return
         return slf
 
-    def __init__(self, radec, zem, **kwargs):
+    def __init__(self, radec, zem=0., **kwargs):
         AbsSightline.__init__(self, radec, sl_type='IGM', **kwargs)
         self.zem = zem
 
