@@ -1704,13 +1704,17 @@ def comp_init_attrib(comp):
 def sync_comp_lines(comp, only_lims=False):
     """Synchronize attributes of the lines and updates
     """
+    if only_lims:
+        # Need to update zlim *not* vlim
+        comp_vlim_mks = comp.vlim.to('km/s').value
+        zlim_comp = comp.zcomp + (1 + comp.zcomp) * (comp_vlim_mks / c_kms)
     for line in comp._abslines:
         if only_lims:
-            line.limits.set(comp.vlim)
+            line.limits.set(zlim_comp)
         else:
             line.attrib['logN'] = comp.attrib['logN']
             line.attrib['b'] = comp.attrib['b']
-            line.setz(comp.attrib['z'])
+            line.setz(comp.attrib['z'])  # vlim is updated because _zlim is fixed
 
 
 def mask_comp_lines(comp, min_ew = 0.003*u.AA, verbose=False):

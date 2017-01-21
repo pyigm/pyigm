@@ -4,6 +4,7 @@
 from __future__ import print_function, absolute_import, division, unicode_literals
 
 import pdb
+import warnings
 
 from astropy import units as u
 from astropy.coordinates import SkyCoord
@@ -56,7 +57,7 @@ class IGMSightline(AbsSightline):
 
         """
         slf = cls(SkyCoord(ra=idict['RA'], dec=idict['DEC'], unit='deg'),
-                  idict['zem'], name=idict['name'], **kwargs)
+                  zem=idict['zem'], name=idict['name'], **kwargs)
         # Other
         for key in idict.keys():
             if key in ['RA', 'DEC', 'zem', 'name', 'components']:
@@ -69,9 +70,12 @@ class IGMSightline(AbsSightline):
         # Return
         return slf
 
-    def __init__(self, radec, zem=0., **kwargs):
+    def __init__(self, radec, zem=None, **kwargs):
         AbsSightline.__init__(self, radec, sl_type='IGM', **kwargs)
-        self.zem = zem
+        if zem is None:
+            warnings.warn("You really should set zem to create IGMSightline")
+        else:
+            self.zem = zem
 
     def make_igmsystems(self, igmsystem=None, **kwargs):
         """ Use the component list to generate a list of IGMSystems
