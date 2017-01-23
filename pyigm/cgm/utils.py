@@ -95,5 +95,124 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, R_max=300*u.kpc, dv_max=400*u
     # Return
     return cgm_list
 
+def velcorr_mould(galaxy,cosmo=None):
+    '''
+    Calculates angular diameter distance, luminosity distance, etc., corrected
+    for peculiar motions due to the Shapley Supercluster, the Local Group, etc.,
+    using the formalism of Mould et al. (2000..ApJ..529..786).
 
+    Code ported from IDL implementation by John Moustakas:
+    github.com/moustakas/impro/blob/master/pro/galaxy/mould_distance.pro
+
+    Parameters
+    ----------
+    galaxy: Galaxy
+    cosmo: astropy.cosmology, optional
+
+    Returns
+    -------
+    velcorrdict: dictionary
+        Resulting quantities of velocity corrected calculation.
+        v_hel: Heliocentric velocity of object with no correction, simply z*c
+        v_LG: Velocity with respect to Local Group
+        v_virgo: Velocity with respect to Virgo Cluster
+        v_GA: Velocity with respect to Virgo Cluster
+        v_shapley: Velocity with respect to Shapley Supercluster
+        v_cosmic: Corrected velocity
+        lumdist: Luminosity distance
+        angdiamdist: Angular diameter distance
+        distmod: Distance modulus
+        flag: 1 if object is the direction of Virgo, 2 if GA, 3 if Shapley
+        Scale: Proper distance per angular separation on sky
+    '''
+
+    # Cosmology
+    if cosmo is None:
+        cosmo = cosmology.Planck15
+
+    H0 = cosmo.H0
+    omega0 = cosmo.Om0
+    omega_lambda = cosmo.Ode0
+
+    # Needed parameters
+    q0 = omega0 / 2.0 - omega_lambda
+    gamma = 2.0
+
+    # Load info from Mould+ 2000 Table 1A
+    clnames = ['Virgo', 'GA', 'Shapley']
+    clra1950 =  ['12h28m19s','13h20m00s','13h30m00s']
+    cldec1950 = ['+12:40:00','-44:00:00','-31:00:00']
+    clcoords = SkyCoord(clra1950,cldec1950,unit=(u.hourangle,u.degree),frame='fk4',equinox='B1950.0')
+    clhelvel = np.array([1035., 4600., 13800.]) * u.km/u.s
+    clLGvel = np.array([957., 4380., 13600.])  * u.km/u.s
+    fidvel = np.array([200., 400., 85.]) * u.km/u.s
+    clrad = np.array([10., 10., 12.]) * u.degree
+    clrangelo = np.array([600., 2600., 10000.]) * u.km/u.s
+    clrangehi = np.array([2300., 6600., 16000.]) * u.km/u.s
+
+    # Convert B1950 coordinates (as given) and
+    clcoords = clcoords.icrs
+
+   # Convert input coords to Galactic coords
+    galcoords_gal = galaxy.coord.transform_to(frame='galactic')
+
+    # Transform to local group frame
+    c = 2.99792458e5 * u.km/u.s
+    v_LG = c * galaxy.z - 79.0 * (u.km/u.s) * np.cos(galcoords_gal.l).value \
+        * np.cos(galcoords_gal.b).value + 296.0 * (u.km/u.s) * np.sin(galcoords_gal.l).value \
+        * np.cos(galcoords_gal.b).value - 36.0 * (u.km/u.s) * np.sin(galcoords_gal.b).value
+
+    # Calculate object-attractor angular and velocity distances (eq. 2 in Mould 2000+)
+    theta = galaxy.coord.separation(clcoords)
+    costheta = np.cos(theta).value
+    r0a = np.sqrt(v_LG ** 2 + clLGvel ** 2 - 2. * v_LG * clLGvel * costheta)
+
+    # Determine if object is in direction of one of the attractors.  If not, calculate velocity!
+    virgo = 0
+    GA = 0
+    shapley = 0
+
+    if (theta[0] < clrad[0]) & (
+        ((clLGvel[0] - r0a[0]) > clrangelo[0]) | ((clLGvel[0] + r0a[0]) < clrangehi[0])):
+        virgo = 1
+    if (theta[1] < clrad[1]) & (
+        (clLGvel[1] - r0a[1] > clrangelo[1]) | (clLGvel[1] + r0a[1] < clrangehi[1])):
+        GA = 1
+    if (theta[2] < clrad[2]) & (
+        (clLGvel[2] - r0a[2] > clrangelo[2]) | (clLGvel[2] + r0a[2] < clrangehi[2])):
+        shapley = 1
+
+    if virgo or GA or shapley:
+        v_infall = np.zeros(3) * u.km/u.s
+        if virgo:
+            v_cosmic = clLGvel[0]
+            flag = 1
+        if GA:
+            v_cosmic = clLGvel[1]
+            flag = 2
+        if shapley:
+            v_cosmic = clLGvel[2]
+            flag = 3
+    else:
+        v_infall = fidvel * (costheta + (v_LG - clLGvel * costheta) / r0a * (r0a / clLGvel) ** (1. - gamma))
+        v_cosmic = v_LG + np.sum(v_infall)
+        flag = 0
+
+    # Derive remaining parameters to report
+    z_cosmic = v_cosmic / c
+    import pdb
+    pdb.set_trace()
+    propdist = c / H0 * (z_cosmic - z_cosmic ** 2 / 2. * (1. + q0))
+    lumdist = propdist * (1. + z_cosmic)
+    angdiamdist = lumdist / (1. + z_cosmic) ** 2
+    distmod = 5. * np.log10(lumdist.to(u.pc).value) - 5.
+    kpcarcsec = angdiamdist * np.pi * 2. / 360. / 3600. * 1000.
+    scale = angdiamdist * np.pi * 2./ (360. * u.degree)
+
+    # Create dictionary to return
+    velcorrdict = dict(v_hel=c * galaxy.z, v_LG=v_LG, v_virgo=v_infall[0], v_GA=v_infall[1],
+                  v_shapley=v_infall[2], v_cosmic=v_cosmic, lumdist=lumdist, angdiamdist=angdiamdist,
+                  distmod=distmod, flag=flag, scale=scale.to(u.kpc/u.arcsec))
+
+    return velcorrdict
 
