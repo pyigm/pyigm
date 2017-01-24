@@ -15,7 +15,7 @@ from linetools import utils as ltu
 
 from pyigm.field.galaxy import Galaxy
 
-def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None):
+def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, chk_lowz=True):
     """
     Parameters
     ----------
@@ -42,8 +42,14 @@ def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None):
 
     if ang_sep is None:
         ang_sep = igm_sys.coord.separation(galaxy.coord).to('arcsec')
-    kpc_amin = cosmo.kpc_comoving_per_arcmin(galaxy.z)  # kpc per arcmin
-    rho = ang_sep.to('arcmin') * kpc_amin / (1+galaxy.z)
+    # Handle cases where object's distance needs correction from peculiar velocities
+    if (galaxy.z < 0.05) and chk_lowz:
+        velcorrdict = velcorr_mould(galaxy,cosmo=cosmo)
+        kpc_amin = velcorrdict['scale'].to(u.kpc/u.arcmin)
+        rho = ang_sep.to('arcmin') * kpc_amin
+    else:
+        kpc_amin = cosmo.kpc_comoving_per_arcmin(galaxy.z)  # kpc per arcmin
+        rho = ang_sep.to('arcmin') * kpc_amin / (1+galaxy.z)
     # Return
     return rho, ang_sep
 

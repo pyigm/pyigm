@@ -137,8 +137,8 @@ class CGMAbsSys(object):
         self.igm_sys = igm_sys
 
         # Raise error for redshifts not in the Hubble flow
-        if (galaxy.z < 0.05) and chk_lowz:
-            raise NotImplementedError("Not prepared for such low redshift.  Need to implement corrections.")
+        #if (galaxy.z < 0.05) and chk_lowz:
+        #    raise NotImplementedError("Not prepared for such low redshift.  Need to implement corrections.")
 
         # Calculate rho
         if cosmo is None:
@@ -149,7 +149,7 @@ class CGMAbsSys(object):
 
         # Impact parameter and PA
         if rho is None:
-            rho, iang = calc_rho(galaxy, igm_sys, self.cosmo, ang_sep=ang_sep)
+            rho, iang = calc_rho(galaxy, igm_sys, self.cosmo, ang_sep=ang_sep, chk_lowz=chk_lowz)
             if ang_sep is None:
                 ang_sep = iang
         self.rho = rho
