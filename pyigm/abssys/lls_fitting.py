@@ -13,9 +13,11 @@ import matplotlib.gridspec as gridspec
 
 from astropy import units as u
 from astropy.table import Table, Column
+from astropy.io import fits
 
 from linetools.analysis import absline as ltaa
 from linetools.spectra.xspectrum1d import XSpectrum1D
+from linetools import utils as ltu
 
 
 def plot_contours(lnL3D, xtup):
@@ -488,6 +490,61 @@ def analyze_lnl(lls_dict, xtup, lnL, CL=0.68):
                             float(C1_val[cl3D[1][2][1]])]]
     # Return
     return
+
+
+def read_soln(in_root):
+    """
+    Parameters
+    ----------
+    in_root : str
+
+    Returns
+    -------
+    xlist
+    lls_dict
+
+    """
+    # dict
+    lls_dict = ltu.loadjson(in_root+'.json')
+    # arrays
+    hdu = fits.open(in_root+'.fits')
+    xlist = []
+    for ii in range(1,5):
+        xlist += [hdu[ii].data]
+    # Return
+    print('xlist contains: NHI_eval, C0_val, C1_val, lnL3D')
+    return xlist, lls_dict
+
+
+def save_soln(xtup, lls_dict, outroot):
+    """ Write solution to the hard-drive
+    Parameters
+    ----------
+    xtup
+    lls_dict
+    outroot : str
+      Root of the output files
+    """
+    if len(xtup) == 4:
+        pass
+        #NHI_eval, C0_val, C1_val, lnL3D = xtup
+    else:
+        raise IOError("Wrong sized xtup")
+    # Dict
+    gdict = ltu.jsonify(lls_dict)
+    ltu.savejson(outroot+'.json', gdict, easy_to_read=True, overwrite=True)
+    print("Wrote lls_dict to {:s}".format(outroot+'.json'))
+    # Rest
+    prihdu = fits.PrimaryHDU()
+    names = ['NHI_eval', 'C0_val', 'C1_val', 'lnL3D']
+    hdulist = [prihdu]
+    for ii,name in enumerate(names):
+        hdu = fits.ImageHDU(xtup[ii])
+        hdu.name = name
+        hdulist += [hdu]
+    thdulist = fits.HDUList(hdulist)
+    thdulist.writeto(outroot+'.fits', overwrite=True)
+    print("Wrote rest to {:s}".format(outroot+'.fits'))
 
 
 def cl_interval(lnL, sigma=None, CL=0.68):
