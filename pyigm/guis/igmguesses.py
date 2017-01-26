@@ -1710,7 +1710,7 @@ def sync_comp_lines(comp, only_lims=False):
         zlim_comp = comp.zcomp + (1 + comp.zcomp) * (comp_vlim_mks / c_kms)
     for line in comp._abslines:
         if only_lims:
-            line.limits.set(zlim_comp)
+            line.limits.set(zlim_comp.tolist())
         else:
             line.attrib['logN'] = comp.attrib['logN']
             line.attrib['b'] = comp.attrib['b']
