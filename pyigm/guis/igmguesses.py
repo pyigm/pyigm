@@ -17,7 +17,7 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 
 # Import libraries
 import numpy as np
-import warnings, imp
+import warnings
 import copy
 import pdb
 
@@ -42,6 +42,7 @@ from linetools.isgm import utils as ltiu
 from linetools.guis import utils as ltgu
 from linetools.guis import line_widgets as ltgl
 from linetools.guis import simple_widgets as ltgsm
+from linetools.guis import spec_widgets as ltspw
 from linetools import utils as ltu
 
 # Global variables; defined as globals mainly to increase speed and convenience
@@ -146,6 +147,7 @@ P         : toggle on/off "colorful" display, where components of different
 E         : toggle displaying/hiding the external absorption model
 %         : guess a transition and redshift for a given feature at
             the cursor's position
+&         : Launch an ExamineSpecWidget to view the spectrum and any absorption systems
 ?         : print this help message
 """
 
@@ -931,6 +933,22 @@ class IGGVelPlotWidget(QtGui.QWidget):
             # Drawing
             self.psdict['x_minmax'] = self.vmnx.value
 
+        ## Launch ExamineSpecWidget
+        if event.key == '&':
+            # Create absorption systems
+            comps = self.parent.comps_widg.all_comp
+            if len(comps) > 0:
+                abs_sys = ltiu.build_systems_from_components(comps)
+            else:
+                abs_sys = None
+            #QtCore.pyqtRemoveInputHook()
+            #pdb.set_trace()
+            #QtCore.pyqtRestoreInputHook()
+            # Launch Gui
+            exspecgui = ltspw.ExSpecDialog(self.spec, abs_sys=abs_sys)
+            exspecgui.exec_()
+
+        ## Set redshift
         if event.key == '^':
             zgui = ltgsm.AnsBox('Enter redshift:',float)
             zgui.exec_()
@@ -1686,13 +1704,16 @@ def comp_init_attrib(comp):
 def sync_comp_lines(comp, only_lims=False):
     """Synchronize attributes of the lines and updates
     """
+    if only_lims:
+        # Need to update zlim *not* vlim
+        zlim_comp = ltu.z_from_dv(comp.vlim, comp.zcomp, rel=False)
     for line in comp._abslines:
         if only_lims:
-            line.limits.set(comp.vlim)
+            line.limits.set(zlim_comp.tolist())
         else:
             line.attrib['logN'] = comp.attrib['logN']
             line.attrib['b'] = comp.attrib['b']
-            line.setz(comp.attrib['z'])
+            line.setz(comp.attrib['z'])  # vlim is updated because _zlim is fixed
 
 
 def mask_comp_lines(comp, min_ew = 0.003*u.AA, verbose=False):
@@ -1837,3 +1858,6 @@ def from_igmguesses_to_joebvp(infile, outfile):
         comp_list += [comp]
 
     ltiu.joebvp_from_components(comp_list, igmg_dict['spec_file'], outfile)
+
+
+
