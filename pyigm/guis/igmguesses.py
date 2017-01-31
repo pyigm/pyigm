@@ -1706,8 +1706,7 @@ def sync_comp_lines(comp, only_lims=False):
     """
     if only_lims:
         # Need to update zlim *not* vlim
-        comp_vlim_mks = comp.vlim.to('km/s').value
-        zlim_comp = comp.zcomp + (1 + comp.zcomp) * (comp_vlim_mks / c_kms)
+        zlim_comp = ltu.z_from_dv(comp.vlim, comp.zcomp, rel=False)
     for line in comp._abslines:
         if only_lims:
             line.limits.set(zlim_comp.tolist())
