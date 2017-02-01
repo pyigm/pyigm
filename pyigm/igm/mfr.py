@@ -5,8 +5,6 @@ import pdb
 
 import numpy as np
 
-from astropy import constants as const
-from astropy.cosmology import Planck15
 from astropy.table import Table
 from astropy import units as u
 from astropy.coordinates import SkyCoord
@@ -23,7 +21,39 @@ except NameError:  # For Python 3
 def fit_forest(wave, flux, sigma, zqso, wavemin=3200., normfac=None,
                user_mask=None, mask_dlas=None, coord=None,
                for_lohi=(1041.,1185)):
-    reload(pyteff)
+    """  Perform mean-flux regulation on an input spectrum
+    Parameters
+    ----------
+    wave : ndarray
+      Observed wavelength values in Ang
+    flux : ndarray
+      flux array
+    sigma : ndarray
+      sigma array.  0 values are masked
+    zqso : float
+      Quasar emission redshift
+    wavemin : float, optional
+      Minimum wavelength to include in analysis
+    normfac : float, optional
+      optional scaling factor
+    user_mask : list (of lists)
+      User can mask out regions in the anaylsis `by-hand'
+    mask_dlas : Table or str, optional
+      Table of DLAs to mask based on coordinates and redshift
+        Required columns are RA, DEC, z
+      Can be the filename of the table to input
+    coord : SkyCoord, optional
+      Coordinate of the sightline.  Used to match against DLAs
+    for_lohi : tuple
+      wavemin, wavemax that define the forest for analysis
+
+    Returns
+    -------
+    new_ff : ndarray
+      Mean-flux regulated flux
+    parm : FittableModel
+      astropy model of the continuum
+    """
     from astropy.modeling import fitting
 
     # invvar
