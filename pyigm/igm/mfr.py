@@ -22,6 +22,7 @@ def fit_forest(wave, flux, sigma, zqso, wavemin=3200., normfac=None,
                user_mask=None, mask_dlas=None, coord=None,
                for_lohi=(1041.,1185)):
     """  Perform mean-flux regulation on an input spectrum
+
     Parameters
     ----------
     wave : ndarray
