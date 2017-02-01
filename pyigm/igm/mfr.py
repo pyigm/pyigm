@@ -108,6 +108,7 @@ def fit_forest(wave, flux, sigma, zqso, wavemin=3200., normfac=None,
 
     # Estimate weights for each pixel
     var_F = forestvar(z_for) * (np.exp(-pyteff.lyman_alpha_obs(z_for)))**2
+    #var_F = forestvar(z_for) * (np.exp(-old_taueff_evo(z_for)))**2
     var_noise = (ivarforest != 0) / (ivarforest + (ivarforest == 0))
     var_total = var_F + var_noise
     weights_forest = (var_total != 0) / (var_total + (var_total == 0))
@@ -191,7 +192,22 @@ class mflux_tauevo(FittableModel):
     def evaluate(lambda_r, p0, p1, zqso, lamb_piv): #logN,b,z,wrest,f,gamma,fwhm):
         zfor = (lambda_r/1216.) * (1. + zqso) - 1.
         tau = pyteff.lyman_alpha_obs(zfor)
+        #tau = old_taueff_evo(zfor)
         fmean = np.exp(-1*tau)
 
         mfluxtauevo = fmean * mfluxcorr(lambda_r, p0, p1, lamb_piv=lamb_piv)
         return mfluxtauevo
+
+
+def old_taueff_evo(z):
+    """ F-G taueff. Mainly for testing
+    Parameters
+    ----------
+    z
+
+    Returns
+    -------
+
+    """
+    tauevo  = 0.001845 * (1+z)**3.924
+    return tauevo
