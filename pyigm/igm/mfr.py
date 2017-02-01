@@ -200,7 +200,9 @@ class mflux_tauevo(FittableModel):
 
 
 def old_taueff_evo(z):
-    """ F-G taueff. Mainly for testing
+    """ F-G taueff.
+    Mainly for testing
+
     Parameters
     ----------
     z
