@@ -206,8 +206,6 @@ def velcorr_mould(galaxy,cosmo=None):
 
     # Derive remaining parameters to report
     z_cosmic = v_cosmic / c
-    import pdb
-    pdb.set_trace()
     propdist = c / H0 * (z_cosmic - z_cosmic ** 2 / 2. * (1. + q0))
     lumdist = propdist * (1. + z_cosmic)
     angdiamdist = lumdist / (1. + z_cosmic) ** 2
