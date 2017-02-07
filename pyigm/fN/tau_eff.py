@@ -219,7 +219,7 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
         idx = np.where(EW_spline['wrest']*u.AA == line)[0]
         if len(idx) != 1:
             raise ValueError('tau_eff: Line %g not included or over included?!' % line)
-        restEW = interpolate.splev(lgNval, EW_spline['tck'][idx], der=0)
+        restEW = interpolate.splev(lgNval, EW_spline['tck'][idx[0]], der=0)
 
         # dz
         dz = ((restEW*u.AA) * (1+zeval) / line).value
