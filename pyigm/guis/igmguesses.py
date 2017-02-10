@@ -514,7 +514,7 @@ E         : toggle displaying/hiding the external absorption model
     def quit(self):
         self.close()
 
- ######################
+######################
 class IGGVelPlotWidget(QtGui.QWidget):
     """ Widget for a velocity plot with interaction.
           Adapted from VelPlotWidget in spec_guis
