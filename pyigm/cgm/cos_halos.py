@@ -107,6 +107,7 @@ class COSHalos(CGMAbsSurvey):
         gal.stellar_mass = summ['LOGMFINAL'][0]
         gal.rvir = galx['RVIR'][0]
         gal.MH = galx['ABUN'][0]
+        gal.abmagr = galx['ABMAGR'][0]
         gal.flag_MH = galx['ABUN_FLAG'][0]
         gal.sdss_phot = [galx[key][0] for key in ['SDSSU','SDSSG','SDSSR','SDSSI','SDSSZ']]
         gal.sdss_phot_sig = [galx[key][0] for key in ['SDSSU_ERR','SDSSG_ERR','SDSSR_ERR','SDSSI_ERR','SDSSZ_ERR']]
@@ -259,7 +260,7 @@ class COSHalos(CGMAbsSurvey):
         pckl_fil : string
           Name of file for pickling
         """
-        warnings.warn("This method will be DEPRECATED")
+        warnings.warn("This method may be DEPRECATED")
         # Loop
         if test is True:
             cos_files = glob.glob(self.fits_path+'/J09*.fits.gz')  # For testing
@@ -657,7 +658,7 @@ class COSHalos(CGMAbsSurvey):
             raise ValueError("Multiple hits.  Should not happen")
 
 
-def update_cos_halos(v10=False, v11=True):
+def update_cos_halos(v10=False, v11=False, v12=True):
     """ Updates the JSON tarball
     Returns
     -------
@@ -667,7 +668,7 @@ def update_cos_halos(v10=False, v11=True):
     # Generate v1.0
     if v10:
         print("Generate v1.0 of the JSON tarball")
-        cos_halos = COSHalos()
+        cos_halos = COSHalos(load=False)
         cos_halos.load_mega()
         tarfil = cos_halos.cdir+'/cos-halos_systems.v1.0.tar.gz'
         cos_halos.write_survey(tarfil)
@@ -757,6 +758,27 @@ def update_cos_halos(v10=False, v11=True):
         tarfil = pyigm.__path__[0]+'/data/CGM/COS_Halos/cos-halos_systems.v1.1.tar.gz'
         cos_halos_v10.write_survey(tarfil)
 
+    if v12:
+        # Adds in abmagr from megastructure
+        print("Generate v1.2 of the JSON tarball")
+        # Load v1.1
+        cos_halos_v11 = COSHalos(load=False)
+        tfile = pyigm.__path__[0]+'/data/CGM/COS_Halos/cos-halos_systems.v1.1.tar.gz'
+        cos_halos_v11.load_sys(tfile=tfile)
+        # Load mega for abmagr
+        print("Loading mega...")
+        cos_halos_mega = COSHalos(load=False, fits_path=os.getenv('DROPBOX_DIR')+'/COS-Halos-Data/Summary/')
+        cos_halos_mega.load_mega(skip_ions=True, verbose=False)
+        # Fill up abmagr
+        for kk, mega_cgm_abs in enumerate(cos_halos_mega.cgm_abs):
+            # Check
+            cgm_abs = cos_halos_v11.cgm_abs[kk]
+            assert mega_cgm_abs.name == cgm_abs.name
+            # Fill
+            cgm_abs.galaxy.abmagr = mega_cgm_abs.galaxy.abmagr
+        # Write
+        tarfil = pyigm.__path__[0]+'/data/CGM/COS_Halos/cos-halos_systems.v1.2.tar.gz'
+        cos_halos_v11.write_survey(tarfil)
 
 class COSDwarfs(COSHalos):
     """Inherits COS Halos Class
