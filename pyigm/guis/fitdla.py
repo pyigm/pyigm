@@ -247,6 +247,9 @@ Q         : Quit the GUI
 
         #self.spec_widg.setFixedWidth(900)
         self.spec_widg.setMinimumWidth(900)
+        
+        # Print help message
+        print(self.help_message)
 
     def on_list_change(self):
         self.update_boxes()
