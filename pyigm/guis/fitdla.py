@@ -30,11 +30,6 @@ from linetools import utils as ltu
 #from pyigm.abssys.lls import LLSSystem
 from pyigm.abssys.dla import DLASystem
 
-#from xastropy.xguis import spec_widgets as xspw
-#from xastropy.xguis import spec_guis as xspg
-#from xastropy.xguis import utils as xxgu
-
-xa_path = imp.find_module('xastropy')[1]
 
 '''
 =======
@@ -520,7 +515,7 @@ Q         : Quit the GUI
     def add_forest(self,inp,z):
         '''Add a Lya/Lyb forest line
         '''
-        from xastropy.igm.abs_sys.abssys_utils import GenericAbsSystem
+        from linetools.isgm.abssystem import GenericAbsSystem
         forest = GenericAbsSystem((0.*u.deg,0.*u.deg), z, [-300.,300.]*u.km/u.s)
         # NHI
         NHI_dict = {'6':12.,'7':13.,'8':14.,'9':15.}
@@ -667,85 +662,4 @@ Q         : Quit the GUI
         self.close()
 
 
-# Script to run XSpec from the command line or ipython
-def run_fitdla(*args, **kwargs):
-    '''
-    Runs the XFitDLAGUI
 
-    Command line or from Python
-    Examples:
-      1.  python ~/xastropy/xastropy/xguis/spec_guis.py 1
-      2.  spec_guis.run_fitdla(filename)
-      3.  spec_guis.run_fitdla(spec1d)
-    '''
-
-    import argparse
-    from specutils import Spectrum1D
-
-    parser = argparse.ArgumentParser(description='Parser for XFitLLSGUI')
-    parser.add_argument("in_file", type=str, help="Spectral file")
-    parser.add_argument("zqso", type=float, help="Use QSO template with zqso")
-    parser.add_argument("-out_file", type=str, help="Output LLS Fit file")
-    parser.add_argument("-smooth", type=float, help="Smoothing (pixels)")
-    parser.add_argument("-dla_fit_file", type=str, help="Input LLS Fit file")
-    parser.add_argument("-conti_file", type=str, help="Input continuum spectrum")
-
-    if len(args) == 0:
-        pargs = parser.parse_args()
-    else: # better know what you are doing!
-        if isinstance(args[0],(Spectrum1D,tuple)):
-            app = QtGui.QApplication(sys.argv)
-            gui = XFitDLAGUI(args[0], **kwargs)
-            gui.show()
-            app.exec_()
-            return
-        else: # String parsing
-            largs = ['1'] + [iargs for iargs in args]
-            pargs = parser.parse_args(largs)
-
-    # Output file
-    try:
-        outfil = pargs.out_file
-    except AttributeError:
-        outfil=None
-
-    # Input LLS file
-    try:
-        dla_fit_file = pargs.dla_fit_file
-    except AttributeError:
-        dla_fit_file=None
-
-    # Quasar redshift (currently required)
-    #try:
-    zqso = pargs.zqso
-    #except AttributeError:
-    #    zqso=None
-
-    app = QtGui.QApplication(sys.argv)
-    gui = XFitDLAGUI(pargs.in_file,outfil=outfil,smooth=pargs.smooth,
-        dla_fit_file=dla_fit_file, zqso=zqso, conti_file=pargs.conti_file)
-    gui.show()
-    app.exec_()
-
-# ################
-if __name__ == "__main__":
-    import sys
-
-    if len(sys.argv) == 1: # TESTING
-
-        flg_tst = 0
-        flg_tst += 2**0  # Fit LLS GUI
-
-        # LLS
-        if (flg_tst % 2**1) >= 2**0:
-            spec_fil = '/Users/xavier/VLT/XShooter/LP/idl_reduced_frames/0952-0115_uvb_coadd_vbin_flx.fits'
-            # Launch
-            spec = lsi.readspec(spec_fil)
-            app = QtGui.QApplication(sys.argv)
-            app.setApplicationName('FitLLS')
-            main = XFitDLAGUI(spec)
-            main.show()
-            sys.exit(app.exec_())
-
-    else: # RUN A GUI
-        run_fitdla()
