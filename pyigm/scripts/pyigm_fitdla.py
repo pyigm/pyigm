@@ -31,10 +31,12 @@ def parser(options=None):
     parser = argparse.ArgumentParser(description='Parser for FitDLAGUI')
     parser.add_argument("in_file", type=str, help="Spectral file")
     parser.add_argument("zqso", type=float, help="Use QSO template with zqso")
-    parser.add_argument("-out_file", type=str, help="Output LLS Fit file")
-    parser.add_argument("-smooth", type=float, help="Smoothing (pixels)")
-    parser.add_argument("-dla_fit_file", type=str, help="Input LLS Fit file")
-    parser.add_argument("-conti_file", type=str, help="Input continuum spectrum")
+    parser.add_argument("--out_file", type=str, help="Output LLS Fit file")
+    parser.add_argument("--smooth", type=float, help="Smoothing (pixels)")
+    parser.add_argument("--dla_fit_file", type=str, help="Input LLS Fit file")
+    parser.add_argument("--conti_file", type=str, help="Input continuum spectrum")
+    parser.add_argument("--zdla", type=float, help="Input DLA redshift")
+    parser.add_argument("--NHI", type=float, help="Input DLA NHI")
 
     if options is None:
         args = parser.parse_args()
@@ -65,7 +67,8 @@ def main(args=None):
     # Run
     app = QtGui.QApplication(sys.argv)
     gui = XFitDLAGUI(pargs.in_file,outfil=pargs.out_file,smooth=pargs.smooth,
-        dla_fit_file=pargs.dla_fit_file, zqso=pargs.zqso, conti_file=pargs.conti_file)
+        dla_fit_file=pargs.dla_fit_file, zqso=pargs.zqso, conti_file=pargs.conti_file,
+                     zdla=pargs.zdla, NHI=pargs.NHI)
     gui.show()
     app.exec_()
 

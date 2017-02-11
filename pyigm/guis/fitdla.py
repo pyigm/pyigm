@@ -6,6 +6,7 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import numpy as np
 import warnings
 import imp
+import pdb
 
 from PyQt4 import QtGui
 from PyQt4 import QtCore
@@ -48,7 +49,8 @@ class XFitDLAGUI(QtGui.QMainWindow):
         04-Mar-2016 by JXP
     """
     def __init__(self, ispec, parent=None, dla_fit_file=None,
-                 zqso=None, outfil=None, smooth=None, dw=0.1,
+                 zqso=None, outfil=None, smooth=None, dw=0.1, zdla=None,
+                 NHI=None,
                  skip_wveval=False, norm=True, conti_file=None):
         QtGui.QMainWindow.__init__(self, parent)
         """
@@ -68,27 +70,32 @@ class XFitDLAGUI(QtGui.QMainWindow):
           continuum (default True).
         conti_file : str, optional
           ASCII file containing the continuum knots (wave, flux)
+        zdla : float, optional
+          Create a DLA at the input redshift
         """
 
         self.help_message = """
-Click on any white region within the velocity plots
-for the following keystroke commands to work:
+Begin by left-clicking in the plot window!
+
+Then any of the following keystroke commands will work:
 
 i,o       : zoom in/out x limits
 I,O       : zoom in/out x limits (larger re-scale)
 Y         : zoom out y limits
 y         : guess y limits
+W         : Show original zooom
 t,b       : set y top/bottom limit
 l,r       : set left/right x limit
-a,m       : Add/modify continuum knot
+a,m,d     : Add/modify/delete continuum knot
 A         : Add a new DLA
-c         : Center Lya on cursor
-g         : Move nearest Lyman line to cursor
+g         : Move nearest Lyman line to cursor and reset z
 N/n       : Increase/decrease NHI
 V/v       : Increase/decrease bvalue
+Z/z       : Increase/decrease zabs
 D         : Delete DLA
 $         : Toggle displaying metal lines
 6,7,8,9   : Add forest lines
+?         : Print these help notes
 Q         : Quit the GUI
         """
 
@@ -148,7 +155,11 @@ Q         : Quit the GUI
                                            llist=self.llist, key_events=False,
                                            abs_sys=self.abssys_widg.abs_sys,
                                            plotzero=1, norm=norm)
-        # Initialize continuum (and LLS if from a file)
+        # Create a DLA?
+        if zdla is not None:
+            self.add_DLA(zdla, NHI=NHI, model=False)
+
+        # Initialize continuum (and DLA if from a file)
         if dla_fit_file is not None:
             self.init_DLA(dla_fit_file,spec)
         else:
@@ -174,7 +185,7 @@ Q         : Quit the GUI
             spec.wavelength,np.ones(len(spec.wavelength))))
 
         # Initialize as needed
-        if dla_fit_file is not None:
+        if (dla_fit_file is not None) or (zdla is not None):
             self.update_boxes()
             self.update_model()
 
@@ -247,7 +258,7 @@ Q         : Quit the GUI
 
         #self.spec_widg.setFixedWidth(900)
         self.spec_widg.setMinimumWidth(900)
-        
+
         # Print help message
         print(self.help_message)
 
@@ -347,15 +358,12 @@ Q         : Quit the GUI
         tau_Lyman = lav.voigt_from_abslines(wa1, all_lines,
                                             ret='tau',
                                             skip_wveval=self.skip_wveval)
-
-        '''
+        all_tau_model = tau_Lyman
         # Loop on forest lines
         for forest in self.all_forest:
-            tau_Lyman = lav.voigt_from_abslines(wa1, forest.lines,
+            tau_Lyman = lav.voigt_from_abslines(wa1, forest, #.lines,
                 ret='tau', skip_wveval=self.skip_wveval)
             all_tau_model += tau_Lyman
-        '''
-        all_tau_model = tau_Lyman
 
         # Flux and smooth
         flux = np.exp(-1. * all_tau_model)
@@ -398,32 +406,38 @@ Q         : Quit the GUI
             return idx
 
     def on_key(self,event):
-        if event.key in ['a','m']: # Modify knots
+        if event.key in ['a','m','d']: # Modify knots
             if event.key == 'a':  # Add a knot
                 x, y = event.xdata, event.ydata
                 self.conti_dict['knots'].append([x, float(y)])
                 self.conti_dict['knots'].sort()
-            elif event.key == 'm':
+            elif event.key in ['m','d']:
+                # Find cloases
                 contx,conty = zip(*self.spec_widg.ax.transData.transform(
                         self.conti_dict['knots']))
-                sep = np.hypot(event.x - np.array(contx),
-                               event.y - np.array(conty))
+                #sep = np.hypot(event.x - np.array(contx),
+                #               event.y - np.array(conty))
+                sep = np.abs(event.x - np.array(contx)),
                 ind = np.argmin(sep)
                 #
-                x, y = event.xdata, event.ydata
-                self.conti_dict['knots'][ind] = [x, float(y)]
+                if event.key == 'm':
+                    x, y = event.xdata, event.ydata
+                    self.conti_dict['knots'][ind] = [x, float(y)]
+                else: # Delete
+                    self.conti_dict['knots'].pop(ind)
+                    #QtCore.pyqtRemoveInputHook()
+                    #pdb.set_trace()
+                    #QtCore.pyqtRestoreInputHook()
                 self.conti_dict['knots'].sort()
             self.update_conti()
         elif event.key == 'A': # New DLA
             # Generate
             z = event.xdata/1215.670 - 1.
-            self.add_DLA(z, bval=30.*u.km/u.s, NHI=20.3)
-        elif event.key in ['a','N','n','v','V','D','$','g']: # DLA-centric
+            self.add_DLA(z)
+        elif event.key in ['a','N','n','v','V','D','$','g','z','Z']: # DLA-centric
             idx = self.get_sngl_sel_sys()
             if idx is None:
                 return
-            elif event.key == 'c': # Center on Lya
-                self.abssys_widg.all_abssys[idx].zabs = event.xdata/1215.6700-1.
             elif event.key == 'g': # Move nearest line to cursor
                 wrest = event.xdata/(1+self.abssys_widg.all_abssys[idx].zabs)
                 #QtCore.pyqtRemoveInputHook()
@@ -432,6 +446,10 @@ Q         : Quit the GUI
                 awrest = np.array([iline.wrest.value for iline in self.abssys_widg.all_abssys[idx].dla_lines])
                 imn = np.argmin(np.abs(wrest-awrest))
                 self.abssys_widg.all_abssys[idx].zabs = event.xdata/awrest[imn]-1.
+            elif event.key == 'Z': #Add to redshift
+                self.abssys_widg.all_abssys[idx].zabs += 0.0002
+            elif event.key == 'z': #Subtract from redshift
+                self.abssys_widg.all_abssys[idx].zabs -= 0.0002
             elif event.key == 'N': #Add to NHI
                 self.abssys_widg.all_abssys[idx].NHI += 0.05
             elif event.key == 'n': #Subtract from NHI
@@ -470,6 +488,8 @@ Q         : Quit the GUI
             print("Setting the quit attribute, the calling script should "
                   "abort after you close the GUI")
             self.script_quit = True
+        if event.key == '?':
+            print(self.help_message)
         else:
             self.spec_widg.on_key(event)
 
@@ -516,28 +536,29 @@ Q         : Quit the GUI
         self.spec_widg.canvas.draw()
 
     def add_forest(self,inp,z):
-        '''Add a Lya/Lyb forest line
-        '''
+        """Add a Lya/Lyb forest line
+        """
         from linetools.isgm.abssystem import GenericAbsSystem
-        forest = GenericAbsSystem((0.*u.deg,0.*u.deg), z, [-300.,300.]*u.km/u.s)
+        forest = [] #GenericAbsSystem((0.*u.deg,0.*u.deg), z, [-300.,300.]*u.km/u.s)
         # NHI
         NHI_dict = {'6':12.,'7':13.,'8':14.,'9':15.}
-        forest.NHI=NHI_dict[inp]
+        forest_NHI=NHI_dict[inp]
         # Lines
         for name in ['HI 1215','HI 1025', 'HI 972']:
-            aline = AbsLine(name,
-                linelist=self.llist[self.llist['List']], z=forest.zabs)
+            aline = AbsLine(name, linelist=self.llist[self.llist['List']], z=z)
             # Attributes
-            aline.attrib['N'] = 10**forest.NHI * u.cm**-2
+            aline.attrib['N'] = 10**forest_NHI * u.cm**-2
             aline.attrib['b'] = 20.*u.km/u.s
             # Append
-            forest.lines.append(aline)
+            forest.append(aline)
         # Append to forest lines
         self.all_forest.append(forest)
 
-    def add_DLA(self,z, NHI=20.3, bval=30.*u.km/u.s, comment='None', model=True):
+    def add_DLA(self,z, NHI=None, bval=30.*u.km/u.s, comment='None', model=True):
         """Generate a new DLA
         """
+        if NHI is None:
+            NHI = 20.3
         # Lya, Lyb
         dla_lines = []  # For convenience
         for trans in ['HI 1025', 'HI 1215']:
