@@ -113,7 +113,7 @@ Q         : Quit the GUI
         self.count_dla = 0
         self.dla_model = None
         if smooth is None:
-            self.smooth = 0.
+            self.smooth = 3. # Pixels
         else:
             self.smooth = smooth
         self.base_continuum = None
@@ -538,8 +538,7 @@ Q         : Quit the GUI
     def add_forest(self,inp,z):
         """Add a Lya/Lyb forest line
         """
-        from linetools.isgm.abssystem import GenericAbsSystem
-        forest = [] #GenericAbsSystem((0.*u.deg,0.*u.deg), z, [-300.,300.]*u.km/u.s)
+        forest = []
         # NHI
         NHI_dict = {'6':12.,'7':13.,'8':14.,'9':15.}
         forest_NHI=NHI_dict[inp]
