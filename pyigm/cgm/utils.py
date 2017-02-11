@@ -166,9 +166,9 @@ def velcorr_mould(galaxy,cosmo=None):
 
     # Transform to local group frame
     c = constants.c.to(u.km/u.s)
-    v_LG = c * galaxy.z - 79.0 * (u.km/u.s) * np.cos(galcoords_gal.l.value) \
-        * np.cos(galcoords_gal.b.value) + 296.0 * (u.km/u.s) * np.sin(galcoords_gal.l.value) \
-        * np.cos(galcoords_gal.b.value) - 36.0 * (u.km/u.s) * np.sin(galcoords_gal.b.value)
+    v_LG = c * galaxy.z - 79.0 * (u.km/u.s) * np.cos(galcoords_gal.l).value \
+        * np.cos(galcoords_gal.b).value + 296.0 * (u.km/u.s) * np.sin(galcoords_gal.l).value \
+        * np.cos(galcoords_gal.b).value - 36.0 * (u.km/u.s) * np.sin(galcoords_gal.b).value
 
     # Calculate object-attractor angular and velocity distances (eq. 2 in Mould 2000+)
     theta = galaxy.coord.separation(clcoords)
