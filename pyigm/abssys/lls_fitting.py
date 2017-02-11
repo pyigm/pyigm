@@ -317,7 +317,7 @@ def setup_lls_fit_analy(spec_fil, zlls, lls_windows, NHI_mnx, nNHI=100, spec_key
     return spec, xspec, gdwv, NHI, tau0
 
 
-def maxlik_fitlinearc(lls_dict, neval=100, nevalC=50, slope_pivot=911.*u.AA, **kwargs):
+def maxlik_fitlinearc(lls_dict, neval=100, nevalC=50, min_dark=0.1, slope_pivot=911.*u.AA, **kwargs):
     """ Max Likelihood analysis of a Lyman limit with fit to a linear continuum over a given range
     Uses ~25Gb with neval = 100
 
@@ -387,6 +387,7 @@ def maxlik_fitlinearc(lls_dict, neval=100, nevalC=50, slope_pivot=911.*u.AA, **k
     # Arrays -- The following is for HSLA outputs
     count_array = np.outer(np.round(spec['GROSSCOUNTS']*spec['EXP_PIX']).data.flatten()[gdwv], np.ones(neval))
     dark_dumb = np.median(((spec['GROSSCOUNTS']-spec['NETCOUNTS'])*spec['EXP_PIX']).data.flatten()[gdwv])
+    dark_dumb = max(dark_dumb, min_dark)
     dark_array = np.outer(dark_dumb*np.ones(len(gdwv)), np.ones(neval))
     calib_array = np.outer(1./spec['FLUXFACTOR'].data.flatten()[gdwv], np.ones(neval))
     expt_array = np.outer(spec['EXP_PIX'].data.flatten()[gdwv], np.ones(neval))
@@ -445,7 +446,6 @@ def maxlik_fitlinearc(lls_dict, neval=100, nevalC=50, slope_pivot=911.*u.AA, **k
     lnP_LL = -1*model_counts + count_grid * np.log(model_counts) - gammaln(count_grid+1)
     lnP_C = -1*(obs_conti_grid-model_conti_grid)**2 / 2 / (sig_conti_grid**2)
 
-    #pdb.set_trace()
     # Sum
     sum_LL = np.sum(lnP_LL, axis=0)
     sum_C = np.sum(lnP_C, axis=0)
