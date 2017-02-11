@@ -10,12 +10,13 @@ import pdb
 from astropy import units as u
 from astropy import cosmology
 from astropy.coordinates import SkyCoord
+from astropy import constants
 
 from linetools import utils as ltu
 
 from pyigm.field.galaxy import Galaxy
 
-def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, chk_lowz=True):
+def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True):
     """
     Parameters
     ----------
@@ -43,7 +44,8 @@ def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, chk_lowz=True):
     if ang_sep is None:
         ang_sep = igm_sys.coord.separation(galaxy.coord).to('arcsec')
     # Handle cases where object's distance needs correction from peculiar velocities
-    if (galaxy.z < 0.05) and chk_lowz:
+    # This is especially important at very low redshifts
+    if (galaxy.z < 0.05) and correct_lowz:
         velcorrdict = velcorr_mould(galaxy,cosmo=cosmo)
         kpc_amin = velcorrdict['scale'].to(u.kpc/u.arcmin)
         rho = ang_sep.to('arcmin') * kpc_amin
@@ -163,10 +165,10 @@ def velcorr_mould(galaxy,cosmo=None):
     galcoords_gal = galaxy.coord.transform_to(frame='galactic')
 
     # Transform to local group frame
-    c = 2.99792458e5 * u.km/u.s
-    v_LG = c * galaxy.z - 79.0 * (u.km/u.s) * np.cos(galcoords_gal.l).value \
-        * np.cos(galcoords_gal.b).value + 296.0 * (u.km/u.s) * np.sin(galcoords_gal.l).value \
-        * np.cos(galcoords_gal.b).value - 36.0 * (u.km/u.s) * np.sin(galcoords_gal.b).value
+    c = constants.c.to(u.km/u.s)
+    v_LG = c * galaxy.z - 79.0 * (u.km/u.s) * np.cos(galcoords_gal.l.value) \
+        * np.cos(galcoords_gal.b.value) + 296.0 * (u.km/u.s) * np.sin(galcoords_gal.l.value) \
+        * np.cos(galcoords_gal.b.value) - 36.0 * (u.km/u.s) * np.sin(galcoords_gal.b.value)
 
     # Calculate object-attractor angular and velocity distances (eq. 2 in Mould 2000+)
     theta = galaxy.coord.separation(clcoords)
@@ -174,19 +176,19 @@ def velcorr_mould(galaxy,cosmo=None):
     r0a = np.sqrt(v_LG ** 2 + clLGvel ** 2 - 2. * v_LG * clLGvel * costheta)
 
     # Determine if object is in direction of one of the attractors.  If not, calculate velocity!
-    virgo = 0
-    GA = 0
-    shapley = 0
+    virgo = False
+    GA = False
+    shapley = False
 
     if (theta[0] < clrad[0]) & (
         ((clLGvel[0] - r0a[0]) > clrangelo[0]) | ((clLGvel[0] + r0a[0]) < clrangehi[0])):
-        virgo = 1
+        virgo = True
     if (theta[1] < clrad[1]) & (
         (clLGvel[1] - r0a[1] > clrangelo[1]) | (clLGvel[1] + r0a[1] < clrangehi[1])):
-        GA = 1
+        GA = True
     if (theta[2] < clrad[2]) & (
         (clLGvel[2] - r0a[2] > clrangelo[2]) | (clLGvel[2] + r0a[2] < clrangehi[2])):
-        shapley = 1
+        shapley = True
 
     if virgo or GA or shapley:
         v_infall = np.zeros(3) * u.km/u.s

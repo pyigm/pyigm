@@ -107,7 +107,7 @@ class CGMAbsSys(object):
         return slf
 
     def __init__(self, galaxy, igm_sys, cosmo=None, name=None, rho=None, PA=None,
-                 ang_sep=None, chk_lowz=True, **kwargs):
+                 ang_sep=None, correct_lowz=True, **kwargs):
         """
         Parameters
         ----------
@@ -118,8 +118,9 @@ class CGMAbsSys(object):
         rho
         PA
         ang_sep
-        chk_lowz : bool, optional
-          Demand that z>0.05  [for impact parameter calculation]
+        correct_lowz : bool, optional
+          If galaxy z < 0.05, correct for peculiar velocies in impact parameter
+          calculation
 
         Returns
         -------
@@ -136,10 +137,6 @@ class CGMAbsSys(object):
             raise IOError('CGMAbsSys instantiated with an IGMSystem')
         self.igm_sys = igm_sys
 
-        # Raise error for redshifts not in the Hubble flow
-        #if (galaxy.z < 0.05) and chk_lowz:
-        #    raise NotImplementedError("Not prepared for such low redshift.  Need to implement corrections.")
-
         # Calculate rho
         if cosmo is None:
             warnings.warn('cgm.CGMAbsSys: Using WMAP9 cosmology')
@@ -149,7 +146,7 @@ class CGMAbsSys(object):
 
         # Impact parameter and PA
         if rho is None:
-            rho, iang = calc_rho(galaxy, igm_sys, self.cosmo, ang_sep=ang_sep, chk_lowz=chk_lowz)
+            rho, iang = calc_rho(galaxy, igm_sys, self.cosmo, ang_sep=ang_sep, correct_lowz=correct_lowz)
             if ang_sep is None:
                 ang_sep = iang
         self.rho = rho
