@@ -289,6 +289,7 @@ Q         : Quit the GUI
             iline.attrib['N'] = 10**self.abssys_widg.all_abssys[idx].NHI * u.cm**-2
             iline.attrib['b'] = self.abssys_widg.all_abssys[idx].bval
         # Update the rest
+        self.llist['z'] = self.abssys_widg.all_abssys[idx].zabs
         self.update_model()
         self.draw()
 
@@ -488,7 +489,7 @@ Q         : Quit the GUI
             print("Setting the quit attribute, the calling script should "
                   "abort after you close the GUI")
             self.script_quit = True
-        if event.key == '?':
+        elif event.key == '?':
             print(self.help_message)
         else:
             self.spec_widg.on_key(event)
