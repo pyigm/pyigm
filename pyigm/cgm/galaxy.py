@@ -77,7 +77,17 @@ class GalaxyCGM(CGM):
             # OVII line
             aline = ovii.copy()
             aline.attrib['coord'] = gc
-            if isinstance(row['b'], float):
+            z = row['Vel']/c_kms
+            try:
+                aline.setz(z)
+            except IOError:
+                z = 0.
+                vlim = np.array([-300,300]) * u.km/u.s
+                aline.attrib['flag_EW'] = 3
+                aline.attrib['flag_N'] = 0  # Might be able to set an upper limit
+                aline.attrib['EW'] = row['EW1'] / 1e3 * u.AA
+                aline.attrib['sig_EW'] = 99. * u.AA
+            else:
                 aline.attrib['b'] = row['b'] * u.km / u.s
                 aline.attrib['flag_EW'] = 1
                 aline.attrib['EW'] = row['EW1'] / 1e3 * u.AA
@@ -87,16 +97,7 @@ class GalaxyCGM(CGM):
                 aline.attrib['flag_N'] = 1
                 aline.attrib['logN'] = row['logNO']
                 aline.attrib['sig_logN'] = [row['e_logNO'], row['E_logNO']]
-                z = row['Vel']/c_kms
-            else:
-                vlim = np.array([-300,300]) * u.km/u.s
-                aline.attrib['flag_EW'] = 3
-                aline.attrib['flag_N'] = 0  # Might be able to set an upper limit
-                aline.attrib['EW'] = row['EW1'] / 1e3 * u.AA
-                aline.attrib['sig_EW'] = 99. * u.AA
-                z=0.
             # OVII
-            aline.setz(z)
             aline.limits.set(vlim)
             # Generate component and add
             comp = AbsComponent.from_abslines([aline])
