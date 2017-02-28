@@ -52,6 +52,8 @@ class GalaxyCGM(CGM):
         Fang+15
         """
         from linetools.lists.linelist import LineList
+        from linetools.analysis.absline import linear_clm
+
         llist = LineList('EUV',use_ISM_table=False)
         ovii = AbsLine('OVII 21', linelist=llist)
 
@@ -89,18 +91,21 @@ class GalaxyCGM(CGM):
                 # N_OVII
                 aline.attrib['flag_N'] = 1
                 aline.attrib['logN'] = row['logNO']
-                aline.attrib['sig_logN'] = [row['e_logNO'], row['E_logNO']]
+                aline.attrib['sig_logN'] = np.array([row['e_logNO'], row['E_logNO']])
+                # Fill linear
+                _,_ = linear_clm(aline.attrib)
             # OVII
             aline.limits.set(vlim)
             # Generate component and add
             comp = AbsComponent.from_abslines([aline])
+            comp.synthesize_colm()
             # Instantiate
-            abssys = IGMSystem(gc, z, vlim)
+            abssys = IGMSystem(gc, z, vlim, name=row['Name'])
             abssys.add_component(comp, chk_sep=False)
             # CGM Abs
             cgmabs = CGMAbsSys(self.galaxy, abssys, Galactic=True)
             # Add to cgm_abs
-            self.abs.cgm_abs.append(abssys)
+            self.abs.cgm_abs.append(cgmabs)
 
 
     def write(self, outfil='COS-Halos_sys.tar.gz'):
