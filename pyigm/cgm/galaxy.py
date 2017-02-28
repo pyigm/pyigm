@@ -4,31 +4,22 @@
 from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
-import os, glob
 import pdb
 import warnings
-import h5py
-import json, yaml
 
-from astropy.io import fits, ascii
 from astropy import units as u
 from astropy import constants as const
 from astropy.table import Table, Column
 from astropy.coordinates import SkyCoord
 
 
-from linetools.spectra import io as lsio
 from linetools.spectralline import AbsLine
-from linetools.analysis import absline as ltaa
-from linetools.analysis import abskin as laak
 from linetools.isgm.abscomponent import AbsComponent
-from linetools.isgm.abssystem import GenericAbsSystem
 
-from pyigm.metallicity.pdf import MetallicityPDF, DensityPDF, GenericPDF
-from pyigm.cgm.cgmsurvey import CGMAbsSurvey
+from pyigm.abssys.igmsys import IGMSystem
 from pyigm.field.galaxy import Galaxy
 from .cgm import CGM, CGMAbsSys
-from pyigm.abssys.igmsys import IGMSystem
+from .cgmsurvey import CGMAbsSurvey
 import pyigm
 
 c_kms = const.c.to('km/s').value
@@ -50,6 +41,8 @@ class GalaxyCGM(CGM):
         milkyway = Galaxy((0.,0.), z=0.)
         CGM.__init__(self, milkyway)
         self.refs = ''
+        # Absorption
+        self.abs = CGMAbsSurvey(survey='Galaxy')
         # Hot gas
         if load:
             self.load_hotgas()
@@ -102,10 +95,12 @@ class GalaxyCGM(CGM):
             # Generate component and add
             comp = AbsComponent.from_abslines([aline])
             # Instantiate
-            abssys = GenericAbsSystem(gc, z, vlim)
+            abssys = IGMSystem(gc, z, vlim)
             abssys.add_component(comp, chk_sep=False)
+            # CGM Abs
+            cgmabs = CGMAbsSys(self.galaxy, abssys, Galactic=True)
             # Add to cgm_abs
-            self.cgm_abs.append(abssys)
+            self.abs.cgm_abs.append(abssys)
 
 
     def write(self, outfil='COS-Halos_sys.tar.gz'):

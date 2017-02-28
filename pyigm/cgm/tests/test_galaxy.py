@@ -12,6 +12,6 @@ from ..galaxy import GalaxyCGM
 
 def test_init():
     mwcgm = GalaxyCGM()
-    assert len(mwcgm.cgm_abs) > 0
+    assert len(mwcgm.abs.cgm_abs) > 0
     assert 'Fang+15' in mwcgm.refs
 
