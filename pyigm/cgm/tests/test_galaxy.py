@@ -16,3 +16,4 @@ def test_init():
     assert 'Fang+15' in mwcgm.refs
     # OVII table
     ovii_tbl = mwcgm.abs.ion_tbl((8,7))
+    assert len(ovii_tbl['sig_logN'][0]) == 2

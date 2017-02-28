@@ -321,7 +321,7 @@ class IGMSurvey(object):
                 irow = abs_sys._ionN[mt]
                 # Cut on flg_clm
                 if irow['flag_N'] > 0:
-                    row = [abs_sys.name] + [irow[key] for key in keys[1:]]
+                    row = [abs_sys.name] + [irow[key][0] for key in keys[1:]]
                     t.add_row(row)   # This could be slow
                 else:
                     if skip_null is False:
