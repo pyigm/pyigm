@@ -33,7 +33,7 @@ def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True, Galactic=F
     rho : Quantity
       impact parameter in kpc
     ang_sep : Angle
-      separation in arsec
+      separation in arsec (deg for Galactic)
 
     """
     # Loop?
