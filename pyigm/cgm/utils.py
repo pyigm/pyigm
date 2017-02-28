@@ -16,13 +16,17 @@ from linetools import utils as ltu
 
 from pyigm.field.galaxy import Galaxy
 
-def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True):
-    """
+
+def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True, Galactic=False):
+    """ Calculate the impact parameter between the galaxy and IGM sightline
+
     Parameters
     ----------
     galaxy : Galaxy object
     igm_sys : IGMSystem object or list
     cosmo : astropy.cosmology
+    Galactic : bool, optional
+      Calculate for our Galaxy!
 
     Returns
     -------
@@ -32,6 +36,7 @@ def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True):
       separation in arsec
 
     """
+    # Loop?
     if isinstance(igm_sys, list):
         rhos = []
         angs = []
@@ -40,6 +45,20 @@ def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True):
             rhos.append(irho.value)
             angs.append(iang)
         return np.array(rhos)*u.kpc, angs
+    # Galactic?
+    if Galactic:
+        d_Sun = 8.0 * u.kpc
+        xcomp = d_Sun * ((np.cos(igm_sys.coord.transform_to('galactic').l)*
+                         np.cos(igm_sys.coord.transform_to('galactic').b))**2 - 1.)
+        ycomp = d_Sun*(np.cos(igm_sys.coord.transform_to('galactic').l)*
+                       np.cos(igm_sys.coord.transform_to('galactic').b)*
+                       np.sin(igm_sys.coord.transform_to('galactic').l)*
+                       np.cos(igm_sys.coord.transform_to('galactic').b))
+        zcomp = d_Sun*(np.cos(igm_sys.coord.transform_to('galactic').l)*
+                       np.cos(igm_sys.coord.transform_to('galactic').b)*
+                       np.sin(igm_sys.coord.transform_to('galactic').b))
+        d = np.sqrt(xcomp**2 + ycomp**2 + zcomp**2)
+        return d, None
 
     if ang_sep is None:
         ang_sep = igm_sys.coord.separation(galaxy.coord).to('arcsec')

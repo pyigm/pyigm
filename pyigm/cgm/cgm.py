@@ -146,7 +146,8 @@ class CGMAbsSys(object):
 
         # Impact parameter and PA
         if rho is None:
-            rho, iang = calc_rho(galaxy, igm_sys, self.cosmo, ang_sep=ang_sep, correct_lowz=correct_lowz)
+            rho, iang = calc_rho(galaxy, igm_sys, self.cosmo, ang_sep=ang_sep,
+                                 correct_lowz=correct_lowz, **kwargs)
             if ang_sep is None:
                 ang_sep = iang
         self.rho = rho
