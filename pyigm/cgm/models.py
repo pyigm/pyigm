@@ -14,6 +14,11 @@ try:
 except NameError:  # For Python 3
     basestring = str
 
+def rad3d2(xyz):
+    return xyz[0]**2 + xyz[1]**2 + xyz[-1]**2
+
+# Constants
+m_p = const.m_p.cgs.value # g
 
 class CGMModel(object):
     """Model of the CGM
@@ -92,12 +97,25 @@ class ModifiedNFW(CGMPhase):
     -----------
     M_halo : float, optional
       log10 of the Halo mass (solar masses)
+    c : float, optional
+      concentration of the halo
+    f_hot : float, optional
+      Fraction of the brayons in this hot phase
+    alpha : float, optional
+      Parameter to modify NFW profile power-law
+    y0 : float, optional
+      Parameter to modify NFW profile position
     """
-    def __init__(self, M_halo=12.2, c=7.67, **kwargs):
+    def __init__(self, M_halo=12.2, c=7.67, f_hot=0.9, alpha=0., y0=1., **kwargs):
         # Init
         CGMPhase.__init__(self, 'hot')
         # Param
         self.M_halo = M_halo
+        self.c = c
+        self.alpha = alpha
+        self.y0 = y0
+        self.f_hot = f_hot
+        # Init more
         self.setup_param()
 
     def setup_param(self):
@@ -109,7 +127,9 @@ class ModifiedNFW(CGMPhase):
         self.rhoc = 9.2e-30 * u.g / u.cm**3
         # DM
         self.r200 = (((3*10**self.M_halo * const.M_sun.cgs) / (4*np.pi*200*self.rhoc))**(1/3)).to('kpc')
-        pdb.set_trace()
+        self.rho0 = 200*self.rhoc/3  * self.c**3 / self.fy(self.c)   # Central density
+        # Misc
+        self.mu = 1.33   # Reduced mass correction for Helium
 
     def fy(self, y):
         """ Enclosed mass function
@@ -122,6 +142,61 @@ class ModifiedNFW(CGMPhase):
         f_y : float or ndarray
 
         """
-        f_y = 
+        f_y = np.log(1+y) - y/(1+y)
+        return f_y
 
+    def ne(self, xyz):
+        """ Calculate n_e from n_H with a correction for Helium
+        Assume 25% mass is Helium and both electrons are off
 
+        Parameters
+        ----------
+        xyz
+
+        Returns
+        -------
+        n_e : float or ndarray
+          electron density in cm**-3
+
+        """
+        ne = self.nH(xyz) * 1.1667
+        # Return
+        return ne
+
+    def nH(self, xyz):
+        """ Calculate the Hydrogen number density
+        Includes a correction for Helium
+
+        Parameters
+        ----------
+        xyz
+
+        Returns
+        -------
+        nH : float or ndarray
+          Density in cm**-3
+
+        """
+        nH = self.rho(xyz).value / self.mu / m_p
+        # Return
+        return nH
+
+    def rho(self, xyz):
+        """ Mass density in baryons; modified
+
+        Parameters
+        ----------
+        xyz : ndarray
+          Position assumed in kpc
+
+        Returns
+        -------
+        rho : Quantity
+          Density in g / cm**-3
+
+        """
+        radius = np.sqrt(rad3d2(xyz))
+        y = self.c * (radius/self.r200.value)
+        rho = (self.fb*self.f_hot*self.rho0) / y**(1-self.alpha) / (self.y0+y)**(2+self.alpha)
+        # Return
+        return rho
