@@ -155,7 +155,7 @@ class CGMAbsSurvey(object):
         for cgmabs in self.cgm_abs:
             if fill_ion:
                 cgmabs.igm_sys.fill_ionN()
-            if len(cgmabs.igm_sys._ionN) > 0:
+            if cgmabs.igm_sys._ionN is not None:
                 dumb._abs_sys.append(cgmabs.igm_sys)
                 # Names
                 names.append(cgmabs.name)

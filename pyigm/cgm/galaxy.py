@@ -101,7 +101,7 @@ class GalaxyCGM(CGM):
             comp = AbsComponent.from_abslines([aline])
             comp.synthesize_colm()
             # Instantiate
-            abssys = IGMSystem(gc, z, vlim, name=row['Name']+'_z0')
+            abssys = IGMSystem(gc, z, vlim, name=row['Name']+'_z0', zem=row['z'])
             abssys.add_component(comp, chk_sep=False)
             # CGM Abs
             cgmabs = CGMAbsSys(self.galaxy, abssys, Galactic=True)
@@ -143,14 +143,14 @@ class GalaxyCGM(CGM):
             minsep = np.min(comp.coord.separation(scoord).to('arcsec'))
             if minsep < 30*u.arcsec:
                 idx = np.argmin(comp.coord.separation(scoord).to('arcsec'))
-                self.abs.cgm_abs[idx].igm_sys.add_component(comp, chk_sep=False)
+                self.abs.cgm_abs[idx].igm_sys.add_component(comp, chk_sep=False, debug=True)
             else:  # New
                 if row['RV'] > 0:
                     zem = row['RV']/3e5
                 else:
                     zem = row['z']
-                abssys = IGMSystem(gc, zem, vlim, name=row['Name']+'_z0')
-                abssys.add_component(comp, chk_sep=False)
+                abssys = IGMSystem(gc, comp.zcomp, vlim, name=row['Name']+'_z0', zem=zem)
+                abssys.add_component(comp, chk_sep=False, debug=True)
                 # CGM Abs
                 cgmabs = CGMAbsSys(self.galaxy, abssys, Galactic=True)
                 # Add to cgm_abs
