@@ -17,3 +17,9 @@ def test_init():
     # OVII table
     ovii_tbl = mwcgm.abs.ion_tbl((8,7))
     assert len(ovii_tbl['sig_logN'][0]) == 2
+    # OVI table
+    ovi_tbl = mwcgm.abs.ion_tbl((8,6))
+    # Usage
+    coords = mwcgm.abs.scoord
+    #pytest.set_trace()
+

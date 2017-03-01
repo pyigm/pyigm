@@ -59,6 +59,7 @@ class GalaxyCGM(CGM):
 
         # Fang+15  Table 1  [OVII]
         self.fang15 = Table.read(pyigm.__path__[0]+'/data/CGM/Galaxy/fang15_table1.dat', format='cds')
+        print('Loading Fang+15 for OVII')
         # Reference
         if len(self.refs) > 0:
             self.refs += ','
@@ -100,13 +101,60 @@ class GalaxyCGM(CGM):
             comp = AbsComponent.from_abslines([aline])
             comp.synthesize_colm()
             # Instantiate
-            abssys = IGMSystem(gc, z, vlim, name=row['Name'])
+            abssys = IGMSystem(gc, z, vlim, name=row['Name']+'_z0')
             abssys.add_component(comp, chk_sep=False)
             # CGM Abs
             cgmabs = CGMAbsSys(self.galaxy, abssys, Galactic=True)
             # Add to cgm_abs
             self.abs.cgm_abs.append(cgmabs)
 
+        scoord = self.abs.scoord  # Sightline coordiantes
+        # Savage+03  Table 2  [OVI] -- Thick disk/halo only??
+        print('Loading Savage+03 for OVI')
+        self.savage03 = Table.read(pyigm.__path__[0] + '/data/CGM/Galaxy/savage03_table2.fits')
+        # Reference
+        if len(self.refs) > 0:
+            self.refs += ','
+        self.refs += 'Savage+03'
+        # Generate the systems
+        # # (should check to see if low-ion ones exist already)
+        for row in self.savage03:
+            # Coordinates
+            coord = SkyCoord(ra=row['_RA']*u.deg, dec=row['_DE']*u.deg, frame='fk5')
+            gc = coord.transform_to('galactic')
+            # Build the component
+            vlim = np.array([row['V-'],row['V_']])*u.km/u.s
+            comp = AbsComponent(gc, (8,6), 0., vlim)
+            # Add attributes
+            if row['b'] > 0.:
+                comp.attrib['vcen'] = row['__v_obs']*u.km/u.s
+                comp.attrib['sig_vcen'] = row['e__v_obs']*u.km/u.s
+                comp.attrib['b'] = row['b']*u.km/u.s
+                comp.attrib['sig_b'] = row['e_b']*u.km/u.s
+                # Column
+                comp.flag_N = 1
+                comp.logN = row['logN_OVI_']
+                comp.sig_logN = np.sqrt(row['e_sc']**2 + row['e_sys']**2)
+            else: # Upper limit
+                comp.flag_N = 3
+                comp.logN = row['logN_OVI_']
+                comp.sig_logN = 99.
+            # Check for existing system
+            minsep = np.min(comp.coord.separation(scoord).to('arcsec'))
+            if minsep < 30*u.arcsec:
+                idx = np.argmin(comp.coord.separation(scoord).to('arcsec'))
+                self.abs.cgm_abs[idx].igm_sys.add_component(comp, chk_sep=False)
+            else:  # New
+                if row['RV'] > 0:
+                    zem = row['RV']/3e5
+                else:
+                    zem = row['z']
+                abssys = IGMSystem(gc, zem, vlim, name=row['Name']+'_z0')
+                abssys.add_component(comp, chk_sep=False)
+                # CGM Abs
+                cgmabs = CGMAbsSys(self.galaxy, abssys, Galactic=True)
+                # Add to cgm_abs
+                self.abs.cgm_abs.append(cgmabs)
 
     def write(self, outfil='COS-Halos_sys.tar.gz'):
         """ Write the survey to a tarball of JSON files
