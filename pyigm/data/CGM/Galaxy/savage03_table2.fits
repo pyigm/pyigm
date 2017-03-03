@@ -1,0 +1,167 @@
+SIMPLE  =                    T / Standard FITS Format                           BITPIX  =                    8 / Character data                                 NAXIS   =                    0 / No Image --- just extension(s)                 EXTEND  =                    T / There are standard extensions                  ORIGIN  = 'xml2fits_v1.95'     / Converted from XML-Astrores to FITS                                     e-mail: question@simbad.u-strasbg.fr                   COMMENT  ARG='-rm'                                                              LONGSTRN= 'OGIP 1.0'           / Long string convention (&/CONTINUE) may be usedDATE    = '2017-03-01'         / Written on 2017-03-01:12:52:33 (GMT)                                        by: apache@vizier.u-strasbg.fr                              **********************************************************                          EXCERPT from catalogues stored in VizieR (CDS)                                             with the following conditions:                                   **********************************************************                                                                                                      VizieR Astronomical Server vizier.u-strasbg.fr                                  Date: 2017-03-01T12:52:33 [V1.99+ (14-Oct-2013)]                                Explanations and Statistics of UCDs: See LINK below                             In case of problem, please report to: cds-question@unistra.fr                                                                                          INFO    = 'votable-version=1.99+ (14-Oct-2013)' / #                             INFO    = '-ref=VIZ58b6c3bc6277' / #                                            INFO    = '-out.max=unlimited' / #                                              Q-PARAMS=                   38 / Number of queryParameters (followed by list)            -oc.form=dec                                                                    -out.max=unlimited                                                              #out.form=FITS (binary) Table                                                   -out.all=2                                                                      -nav=cat:J/ApJS/146/125&tab:{J/ApJS/146/125/table2}&key:source=J/ApJS/1         46/125/table2&HTTPPRM:&                                                         -c.eq=J2000                                                                     -c.r= 2                                                                         -c.u=arcmin                                                                     -c.geom=r                                                                       -source=J/ApJS/146/125/table2                                                   -order=I                                                                        -out=Name                                                                       -out=n_Name                                                                     -out=RV                                                                         -out=z                                                                          -out=Q                                                                          -out=V-                                                                         -out=u_V-                                                                       -out=V+                                                                         -out=u_V+                                                                       -out=<v>exp                                                                     -out.all=2                                                                      -out=<v>obs                                                                     -out=e_<v>obs                                                                   -out=b                                                                          -out=u_b                                                                        -out=e_b                                                                        -out=l_logN(OVI)                                                                -out=logN(OVI)                                                                  -out=n_logN(OVI)                                                                -out=e_sc                                                                       -out=n_sc                                                                       -out=e_sys                                                                      -out=l_logNsin|b|                                                               -out=logNsin|b|                                                                 -out=_RA                                                                        -out=_DE                                                                        -out.all=2                                                                      #                                                                               #RESOURCE=yCat_21460125                                                         #Name: J/ApJS/146/125                                                           #Title: O VI in the galactic halo (Savage+, 2003)                               #Coosys J2000: eq_FK5 J2000                                                                                                                            END                                                                                                                                                                                                                                             XTENSION= 'BINTABLE'           / Binary Table Extension                         BITPIX  =                    8 / binary data                                    NAXIS   =                    2 / Simple 2-D matrix                              NAXIS1  =                   75 / Number of bytes per record                     NAXIS2  =                  104 / Number of records                              PCOUNT  =                    0 / Get rid of random parameters                   GCOUNT  =                    1 / Only one group (isn't it obvious?)             TFIELDS =                   25 / Number of data fields (columns)                CDS-CAT = 'J/ApJS/146/125'     / Catalogue designation in CDS nomenclature               O VI in the galactic halo (Savage+, 2003)                              EXTNAME = 'J_ApJS_146_125_table2' / Identification of the table                 CDS-NAME= 'J/ApJS/146/125/table2' / Table name in METAtab                                *Results for O VI in the Thick Disk of the Milky Way                   UCD__1  = 'meta.id;meta.main'  / ................................byte#0         TDISP1  = 'A14     '           / Display Fortran Format                         TFORM1  = '14A     '           / Ascii string                                   TTYPE1  = 'Name    '           / Object name                                    UCD__2  = 'meta.note'          / ................................byte#14        TDISP2  = 'A1      '           / Display Fortran Format                         TFORM2  = 'A       '           / Ascii string                                   TTYPE2  = 'n_Name  '           / [b] Note on Name (1)                           UCD__3  = 'phys.veloc;pos.heliocentric' / .......................byte#15        TDISP3  = 'I4      '           / Display Fortran Format                         TFORM3  = 'I       '           / 16-bit (short) integer                         TTYPE3  = 'RV      '           / ? Radial velocity [NULL integer written as an                                   empty string]                                  TUNIT3  = 'km/s    '           / kilometre per second                           TNULL3  =               -32768 / NULL definition                                UCD__4  = 'src.redshift'       / ................................byte#17        TDISP4  = 'F7.4    '           / Display Fortran Format                         TFORM4  = 'E       '           / 32-bit floating-point (simple precision)       TTYPE4  = 'z       '           / ? Redshift                                     UCD__5  = 'meta.code.qual'     / ................................byte#21        TDISP5  = 'I1      '           / Display Fortran Format                         TFORM5  = 'B       '           / unsigned 8-bit integer                         TTYPE5  = 'Q       '           / Data quality (2)                               UCD__6  = 'meta.code.error;phys.veloc;instr.sensitivity' / ......byte#22        TDISP6  = 'I4      '           / Display Fortran Format                         TFORM6  = 'I       '           / 16-bit (short) integer                         TTYPE6  = 'V-      '           / Negative velocity integration limit            TUNIT6  = 'km/s    '           / kilometre per second                           UCD__7  = 'meta.code.error'    / ................................byte#24        TDISP7  = 'A1      '           / Display Fortran Format                         TFORM7  = 'A       '           / Ascii string                                   TTYPE7  = 'u_V-    '           / Uncertainty flag on V-                         UCD__8  = 'meta.code.error;phys.veloc;instr.sensitivity' / ......byte#25        TDISP8  = 'I3      '           / Display Fortran Format                         TFORM8  = 'I       '           / 16-bit (short) integer                         TTYPE8  = 'V_      '           / Positive velocity integration limit            TUNIT8  = 'km/s    '           / kilometre per second                           UCD__9  = 'meta.code.error;phot.mag;em.opt.V' / .................byte#27        TDISP9  = 'A1      '           / Display Fortran Format                         TFORM9  = 'A       '           / Ascii string                                   TTYPE9  = 'u_V_    '           / Uncertainty flag on V+                         UCD__10 = 'phys.veloc;stat.mean' / ..............................byte#28        TDISP10 = 'I3      '           / Display Fortran Format                         TFORM10 = 'I       '           / 16-bit (short) integer                         TTYPE10 = '__v_exp '           / ? Expected average velocity of the O VI                                         absorption (3) [NULL integer written as an                                      empty string]                                  TUNIT10 = 'km/s    '           / kilometre per second                           TNULL10 =               -32768 / NULL definition                                UCD__11 = 'spect.dopplerVeloc;pos.lsr' / ........................byte#30        TDISP11 = 'I3      '           / Display Fortran Format                         TFORM11 = 'I       '           / 16-bit (short) integer                         TTYPE11 = '__v_obs '           / ? Average observed LSR velocity of the O VI                                     absorption [NULL integer written as an empty                                    string]                                        TUNIT11 = 'km/s    '           / kilometre per second                           TNULL11 =               -32768 / NULL definition                                UCD__12 = 'stat.error'         / ................................byte#32        TDISP12 = 'I2      '           / Display Fortran Format                         TFORM12 = 'I       '           / 16-bit (short) integer                         TTYPE12 = 'e__v_obs'           / ? 1 {sigma} random error in the observed                                        velocity (4) [NULL integer written as an empty                                  string]                                        TUNIT12 = 'km/s    '           / kilometre per second                           TNULL12 =               -32768 / NULL definition                                UCD__13 = 'phys.veloc.dispersion' / .............................byte#34        TDISP13 = 'I2      '           / Display Fortran Format                         TFORM13 = 'I       '           / 16-bit (short) integer                         TTYPE13 = 'b       '           / ? Observed O VI velocity dispersion [NULL                                       integer written as an empty string]            TUNIT13 = 'km/s    '           / kilometre per second                           TNULL13 =               -32768 / NULL definition                                UCD__14 = 'meta.code.error'    / ................................byte#36        TDISP14 = 'A1      '           / Display Fortran Format                         TFORM14 = 'A       '           / Ascii string                                   TTYPE14 = 'u_b     '           / Uncertainty flag on b                          UCD__15 = 'stat.error'         / ................................byte#37        TDISP15 = 'I2      '           / Display Fortran Format                         TFORM15 = 'I       '           / 16-bit (short) integer                         TTYPE15 = 'e_b     '           / ? 1{sigma} random error in the velocity                                         dispersion [NULL integer written as an empty                                    string]                                        TUNIT15 = 'km/s    '           / kilometre per second                           TNULL15 =               -32768 / NULL definition                                UCD__16 = 'meta.code.error'    / ................................byte#39        TDISP16 = 'A1      '           / Display Fortran Format                         TFORM16 = 'A       '           / Ascii string                                   TTYPE16 = 'l_logN_OVI_'        / Limit flag on logN(OVI)                        UCD__17 = 'phys.columnDensity' / ................................byte#40        TDISP17 = 'F5.2    '           / Display Fortran Format                         TFORM17 = 'E       '           / 32-bit floating-point (simple precision)       TTYPE17 = 'logN_OVI_'          / log of O VI column density for the velocity                                     range V- to V+ based on the strong line of the                                  doublet                                        TUNIT17 = '[cm-2]  '           / log[ centimetre power-2]                       UCD__18 = 'meta.note'          / ................................byte#44        TDISP18 = 'A1      '           / Display Fortran Format                         TFORM18 = 'A       '           / Ascii string                                   TTYPE18 = 'n_logN_OVI_'        / Note on logN(OVI) (1)                          UCD__19 = 'stat.error'         / ................................byte#45        TDISP19 = 'F5.2    '           / Display Fortran Format                         TFORM19 = 'E       '           / 32-bit floating-point (simple precision)       TTYPE19 = 'e_sc    '           / ? 1 {sigma} combined statistical and continuum                                  placement errors in log N(O VI)                UCD__20 = 'meta.note'          / ................................byte#49        TDISP20 = 'A1      '           / Display Fortran Format                         TFORM20 = 'A       '           / Ascii string                                   TTYPE20 = 'n_sc    '           / [b] Note on e_sc (1)                           UCD__21 = 'stat.error'         / ................................byte#50        TDISP21 = 'F5.2    '           / Display Fortran Format                         TFORM21 = 'E       '           / 32-bit floating-point (simple precision)       TTYPE21 = 'e_sys   '           / ? Systematic error in log N(O VI)              UCD__22 = 'meta.code.error;phot.mag;em.opt.B' / .................byte#54        TDISP22 = 'A1      '           / Display Fortran Format                         TFORM22 = 'A       '           / Ascii string                                   TTYPE22 = 'l_logNsin_b_'       / Limit flag on logNsin|b|                       UCD__23 = 'phys.columnDensity' / ................................byte#55        TDISP23 = 'F5.2    '           / Display Fortran Format                         TFORM23 = 'E       '           / 32-bit floating-point (simple precision)       TTYPE23 = 'logNsin_b_'         / log of projected O VI column density           TUNIT23 = '[cm-2]  '           / log[ centimetre power-2]                       UCD__24 = 'pos.eq.ra;meta.main' / ...............................byte#59        TDISP24 = 'F9.5    '           / Display Fortran Format                         TFORM24 = 'D       '           / 64-bit floating-point (double precision)       TTYPE24 = '_RA     '           / Right Ascension (J2000) from SIMBAD (not part                                   of the original data)                          TUNIT24 = 'deg     '           / degree                                         UCD__25 = 'pos.eq.dec;meta.main' / ..............................byte#67        TDISP25 = 'F9.5    '           / Display Fortran Format                         TFORM25 = 'D       '           / 64-bit floating-point (double precision)       TTYPE25 = '_DE     '           / Declination (J2000) from SIMBAD (not part of                                    the original data)                             TUNIT25 = 'deg     '           / degree                                         END                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             PG 1352+183      >‹¬ÿ°  d    
+ ;   Af=q =áG® <£×
+ Aeë…@jÊi!s^@2ÕrußPKS 2155-304     =í‘hÿ«: x    
+ C:  Aep¤ <#×
+ <õÂ Ac×
+@t›x“¿M(À>9À(2›PG 1404+226      =È´9ÿ¡  K  ÿğ 
+ ;   AeG® =õÂ <õÂ AdõÃ@jrêÖ[z2@6ek-½ANGC 5548       ÿÿÿÿÿˆ  <  ÿà 
+ ;   Ah   =LÌÍ <£×
+ Ag…@jÏô§@Ù@9#¨Ø¡PG 1402+261      >'ïÿˆ  s  ÿõ 
+ I   Ahzá =LÌÍ <£×
+ Ah(ö@jj)M$.k@9íp/TàMrk 509          =~(ÿœ  s  &  
+ @   Aj\ <#×
+ <£×
+ AeÂ@sp¦’5îÀ%rr;›1vZ 1128          ÿÿÿÿÿ~  P  ÿç 
+ 6   Ag® <#×
+ <£×
+ Ag…@i²9 ®Ã=@<nÚèĞªMRC 2251-178     =‡+ÿ¿  F  
+ÿÿ  3   Aa™š =\) =ÌÌÍ A`£×@ux*ªªªªÀ1šöåÔPHL 1811         >Doÿ¿  d    
+ 5   Ag33 =#×
+ <õÂ AdÌÍ@tŒJôğØÀ"¿=“—°CMrk 506          =0 Åÿœ:   ÿÜ 
+ %:  Ag… =\) <õÂ Ac
+=@pJ¨õÂ\@>á¢³ÄÕæMrk 829        ¿ÿÿÿÿÿœ  (  ÿå 
+ 0   Adzá =¸Qì =#×
+ Ac®@k×ÇV²@AÉ%p/TMrk 478          =¡ÊÁÿ  P  ÿí 
+ A   Ag… =#×
+ <õÂ AfáH@kş¢yƒÀ@A¸GèU–3C 382.0         =l¿±ÿ~  n ÿûÿò  c   AhÌÍ =\) <õÂ A`zá@ql9Ùclo@@Y!ø0·Mrk 501          =	 'ÿœ:   ÿÚ  1:  AdQì =\) =\) Aa¸@o®öT2í@CáM9'!eMrk 1513         =€Ñ·ÿµ  P    
+ 2   Aep¤ =LÌÍ <£×
+ A`zá@t1Ü€Wa@$FíæIEMrk 926          =A½¥ÿ¿: d:          <Ac® ÿÿÿÿ ÿÿÿÿ<Ab\@u¢æÇVÀ!_û­+vPG 1444+407      >ˆÛŒÿœ  d  ÿê  J   Ah   =\) <õÂ Ag33@k¶¾vÈ³@DJßu¥nÑMrk 304          =†¹ÿØ  K ÿü 	 
+ *   Ac33 =£×
+ =LÌÍ A_33@täÑA [¿@,zv<äÔqSBS 1415+437   aÿÿÿÿÿÎ  d     
+ 6   Ab=q =õÂ <õÂ Aa™š@jÈ<ZÊ@EÀyøC[?NGC 7469       ÿÿÿÿÿ¿  - ÿûÿó 
+ &   A_\) =uÂ =uÂ A\õÃ@uÌÌÌÌ@!¿j¹:ï×PG 1411+442      =·KÇÿ¡  Z   ÿû 
+ :   Ai¸ =LÌÍ <õÂ Ahzá@j®r]†{@F €WaŸPG 1626+554      >ğÿ¿: U:ÿù  
+ /:  Ad   =¸Qì =£×
+ AaG®@nßz‰æ@K°yI€PG 1415+451      =éDgÿ°  d      4   Ae¸ =ÌÌÍ =#×
+ Adzá@jÈ¥ãS÷@Fw±¸Œ,™Mrk 487        ™ÿÿÿÿÿÉ  x ÿú   I   Ad   =áG® =#×
+ Ab{@mHÇV²@K¡·£(FşNGC 7714       
+îÿÿÿÿÿÄ  - ÿıÿş 
+ #   A]™š >\) =LÌÍ A\Qì@v ó¶E¡Ê@=SƒL¯¬Mrk 290          <ñ©üÿº: ¥ ÿø   [: 
+ Ac\) =õÂ =LÌÍ AaG®@m>û8©M#@Ló†ğÀ÷”PG 2349-014      >2-ÿº: F:ÿı         <A_… ÿÿÿÿ ÿÿÿÿ<A^\@v_½ó¶E¡¿òu¥nÑÎdUGC 12163        <É…ğÿœ  d ÿà   Q   A`   =õÂ =uÂ AZ{@uJ¡Ÿ³Š@=¹™™™™™H1821+643        >‘œàÿ`  s ÿâÿÒ 
+ Y   Ag® <£×
+ <£×
+ Ab=q@q7Ñë…¸@Pù,_’ÅMrk 876          >ş]ÿœ: U ÿîÿô  @:  AfáH <£×
+ =LÌÍ Ac×
+@no m:Ó@Pn`¶`Mrk 817          = Iÿ¦: < ÿ÷ÿâ  4:  Af{a<#×
+ =uÂ Ad£×@kbôeßé@Me©ûçlŠMrk 335          <Ñ·ÿµ: Z ÿë  
+ 0:  Aa¸ <õÂ =#×
+ A^=q?ùM(Œç¯@43ò*$®”Mrk 59         Aÿÿÿÿÿµ  K   ÿõ 
+ -   Ad£× =#×
+ <£×
+ Ad£×@hXòX¿%@Al0=å& PG 1351+640      =´¢4ÿœ: d:ÿóÿõ 
+ Q:  Af{ =#×
+ =uÂ Adzá@j
+Ÿ¾vÈ@Oá—ÇóïMrk 279          =oÿ: d ÿîÿğ 
+ @:  Af\ <£×
+ <£×
+ AdQì@jw Øg@QS¸ªpiPG 1259+593      >ô¢4ÿ°: d ÿö  
+ >:  Ac…a<£×
+ =LÌÍ Abff@hi¸Që…@M„~…XùfMrk 1502         =zCşÿİ  A ÿğ  
+ !   A`   =ÌÌÍ <õÂ A^=q@*ÊÖ[z2ƒ@)bÂU@PG 0052+251      >¸Rÿº: F:ÿæ         <A_… ÿÿÿÿ ÿÿÿÿ<A\  @+o0x&:µ@9mp£×
+=Mrk 352        hÿÿÿÿÿ  s ÿßÿ÷ 
+ U   Aeë… =¸Qì <õÂ AaG®@-ñ©ûçlŠ@?Ó°C¸tŞMrk 205          =ÿ—ÿœ: d:ÿê         <Ac
+= ÿÿÿÿ ÿÿÿÿ<A`(ö@g-áöqR™@RÓálÿÅ3C 249.1         >ŸoÒÿµ  A ÿçÿï  3   Ae¸ =\) =#×
+ AaÂ@dÁÓ.Ô¸@S>åìîMrk 357          =SZ†ÿ  s ÿè   c   Afff =£×
+ =LÌÍ Ac33@4«ä±~J@7+»»»»»NGC 588        ÿRÿÿÿÿÿƒ: d:ÿâ         <Aa¸ ÿÿÿÿ ÿÿÿÿ<A\£×@706iÏ@>¥ù,_’ÅNGC 595        ÿRÿÿÿÿÿ°: P:ÿá         <A`   ÿÿÿÿ ÿÿÿÿ<A[…@7eİİİİİ@>²¡n\Mrk 209        ÿÿÿÿÿ  ‚ ÿû   
+ N   AfáH =#×
+ <£×
+ Afff@gR"Ğå`A@H?+I¹PG 0804+761      =Ğå`ÿˆ  P ÿâÿî 
+ >   Ah(ö <£×
+ <£×
+ Ac…@^¯¤…Í{@Sã8ãTon S180         =}ŠÛÿ¦  Z   ÿû  7   Aeë… =#×
+ <õÂ Aeë…@,ª‰æÆÀ6b¿ÔO0HS 0624+6907     >½cˆÿ«  Z ÿßÿú  E   Af{ =uÂ =#×
+ A_®@X`ªªªªª@QEg‰«ÍïPG 0832+675      ÿÿÿÿÿÄ  U ÿë   3   Ad(ö =uÂ <õÂ A`Qì@`,ªªªªª@PÙë…¸QVII Zw 118       =£Sÿ¡  2 ÿæÿí 
+ 6   Ab{ =LÌÍ =LÌÍ A\Qì@Z³$İ.@P&bMÒñ©MS 0700.7+6338   >‘Ñÿ¿  U ÿæ 	 
+ )   Ab\ =õÂ <õÂ A\ÌÍ@Z—ÙÅJi @OÇ–j
+w±NGC 4151       ãÿÿÿÿÿİ  d ÿÿ   *   Ac×
+ =#×
+ <õÂ Ac®@fÔ]/Ÿ¾@C³åš‚ìNGC 3310       áÿÿÿÿÿy  U ÿùÿæ 
+ N   AhõÃ <£×
+ <õÂ Ag…@cöZËoF@JÀh¬ñ5yMrk 9            =#Sÿ¡  U ÿíÿ÷ 
+ :   Aeë… =#×
+ <£×
+ A`ÌÍ@\1Õ¬¶ó@Mbœe}aMrk 116        ïÿÿÿÿÿƒ  n ÿ÷ 	 
+ S   Ac\) =LÌÍ =#×
+ A`õÃ@ağ@Út§@KÊ†Aı¸Mrk 106          =ü¹$ÿœ: d ÿö  
+ F:  Ag33 =£×
+ =#×
+ Adzá@a`˜êÖ[@K®•ƒúMrk 79           <µÿØ  d ÿö  
+ ,   Af\ =£×
+ <õÂ Aap¤@\èÃ>g@Hç–j
+w±NGC 1068       qÿÿÿÿÿ  < ÿşÿø  9   A_® =uÂ =LÌÍ A]ë…@DUÆ§ï±¿‹ˆÂÉ=ªPG 0953+414      >o²ÿƒ  d:    
+ M:  Ag33 <õÂ =#×
+ Aep¤@b¦üí‘hr@D É(»zMrk 421          <õÂÿ~  d:  ÿü 
+ O:  Af=qa<õÂ <õÂ Ae™š@dÃ¤PÊ”<@C»
+£÷©NGC 985          =0‰ ÿ¡  Z     
+ >   Aep¤ =#×
+ <£×
+ Adzá@CT$İ/ŸÀ!“AÃx`{PG 0947+396      >R×sÿ¿  d:   
+ ::  Ah£× =\) =#×
+ AfáH@bvs¶E¡Ê@C¹D
+/NGC 3991       xÿÿÿÿÿ¡  s   ÿı  G   Ag… =áG® <£×
+ Ag\)@fl¥ãS÷@@+ÍµÑTon 1187         ='»ÿ¦  A  ÿü 
+ 3   Ae™š =£×
+ <£×
+ AdQì@c(m:Ó @Aí¢³ÄÕæHS 1102+3441     ?ˆÎÿt  _: ÿë 
+ J:  Ak\) =\) <õÂ Aj¸R@dÍO‡ÙÅJ@A6“ :APG 0844+349      =ƒoÿ«  x     F   AhQì <£×
+ <£×
+ AdõÃ@`}¨FÿQ<@A`(¾<‡SBS 0335-052   Ëÿÿÿÿÿº: F:          <A_×
+ ÿÿÿÿ ÿÿÿÿ<A]p¤@K7|í‘hrÀ-&¯7PG 0832+251      >©kºÿ¦  x     M   Ah(ö =\) <£×
+ Ad  @`Åù,_’@8ş•»G9‘PG 1001+291      >¨Îpÿº  d:   
+ ;:  Ah   =uÂ =LÌÍ Afff@bàXgÃìâ@<í6bÂUHE 0238-1904     ?!‚ªÿˆ  n     
+ R   AeG® =¸Qì <£×
+ Adzá@D`A‰7KÀ2İC şÜºMrk 1095         =ä&ÿİ  2    
+    A^=q =\) =£×
+ AW33@SÃ³Š”Ò¿Ã8©M$.kMrk 36         fÿÿÿÿÿˆ  n     Z   AeÂ =áG® <õÂ Ae¸@dÇËÆ§ï@=#´s™%NGC 3504       şÿÿÿÿÿº: F:          <Ac
+= ÿÿÿÿ ÿÿÿÿ<Abff@d¹~Kä±@;ù€ËãÇPKS 0405-12      ?\ÿ°  d    
+ <   Ab=q =#×
+ =#×
+ A_\)@NùÔr$Q_À(cÕ çMrk 618          =hsÿÎ  -  ÿş 
+    AdQì =\) =#×
+ A`Qì@QEî@+°ÏÀ$ÀŠZ‘.1NGC 4670       -ÿÿÿÿÿœ  i     
+ ;   Ah(ö <õÂ <#×
+ Ah(ö@gêGV²ÛÑ@; E-HPG 1116+215      >4¢4ÿÉ  s:    
+ 5:  Ad(ö <õÂ <õÂ Ac®@e9(õÂ[@5RX¿%‹òTon S210         =í‘hÿˆ  _  ÿç 
+ I   Ai™š <£×
+ <£×
+ Ai™š@4vñ©ûçlÀ<Ys^äºPG 1004+130      >u¨Xÿ~  d  ÿô 
+ S   Aj{ <õÂ <£×
+ Ah(ö@bû{8©M#@)¡—ÇóğHE 0450-2958     >’n˜ÿ«: U:          <A`   ÿÿÿÿ ÿÿÿÿ<A\£×@RHÓ m9À=ä¦’5íNGC 1399       ‘ÿÿÿÿÿÎ  F     
+ &   Aa™š =áG® =uÂ A`(ö@KO£(FÿPÀA¹Ÿø·İiMrk 734          =M„ÿİ  Œ:  R  <:  AhÌÍ =uÂ =LÌÍ Ah  @eNGÈK]Ì@'zK —uHE 0226-4110     >ıcˆÿt  K  ÿß 
+ L   Ad   <õÂ <£×
+ Ac\)@BˆN´çÀDyôŸIôŸPKS 0558-504     >Iºÿ  ‡  "  
+ L   Af¸R <õÂ <£×
+ Aa™š@V|yƒÁ1ÕÀI8İ/Ÿ¾NGC 1705       tÿÿÿÿÿˆ  x     F   Af=q <£×
+ =¸Qì Ac
+=@Rc§@ÚtÀJ®8ã8ãPG 1211+143      =§çÿœ  d   
+ 
+ 3   Ab¸R =uÂ <£×
+ Abff@fòX¿%‹ò@,`¶`µMrk 771          =%ÿö  x    ) 
+ '   Ac
+= >#×
+ =\) AbáH@g€{ø}›@4(z&İÒ7HE 1115-1735     >^5?ÿâ: Z:          <A^¸R ÿÿÿÿ ÿÿÿÿ<A[…@e1lâ¥4À1İÑ¡V>HE 1143-1810     =Â'ÿµ  d:  &  9:  AhõÃ =#×
+ =LÌÍ Af{@fe`A‰6À2tM^o€‘ESO 265-G23      =d÷fÿì  d   0 
+ +   Ae¸ =áG® =LÌÍ A\zá@eFbü–/ÉÀE¡ÇqÇESO 572-G34    Zÿÿÿÿÿœ  d:     H:  Ag… =#×
+ =uÂ AdÌÍ@fwªªªªªÀ3qÇq3C 273.0         >"eÿ’  i ÿş  
+ :   Ak®a<#×
+ <#×
+ AjáH@ghä¯)Å$@ kJ“ŞpFairall 9        =@ƒÿ’  d:ÿú   O:  Af{ =\) =uÂ AdõÃ@4ñÌ	ÀMg=6bÂTNGC 4649       ]ÿÿÿÿÿ—  F ÿÿÿÛ  G   AdõÃ >¸ =#×
+ Ad£×@gİ[Ñ”#@'İ£œÉ(Tol 1247-232     =D2ÊÿÎ  d:ÿğ % 
+ 4:  Afff =£×
+ =LÌÍ Ac33@h…¸QëÀ7å`A‰6PG 1302-102      >}Vÿ¿  F ÿò  
+ (   Ac® =#×
+ <õÂ Ab{@hŒféxÔıÀ%\ó¯HPG 1307+085      >¸Rÿ  P ÿüÿí 
+ <   Ag33 =LÌÍ <£×
+ Af¸R@h®EJi!r@ ©%p/THE 1326-0516     ?ñAÿœ: d:ÿó         <Ab=q ÿÿÿÿ ÿÿÿÿ<A`õÃ@iKÑ”#¨ÀG9’QvESO 141-G55      =t¼ÿœ  U ÿ×  
+ 4   Ah   <£×
+ <£×
+ Abff@r$òX¿%‹ÀMUİİİİİMrk 1383         =°ò|ÿœ  d:ÿùÿı 
+ 7:  AiG®a<£×
+ <#×
+ Ag×
+@k(àŞÒˆÍ?ôçøZ¨{PKS 2005-489     =‘4ÿœ  x:ÿä &  C:  Alzá <£×
+ <õÂ Ah(ö@rå±UÎ€ŠÀHjqƒ‰EFTol 1924-416   Dÿÿÿÿÿº  _ ÿì 
+ 
+ 2   Aië… =LÌÍ <£×
+ Ac®@r?İİİİİÀDÉ~Kä±<LMC>         bÿÿÿÿÿÜ  ¯             Ah(öb>¸bÿÿÿÿ Ad  @T9:Ó lÀQpdÛ—R<SMC>         b –ÿÿÿÿÿÓ  ?             Aa™šb>.{bÿÿÿÿ A_
+=@*QÀR37ÀHÑY                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        

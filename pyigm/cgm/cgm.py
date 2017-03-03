@@ -72,7 +72,7 @@ class CGMAbsSys(object):
       Must include redshift
     igm_sys : IGMSystem
     cosmo : astropy.cosmology, optional
-      Defaults to WMAP9
+      Defaults to Planck15
 
     Attributes
     ----------
@@ -139,8 +139,8 @@ class CGMAbsSys(object):
 
         # Calculate rho
         if cosmo is None:
-            warnings.warn('cgm.CGMAbsSys: Using WMAP9 cosmology')
-            self.cosmo = cosmology.WMAP9
+            warnings.warn('cgm.CGMAbsSys: Using Planck15 cosmology')
+            self.cosmo = cosmology.Planck15
         else:
             self.cosmo = cosmo
 
