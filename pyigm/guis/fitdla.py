@@ -8,8 +8,10 @@ import warnings
 import imp
 import pdb
 
-from PyQt4 import QtGui
-from PyQt4 import QtCore
+from PyQt5 import QtGui, QtCore
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import QWidget, QLabel, QPushButton, QMainWindow
+from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout
 
 # Matplotlib Figure object
 
@@ -43,7 +45,7 @@ Here is now my preferred approach to searching for DLA:
 '''
 
 # GUI for fitting DLA in a spectrum
-class XFitDLAGUI(QtGui.QMainWindow):
+class XFitDLAGUI(QMainWindow):
     """ GUI to fit DLA in a given spectrum
         v1.0
         04-Mar-2016 by JXP
@@ -52,7 +54,7 @@ class XFitDLAGUI(QtGui.QMainWindow):
                  zqso=None, outfil=None, smooth=None, dw=0.1, zdla=None,
                  NHI=None,
                  skip_wveval=False, norm=True, conti_file=None):
-        QtGui.QMainWindow.__init__(self, parent)
+        QMainWindow.__init__(self, parent)
         """
         ispec : Spectrum1D or specfil
         dla_fit_file: str, optional
@@ -100,12 +102,13 @@ Q         : Quit the GUI
         """
 
         # Build a widget combining several others
-        self.main_widget = QtGui.QWidget()
+        self.main_widget = QWidget()
 
         # Status bar
         self.create_status_bar()
 
         # Initialize
+        self.update = True
         if outfil is None:
             self.outfil = 'DLA_fit.json'
         else:
@@ -190,7 +193,8 @@ Q         : Quit the GUI
             self.update_model()
 
         # Outfil
-        wbtn = QtGui.QPushButton('Write', self)
+        wbtn = QPushButton(self)
+        wbtn.setText('Write')
         wbtn.setAutoDefault(False)
         wbtn.clicked.connect(self.write_out)
         #self.out_box = QtGui.QLineEdit()
@@ -198,11 +202,13 @@ Q         : Quit the GUI
         #self.connect(self.out_box, QtCore.SIGNAL('editingFinished ()'), self.set_outfil)
 
         # Quit
-        buttons = QtGui.QWidget()
-        wqbtn = QtGui.QPushButton('Write\n Quit', self)
+        buttons = QWidget()
+        wqbtn = QPushButton(self)
+        wqbtn.setText('Write\n Quit')
         wqbtn.setAutoDefault(False)
         wqbtn.clicked.connect(self.write_quit)
-        qbtn = QtGui.QPushButton('Quit', self)
+        qbtn = QPushButton(self)
+        qbtn.setText('Quit')
         qbtn.setAutoDefault(False)
         qbtn.clicked.connect(self.quit)
 
@@ -210,44 +216,40 @@ Q         : Quit the GUI
         self.spec_widg.canvas.mpl_connect('key_press_event', self.on_key)
         self.abssys_widg.abslist_widget.itemSelectionChanged.connect(
             self.on_list_change)
-        self.connect(self.Nwidget.box,
-            QtCore.SIGNAL('editingFinished ()'), self.setbzN)
-        self.connect(self.zwidget.box,
-            QtCore.SIGNAL('editingFinished ()'), self.setbzN)
-        self.connect(self.bwidget.box,
-            QtCore.SIGNAL('editingFinished ()'), self.setbzN)
-        self.connect(self.Cwidget.box,
-            QtCore.SIGNAL('editingFinished ()'), self.setbzN)
+        self.Nwidget.box.textChanged[str].connect(self.setbzN)
+        #self.zwidget.box.textChanged[str].connect(self.setbzN)
+        #self.bwidget.box.textChanged[str].connect(self.setbzN)
+        #self.Cwidget.box.textChanged[str].connect(self.setbzN)
 
         # Layout
-        anly_widg = QtGui.QWidget()
+        anly_widg = QWidget()
         anly_widg.setMaximumWidth(400)
         anly_widg.setMinimumWidth(250)
 
         # Write/Quit buttons
-        hbox1 = QtGui.QHBoxLayout()
+        hbox1 = QHBoxLayout()
         hbox1.addWidget(wbtn)
         hbox1.addWidget(wqbtn)
         hbox1.addWidget(qbtn)
         buttons.setLayout(hbox1)
 
         # z,N
-        zNwidg = QtGui.QWidget()
-        hbox2 = QtGui.QHBoxLayout()
+        zNwidg = QWidget()
+        hbox2 = QHBoxLayout()
         hbox2.addWidget(self.zwidget)
         hbox2.addWidget(self.Nwidget)
         hbox2.addWidget(self.bwidget)
         zNwidg.setLayout(hbox2)
         #vbox.addWidget(self.pltline_widg)
 
-        vbox = QtGui.QVBoxLayout()
+        vbox = QVBoxLayout()
         vbox.addWidget(zNwidg)
         vbox.addWidget(self.Cwidget)
         vbox.addWidget(self.abssys_widg)
         vbox.addWidget(buttons)
         anly_widg.setLayout(vbox)
 
-        hbox = QtGui.QHBoxLayout()
+        hbox = QHBoxLayout()
         hbox.addWidget(self.spec_widg)
         hbox.addWidget(anly_widg)
 
@@ -262,16 +264,20 @@ Q         : Quit the GUI
         # Print help message
         print(self.help_message)
 
+    @pyqtSlot()
     def on_list_change(self):
         self.update_boxes()
 
     def create_status_bar(self):
-        self.status_text = QtGui.QLabel("XFitLLS v0.5.0")
+        self.status_text = QLabel("XFitLLS v0.5.0")
         self.statusBar().addWidget(self.status_text, 1)
 
+    @pyqtSlot()
     def setbzN(self):
-        '''Set the column density or redshift from the box
-        '''
+        """Set the column density or redshift from the box
+        """
+        if self.update is False:
+            return
         idx = self.get_sngl_sel_sys()
         if idx is None:
             return
@@ -299,6 +305,7 @@ Q         : Quit the GUI
         if idx is None:
             return
         # z
+        self.update = False  # Avoids a bit of an internal loop
         self.zwidget.box.setText(
             self.zwidget.box.frmt.format(
                 self.abssys_widg.all_abssys[idx].zabs))
@@ -317,6 +324,7 @@ Q         : Quit the GUI
         # Rest-frame too
         self.spec_widg.show_restframe = False
         self.spec_widg.rest_z = self.abssys_widg.all_abssys[idx].zabs
+        self.update = True
 
     def update_conti(self):
         """Update continuum
@@ -356,6 +364,10 @@ Q         : Quit the GUI
         #QtCore.pyqtRemoveInputHook()
         #import pdb; pdb.set_trace()
         #QtCore.pyqtRestoreInputHook()
+        if all_lines[0].attrib['b'].value < 0.:
+            QtCore.pyqtRemoveInputHook()
+            import pdb; pdb.set_trace()
+            QtCore.pyqtRestoreInputHook()
         tau_Lyman = lav.voigt_from_abslines(wa1, all_lines,
                                             ret='tau',
                                             skip_wveval=self.skip_wveval)
@@ -573,9 +585,6 @@ Q         : Quit the GUI
         HIcomponent = ltiu.build_components_from_abslines(dla_lines)[0]
         HIcomponent.synthesize_colm()
         new_sys = DLASystem.from_components([HIcomponent]) #(0*u.deg,0*u.deg),z,None,NHI)
-        #QtCore.pyqtRemoveInputHook()
-        #import pdb; pdb.set_trace()
-        #QtCore.pyqtRestoreInputHook()
         new_sys.bval = bval # This is not standard, but for convenience
         new_sys.comment = comment
         new_sys.dla_lines = dla_lines  # Also for convenience
@@ -585,8 +594,11 @@ Q         : Quit the GUI
         # Add
         self.abssys_widg.add_fil(new_sys.label)
         self.abssys_widg.all_abssys.append(new_sys)
-        self.abssys_widg.abslist_widget.item(
-            len(self.abssys_widg.all_abssys)).setSelected(True)
+        #QtCore.pyqtRemoveInputHook()
+        #import pdb; pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
+        self.abssys_widg.abslist_widget.item(len(
+            self.abssys_widg.all_abssys)).setSelected(True)
 
         # Update
         self.llist['Plot'] = False # Turn off metal-lines
@@ -650,6 +662,7 @@ Q         : Quit the GUI
         #QtCore.pyqtRestoreInputHook()
 
     # Write
+    @pyqtSlot()
     def write_out(self):
         import json, io
         # Create dict
@@ -677,11 +690,13 @@ Q         : Quit the GUI
         self.flag_write = True
 
     # Write + Quit
+    @pyqtSlot()
     def write_quit(self):
         self.write_out()
         self.quit()
 
     # Quit
+    @pyqtSlot()
     def quit(self):
         self.close()
 
