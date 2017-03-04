@@ -94,10 +94,12 @@ g         : Move nearest Lyman line to cursor and reset z
 N/n       : Increase/decrease NHI
 V/v       : Increase/decrease bvalue
 Z/z       : Increase/decrease zabs
+U/u       : Increase/decrease sig_NHI  [Default is 0.1 dex]
 D         : Delete DLA
 $         : Toggle displaying metal lines
 6,7,8,9   : Add forest lines
 ?         : Print these help notes
+P         : Save current screen in dla_plot.pdf
 Q         : Quit the GUI
         """
 
@@ -109,6 +111,7 @@ Q         : Quit the GUI
 
         # Initialize
         self.update = True
+        self.sig_NHI = 0.1
         if outfil is None:
             self.outfil = 'DLA_fit.json'
         else:
@@ -116,7 +119,7 @@ Q         : Quit the GUI
         self.count_dla = 0
         self.dla_model = None
         if smooth is None:
-            self.smooth = 3. # Pixels
+            self.smooth = 3.  # Pixels to smooth model by
         else:
             self.smooth = smooth
         self.base_continuum = None
@@ -378,21 +381,37 @@ Q         : Quit the GUI
                 ret='tau', skip_wveval=self.skip_wveval)
             all_tau_model += tau_Lyman
 
+        # Uncertainty
+        tau_low = all_tau_model * 10**(-1*self.sig_NHI)
+        tau_high = all_tau_model * 10**(self.sig_NHI)
+
         # Flux and smooth
         flux = np.exp(-1. * all_tau_model)
+        low_flux = np.exp(-1. * tau_low)
+        high_flux = np.exp(-1. * tau_high)
         if self.smooth > 0.:
             if not self.skip_wveval:
                 mult = np.median(np.diff(wa.value)) / self.dw
                 flux = lsc.convolve_psf(flux, self.smooth * mult)
+                low_flux = lsc.convolve_psf(low_flux, self.smooth * mult)
+                high_flux = lsc.convolve_psf(high_flux, self.smooth * mult)
             else:
                 flux = lsc.convolve_psf(flux, self.smooth)
+                low_flux = lsc.convolve_psf(low_flux, self.smooth)
+                high_flux = lsc.convolve_psf(high_flux, self.smooth)
         if not self.skip_wveval:
             self.dla_model = np.interp(wa.value, wa1.value, flux)
+            self.dla_low = np.interp(wa.value, wa1.value, low_flux)
+            self.dla_high = np.interp(wa.value, wa1.value, high_flux)
         else:
             self.dla_model = flux
+            self.dla_low = low_flux
+            self.dla_high = high_flux
 
         # Finish
         self.full_model.flux = self.dla_model * self.conti_dict['co']
+        self.dla_low *= self.conti_dict['co']
+        self.dla_high *= self.conti_dict['co']
         # Over-absorbed
         self.spec_widg.bad_model = np.where( (self.dla_model < 0.7) &
             (self.full_model.flux < (self.spec_widg.spec.flux-
@@ -447,7 +466,7 @@ Q         : Quit the GUI
             # Generate
             z = event.xdata/1215.670 - 1.
             self.add_DLA(z)
-        elif event.key in ['a','N','n','v','V','D','$','g','z','Z']: # DLA-centric
+        elif event.key in ['u','U','a','N','n','v','V','D','$','g','z','Z']: # DLA-centric
             idx = self.get_sngl_sel_sys()
             if idx is None:
                 return
@@ -463,6 +482,12 @@ Q         : Quit the GUI
                 self.abssys_widg.all_abssys[idx].zabs += 0.0002
             elif event.key == 'z': #Subtract from redshift
                 self.abssys_widg.all_abssys[idx].zabs -= 0.0002
+            elif event.key == 'U': #Add to sig_NHI
+                self.sig_NHI += 0.05
+                print('sig_NHI={}'.format(self.sig_NHI))
+            elif event.key == 'u': #Subtract from sig_NHI
+                self.sig_NHI -= 0.05
+                print('sig_NHI={}'.format(self.sig_NHI))
             elif event.key == 'N': #Add to NHI
                 self.abssys_widg.all_abssys[idx].NHI += 0.05
             elif event.key == 'n': #Subtract from NHI
@@ -500,9 +525,14 @@ Q         : Quit the GUI
             # set an attribute to tell calling script to abort
             print("Setting the quit attribute, the calling script should "
                   "abort after you close the GUI")
-            self.script_quit = True
+            self.quit()
         elif event.key == '?':
             print(self.help_message)
+        elif event.key == 'S':
+            print('Smoothing not allowed in this GUI')
+        elif event.key == 'P':  # Print
+            self.draw(save=True)
+            return
         else:
             self.spec_widg.on_key(event)
 
@@ -510,7 +540,7 @@ Q         : Quit the GUI
         self.update_boxes()
         self.draw()
 
-    def draw(self):
+    def draw(self, save=False):
         self.spec_widg.on_draw(no_draw=True)
         # Add text?
         for kk,dla in enumerate(self.abssys_widg.all_abssys):
@@ -540,6 +570,11 @@ Q         : Quit the GUI
                     self.conti_dict['co'][idx],
                     '-{:s}'.format(ilbl), ha='center',
                     color='red', size='small', rotation=90.)
+            # Error interval
+            #QtCore.pyqtRemoveInputHook()
+            #import pdb; pdb.set_trace()
+            #QtCore.pyqtRestoreInputHook()
+            self.spec_widg.ax.fill_between(self.full_model.wavelength.value, self.dla_low, self.dla_high, color='gray', alpha=0.5)
         # Continuum knots
         xknot = np.array([knot[0] for knot in self.conti_dict['knots']])
         yknot = np.array([knot[1] for knot in self.conti_dict['knots']])
@@ -547,6 +582,12 @@ Q         : Quit the GUI
                                   zorder=10)
         # Draw
         self.spec_widg.canvas.draw()
+        if save:
+            print("Printing the window to dla_plot.pdf")
+            self.spec_widg.canvas.print_figure('dla_plot.pdf')
+        #QtCore.pyqtRemoveInputHook()
+        #import pdb; pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
 
     def add_forest(self,inp,z):
         """Add a Lya/Lyb forest line
