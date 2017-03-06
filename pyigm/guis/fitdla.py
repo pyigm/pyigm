@@ -220,9 +220,9 @@ Q         : Quit the GUI
         self.abssys_widg.abslist_widget.itemSelectionChanged.connect(
             self.on_list_change)
         self.Nwidget.box.textChanged[str].connect(self.setbzN)
-        #self.zwidget.box.textChanged[str].connect(self.setbzN)
-        #self.bwidget.box.textChanged[str].connect(self.setbzN)
-        #self.Cwidget.box.textChanged[str].connect(self.setbzN)
+        self.zwidget.box.textChanged[str].connect(self.setbzN)
+        self.bwidget.box.textChanged[str].connect(self.setbzN)
+        self.Cwidget.box.textChanged[str].connect(self.setbzN)
 
         # Layout
         anly_widg = QWidget()
@@ -288,8 +288,11 @@ Q         : Quit the GUI
             float(self.Nwidget.box.text()))
         self.abssys_widg.all_abssys[idx].zabs = (
             float(self.zwidget.box.text()))
-        self.abssys_widg.all_abssys[idx].bval = (
-            float(self.bwidget.box.text()))*u.km/u.s
+        try:
+            self.abssys_widg.all_abssys[idx].bval = (
+                float(self.bwidget.box.text()))*u.km/u.s
+        except:
+            self.abssys_widg.all_abssys[idx].bval = 10 * u.km/u.s
         self.abssys_widg.all_abssys[idx].comment = (
             self.Cwidget.box.text())
         # Update the lines
