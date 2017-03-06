@@ -48,6 +48,8 @@ class COSHalos(CGMAbsSurvey):
             self.cdir = pyigm.__path__[0]+'/data/CGM/COS_Halos/'
         else:
             self.cdir = cdir
+        # Spectra dir
+        self.data_dir = os.getenv('COSHALOS_DATA')
         # Summary Tables
         if fits_path is None:
             self.fits_path = self.cdir+'/Summary/'
@@ -507,7 +509,7 @@ class COSHalos(CGMAbsSurvey):
         # Init
         cgm_abs = self[inp]
         # Directories
-        galdir = self.cdir+'/Galaxies/'
+        galdir = self.data_dir+'/Galaxies/'
         #fielddir = 'fields/'+cgm_abs.field+'/'
         #sysdir = cgm_abs.gal_id+'/spec1d/'
         sysname = cgm_abs.galaxy.field+'_'+cgm_abs.galaxy.gal_id
@@ -548,7 +550,7 @@ class COSHalos(CGMAbsSurvey):
         sysname = cgm_abs.galaxy.field+'_'+sysdir
 
         # Transition
-        templ_fil = self.cdir+'/Targets/system_template.lst'
+        templ_fil = self.data_dir+'/Targets/system_template.lst'
         tab = ascii.read(templ_fil)
         mt = np.argmin(np.abs(tab['col1']-wrest.value))
         if np.abs(tab['col1'][mt]-wrest.value) > 1e-2:
@@ -556,7 +558,7 @@ class COSHalos(CGMAbsSurvey):
         trans = tab['col2'][mt]+tab['col3'][mt]
 
         # Read
-        slicedir = self.cdir+'/Targets/fitting/'
+        slicedir = self.data_dir+'/Targets/fitting/'
         slicename = sysname+'_'+trans+'_slice.fits'
         try:
             spec = lsio.readspec(slicedir+slicename,
