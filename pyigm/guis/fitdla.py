@@ -290,8 +290,12 @@ Q         : Quit the GUI
                 float(self.Nwidget.box.text()))
         except:
             self.abssys_widg.all_abssys[idx].NHI = 20.
-        self.abssys_widg.all_abssys[idx].zabs = (
-            float(self.zwidget.box.text()))
+        # z
+        try:
+            self.abssys_widg.all_abssys[idx].zabs = (
+                float(self.zwidget.box.text()))
+        except:
+            self.abssys_widg.all_abssys[idx].zabs = 2.
         # b-value
         try:
             self.abssys_widg.all_abssys[idx].bval = (
