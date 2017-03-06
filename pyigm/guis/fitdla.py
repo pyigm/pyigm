@@ -284,10 +284,15 @@ Q         : Quit the GUI
         idx = self.get_sngl_sel_sys()
         if idx is None:
             return
-        self.abssys_widg.all_abssys[idx].NHI = (
-            float(self.Nwidget.box.text()))
+        # NHI
+        try:
+            self.abssys_widg.all_abssys[idx].NHI = (
+                float(self.Nwidget.box.text()))
+        except:
+            self.abssys_widg.all_abssys[idx].NHI = 20.
         self.abssys_widg.all_abssys[idx].zabs = (
             float(self.zwidget.box.text()))
+        # b-value
         try:
             self.abssys_widg.all_abssys[idx].bval = (
                 float(self.bwidget.box.text()))*u.km/u.s
