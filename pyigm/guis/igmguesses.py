@@ -21,10 +21,15 @@ import warnings
 import copy
 import pdb
 
-from PyQt4 import QtGui
-from PyQt4 import QtCore
+#from PyQt4 import QtGui
+#from PyQt4 import QtCore
+from PyQt5 import QtGui, QtCore
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import QWidget, QLabel, QPushButton, QMainWindow
+from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QComboBox
+from PyQt5.QtWidgets import QListWidget
 
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 # Matplotlib Figure object
 from matplotlib.figure import Figure
 
@@ -45,6 +50,11 @@ from linetools.guis import simple_widgets as ltgsm
 from linetools.guis import spec_widgets as ltspw
 from linetools import utils as ltu
 
+try:
+    ustr = unicode
+except NameError:  # For Python 3
+    ustr = str
+
 # Global variables; defined as globals mainly to increase speed and convenience
 c_kms = const.c.to('km/s').value
 COLOR_MODEL = '#999966'
@@ -56,7 +66,7 @@ COLORS = ['#0066FF','#339933','#CC3300','#660066','#FF9900','#B20047']
 zero_coord = SkyCoord(ra=0.*u.deg, dec=0.*u.deg)  # Coords
 
 # GUI for fitting LLS in a spectrum
-class IGMGuessesGui(QtGui.QMainWindow):
+class IGMGuessesGui(QMainWindow):
     """ GUI to identify absorption features and provide reasonable
         first guesses of (z, logN, b) for subsequent Voigt profile
         fitting.
@@ -68,7 +78,7 @@ class IGMGuessesGui(QtGui.QMainWindow):
         srch_id=True, outfil=None, fwhm=None,
         plot_residuals=True,n_max_tuple=None, min_strength=None,
                  min_ew=None, vlim_disp=None, external_model=None):
-        QtGui.QMainWindow.__init__(self, parent)
+        QMainWindow.__init__(self, parent)
         """
         ispec : str
             Name of the spectrum file to load
@@ -153,12 +163,13 @@ E         : toggle displaying/hiding the external absorption model
 """
 
         # Build a widget combining several others
-        self.main_widget = QtGui.QWidget()
+        self.main_widget = QWidget()
 
         # Status bar
         self.create_status_bar()
 
         # Initialize
+        self.update = True
         self.previous_file = previous_file
         if outfil is None:
             self.outfil = 'IGM_model.json'
@@ -260,18 +271,18 @@ E         : toggle displaying/hiding the external absorption model
         #    self.on_list_change)
 
         # Layout
-        anly_widg = QtGui.QWidget()
+        anly_widg = QWidget()
         anly_widg.setMaximumWidth(500)
         anly_widg.setMinimumWidth(250)
 
-        vbox = QtGui.QVBoxLayout()
+        vbox = QVBoxLayout()
         vbox.addWidget(self.fiddle_widg)
         vbox.addWidget(self.comps_widg)
         vbox.addWidget(self.slines_widg)
         vbox.addWidget(self.wq_widg)
         anly_widg.setLayout(vbox)
 
-        hbox = QtGui.QHBoxLayout()
+        hbox = QHBoxLayout()
         hbox.addWidget(self.velplot_widg)
         hbox.addWidget(anly_widg)
 
@@ -328,7 +339,7 @@ E         : toggle displaying/hiding the external absorption model
         self.update_boxes()
 
     def create_status_bar(self):
-        self.status_text = QtGui.QLabel("IGMGuessesGUI: Please press '?' to display help message in terminal.")
+        self.status_text = QLabel("IGMGuessesGUI: Please press '?' to display help message in terminal.")
         self.statusBar().addWidget(self.status_text, 1)
 
     def delete_component(self, component):
@@ -454,6 +465,7 @@ E         : toggle displaying/hiding the external absorption model
         self.fiddle_widg.init_component(self.velplot_widg.current_comp)
 
 
+    @pyqtSlot()
     def write_out(self):
         """ Write to a JSON file"""
         import json, io
@@ -502,21 +514,23 @@ E         : toggle displaying/hiding the external absorption model
 
         # Write file
         with io.open(self.outfil, 'w', encoding='utf-8') as f:
-            f.write(unicode(json.dumps(gd_dict, sort_keys=True, indent=4,
+            f.write(ustr(json.dumps(gd_dict, sort_keys=True, indent=4,
                                        separators=(',', ': '))))
         print('Wrote: {:s}'.format(self.outfil))
 
     # Write + Quit
+    @pyqtSlot()
     def write_quit(self):
         self.write_out()
         self.quit()
 
     # Quit
+    @pyqtSlot()
     def quit(self):
         self.close()
 
 ######################
-class IGGVelPlotWidget(QtGui.QWidget):
+class IGGVelPlotWidget(QWidget):
     """ Widget for a velocity plot with interaction.
           Adapted from VelPlotWidget in spec_guis
         14-Aug-2015 by JXP
@@ -614,7 +628,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         self.fig.subplots_adjust(hspace=0.0, wspace=0.1, left=0.04,
                                  right=0.975, top=0.9, bottom=0.07)
         
-        vbox = QtGui.QVBoxLayout()
+        vbox = QVBoxLayout()
         vbox.addWidget(self.canvas)
         
         self.setLayout(vbox)
@@ -1175,7 +1189,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         try:
             print('button={:d}, x={:f}, y={:f}, xdata={:f}, ydata={:f}'.format(
                 event.button, event.x, event.y, event.xdata, event.ydata))
-        except ValueError:
+        except (ValueError, TypeError):
             return
         if event.button == 1: # Draw line
             # remove this ugly green line
@@ -1410,7 +1424,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         # Draw
         self.canvas.draw()
 ############        
-class FiddleComponentWidget(QtGui.QWidget):
+class FiddleComponentWidget(QWidget):
     ''' Widget to fiddle with a given component
     '''
     def __init__(self, component=None, parent=None):
@@ -1421,13 +1435,13 @@ class FiddleComponentWidget(QtGui.QWidget):
         self.parent = parent
         #if not status is None:
         #    self.statusBar = status
-        self.label = QtGui.QLabel('Component:',self)
+        self.label = QLabel('Component:',self)
         self.zwidget = ltgsm.EditBox(-1., 'zc=', '{:0.5f}')
         self.Nwidget = ltgsm.EditBox(-1., 'Nc=', '{:0.2f}')
         self.bwidget = ltgsm.EditBox(-1., 'bc=', '{:0.1f}')
 
-        self.ddlbl = QtGui.QLabel('Reliability')
-        self.ddlist = QtGui.QComboBox(self)
+        self.ddlbl = QLabel('Reliability')
+        self.ddlist = QComboBox(self)
         self.ddlist.addItem('None')
         self.ddlist.addItem('a')
         self.ddlist.addItem('b')
@@ -1442,37 +1456,33 @@ class FiddleComponentWidget(QtGui.QWidget):
 
         # Connect
         self.ddlist.activated[str].connect(self.setReliability)
-        self.connect(self.Nwidget.box, 
-            QtCore.SIGNAL('editingFinished ()'), self.setbzN)
-        self.connect(self.zwidget.box, 
-            QtCore.SIGNAL('editingFinished ()'), self.setbzN)
-        self.connect(self.bwidget.box, 
-            QtCore.SIGNAL('editingFinished ()'), self.setbzN)
-        self.connect(self.Cwidget.box, 
-            QtCore.SIGNAL('editingFinished ()'), self.setbzN)
+        self.Nwidget.box.textChanged[str].connect(self.setbzN)
+        self.zwidget.box.textChanged[str].connect(self.setbzN)
+        self.bwidget.box.textChanged[str].connect(self.setbzN)
+        self.Cwidget.box.textChanged[str].connect(self.setbzN)
 
         # Layout
-        zNbwidg = QtGui.QWidget()
-        hbox2 = QtGui.QHBoxLayout()
+        zNbwidg = QWidget()
+        hbox2 = QHBoxLayout()
         hbox2.addWidget(self.zwidget)
         hbox2.addWidget(self.Nwidget)
         hbox2.addWidget(self.bwidget)
         zNbwidg.setLayout(hbox2)
 
-        ddwidg = QtGui.QWidget()
-        vbox1 = QtGui.QVBoxLayout()
+        ddwidg = QWidget()
+        vbox1 = QVBoxLayout()
         vbox1.addWidget(self.ddlbl)
         vbox1.addWidget(self.ddlist)
         ddwidg.setLayout(vbox1)
 
-        commwidg = QtGui.QWidget()
-        hbox3 = QtGui.QHBoxLayout()
+        commwidg = QWidget()
+        hbox3 = QHBoxLayout()
         hbox3.addWidget(ddwidg)
         hbox3.addWidget(self.Cwidget)
         commwidg.setLayout(hbox3)
 
         # Layout
-        vbox = QtGui.QVBoxLayout()
+        vbox = QVBoxLayout()
         vbox.addWidget(self.label)
         vbox.addWidget(zNbwidg)
         vbox.addWidget(commwidg)
@@ -1482,10 +1492,12 @@ class FiddleComponentWidget(QtGui.QWidget):
         '''Setup Widget for the input component'''
         self.component = component
         # Values
+        self.update = False  # Avoids a bit of an internal loop
         self.Nwidget.set_text(self.component.attrib['logN'])
         self.zwidget.set_text(self.component.attrib['z'])
         self.bwidget.set_text(self.component.attrib['b'].value)
         self.Cwidget.set_text(self.component.comment)
+        self.update = True  # Avoids a bit of an internal loop
         # Reliability
         idx = self.ddlist.findText(self.component.attrib['Reliability'])
         self.ddlist.setCurrentIndex(idx)
@@ -1510,11 +1522,13 @@ class FiddleComponentWidget(QtGui.QWidget):
         self.set_label()
 
     def update_component(self):
-        '''Values have changed'''
+        """Values have changed"""
+        self.update = False  # Avoids a bit of an internal loop
         self.Nwidget.set_text(self.component.attrib['logN'])
         self.zwidget.set_text(self.component.attrib['z'])
         self.bwidget.set_text(self.component.attrib['b'].value)
         self.Cwidget.set_text(self.component.comment)
+        self.update = True  # Avoids a bit of an internal loop
         if self.parent is not None:
             self.parent.updated_component()
 
@@ -1525,8 +1539,11 @@ class FiddleComponentWidget(QtGui.QWidget):
         else:
             self.label.setText('Component:')
 
+    @pyqtSlot()
     def setbzN(self):
         '''Set the component column density or redshift from the boxes'''
+        if self.update is False:
+            return
         if self.component is None:
             print('Need to generate a component first!')
         else:
@@ -1543,8 +1560,8 @@ class FiddleComponentWidget(QtGui.QWidget):
                 self.parent.updated_component()
 
 # #####
-class ComponentListWidget(QtGui.QWidget):
-    ''' Widget to organize components on a sightline
+class ComponentListWidget(QWidget):
+    """ Widget to organize components on a sightline
 
     Parameters:
     -----------
@@ -1552,14 +1569,14 @@ class ComponentListWidget(QtGui.QWidget):
       List of components
 
     16-Dec-2014 by JXP
-    '''
+    """
     def __init__(self, components, parent=None, no_buttons=False):
-        '''
+        """
         only_one: bool, optional
           Restrict to one selection at a time? [False]
         no_buttons: bool, optional
           Eliminate Refine/Reload buttons?
-        '''
+        """
         super(ComponentListWidget, self).__init__(parent)
 
         self.parent = parent
@@ -1568,8 +1585,8 @@ class ComponentListWidget(QtGui.QWidget):
         #    self.statusBar = status
         self.all_comp = components  # Actual components
 
-        list_label = QtGui.QLabel('Components:')
-        self.complist_widget = QtGui.QListWidget(self) 
+        list_label = QLabel('Components:')
+        self.complist_widget = QListWidget(self)
         #self.complist_widget.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
         self.complist_widget.addItem('None')
         #self.abslist_widget.addItem('Test')
@@ -1582,7 +1599,7 @@ class ComponentListWidget(QtGui.QWidget):
         self.complist_widget.itemSelectionChanged.connect(self.on_list_change)
 
         # Layout
-        vbox = QtGui.QVBoxLayout()
+        vbox = QVBoxLayout()
         vbox.addWidget(list_label)
         vbox.addWidget(self.complist_widget)
         self.setLayout(vbox)
