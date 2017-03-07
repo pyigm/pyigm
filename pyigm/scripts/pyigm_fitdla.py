@@ -5,9 +5,6 @@ Script to run igmguesses GUI
 """
 from __future__ import (print_function, absolute_import, division, unicode_literals)
 
-from PyQt4 import QtGui
-from pyigm.guis.igmguesses import IGMGuessesGui
-from astropy import units as u
 import pdb
 
 try:
@@ -28,13 +25,15 @@ def parser(options=None):
     """
 
     import argparse
-    parser = argparse.ArgumentParser(description='Parser for FitDLAGUI')
+    parser = argparse.ArgumentParser(description='Parser for FitDLAGUI (v1.0)')
     parser.add_argument("in_file", type=str, help="Spectral file")
     parser.add_argument("zqso", type=float, help="Use QSO template with zqso")
-    parser.add_argument("-out_file", type=str, help="Output LLS Fit file")
-    parser.add_argument("-smooth", type=float, help="Smoothing (pixels)")
-    parser.add_argument("-dla_fit_file", type=str, help="Input LLS Fit file")
-    parser.add_argument("-conti_file", type=str, help="Input continuum spectrum")
+    parser.add_argument("--out_file", type=str, help="Output DLA Fit file")
+    parser.add_argument("--smooth", type=float, help="Smoothing (pixels)")
+    parser.add_argument("--dla_fit_file", type=str, help="Input DLA Fit file")
+    parser.add_argument("--conti_file", type=str, help="Input continuum spectrum")
+    parser.add_argument("--zdla", type=float, help="Input DLA redshift")
+    parser.add_argument("--NHI", type=float, help="Input DLA NHI")
 
     if options is None:
         args = parser.parse_args()
@@ -46,26 +45,15 @@ def parser(options=None):
 def main(args=None):
 
     import sys
+    from PyQt5.QtWidgets import QApplication
     from pyigm.guis.fitdla import XFitDLAGUI
-    if args is None:
-        pargs = parser(options=args)
-    else: # better know what you are doing!
-        pdb.set_trace()  # Not ready for this yet
-        if isinstance(args[0],(Spectrum1D,tuple)):
-            app = QtGui.QApplication(sys.argv)
-            gui = XFitDLAGUI(args[0], **kwargs)
-            gui.show()
-            app.exec_()
-            return
-        else: # String parsing
-            largs = ['1'] + [iargs for iargs in args]
-            pargs = parser.parse_args(largs)
-
+    pargs = parser(options=args)
 
     # Run
-    app = QtGui.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     gui = XFitDLAGUI(pargs.in_file,outfil=pargs.out_file,smooth=pargs.smooth,
-        dla_fit_file=pargs.dla_fit_file, zqso=pargs.zqso, conti_file=pargs.conti_file)
+        dla_fit_file=pargs.dla_fit_file, zqso=pargs.zqso, conti_file=pargs.conti_file,
+                     zdla=pargs.zdla, NHI=pargs.NHI)
     gui.show()
     app.exec_()
 

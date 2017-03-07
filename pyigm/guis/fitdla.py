@@ -6,9 +6,12 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import numpy as np
 import warnings
 import imp
+import pdb
 
-from PyQt4 import QtGui
-from PyQt4 import QtCore
+from PyQt5 import QtGui, QtCore
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import QWidget, QLabel, QPushButton, QMainWindow
+from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout
 
 # Matplotlib Figure object
 
@@ -30,11 +33,6 @@ from linetools import utils as ltu
 #from pyigm.abssys.lls import LLSSystem
 from pyigm.abssys.dla import DLASystem
 
-#from xastropy.xguis import spec_widgets as xspw
-#from xastropy.xguis import spec_guis as xspg
-#from xastropy.xguis import utils as xxgu
-
-xa_path = imp.find_module('xastropy')[1]
 
 '''
 =======
@@ -47,15 +45,16 @@ Here is now my preferred approach to searching for DLA:
 '''
 
 # GUI for fitting DLA in a spectrum
-class XFitDLAGUI(QtGui.QMainWindow):
+class XFitDLAGUI(QMainWindow):
     """ GUI to fit DLA in a given spectrum
         v1.0
         04-Mar-2016 by JXP
     """
     def __init__(self, ispec, parent=None, dla_fit_file=None,
-                 zqso=None, outfil=None, smooth=None, dw=0.1,
+                 zqso=None, outfil=None, smooth=None, dw=0.1, zdla=None,
+                 NHI=None,
                  skip_wveval=False, norm=True, conti_file=None):
-        QtGui.QMainWindow.__init__(self, parent)
+        QMainWindow.__init__(self, parent)
         """
         ispec : Spectrum1D or specfil
         dla_fit_file: str, optional
@@ -73,37 +72,46 @@ class XFitDLAGUI(QtGui.QMainWindow):
           continuum (default True).
         conti_file : str, optional
           ASCII file containing the continuum knots (wave, flux)
+        zdla : float, optional
+          Create a DLA at the input redshift
         """
 
         self.help_message = """
-Click on any white region within the velocity plots
-for the following keystroke commands to work:
+Begin by left-clicking in the plot window!
+
+Then any of the following keystroke commands will work:
 
 i,o       : zoom in/out x limits
 I,O       : zoom in/out x limits (larger re-scale)
 Y         : zoom out y limits
 y         : guess y limits
+W         : Show original zooom
 t,b       : set y top/bottom limit
 l,r       : set left/right x limit
-a,m       : Add/modify continuum knot
+a,m,d     : Add/modify/delete continuum knot
 A         : Add a new DLA
-c         : Center Lya on cursor
-g         : Move nearest Lyman line to cursor
+g         : Move nearest Lyman line to cursor and reset z
 N/n       : Increase/decrease NHI
 V/v       : Increase/decrease bvalue
+Z/z       : Increase/decrease zabs
+U/u       : Increase/decrease sig_NHI  [Default is 0.1 dex]
 D         : Delete DLA
 $         : Toggle displaying metal lines
 6,7,8,9   : Add forest lines
+?         : Print these help notes
+P         : Save current screen in dla_plot.pdf
 Q         : Quit the GUI
         """
 
         # Build a widget combining several others
-        self.main_widget = QtGui.QWidget()
+        self.main_widget = QWidget()
 
         # Status bar
         self.create_status_bar()
 
         # Initialize
+        self.update = True
+        self.sig_NHI = 0.1
         if outfil is None:
             self.outfil = 'DLA_fit.json'
         else:
@@ -111,7 +119,7 @@ Q         : Quit the GUI
         self.count_dla = 0
         self.dla_model = None
         if smooth is None:
-            self.smooth = 0.
+            self.smooth = 3.  # Pixels to smooth model by
         else:
             self.smooth = smooth
         self.base_continuum = None
@@ -153,7 +161,11 @@ Q         : Quit the GUI
                                            llist=self.llist, key_events=False,
                                            abs_sys=self.abssys_widg.abs_sys,
                                            plotzero=1, norm=norm)
-        # Initialize continuum (and LLS if from a file)
+        # Create a DLA?
+        if zdla is not None:
+            self.add_DLA(zdla, NHI=NHI, model=False)
+
+        # Initialize continuum (and DLA if from a file)
         if dla_fit_file is not None:
             self.init_DLA(dla_fit_file,spec)
         else:
@@ -179,12 +191,13 @@ Q         : Quit the GUI
             spec.wavelength,np.ones(len(spec.wavelength))))
 
         # Initialize as needed
-        if dla_fit_file is not None:
+        if (dla_fit_file is not None) or (zdla is not None):
             self.update_boxes()
             self.update_model()
 
         # Outfil
-        wbtn = QtGui.QPushButton('Write', self)
+        wbtn = QPushButton(self)
+        wbtn.setText('Write')
         wbtn.setAutoDefault(False)
         wbtn.clicked.connect(self.write_out)
         #self.out_box = QtGui.QLineEdit()
@@ -192,11 +205,13 @@ Q         : Quit the GUI
         #self.connect(self.out_box, QtCore.SIGNAL('editingFinished ()'), self.set_outfil)
 
         # Quit
-        buttons = QtGui.QWidget()
-        wqbtn = QtGui.QPushButton('Write\n Quit', self)
+        buttons = QWidget()
+        wqbtn = QPushButton(self)
+        wqbtn.setText('Write\n Quit')
         wqbtn.setAutoDefault(False)
         wqbtn.clicked.connect(self.write_quit)
-        qbtn = QtGui.QPushButton('Quit', self)
+        qbtn = QPushButton(self)
+        qbtn.setText('Quit')
         qbtn.setAutoDefault(False)
         qbtn.clicked.connect(self.quit)
 
@@ -204,44 +219,40 @@ Q         : Quit the GUI
         self.spec_widg.canvas.mpl_connect('key_press_event', self.on_key)
         self.abssys_widg.abslist_widget.itemSelectionChanged.connect(
             self.on_list_change)
-        self.connect(self.Nwidget.box,
-            QtCore.SIGNAL('editingFinished ()'), self.setbzN)
-        self.connect(self.zwidget.box,
-            QtCore.SIGNAL('editingFinished ()'), self.setbzN)
-        self.connect(self.bwidget.box,
-            QtCore.SIGNAL('editingFinished ()'), self.setbzN)
-        self.connect(self.Cwidget.box,
-            QtCore.SIGNAL('editingFinished ()'), self.setbzN)
+        self.Nwidget.box.textChanged[str].connect(self.setbzN)
+        self.zwidget.box.textChanged[str].connect(self.setbzN)
+        self.bwidget.box.textChanged[str].connect(self.setbzN)
+        self.Cwidget.box.textChanged[str].connect(self.setbzN)
 
         # Layout
-        anly_widg = QtGui.QWidget()
+        anly_widg = QWidget()
         anly_widg.setMaximumWidth(400)
         anly_widg.setMinimumWidth(250)
 
         # Write/Quit buttons
-        hbox1 = QtGui.QHBoxLayout()
+        hbox1 = QHBoxLayout()
         hbox1.addWidget(wbtn)
         hbox1.addWidget(wqbtn)
         hbox1.addWidget(qbtn)
         buttons.setLayout(hbox1)
 
         # z,N
-        zNwidg = QtGui.QWidget()
-        hbox2 = QtGui.QHBoxLayout()
+        zNwidg = QWidget()
+        hbox2 = QHBoxLayout()
         hbox2.addWidget(self.zwidget)
         hbox2.addWidget(self.Nwidget)
         hbox2.addWidget(self.bwidget)
         zNwidg.setLayout(hbox2)
         #vbox.addWidget(self.pltline_widg)
 
-        vbox = QtGui.QVBoxLayout()
+        vbox = QVBoxLayout()
         vbox.addWidget(zNwidg)
         vbox.addWidget(self.Cwidget)
         vbox.addWidget(self.abssys_widg)
         vbox.addWidget(buttons)
         anly_widg.setLayout(vbox)
 
-        hbox = QtGui.QHBoxLayout()
+        hbox = QHBoxLayout()
         hbox.addWidget(self.spec_widg)
         hbox.addWidget(anly_widg)
 
@@ -253,25 +264,44 @@ Q         : Quit the GUI
         #self.spec_widg.setFixedWidth(900)
         self.spec_widg.setMinimumWidth(900)
 
+        # Print help message
+        print(self.help_message)
+
+    @pyqtSlot()
     def on_list_change(self):
         self.update_boxes()
 
     def create_status_bar(self):
-        self.status_text = QtGui.QLabel("XFitLLS v0.5.0")
+        self.status_text = QLabel("XFitLLS v0.5.0")
         self.statusBar().addWidget(self.status_text, 1)
 
+    @pyqtSlot()
     def setbzN(self):
-        '''Set the column density or redshift from the box
-        '''
+        """Set the column density or redshift from the box
+        """
+        if self.update is False:
+            return
         idx = self.get_sngl_sel_sys()
         if idx is None:
             return
-        self.abssys_widg.all_abssys[idx].NHI = (
-            float(self.Nwidget.box.text()))
-        self.abssys_widg.all_abssys[idx].zabs = (
-            float(self.zwidget.box.text()))
-        self.abssys_widg.all_abssys[idx].bval = (
-            float(self.bwidget.box.text()))*u.km/u.s
+        # NHI
+        try:
+            self.abssys_widg.all_abssys[idx].NHI = (
+                float(self.Nwidget.box.text()))
+        except:
+            self.abssys_widg.all_abssys[idx].NHI = 20.
+        # z
+        try:
+            self.abssys_widg.all_abssys[idx].zabs = (
+                float(self.zwidget.box.text()))
+        except:
+            self.abssys_widg.all_abssys[idx].zabs = 2.
+        # b-value
+        try:
+            self.abssys_widg.all_abssys[idx].bval = (
+                float(self.bwidget.box.text()))*u.km/u.s
+        except:
+            self.abssys_widg.all_abssys[idx].bval = 10 * u.km/u.s
         self.abssys_widg.all_abssys[idx].comment = (
             self.Cwidget.box.text())
         # Update the lines
@@ -280,6 +310,7 @@ Q         : Quit the GUI
             iline.attrib['N'] = 10**self.abssys_widg.all_abssys[idx].NHI * u.cm**-2
             iline.attrib['b'] = self.abssys_widg.all_abssys[idx].bval
         # Update the rest
+        self.llist['z'] = self.abssys_widg.all_abssys[idx].zabs
         self.update_model()
         self.draw()
 
@@ -289,6 +320,7 @@ Q         : Quit the GUI
         if idx is None:
             return
         # z
+        self.update = False  # Avoids a bit of an internal loop
         self.zwidget.box.setText(
             self.zwidget.box.frmt.format(
                 self.abssys_widg.all_abssys[idx].zabs))
@@ -307,6 +339,7 @@ Q         : Quit the GUI
         # Rest-frame too
         self.spec_widg.show_restframe = False
         self.spec_widg.rest_z = self.abssys_widg.all_abssys[idx].zabs
+        self.update = True
 
     def update_conti(self):
         """Update continuum
@@ -346,34 +379,51 @@ Q         : Quit the GUI
         #QtCore.pyqtRemoveInputHook()
         #import pdb; pdb.set_trace()
         #QtCore.pyqtRestoreInputHook()
+        if all_lines[0].attrib['b'].value < 0.:
+            QtCore.pyqtRemoveInputHook()
+            import pdb; pdb.set_trace()
+            QtCore.pyqtRestoreInputHook()
         tau_Lyman = lav.voigt_from_abslines(wa1, all_lines,
                                             ret='tau',
                                             skip_wveval=self.skip_wveval)
-
-        '''
+        all_tau_model = tau_Lyman
         # Loop on forest lines
         for forest in self.all_forest:
-            tau_Lyman = lav.voigt_from_abslines(wa1, forest.lines,
+            tau_Lyman = lav.voigt_from_abslines(wa1, forest, #.lines,
                 ret='tau', skip_wveval=self.skip_wveval)
             all_tau_model += tau_Lyman
-        '''
-        all_tau_model = tau_Lyman
+
+        # Uncertainty
+        tau_low = all_tau_model * 10**(-1*self.sig_NHI)
+        tau_high = all_tau_model * 10**(self.sig_NHI)
 
         # Flux and smooth
         flux = np.exp(-1. * all_tau_model)
+        low_flux = np.exp(-1. * tau_low)
+        high_flux = np.exp(-1. * tau_high)
         if self.smooth > 0.:
             if not self.skip_wveval:
                 mult = np.median(np.diff(wa.value)) / self.dw
                 flux = lsc.convolve_psf(flux, self.smooth * mult)
+                low_flux = lsc.convolve_psf(low_flux, self.smooth * mult)
+                high_flux = lsc.convolve_psf(high_flux, self.smooth * mult)
             else:
                 flux = lsc.convolve_psf(flux, self.smooth)
+                low_flux = lsc.convolve_psf(low_flux, self.smooth)
+                high_flux = lsc.convolve_psf(high_flux, self.smooth)
         if not self.skip_wveval:
             self.dla_model = np.interp(wa.value, wa1.value, flux)
+            self.dla_low = np.interp(wa.value, wa1.value, low_flux)
+            self.dla_high = np.interp(wa.value, wa1.value, high_flux)
         else:
             self.dla_model = flux
+            self.dla_low = low_flux
+            self.dla_high = high_flux
 
         # Finish
         self.full_model.flux = self.dla_model * self.conti_dict['co']
+        self.dla_low *= self.conti_dict['co']
+        self.dla_high *= self.conti_dict['co']
         # Over-absorbed
         self.spec_widg.bad_model = np.where( (self.dla_model < 0.7) &
             (self.full_model.flux < (self.spec_widg.spec.flux-
@@ -400,32 +450,38 @@ Q         : Quit the GUI
             return idx
 
     def on_key(self,event):
-        if event.key in ['a','m']: # Modify knots
+        if event.key in ['a','m','d']: # Modify knots
             if event.key == 'a':  # Add a knot
                 x, y = event.xdata, event.ydata
                 self.conti_dict['knots'].append([x, float(y)])
                 self.conti_dict['knots'].sort()
-            elif event.key == 'm':
+            elif event.key in ['m','d']:
+                # Find cloases
                 contx,conty = zip(*self.spec_widg.ax.transData.transform(
                         self.conti_dict['knots']))
-                sep = np.hypot(event.x - np.array(contx),
-                               event.y - np.array(conty))
+                #sep = np.hypot(event.x - np.array(contx),
+                #               event.y - np.array(conty))
+                sep = np.abs(event.x - np.array(contx)),
                 ind = np.argmin(sep)
                 #
-                x, y = event.xdata, event.ydata
-                self.conti_dict['knots'][ind] = [x, float(y)]
+                if event.key == 'm':
+                    x, y = event.xdata, event.ydata
+                    self.conti_dict['knots'][ind] = [x, float(y)]
+                else: # Delete
+                    self.conti_dict['knots'].pop(ind)
+                    #QtCore.pyqtRemoveInputHook()
+                    #pdb.set_trace()
+                    #QtCore.pyqtRestoreInputHook()
                 self.conti_dict['knots'].sort()
             self.update_conti()
         elif event.key == 'A': # New DLA
             # Generate
             z = event.xdata/1215.670 - 1.
-            self.add_DLA(z, bval=30.*u.km/u.s, NHI=20.3)
-        elif event.key in ['a','N','n','v','V','D','$','g']: # DLA-centric
+            self.add_DLA(z)
+        elif event.key in ['u','U','a','N','n','v','V','D','$','g','z','Z']: # DLA-centric
             idx = self.get_sngl_sel_sys()
             if idx is None:
                 return
-            elif event.key == 'c': # Center on Lya
-                self.abssys_widg.all_abssys[idx].zabs = event.xdata/1215.6700-1.
             elif event.key == 'g': # Move nearest line to cursor
                 wrest = event.xdata/(1+self.abssys_widg.all_abssys[idx].zabs)
                 #QtCore.pyqtRemoveInputHook()
@@ -434,6 +490,16 @@ Q         : Quit the GUI
                 awrest = np.array([iline.wrest.value for iline in self.abssys_widg.all_abssys[idx].dla_lines])
                 imn = np.argmin(np.abs(wrest-awrest))
                 self.abssys_widg.all_abssys[idx].zabs = event.xdata/awrest[imn]-1.
+            elif event.key == 'Z': #Add to redshift
+                self.abssys_widg.all_abssys[idx].zabs += 0.0002
+            elif event.key == 'z': #Subtract from redshift
+                self.abssys_widg.all_abssys[idx].zabs -= 0.0002
+            elif event.key == 'U': #Add to sig_NHI
+                self.sig_NHI += 0.05
+                print('sig_NHI={}'.format(self.sig_NHI))
+            elif event.key == 'u': #Subtract from sig_NHI
+                self.sig_NHI -= 0.05
+                print('sig_NHI={}'.format(self.sig_NHI))
             elif event.key == 'N': #Add to NHI
                 self.abssys_widg.all_abssys[idx].NHI += 0.05
             elif event.key == 'n': #Subtract from NHI
@@ -471,7 +537,14 @@ Q         : Quit the GUI
             # set an attribute to tell calling script to abort
             print("Setting the quit attribute, the calling script should "
                   "abort after you close the GUI")
-            self.script_quit = True
+            self.quit()
+        elif event.key == '?':
+            print(self.help_message)
+        elif event.key == 'S':
+            print('Smoothing not allowed in this GUI')
+        elif event.key == 'P':  # Print
+            self.draw(save=True)
+            return
         else:
             self.spec_widg.on_key(event)
 
@@ -479,7 +552,7 @@ Q         : Quit the GUI
         self.update_boxes()
         self.draw()
 
-    def draw(self):
+    def draw(self, save=False):
         self.spec_widg.on_draw(no_draw=True)
         # Add text?
         for kk,dla in enumerate(self.abssys_widg.all_abssys):
@@ -509,6 +582,11 @@ Q         : Quit the GUI
                     self.conti_dict['co'][idx],
                     '-{:s}'.format(ilbl), ha='center',
                     color='red', size='small', rotation=90.)
+            # Error interval
+            #QtCore.pyqtRemoveInputHook()
+            #import pdb; pdb.set_trace()
+            #QtCore.pyqtRestoreInputHook()
+            self.spec_widg.ax.fill_between(self.full_model.wavelength.value, self.dla_low, self.dla_high, color='gray', alpha=0.5)
         # Continuum knots
         xknot = np.array([knot[0] for knot in self.conti_dict['knots']])
         yknot = np.array([knot[1] for knot in self.conti_dict['knots']])
@@ -516,30 +594,36 @@ Q         : Quit the GUI
                                   zorder=10)
         # Draw
         self.spec_widg.canvas.draw()
+        if save:
+            print("Printing the window to dla_plot.pdf")
+            self.spec_widg.canvas.print_figure('dla_plot.pdf')
+        #QtCore.pyqtRemoveInputHook()
+        #import pdb; pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
 
     def add_forest(self,inp,z):
-        '''Add a Lya/Lyb forest line
-        '''
-        from xastropy.igm.abs_sys.abssys_utils import GenericAbsSystem
-        forest = GenericAbsSystem((0.*u.deg,0.*u.deg), z, [-300.,300.]*u.km/u.s)
+        """Add a Lya/Lyb forest line
+        """
+        forest = []
         # NHI
         NHI_dict = {'6':12.,'7':13.,'8':14.,'9':15.}
-        forest.NHI=NHI_dict[inp]
+        forest_NHI=NHI_dict[inp]
         # Lines
         for name in ['HI 1215','HI 1025', 'HI 972']:
-            aline = AbsLine(name,
-                linelist=self.llist[self.llist['List']], z=forest.zabs)
+            aline = AbsLine(name, linelist=self.llist[self.llist['List']], z=z)
             # Attributes
-            aline.attrib['N'] = 10**forest.NHI * u.cm**-2
+            aline.attrib['N'] = 10**forest_NHI * u.cm**-2
             aline.attrib['b'] = 20.*u.km/u.s
             # Append
-            forest.lines.append(aline)
+            forest.append(aline)
         # Append to forest lines
         self.all_forest.append(forest)
 
-    def add_DLA(self,z, NHI=20.3, bval=30.*u.km/u.s, comment='None', model=True):
+    def add_DLA(self,z, NHI=None, bval=30.*u.km/u.s, comment='None', model=True):
         """Generate a new DLA
         """
+        if NHI is None:
+            NHI = 20.3
         # Lya, Lyb
         dla_lines = []  # For convenience
         for trans in ['HI 1025', 'HI 1215']:
@@ -554,9 +638,6 @@ Q         : Quit the GUI
         HIcomponent = ltiu.build_components_from_abslines(dla_lines)[0]
         HIcomponent.synthesize_colm()
         new_sys = DLASystem.from_components([HIcomponent]) #(0*u.deg,0*u.deg),z,None,NHI)
-        #QtCore.pyqtRemoveInputHook()
-        #import pdb; pdb.set_trace()
-        #QtCore.pyqtRestoreInputHook()
         new_sys.bval = bval # This is not standard, but for convenience
         new_sys.comment = comment
         new_sys.dla_lines = dla_lines  # Also for convenience
@@ -566,8 +647,11 @@ Q         : Quit the GUI
         # Add
         self.abssys_widg.add_fil(new_sys.label)
         self.abssys_widg.all_abssys.append(new_sys)
-        self.abssys_widg.abslist_widget.item(
-            len(self.abssys_widg.all_abssys)).setSelected(True)
+        #QtCore.pyqtRemoveInputHook()
+        #import pdb; pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
+        self.abssys_widg.abslist_widget.item(len(
+            self.abssys_widg.all_abssys)).setSelected(True)
 
         # Update
         self.llist['Plot'] = False # Turn off metal-lines
@@ -631,6 +715,7 @@ Q         : Quit the GUI
         #QtCore.pyqtRestoreInputHook()
 
     # Write
+    @pyqtSlot()
     def write_out(self):
         import json, io
         # Create dict
@@ -658,94 +743,15 @@ Q         : Quit the GUI
         self.flag_write = True
 
     # Write + Quit
+    @pyqtSlot()
     def write_quit(self):
         self.write_out()
         self.quit()
 
     # Quit
+    @pyqtSlot()
     def quit(self):
         self.close()
 
 
-# Script to run XSpec from the command line or ipython
-def run_fitdla(*args, **kwargs):
-    '''
-    Runs the XFitDLAGUI
 
-    Command line or from Python
-    Examples:
-      1.  python ~/xastropy/xastropy/xguis/spec_guis.py 1
-      2.  spec_guis.run_fitdla(filename)
-      3.  spec_guis.run_fitdla(spec1d)
-    '''
-
-    import argparse
-    from specutils import Spectrum1D
-
-    parser = argparse.ArgumentParser(description='Parser for XFitLLSGUI')
-    parser.add_argument("in_file", type=str, help="Spectral file")
-    parser.add_argument("zqso", type=float, help="Use QSO template with zqso")
-    parser.add_argument("-out_file", type=str, help="Output LLS Fit file")
-    parser.add_argument("-smooth", type=float, help="Smoothing (pixels)")
-    parser.add_argument("-dla_fit_file", type=str, help="Input LLS Fit file")
-    parser.add_argument("-conti_file", type=str, help="Input continuum spectrum")
-
-    if len(args) == 0:
-        pargs = parser.parse_args()
-    else: # better know what you are doing!
-        if isinstance(args[0],(Spectrum1D,tuple)):
-            app = QtGui.QApplication(sys.argv)
-            gui = XFitDLAGUI(args[0], **kwargs)
-            gui.show()
-            app.exec_()
-            return
-        else: # String parsing
-            largs = ['1'] + [iargs for iargs in args]
-            pargs = parser.parse_args(largs)
-
-    # Output file
-    try:
-        outfil = pargs.out_file
-    except AttributeError:
-        outfil=None
-
-    # Input LLS file
-    try:
-        dla_fit_file = pargs.dla_fit_file
-    except AttributeError:
-        dla_fit_file=None
-
-    # Quasar redshift (currently required)
-    #try:
-    zqso = pargs.zqso
-    #except AttributeError:
-    #    zqso=None
-
-    app = QtGui.QApplication(sys.argv)
-    gui = XFitDLAGUI(pargs.in_file,outfil=outfil,smooth=pargs.smooth,
-        dla_fit_file=dla_fit_file, zqso=zqso, conti_file=pargs.conti_file)
-    gui.show()
-    app.exec_()
-
-# ################
-if __name__ == "__main__":
-    import sys
-
-    if len(sys.argv) == 1: # TESTING
-
-        flg_tst = 0
-        flg_tst += 2**0  # Fit LLS GUI
-
-        # LLS
-        if (flg_tst % 2**1) >= 2**0:
-            spec_fil = '/Users/xavier/VLT/XShooter/LP/idl_reduced_frames/0952-0115_uvb_coadd_vbin_flx.fits'
-            # Launch
-            spec = lsi.readspec(spec_fil)
-            app = QtGui.QApplication(sys.argv)
-            app.setApplicationName('FitLLS')
-            main = XFitDLAGUI(spec)
-            main.show()
-            sys.exit(app.exec_())
-
-    else: # RUN A GUI
-        run_fitdla()

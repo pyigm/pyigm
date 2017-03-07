@@ -138,6 +138,7 @@ N,n       : slightly increase/decrease column density in initial guess
 V,v       : slightly increase/decrease b-value in initial guess
 <,>       : slightly increase/decrease redshift in initial guess
 R         : refit
+z         : Sort the component list by redshift
 X,x       : add/remove `bad pixels` (for avoiding using them in subsequent
             VP fitting; works as `A` command, i.e. need to define two limits)
 L         : toggle displaying/hiding labels of currently identified lines
@@ -913,9 +914,6 @@ class IGGVelPlotWidget(QtGui.QWidget):
             mtc = np.where(wrest == iwrest)[0]
             if len(mtc) == 0:
                 return
-            # QtCore.pyqtRemoveInputHook()
-            # pdb.set_trace()
-            # QtCore.pyqtRestoreInputHook()
             dvz = np.array([c_kms * (self.z - components[mt].zcomp) / (1+self.z) for mt in mtc])
             # Find minimum
             mindvz = np.argmin(np.abs(dvz+event.xdata))
@@ -926,6 +924,37 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 self.parent.comps_widg.complist_widget.setCurrentRow(idx+1) # +1 because None counts
             elif event.key == 'D': # Delete nearest component to cursor
                 self.parent.delete_component(components[mtc[mindvz]])
+
+        ## Sort component list
+        if event.key == 'z':
+            # Find the order
+            components = self.parent.comps_widg.all_comp
+            ncomp = len(components)
+            if ncomp <= 1:
+                return
+            zcomp = np.array([comp.zcomp for comp in components])
+            isrt = np.argsort(zcomp)
+            # Reset the list
+            new_list = []
+            new_names = []
+            for ii in range(ncomp):
+                # Add
+                new_list.append(components[isrt[ii]])
+                new_names.append(self.parent.comps_widg.all_items[isrt[ii]])
+                # Remove
+                tmp = self.parent.comps_widg.complist_widget.takeItem(ncomp-ii)  # +1 because of None counts in widget list but no in component list
+            # Regenerate the list
+            self.parent.comps_widg.all_comp = new_list
+            self.parent.comps_widg.all_items = new_names
+            for comp_name in new_names:
+                self.parent.comps_widg.complist_widget.addItem(comp_name)
+
+            # Choose None item to avoid confusion
+            self.parent.comps_widg.complist_widget.item(0).setSelected(True)
+
+            #QtCore.pyqtRemoveInputHook()
+            #pdb.set_trace()
+            #QtCore.pyqtRestoreInputHook()
 
         ## Reset z
         if event.key == ' ': # space to move redshift
@@ -1580,46 +1609,6 @@ class ComponentListWidget(QtGui.QWidget):
             ii = self.all_items.index(txt)
             if self.parent is not None:
                 self.parent.updated_compslist(self.all_comp[ii])
-
-        '''
-        items = self.complist_widget.selectedItems()
-        # Empty the list
-        #self.abs_sys = []
-        if len(self.abs_sys) > 0:
-            for ii in range(len(self.abs_sys)-1,-1,-1):
-                self.abs_sys.pop(ii)
-        # Load up abs_sys (as need be)
-        new_items = []
-        for item in items:
-            txt = item.text()
-            # Dummy
-            if txt == 'None':
-                continue
-            print('Including {:s} in the list'.format(txt))
-            # Using LLS for now.  Might change to generic
-            new_items.append(txt)
-            ii = self.all_items.index(txt)
-            self.abs_sys.append(self.all_abssys[ii])
-
-        # Pass back
-        self.items = new_items
-        #QtCore.pyqtRemoveInputHook()
-        #pdb.set_trace()
-        #QtCore.pyqtRestoreInputHook()
-        '''
-    '''
-    def selected_components(self):
-        items = self.complist_widget.selectedItems()
-        selc = []
-        for item in items:
-            txt = item.text()
-            if txt == 'None':
-                continue
-            ii = self.all_items.index(txt)
-            selc.append(self.all_comp[ii])
-        # Return
-        return selc
-    '''
 
     def add_component(self,component):
         self.all_comp.append( component )
