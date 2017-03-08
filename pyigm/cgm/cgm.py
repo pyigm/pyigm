@@ -30,7 +30,7 @@ class CGM(object):
     rlim : Quantity array (2)
       Radial limits
     cgm_abs : list
-      List of AbsSys classes
+      List of CGMAbsSys classes
 
     TODO:
       Need to check cosmologies
@@ -52,7 +52,7 @@ class CGM(object):
         # rlim
         self.rlim = None
         # AbsSys
-        self.cgm_abs = []   # These will be AbsSystem's *not* CGMAbsSystem
+        self.cgm_abs = []
 
     def __repr__(self):
         return ('<CGM: {:s} {:s}, z={:g}>'.format(
