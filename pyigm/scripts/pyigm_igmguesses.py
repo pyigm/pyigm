@@ -6,7 +6,6 @@ Script to run igmguesses GUI
 from __future__ import (print_function, absolute_import, division, unicode_literals)
 
 from PyQt4 import QtGui
-from pyigm.guis.igmguesses import IGMGuessesGui
 from astropy import units as u
 import pdb
 
@@ -51,6 +50,7 @@ def parser(options=None):
 def main(args=None):
     pargs = parser(options=args)
     import sys
+    from pyigm.guis.igmguesses import IGMGuessesGui
 
     if pargs.vlim is not None:
         vlim_disp = [-1*pargs.vlim, 1.*pargs.vlim]*u.km/u.s

@@ -10,13 +10,14 @@ Dependencies
 pyigm depends on these packages:
 
 * `python <http://www.python.org/>`_ versions 2.7, or 3.3 or later
-* `numpy <http://www.numpy.org/>`_ version 1.10 or later
-* `astropy <http://www.astropy.org>`_ version 1.0 or later
+* `numpy <http://www.numpy.org/>`_ version 1.11 or later
+* `astropy <http://www.astropy.org>`_ version 1.3 or later
 * `scipy <http://www.scipy.org/>`_ version 0.17 or later
 * `matplotlib <http://matplotlib.org/>`_  version 1.4 or later
 * `specutils <https://github.com/astropy/specutils>`_ version 0.2 or later
 * `linetools <https://github.com/linetools/linetools>`_ version 0.1 or later
 * `h5py <http://www.h5py.org/>`_ version 2.5 or later
+* `PyQt5`_ -- Now the default in conda
 
 We strongly recommend that you use `Anaconda
 <https://www.continuum.io/downloads>`_ to install them. With Anaconda
