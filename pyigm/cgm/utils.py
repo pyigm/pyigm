@@ -30,7 +30,7 @@ def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True,
       Calculate for our Galaxy!
     correct_lowz : bool, optional
       Apply corrections for the local universe, as desired
-      Follows Tonry et al.
+      Follows Mould et al. 2000
     ang_sep : Angle or Quantity
       Input angular separation
       May speed up calculation
