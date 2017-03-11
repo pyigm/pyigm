@@ -56,8 +56,8 @@ class CGM(object):
 
     def __repr__(self):
         return ('<CGM: {:s} {:s}, z={:g}>'.format(
-                self.galaxy.coord.ra.to_string(unit=u.hour, sep=':', pad=True),
-                self.galaxy.coord.dec.to_string(sep=':', pad=True, alwayssign=True),
+                self.galaxy.coord.fk5.ra.to_string(unit=u.hour, sep=':', pad=True),
+                self.galaxy.coord.fk5.dec.to_string(sep=':', pad=True, alwayssign=True),
                 self.galaxy.z))
 
 
@@ -72,7 +72,7 @@ class CGMAbsSys(object):
       Must include redshift
     igm_sys : IGMSystem
     cosmo : astropy.cosmology, optional
-      Defaults to WMAP9
+      Defaults to Planck15
 
     Attributes
     ----------
@@ -139,14 +139,15 @@ class CGMAbsSys(object):
 
         # Calculate rho
         if cosmo is None:
-            warnings.warn('cgm.CGMAbsSys: Using WMAP9 cosmology')
-            self.cosmo = cosmology.WMAP9
+            warnings.warn('cgm.CGMAbsSys: Using Planck15 cosmology')
+            self.cosmo = cosmology.Planck15
         else:
             self.cosmo = cosmo
 
         # Impact parameter and PA
         if rho is None:
-            rho, iang = calc_rho(galaxy, igm_sys, self.cosmo, ang_sep=ang_sep, correct_lowz=correct_lowz)
+            rho, iang = calc_rho(galaxy, igm_sys, self.cosmo, ang_sep=ang_sep,
+                                 correct_lowz=correct_lowz, **kwargs)
             if ang_sep is None:
                 ang_sep = iang
         self.rho = rho
@@ -156,8 +157,8 @@ class CGMAbsSys(object):
         # Standard name
         if name is None:
             self.name = 'J{:s}{:s}_{:d}_{:d}'.format(
-                    self.igm_sys.coord.ra.to_string(unit=u.hour,sep='',pad=True)[0:4],
-                    self.igm_sys.coord.dec.to_string(sep='',pad=True,alwayssign=True)[0:5],
+                    self.igm_sys.coord.fk5.ra.to_string(unit=u.hour,sep='',pad=True)[0:4],
+                    self.igm_sys.coord.fk5.dec.to_string(sep='',pad=True,alwayssign=True)[0:5],
                     int(np.round(self.PA.to('deg').value)),
                     int(np.round(self.ang_sep.to('arcsec').value)))
         else:
@@ -178,8 +179,8 @@ class CGMAbsSys(object):
         outdict = dict(Name=self.name, z=self.galaxy.z, rho=self.rho.value,
                        ang_sep=self.ang_sep.value,
                        PA=self.PA.value,
-                       RA=self.galaxy.coord.ra.value,
-                       DEC=self.galaxy.coord.dec.value,
+                       RA=self.galaxy.coord.fk5.ra.value,
+                       DEC=self.galaxy.coord.fk5.dec.value,
                        cosmo = self.cosmo.name,
                        CreationDate=date,
                        user=user
@@ -219,6 +220,6 @@ class CGMAbsSys(object):
         return ('<{:s}: {:s} Galaxy RA/DEC={:s}{:s}, zgal={:g}, rho={:g}>'.format(
                 self.__class__.__name__,
                 self.name,
-                 self.galaxy.coord.ra.to_string(unit=u.hour,sep=':',pad=True),
-                 self.galaxy.coord.dec.to_string(sep=':',pad=True,alwayssign=True),
+                 self.galaxy.coord.fk5.ra.to_string(unit=u.hour,sep=':',pad=True),
+                 self.galaxy.coord.fk5.dec.to_string(sep=':',pad=True,alwayssign=True),
                  self.galaxy.z, self.rho))

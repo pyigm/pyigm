@@ -11,6 +11,7 @@ from linetools.isgm.abssystem import AbsSystem
 from linetools import utils as ltu
 from linetools.isgm import utils as ltiu
 
+
 class IGMSystem(AbsSystem):
     """
     Class for an IGM absorption system
@@ -43,8 +44,8 @@ class IGMSystem(AbsSystem):
     def __repr__(self):
         return ('<{:s}: {:s} {:s} {:s}, {:g}, NHI={:g}, Z/H={:g}>'.format(
                 self.__class__.__name__, self.abs_type,
-                 self.coord.ra.to_string(unit=u.hour, sep=':', pad=True),
-                 self.coord.dec.to_string(sep=':', pad=True),
+                 self.coord.fk5.ra.to_string(unit=u.hour, sep=':', pad=True),
+                 self.coord.fk5.dec.to_string(sep=':', pad=True),
                  self.zabs, self.NHI, self.ZH))
 
 
@@ -156,8 +157,8 @@ class AbsSubSystem(object):
         txt = '[{:s}: name={:s}{:s} type={:s}, {:s} {:s}, z={:g}, vlim={:g},{:g}'.format(
             self.__class__.__name__, self.parent.name, self.lbl,
             self.parent.abs_type,
-            self.parent.coord.ra.to_string(unit=u.hour,sep=':',pad=True),
-            self.parent.coord.dec.to_string(sep=':',pad=True,alwayssign=True),
+            self.parent.coord.fk5.ra.to_string(unit=u.hour,sep=':',pad=True),
+            self.parent.coord.fk5.dec.to_string(sep=':',pad=True,alwayssign=True),
             self.zabs, self.vlim[0],self.vlim[1])
         # Finish
         txt = txt + ']'
