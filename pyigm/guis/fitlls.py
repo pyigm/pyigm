@@ -16,6 +16,7 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 # Import libraries
 import numpy as np
 import warnings
+import pdb
 
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import pyqtSlot
@@ -31,10 +32,7 @@ from linetools.spectra.xspectrum1d import XSpectrum1D
 from linetools.spectra import convolve as lsc
 import linetools.spectra.io as lsi
 from linetools.spectralline import AbsLine
-from linetools.guis import line_widgets as ltgl
 from linetools.guis import utils as ltgu
-from linetools.guis import simple_widgets as ltgsm
-from linetools.guis import spec_widgets as ltgsp
 from linetools import utils as ltu
 
 from pyigm.abssys.lls import LLSSystem
@@ -86,8 +84,8 @@ class XFitLLSGUI(QMainWindow):
         v1.2
         30-Jul-2015 by JXP
     """
-    def __init__(self, ispec, parent=None, lls_fit_file=None,
-        outfil=None, smooth=3., zqso=None, fN_gamma=None, template=None,
+    def __init__(self, ispec, zqso, parent=None, lls_fit_file=None,
+        outfil=None, smooth=3., fN_gamma=None, template=None,
         dw=0.1, skip_wveval=False, norm=True):
         QMainWindow.__init__(self, parent)
         '''
@@ -163,7 +161,7 @@ class XFitLLSGUI(QMainWindow):
         self.abssys_widg = ltgsp.AbsSysWidget([],only_one=True,
             no_buttons=True, linelist=self.llist[self.llist['List']])
 
-        vlines = [(912 * (1 + zqso) if zqso is not None else None)]
+        vlines = [912 * (1 + zqso)]
         self.spec_widg = ltgsp.ExamineSpecWidget(spec,status=self.statusBar,
                                            llist=self.llist, key_events=False,
                                            abs_sys=self.abssys_widg.abs_sys,
@@ -313,15 +311,16 @@ class XFitLLSGUI(QMainWindow):
             self.abssys_widg.all_abssys[idx].zabs = 2.
         # b-value
         try:
-            self.abssys_widg.all_abssys[idx].bval = (
-                                                        float(self.bwidget.box.text()))*u.km/u.s
+            self.abssys_widg.all_abssys[idx].bval = (float(self.bwidget.box.text()))*u.km/u.s
         except:
             self.abssys_widg.all_abssys[idx].bval = 10 * u.km/u.s
+        if self.abssys_widg.all_abssys[idx].bval < (1*u.km/u.s):
+            self.abssys_widg.all_abssys[idx].bval = (1*u.km/u.s)
         self.abssys_widg.all_abssys[idx].comment = (
             self.Cwidget.box.text())
         # Update the lines
         for iline in self.abssys_widg.all_abssys[idx].lls_lines:
-            iline.attrib['z'] = self.abssys_widg.all_abssys[idx].zabs
+            iline.setz(self.abssys_widg.all_abssys[idx].zabs)
             iline.attrib['N'] = 10**self.abssys_widg.all_abssys[idx].NHI * u.cm**-2
             iline.attrib['b'] = self.abssys_widg.all_abssys[idx].bval
         # Update the rest
@@ -393,9 +392,6 @@ class XFitLLSGUI(QMainWindow):
             wa1 = wa
         all_tau_model = igmlls.tau_multi_lls(wa1,
            self.abssys_widg.all_abssys, skip_wveval=self.skip_wveval)
-        #QtCore.pyqtRemoveInputHook()
-        #import pdb; pdb.set_trace()
-        #QtCore.pyqtRestoreInputHook()
 
         # Loop on forest lines
         for forest in self.all_forest:
@@ -446,7 +442,7 @@ class XFitLLSGUI(QMainWindow):
             return idx
 
     def on_key(self,event):
-        if event.key in ['C','1','2','!','@']: # Set continuum level
+        if event.key in ['C','1','2','!','@']:  # Set continuum level
             if event.key == 'C':
                 imin = np.argmin(np.abs(
                     self.continuum.wavelength.value-event.xdata))
@@ -462,11 +458,11 @@ class XFitLLSGUI(QMainWindow):
             elif event.key == '@':
                 self.conti_dict['tilt2'] -= 0.1
             self.update_conti()
-        elif event.key == 'A': # New LLS
+        elif event.key == 'A':  # New LLS
             # Generate
             z = event.xdata/911.7633 - 1.
             self.add_LLS(z, bval=20.*u.km/u.s, NHI=17.3)
-        elif event.key == 'F': # New LLS
+        elif event.key == 'F': # New LLS automagically
             self.auto_plls(event.xdata, event.ydata)
         elif event.key in ['L','a','N','n','v','V','D','$','g']: # LLS-centric
             idx = self.get_sngl_sel_sys()
@@ -483,7 +479,8 @@ class XFitLLSGUI(QMainWindow):
                 #QtCore.pyqtRestoreInputHook()
                 awrest = np.array([iline.wrest.value for iline in self.abssys_widg.all_abssys[idx].lls_lines])
                 imn = np.argmin(np.abs(wrest-awrest))
-                self.abssys_widg.all_abssys[idx].zabs = event.xdata/awrest[imn]-1.
+                newz = event.xdata/awrest[imn]-1.
+                self.abssys_widg.all_abssys[idx].zabs = newz
             elif event.key == 'N': #Add to NHI
                 self.abssys_widg.all_abssys[idx].NHI += 0.05
             elif event.key == 'n': #Subtract from NHI
@@ -509,7 +506,7 @@ class XFitLLSGUI(QMainWindow):
                 #xdb.set_trace()
                 #QtCore.pyqtRestoreInputHook()
                 for iline in self.abssys_widg.all_abssys[idx].lls_lines:
-                    iline.attrib['z'] = self.abssys_widg.all_abssys[idx].zabs
+                    iline.setz(self.abssys_widg.all_abssys[idx].zabs)
                     iline.attrib['N'] = 10**self.abssys_widg.all_abssys[idx].NHI * u.cm**-2
                     iline.attrib['b'] = self.abssys_widg.all_abssys[idx].bval
             # Update the model
@@ -565,7 +562,7 @@ class XFitLLSGUI(QMainWindow):
     def add_forest(self,inp,z):
         '''Add a Lya/Lyb forest line
         '''
-        from xastropy.igm.abs_sys.abssys_utils import GenericAbsSystem
+        from linetools.isgm.abssystem import GenericAbsSystem
         forest = GenericAbsSystem((0.*u.deg,0.*u.deg), z, [-300.,300.]*u.km/u.s)
         # NHI
         NHI_dict = {'6':12.,'7':13.,'8':14.,'9':15.}
@@ -577,7 +574,7 @@ class XFitLLSGUI(QMainWindow):
             # Attributes
             aline.attrib['N'] = 10**forest.NHI * u.cm**-2
             aline.attrib['b'] = 20.*u.km/u.s
-            aline.attrib['z'] = forest.zabs
+            aline.setz(forest.zabs)
             # Append
             forest.lines.append(aline)
         # Append to forest lines
@@ -591,6 +588,9 @@ class XFitLLSGUI(QMainWindow):
         new_sys.bval = bval # This is not standard, but for convenience
         new_sys.comment = comment
         new_sys.fill_lls_lines(bval=bval, do_analysis=0)
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
         # Name
         self.count_lls += 1
         new_sys.label = 'LLS_Sys_{:d}'.format(self.count_lls)
@@ -606,12 +606,13 @@ class XFitLLSGUI(QMainWindow):
             self.update_model()
 
     def auto_plls(self,x,y):
-        '''Automatically fit a pLLS
+        """Automatically fit a pLLS
+
         Parameters:
         ----------
         x,y: floats
           x,y values in the GUI
-        '''
+        """
         spec = self.spec_widg.spec # For convenience
         if len(self.abssys_widg.all_abssys) > 0:
             conti= self.full_model

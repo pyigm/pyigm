@@ -76,10 +76,10 @@ def parser(options=None):
 
     parser = argparse.ArgumentParser(description='Parser for FitLLSGUI (v1.0)')
     parser.add_argument("in_file", type=str, help="Spectral file")
+    parser.add_argument("zqso", type=float, help="Use Telfer template with zqso")
     parser.add_argument("--out_file", type=str, help="Output LLS Fit file")
-    parser.add_argument("--smooth", type=float, help="Smoothing (pixels)")
+    parser.add_argument("--smooth", type=float, default=3., help="Smoothing (pixels)")
     parser.add_argument("--lls_fit_file", type=str, help="Input LLS Fit file")
-    parser.add_argument("--zqso", type=float, help="Use Telfer template with zqso")
 
     if options is None:
         args = parser.parse_args()
@@ -96,8 +96,8 @@ def main(args=None):
 
     # Run
     app = QApplication(sys.argv)
-    gui = XFitLLSGUI(pargs.in_file,outfil=pargs.out_file,smooth=pargs.smooth,
-                     lls_fit_file=pargs.lls_fit_file, zqso=pargs.zqso)
+    gui = XFitLLSGUI(pargs.in_file, pargs.zqso, outfil=pargs.out_file,smooth=pargs.smooth,
+                     lls_fit_file=pargs.lls_fit_file)
     gui.show()
     app.exec_()
 
