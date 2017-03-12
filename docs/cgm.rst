@@ -21,6 +21,8 @@ Overview
 There are a series of classes designed for CGM analyses.
 We describe each in turn.
 
+.. _cgm-class:
+
 CGM
 ===
 
