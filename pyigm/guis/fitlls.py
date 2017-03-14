@@ -492,6 +492,16 @@ class XFitLLSGUI(QMainWindow):
             z = event.xdata/911.7633 - 1.
             self.add_LLS(z, bval=20.*u.km/u.s, NHI=17.3)
         elif event.key == 'F': # New LLS automagically
+            # Check if redshift is higher than any existing
+            new_z = event.xdata/911.7633 - 1.
+            for absssys in self.abssys_widg.all_abssys:
+                if new_z >= absssys.zabs:
+                    print("New LLS with F must be at lower z than any other!")
+                    return
+            # Do not exceed zqso too much
+            if new_z > (self.zqso+0.05):
+                print("Cannot use F on an LLS with z > z_qso + 0.05")
+                return
             self.auto_plls(event.xdata, event.ydata)
         elif event.key in ['L','a','N','n','v','V','D','$','g']: # LLS-centric
             idx = self.get_sngl_sel_sys()
@@ -643,10 +653,14 @@ class XFitLLSGUI(QMainWindow):
             conti= self.continuum
         # Generate toy LLS from click
         ximn = np.argmin(np.abs(spec.wavelength.value-x))
+        if y > conti.flux.value[ximn]:
+            print("Type F below the continuum fool!")
+            return
         NHI = 17.29 + np.log10(-1.*np.log(y/conti.flux.value[ximn]))
         #QtCore.pyqtRemoveInputHook()
-        #xdb.set_trace()
+        #pdb.set_trace()
         #QtCore.pyqtRestoreInputHook()
+
 
         #print('NHI={:g}'.format(NHI))
         z = x/(911.7)-1
@@ -656,6 +670,7 @@ class XFitLLSGUI(QMainWindow):
 
         # wrest, Tau model, flux
         wrest = spec.wavelength/(1+plls.zabs)
+
         tau = igmlls.tau_multi_lls(spec.wavelength,[plls])
         emtau = np.exp(-1. * tau)
         lls_flux = lsc.convolve_psf(emtau, 3.)
@@ -665,11 +680,11 @@ class XFitLLSGUI(QMainWindow):
         if len(self.abssys_widg.all_abssys) != 0:
             zlls = [lls.zabs for lls in self.abssys_widg.all_abssys if lls.zabs > plls.zabs]
             if len(zlls) == 0:
-                zmin = self.zqso+0.01
+                zmin = self.zqso+0.05
             else:
                 zmin = np.min(np.array(zlls)) - 0.01
         else:
-            zmin = self.zqso+0.01
+            zmin = self.zqso+0.05
 
         # Pixels for analysis and rolling
         # NEED TO CUT ON X-Shooter ARM
