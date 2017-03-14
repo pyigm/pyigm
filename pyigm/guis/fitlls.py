@@ -167,6 +167,7 @@ class XFitLLSGUI(QMainWindow):
                                            abs_sys=self.abssys_widg.abs_sys,
                                            vlines=vlines, plotzero=1,
                                                  norm=norm)
+        self.spec_widg.canvas.mpl_connect('button_press_event', self.on_click)
         # Initialize continuum (and LLS if from a file)
         if lls_fit_file is not None:
             self.init_LLS(lls_fit_file,spec)
@@ -303,6 +304,9 @@ class XFitLLSGUI(QMainWindow):
                 float(self.Nwidget.box.text()))
         except:
             self.abssys_widg.all_abssys[idx].NHI = 20.
+        if self.abssys_widg.all_abssys[idx].NHI > 40:  # Max
+            self.abssys_widg.all_abssys[idx].NHI = 40.
+            self.Nwidget.set_text(40.)
         # z
         try:
             self.abssys_widg.all_abssys[idx].zabs = (
@@ -441,6 +445,31 @@ class XFitLLSGUI(QMainWindow):
             idx = self.abssys_widg.all_items.index(item.text())
             return idx
 
+    def on_click(self, event):
+        """ Over-loads click events
+        """
+        if event.button == 3:  # Set redshift; equivalent to 'g'
+            idx = self.get_sngl_sel_sys()
+            if idx is None:
+                return
+            wrest = event.xdata/(1+self.abssys_widg.all_abssys[idx].zabs)
+            awrest = np.array([iline.wrest.value for iline in self.abssys_widg.all_abssys[idx].lls_lines])
+            imn = np.argmin(np.abs(wrest-awrest))
+            newz = event.xdata/awrest[imn]-1.
+            self.abssys_widg.all_abssys[idx].zabs = newz
+            # Update the lines
+            self.llist['z'] = self.abssys_widg.all_abssys[idx].zabs
+            for iline in self.abssys_widg.all_abssys[idx].lls_lines:
+                iline.setz(self.abssys_widg.all_abssys[idx].zabs)
+                iline.attrib['N'] = 10**self.abssys_widg.all_abssys[idx].NHI * u.cm**-2
+                iline.attrib['b'] = self.abssys_widg.all_abssys[idx].bval
+            # Update the model
+            self.update_model()
+            # Draw by default
+            self.update_boxes()
+            self.draw()
+
+
     def on_key(self,event):
         if event.key in ['C','1','2','!','@']:  # Set continuum level
             if event.key == 'C':
@@ -474,9 +503,6 @@ class XFitLLSGUI(QMainWindow):
                 self.abssys_widg.all_abssys[idx].zabs = event.xdata/1215.6700-1.
             elif event.key == 'g': # Move nearest line to cursor
                 wrest = event.xdata/(1+self.abssys_widg.all_abssys[idx].zabs)
-                #QtCore.pyqtRemoveInputHook()
-                #xdb.set_trace()
-                #QtCore.pyqtRestoreInputHook()
                 awrest = np.array([iline.wrest.value for iline in self.abssys_widg.all_abssys[idx].lls_lines])
                 imn = np.argmin(np.abs(wrest-awrest))
                 newz = event.xdata/awrest[imn]-1.
@@ -502,9 +528,6 @@ class XFitLLSGUI(QMainWindow):
             # Update the lines
             if idx is not None:
                 self.llist['z'] = self.abssys_widg.all_abssys[idx].zabs
-                #QtCore.pyqtRemoveInputHook()
-                #xdb.set_trace()
-                #QtCore.pyqtRestoreInputHook()
                 for iline in self.abssys_widg.all_abssys[idx].lls_lines:
                     iline.setz(self.abssys_widg.all_abssys[idx].zabs)
                     iline.attrib['N'] = 10**self.abssys_widg.all_abssys[idx].NHI * u.cm**-2
