@@ -27,6 +27,11 @@ from .cgm import CGMAbsSys
 from pyigm.abssys.igmsys import IGMSystem
 import pyigm
 
+try:
+    basestring
+except NameError:  # For Python 3
+    basestring = str
+
 class COSHalos(CGMAbsSurvey):
     """Inherits CGM Abs Survey
 

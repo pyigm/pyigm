@@ -1,6 +1,5 @@
 """ Classes for CGM Surveys
 """
-
 from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
@@ -15,6 +14,11 @@ from astropy.coordinates import SkyCoord
 from pyigm.utils import lst_to_array
 from pyigm.surveys.igmsurvey import GenericIGMSurvey
 from pyigm.cgm.cgm import CGMAbsSys
+
+try:
+    basestring
+except NameError:  # For Python 3
+    basestring = str
 
 class CGMAbsSurvey(object):
     """A CGM Survey class in absorption
@@ -134,7 +138,7 @@ class CGMAbsSurvey(object):
 
         Parameters
         ----------
-        Zion : tuple
+        Zion : tuple or str
         fill_ion : bool, optional
           Fill each ionN table in the survey (a bit slow)
 
@@ -142,15 +146,19 @@ class CGMAbsSurvey(object):
         -------
         tbl : astropy.Table
         """
+        from linetools.abund.ions import name_to_ion
+        if isinstance(Zion, basestring):
+            Zion = name_to_ion(Zion)
         # Generate dummy IGMSurvey
         dumb = GenericIGMSurvey()
         names = []
         for cgmabs in self.cgm_abs:
             if fill_ion:
                 cgmabs.igm_sys.fill_ionN()
-            dumb._abs_sys.append(cgmabs.igm_sys)
-            # Names
-            names.append(cgmabs.name)
+            if cgmabs.igm_sys._ionN is not None:
+                dumb._abs_sys.append(cgmabs.igm_sys)
+                # Names
+                names.append(cgmabs.name)
         # Run ions
         tbl = dumb.ions(Zion)
         # Add CGM name
@@ -231,10 +239,22 @@ class CGMAbsSurvey(object):
                     pdb.set_trace()
         # Special cases
         if k == 'coord':
-            ra = [coord.ra.value for coord in lst]
-            dec = [coord.dec.value for coord in lst]
+            ra = [coord.fk5.ra.value for coord in lst]
+            dec = [coord.fk5.dec.value for coord in lst]
             lst = SkyCoord(ra=ra, dec=dec, unit='deg')
-            return lst[self.mask]
+            if self.mask is not None:
+                return lst[self.mask]
+            else:
+                return lst
+        elif k == 'scoord':  # Sightline coordinates
+            lst = [getattr(cgm_abs.igm_sys, 'coord') for cgm_abs in self.cgm_abs]
+            ra = [coord.fk5.ra.value for coord in lst]
+            dec = [coord.fk5.dec.value for coord in lst]
+            lst = SkyCoord(ra=ra, dec=dec, unit='deg')
+            if self.mask is not None:
+                return lst[self.mask]
+            else:
+                return lst
         # Return array
         return lst_to_array(lst, mask=self.mask)
 

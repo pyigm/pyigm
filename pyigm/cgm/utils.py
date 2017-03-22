@@ -16,22 +16,37 @@ from linetools import utils as ltu
 
 from pyigm.field.galaxy import Galaxy
 
-def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True):
-    """
+
+def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True,
+             Galactic=False, d_Sun=8.0*u.kpc):
+    """ Calculate the impact parameter between the galaxy and IGM sightline
+
     Parameters
     ----------
     galaxy : Galaxy object
     igm_sys : IGMSystem object or list
     cosmo : astropy.cosmology
+    Galactic : bool, optional
+      Calculate for our Galaxy!
+    correct_lowz : bool, optional
+      Apply corrections for the local universe, as desired
+      Follows Mould et al. 2000
+    ang_sep : Angle or Quantity
+      Input angular separation
+      May speed up calculation
+    d_Sun : Quantity
+      Distance to the Sun;  for Galactic calculation only
+
 
     Returns
     -------
     rho : Quantity
       impact parameter in kpc
     ang_sep : Angle
-      separation in arsec
+      separation in arcsec (deg for Galactic)
 
     """
+    # Loop?
     if isinstance(igm_sys, list):
         rhos = []
         angs = []
@@ -40,6 +55,19 @@ def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True):
             rhos.append(irho.value)
             angs.append(iang)
         return np.array(rhos)*u.kpc, angs
+    # Galactic?
+    if Galactic:
+        cosl_cosb = (np.cos(igm_sys.coord.transform_to('galactic').l)*
+                          np.cos(igm_sys.coord.transform_to('galactic').b))
+        xcomp = d_Sun * (cosl_cosb**2 - 1.)
+        ycomp = d_Sun*(cosl_cosb*np.sin(igm_sys.coord.transform_to('galactic').l)*
+                       np.cos(igm_sys.coord.transform_to('galactic').b))
+        zcomp = d_Sun*(cosl_cosb*np.sin(igm_sys.coord.transform_to('galactic').b))
+        # Distance
+        d = np.sqrt(xcomp**2 + ycomp**2 + zcomp**2)
+        # Angle
+        ang_sep = np.arccos(cosl_cosb)
+        return d, ang_sep.to('deg')
 
     if ang_sep is None:
         ang_sep = igm_sys.coord.separation(galaxy.coord).to('arcsec')
