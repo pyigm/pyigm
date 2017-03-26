@@ -29,12 +29,8 @@ class GalaxyCGM(CGM):
 
     Parameters:
     -----------
-    fits_path : str, optional
-      Path to the FITS data files for COS-Halos
-    cdir : str, optional
-      Path to the COS-Halos Dropbox
-    kin_init_file : str, optional
-      Path to kinematics file
+    load : bool, optional
+      Load datasets
     """
     def __init__(self, load=True, **kwargs):
         # Generate the Milky Way
@@ -146,7 +142,7 @@ class GalaxyCGM(CGM):
                 self.abs.cgm_abs[idx].igm_sys.add_component(comp, chk_sep=False, debug=True)
             else:  # New
                 if row['RV'] > 0:
-                    zem = row['RV']/3e5
+                    zem = row['RV']/c_kms
                 else:
                     zem = row['z']
                 abssys = IGMSystem(gc, comp.zcomp, vlim, name=row['Name']+'_z0', zem=zem)
@@ -156,7 +152,7 @@ class GalaxyCGM(CGM):
                 # Add to cgm_abs
                 self.abs.cgm_abs.append(cgmabs)
 
-    def write(self, outfil='COS-Halos_sys.tar.gz'):
+    def write(self, outfil='MW_CGM.tar.gz'):
         """ Write the survey to a tarball of JSON files
 
         Parameters
@@ -178,6 +174,8 @@ class GalaxyCGM(CGM):
         ----------
         cgm_abs
         """
+        return  # NOT YET IMPLEMENTED
+        '''
         if isinstance(inp,int):
             return self.cgm_abs[inp]
         elif isinstance(inp,tuple):
@@ -206,5 +204,6 @@ class GalaxyCGM(CGM):
             return self.cgm_abs[mt[0]]
         else:
             raise ValueError("Multiple hits.  Should not happen")
+        '''
 
 

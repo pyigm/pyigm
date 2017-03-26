@@ -17,7 +17,8 @@ from linetools import utils as ltu
 from pyigm.field.galaxy import Galaxy
 
 
-def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True, Galactic=False):
+def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True,
+             Galactic=False, d_Sun=8.0*u.kpc):
     """ Calculate the impact parameter between the galaxy and IGM sightline
 
     Parameters
@@ -27,13 +28,22 @@ def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True, Galactic=F
     cosmo : astropy.cosmology
     Galactic : bool, optional
       Calculate for our Galaxy!
+    correct_lowz : bool, optional
+      Apply corrections for the local universe, as desired
+      Follows Mould et al. 2000
+    ang_sep : Angle or Quantity
+      Input angular separation
+      May speed up calculation
+    d_Sun : Quantity
+      Distance to the Sun;  for Galactic calculation only
+
 
     Returns
     -------
     rho : Quantity
       impact parameter in kpc
     ang_sep : Angle
-      separation in arsec (deg for Galactic)
+      separation in arcsec (deg for Galactic)
 
     """
     # Loop?
@@ -47,7 +57,6 @@ def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True, Galactic=F
         return np.array(rhos)*u.kpc, angs
     # Galactic?
     if Galactic:
-        d_Sun = 8.0 * u.kpc
         cosl_cosb = (np.cos(igm_sys.coord.transform_to('galactic').l)*
                           np.cos(igm_sys.coord.transform_to('galactic').b))
         xcomp = d_Sun * (cosl_cosb**2 - 1.)

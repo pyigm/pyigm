@@ -39,6 +39,44 @@ class IGMSightline(AbsSightline):
         return slf
 
     @classmethod
+    def from_igmguesses(cls, radec, zem, igmgfile, name=None, **kwargs):
+        """ Instantiate from a JSON file from IGMGuesses
+        The input coordinates are used for all the components
+
+        Parameters
+        ----------
+        radec : RA/DEC input
+          See ltu.radec_to_coord for options
+        zem : float
+          Emission redshift of sightline
+        igmgfile : str
+          Filename
+
+        Returns
+        -------
+
+        """
+        # Read
+        jdict = ltu.loadjson(igmgfile)   # cmps, specfile
+        # Add in additional keys
+        coord = ltu.radec_to_coord(radec)
+        jdict['RA'] = coord.fk5.ra.deg
+        jdict['DEC'] = coord.fk5.dec.deg
+        jdict['zem'] = zem
+        # Name
+        if name is None:
+            name = 'J{:s}{:s}_z{:0.3f}'.format(
+                coord.fk5.ra.to_string(unit=u.hour,sep='',pad=True)[0:4],
+                coord.fk5.dec.to_string(sep='',pad=True,alwayssign=True)[0:5],
+                zem)
+        jdict['name'] = name
+        jdict['components'] = jdict.pop('cmps')
+        kwargs['use_coord'] = True
+        slf = cls.from_dict(jdict, **kwargs)
+        # Return
+        return slf
+
+    @classmethod
     def from_dict(cls, idict, **kwargs):
         """ Instantiate from a dict
 
@@ -50,6 +88,7 @@ class IGMSightline(AbsSightline):
            'DEC' -- float(deg)
            'zem' -- float
            'name' -- str
+           'components' -- list
          Other keys are added as attributes to the IgmSightline object
 
         Returns
@@ -96,8 +135,8 @@ class IGMSightline(AbsSightline):
 
     def __repr__(self):
         txt = '<{:s}: {:s} {:s}, zem={:f}'.format(
-                self.__class__.__name__, self.coord.ra.to_string(unit=u.hour,sep=':', pad=True),
-                self.coord.dec.to_string(sep=':',pad=True,alwayssign=True), self.zem)
+                self.__class__.__name__, self.coord.fk5.ra.to_string(unit=u.hour,sep=':', pad=True),
+                self.coord.fk5.dec.to_string(sep=':',pad=True,alwayssign=True), self.zem)
 
         # Type?
         if self.em_type is not None:
