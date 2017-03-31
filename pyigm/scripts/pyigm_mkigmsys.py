@@ -15,12 +15,15 @@ def parser(options=None):
     import argparse
     # Parse
     parser = argparse.ArgumentParser(
-        description='Show contents of a JSON file, assuming one of several formats.')
+        description='Show contents of a JSON file, assuming one of several formats. (v1.0)')
     parser.add_argument("itype", help="Type of IGMSystem: dla, lls")
     parser.add_argument("zabs", type=float, help="Absorption redshift")
     parser.add_argument("NHI", type=float, help="log10 NHI value")
     parser.add_argument("outfile", type=str, help="Name of JSON file to create")
-    parser.add_argument("--jcoord", type=str, help="Coordiantes in JXXXXXXXX.X+XXXXXX.X format")
+    parser.add_argument("--jcoord", type=str, help="Coordinates in JXXXXXXXX.X+XXXXXX.X format")
+    parser.add_argument("--zem", type=float, help="Emission redshift")
+    parser.add_argument("--sigNHI", type=float, help="Error in NHI")
+    parser.add_argument("--vlim", type=str, help="Velocity limits in format ###,###")
 
     if options is None:
         args = parser.parse_args()
@@ -30,11 +33,15 @@ def parser(options=None):
 
 def main(args=None):
     from astropy.coordinates import SkyCoord
+    from astropy import units as u
     from linetools import utils as ltu
     from pyigm.abssys.dla import DLASystem
     from pyigm.abssys.lls import LLSSystem
 
-    pargs = parser()
+    if args is None:
+        pargs = parser()
+    else:
+        pargs = args
 
     # Coordinates
     if pargs.jcoord is not None:
@@ -42,11 +49,17 @@ def main(args=None):
     else:
         coord = SkyCoord(ra=0., dec=0., unit='deg')
 
+    # vlim
+    if pargs.vlim is not None:
+        vlims = [float(vlim) for vlim in pargs.vlim.split(',')]*u.km/u.s
+    else:
+        vlims = None
+
     # go
     if pargs.itype == 'dla':
-        isys = DLASystem(coord, pargs.zabs, None, pargs.NHI)
+        isys = DLASystem(coord, pargs.zabs, vlims, pargs.NHI, zem=pargs.zem, sig_NHI=pargs.sigNHI)
     elif pargs.itype == 'lls':
-        isys = LLSSystem(coord, pargs.zabs, None, NHI=pargs.NHI)
+        isys = LLSSystem(coord, pargs.zabs, vlims, NHI=pargs.NHI, zem=pargs.zem, sig_NHI=pargs.sigNHI)
     else:
         raise IOError("Not prepared for this type of IGMSystem")
 
