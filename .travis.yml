@@ -120,6 +120,7 @@ install:
     - if [[ $SETUP_CMD != egg_info ]]; then $PIP_INSTALL pyyaml; fi
     - if [[ $SETUP_CMD != egg_info ]]; then $PIP_INSTALL emcee; fi
     - if [[ $SETUP_CMD != egg_info ]]; then $PIP_INSTALL corner; fi
+    - if [[ $SETUP_CMD != egg_info ]]; then $PIP_INSTALL urllib2; fi
     - if [[ $SETUP_CMD != egg_info ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION matplotlib; fi
 
     # DOCUMENTATION DEPENDENCIES
