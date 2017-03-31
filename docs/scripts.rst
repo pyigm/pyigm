@@ -41,3 +41,13 @@ Here is the usage::
       --sigNHI SIGNHI  Error in NHI
       --vlim VLIM      Velocity limits in format ###,###
 
+
+And an example::
+
+    pyigm_mkigmsys dla 3.0 20.5 tmp.json --zem=4. --vlim=-232,300 --sigNHI=0.2
+
+pyigm_showjson
+--------------
+
+Simple script to give a brief summary of stuff in a
+JSON file.  Best to use on an IGMSightline file.
