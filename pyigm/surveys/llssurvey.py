@@ -227,7 +227,7 @@ class LLSSurvey(IGMSurvey):
         ras = []
         decs = []
         zval = []
-        mkeys = fh5['met'].keys()
+        mkeys = list(fh5['met'].keys())  # Python 3
         mkeys.remove('left_edge_bins')
         for key in mkeys:
             radec, z = key.split('z')
