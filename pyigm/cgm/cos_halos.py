@@ -374,7 +374,7 @@ class COSHalos(CGMAbsSurvey):
 
         """
         fh5=h5py.File(ZH_fil, 'r')
-        mkeys = fh5['met'].keys()
+        mkeys = list(fh5['met'].keys())  # Python 3
         mkeys.remove('left_edge_bins')
         mkeys.remove('right_edge_bins')
         mkeys = np.array(mkeys)
