@@ -42,7 +42,7 @@ def dict_to_ions(idict):
     #  Could probably use add_row or dict instantiation
     table = None
     for ion in idict.keys():
-        Zion = ltai.name_ion(ion)
+        Zion = ltai.name_to_ion(ion)
         if table is None:
             tkeys = idict[ion].keys()
             lst = [[idict[ion][tkey]] for tkey in tkeys]

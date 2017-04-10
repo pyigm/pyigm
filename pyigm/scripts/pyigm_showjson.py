@@ -37,6 +37,11 @@ def main(args=None):
     if jdict['class'] == 'IGMSightline':
         from pyigm.igm.igmsightline import IGMSightline
         obj = IGMSightline.from_dict(jdict)
+        flg_tbl = True
+    elif jdict['class'] == 'DLASystem':
+        from pyigm.abssys.dla import DLASystem
+        obj = DLASystem.from_dict(jdict)
+        flg_tbl = False
     else:
         raise IOError("Not prepared for this class: {:s}".format(jdict['class']))
 
@@ -51,9 +56,10 @@ def main(args=None):
     print("Name of object: {:s}".format(name))
 
     # Generate table
-    tbl = obj.build_table()
-    if len(tbl) > 0:
-        tbl.pprint(max_width=120)
-    else:
-        print("Table was empty..")
+    if flg_tbl:
+        tbl = obj.build_table()
+        if len(tbl) > 0:
+            tbl.pprint(max_width=120)
+        else:
+            print("Table was empty..")
 

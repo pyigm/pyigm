@@ -6,7 +6,10 @@ import numpy as np
 import os
 import imp, glob
 import pdb
-import urllib2
+try:
+    from urllib2 import urlopen # Python 2.7
+except ImportError:
+    from urllib.request import urlopen
 import json
 
 from astropy.table import QTable, Column, Table, vstack
@@ -115,7 +118,7 @@ class DLASurvey(IGMSurvey):
                 print('H100: Downloading a 141Mb file.  Be patient..')
                 url = 'https://dl.dropboxusercontent.com/u/6285549/DLA/H100/H100_DLA_spectra.tar.gz'
                 spectra_fil = pyigm_path+'/data/DLA/H100/H100_spectra.tar.gz'
-                f = urllib2.urlopen(url)
+                f = urlopen(url)
                 with open(spectra_fil, "wb") as code:
                     code.write(f.read())
                 # Unpack
