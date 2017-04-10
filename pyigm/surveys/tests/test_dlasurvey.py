@@ -16,7 +16,6 @@ def data_path(filename):
     return os.path.join(data_dir, filename)
 '''
 
-
 def test_init():
     dlas = DLASurvey(ref='null')
     assert dlas.abs_type == 'DLA'
@@ -36,7 +35,6 @@ def test_read_h100_nosys():
     h100 = DLASurvey.load_H100(load_sys=False)
     assert h100.nsys == 100
 
-
 @remote_data
 def test_read_h100():
     h100 = DLASurvey.load_H100()
@@ -45,6 +43,11 @@ def test_read_h100():
     SiII_clms = h100.ions((14, 2))
     gdSiII = np.where(SiII_clms['flag_N'] > 0)[0]
     assert len(gdSiII) == 98
+
+def test_read_xq100_nosys():
+    """ XQ-100 """
+    xq100 = DLASurvey.load_XQ100(sample='stat')
+    assert xq100.nsys == 36
 
 
 def test_dat_list():
