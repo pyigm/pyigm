@@ -200,3 +200,50 @@ class ModifiedNFW(CGMPhase):
         rho = (self.fb*self.f_hot*self.rho0) / y**(1-self.alpha) / (self.y0+y)**(2+self.alpha)
         # Return
         return rho
+
+    def Ne_Rperp(self, Rperp, step_size=0.1*u.kpc, rmax=1., epsrel=1e-4, epsabs=1e-6,
+                 *arg, **kwargs):
+        """ Calculate N_H at an input impact parameter Rperp
+
+        Parameters
+        ----------
+        Rperp : Quantity
+          Impact parameter, typically in kpc
+        step_size : Quantity
+          Step size used for numerical integration
+        rmax : float
+          Maximum radius for integration in units of r200
+
+        Returns
+        -------
+        NH : Quantity
+          Column density of total hydrogen
+        """
+        from scipy.integrate import quad
+
+        # Cut at rmax*rvir
+        if Rperp > rmax*self.r200:
+            return 0. / u.cm**2
+        # Generate a sightline to rvir
+        zmax = np.sqrt(self.r200 ** 2 - Rperp ** 2).to('kpc')
+        zval = np.arange(-zmax.value, zmax.value+step_size.to('kpc').value,
+                         step_size.to('kpc').value)  # kpc
+        # Set xyz
+        xyz = np.zeros((3,zval.size))
+        xyz[0, :] = Rperp.to('kpc').value
+        xyz[2, :] = zval
+
+        # dfinal
+        dfinal = np.sqrt(xyz[0]**2 + xyz[1]**2 + xyz[-1]**2)
+        # Integrate
+        pdb.set_trace()
+        Ne = quad(lambda x: self.ne(x*xyz),
+                          0, 1, *arg, epsrel=epsrel, epsabs=epsabs,
+                          **kwargs)[0]*dfinal
+        pdb.set_trace()
+
+        # Density
+        ne = self.electron_density(xyz) / u.cm ** 3
+        # Ne
+        Ne = np.sum(ne) * dz
+        Ne_NFW[kk] = Ne.to(u.cm ** -2).value
