@@ -16,7 +16,6 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 
 import imp, glob
 import numpy as np
-import urllib2
 import pdb
 
 from astropy import units as u
@@ -30,6 +29,10 @@ from pyigm.abssys.igmsys import AbsSubSystem
 from pyigm.abssys import utils as pyiau
 from pyigm.abssys.lls import LLSSystem
 from .llssurvey import LLSSurvey
+try:
+    from urllib2 import urlopen # Python 2.7
+except ImportError:
+    from urllib.request import urlopen
 
 pyigm_path = imp.find_module('pyigm')[1]
 
@@ -90,7 +93,7 @@ def jenkins2005():
     else:
         url = 'http://iopscience.iop.org/0004-637X/623/2/767/fulltext/61520.tb1.txt'
         print('LLSSurvey: Grabbing table file from {:s}'.format(url))
-        f = urllib2.urlopen(url)
+        f = urlopen(url)
         with open(tab_fil, "wb") as code:
             code.write(f.read())
     # Setup
@@ -208,7 +211,7 @@ def tripp2005():
         else:
             url = urls[jj]
             print('LLSSurvey: Grabbing table file from {:s}'.format(url))
-            f = urllib2.urlopen(url)
+            f = urlopen(url)
             with open(tab_fil, "wb") as code:
                 code.write(f.read())
     # Setup
@@ -799,7 +802,7 @@ def tumlinson11():
         tab_fil = chk_fil[0]
     else:
         print('LLSSurvey: Grabbing table file from {:s}'.format(url))
-        f = urllib2.urlopen(url)
+        f = urlopen(url)
         with open(tab_fil, "wb") as code:
             code.write(f.read())
     # Setup
@@ -910,7 +913,7 @@ def battisti12():
         else:
             url = urls[jj]
             print('LLSSurvey: Grabbing table file from {:s}'.format(url))
-            f = urllib2.urlopen(url)
+            f = urlopen(url)
             with open(tab_fil, "wb") as code:
                 code.write(f.read())
     # QSO info 
@@ -993,7 +996,7 @@ def lehner13():
     else:
         url = 'http://iopscience.iop.org/0004-637X/770/2/138/suppdata/apj472363t2_mrt.txt'
         print('LLSSurvey: Grabbing table file from {:s}'.format(url))
-        f = urllib2.urlopen(url)
+        f = urlopen(url)
         with open(tab_fil, "wb") as code:
             code.write(f.read())
 
