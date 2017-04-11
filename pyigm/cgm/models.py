@@ -125,7 +125,7 @@ class ModifiedNFW(CGMPhase):
         self.H0 = 70. *u.km/u.s/ u.Mpc
         self.fb = 0.16       # Baryon fraction
         self.rhoc = 9.2e-30 * u.g / u.cm**3
-        # DM
+        # Dark Matter
         self.r200 = (((3*10**self.M_halo * const.M_sun.cgs) / (4*np.pi*200*self.rhoc))**(1/3)).to('kpc')
         self.rho0 = 200*self.rhoc/3  * self.c**3 / self.fy(self.c)   # Central density
         # Misc
@@ -196,7 +196,7 @@ class ModifiedNFW(CGMPhase):
 
         """
         radius = np.sqrt(rad3d2(xyz))
-        y = self.c * (radius/self.r200.value)
+        y = self.c * (radius/self.r200.to('kpc').value)
         rho = (self.fb*self.f_hot*self.rho0) / y**(1-self.alpha) / (self.y0+y)**(2+self.alpha)
         # Return
         return rho
@@ -216,34 +216,25 @@ class ModifiedNFW(CGMPhase):
 
         Returns
         -------
-        NH : Quantity
-          Column density of total hydrogen
+        Ne : Quantity
+          Column density of total electrons
         """
-        from scipy.integrate import quad
+        dz = step_size.to('kpc').value
 
         # Cut at rmax*rvir
         if Rperp > rmax*self.r200:
             return 0. / u.cm**2
         # Generate a sightline to rvir
         zmax = np.sqrt(self.r200 ** 2 - Rperp ** 2).to('kpc')
-        zval = np.arange(-zmax.value, zmax.value+step_size.to('kpc').value,
-                         step_size.to('kpc').value)  # kpc
+        zval = np.arange(-zmax.value, zmax.value+dz, dz)  # kpc
         # Set xyz
         xyz = np.zeros((3,zval.size))
         xyz[0, :] = Rperp.to('kpc').value
         xyz[2, :] = zval
 
-        # dfinal
-        dfinal = np.sqrt(xyz[0]**2 + xyz[1]**2 + xyz[-1]**2)
         # Integrate
-        pdb.set_trace()
-        Ne = quad(lambda x: self.ne(x*xyz),
-                          0, 1, *arg, epsrel=epsrel, epsabs=epsabs,
-                          **kwargs)[0]*dfinal
-        pdb.set_trace()
+        ne = self.ne(xyz) # cm**-3
+        Ne = np.sum(ne) * dz * 1000  # pc cm**-3
 
-        # Density
-        ne = self.electron_density(xyz) / u.cm ** 3
-        # Ne
-        Ne = np.sum(ne) * dz
-        Ne_NFW[kk] = Ne.to(u.cm ** -2).value
+        # Return
+        return Ne * u.pc / u.cm**3
