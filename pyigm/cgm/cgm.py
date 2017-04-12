@@ -32,8 +32,6 @@ class CGM(object):
     cgm_abs : list
       List of CGMAbsSys classes
 
-    TODO:
-      Need to check cosmologies
     """
     # Initialize with a .dat file
     def __init__(self, galaxy):
