@@ -5,7 +5,6 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 # Import libraries
 import numpy as np
 import warnings
-import imp
 import pdb
 
 from PyQt5 import QtGui, QtCore
