@@ -10,12 +10,15 @@ try:
     from urllib2 import urlopen # Python 2.7
 except ImportError:
     from urllib.request import urlopen
-import json
 
 from astropy.table import QTable, Column, Table, vstack
 from astropy import units as u
-#from astropy.coordinates import SkyCoord
+from astropy.stats import poisson_conf_interval as aspci
+from astropy import constants as const
+from astropy.cosmology import core as acc
+
 from linetools import utils as ltu
+
 from pyigm.surveys.igmsurvey import IGMSurvey
 from pyigm.surveys import utils as pyisu
 
@@ -388,6 +391,209 @@ class DLASurvey(IGMSurvey):
 
     def __init__(self, **kwargs):
         IGMSurvey.__init__(self, 'DLA', **kwargs)
+
+        # define the cosmology (for H0)
+        if not hasattr(self, 'cosmo'):
+            self.cosmo = acc.FlatLambdaCDM(70., 0.3)
+
+    def calculate_lox(self, zbins, NHI_mnx=(20.3, 23.00)):
+        """
+        Parameters
+        ----------
+        zbins : list
+          List of lists or tuples, e.g.  [ [0., 1.], [1., 2.], [2.,3]]
+        NHI_mnx : tuple, optional
+          min/max of NHI for evaluation
+
+        Returns
+        -------
+        lX, sig_lX_lower, sig_lX_upper : ndarray
+        """
+        # assign the nhbins
+        nhbins = np.array(NHI_mnx)
+
+        # generate the fN components
+        fncomp = self.__generate_fncomp__(nhbins, zbins)
+
+        # get the absorption path length
+        dXtot = self.__find_dXtot__(zbins)
+
+        # total number of absorbers + poisson uncertainty
+        Ntot = fncomp.sum(axis=0)
+        Nunc = aspci(Ntot, interval='frequentist-confidence')
+
+        # l(X)
+        lX = Ntot / dXtot
+        lX_lo = Nunc[0, :] / dXtot
+        lX_hi = Nunc[1, :] / dXtot
+
+        return lX, lX - lX_lo, lX_hi - lX
+
+    def calculate_rhoHI(self, survey, zbins, nhbins, cosmo=None):
+
+
+        # generate the fN components
+        fncomp = self.__generate_fncomp__(survey, nhbins, zbins, cosmo=None)
+
+        # get the absorption path length
+        dXtot = self.__find_dXtot__(survey, zbins, cosmo=None)
+
+        # get the total column density per zbin
+        NHtot = self.__find_NHtot__(survey, zbins, NH_mnx=(np.min(nhbins), np.max(nhbins)))
+
+        # bootstrap NH_average uncertainty
+        NHunc = self.__bootstrap_rhohi__(fncomp, nhbins, zbins, nboot=1000)
+
+        # total number of absorbers + poisson uncertainty
+        Ntot = fncomp.sum(axis=0)
+        Nunc = aspci(Ntot, interval='frequentist-confidence')
+
+        frac_unc = np.sqrt(np.power(abs(Nunc - Ntot) / Ntot, 2) +
+                           np.power(np.array([NHunc / (NHtot / Ntot), ] * 2), 2))
+        # rho_HI
+        rhoHI = NHtot / dXtot
+        rhoHI_lo = rhoHI * frac_unc[0, :]
+        rhoHI_hi = rhoHI * frac_unc[1, :]
+
+        # Constants
+        rhoHI = rhoHI * (const.m_p.cgs * cosmo.H0 /
+                         const.c.cgs / (u.cm ** 2)).to(u.Msun / u.Mpc ** 3)
+        rhoHI_lo = rhoHI_lo * (const.m_p.cgs * cosmo.H0 /
+                               const.c.cgs / (u.cm ** 2)).to(u.Msun / u.Mpc ** 3)
+        rhoHI_hi = rhoHI_hi * (const.m_p.cgs * cosmo.H0 /
+                               const.c.cgs / (u.cm ** 2)).to(u.Msun / u.Mpc ** 3)
+
+        return rhoHI, rhoHI_lo, rhoHI_hi
+
+    def calculate_fn(self, survey, nhbins, zbins, cosmo=None, log=False):
+
+        # generate the fN components
+        fncomp = self.__generate_fncomp__(survey, nhbins, zbins, cosmo=None)
+
+        # calculate the uncertainty on the bins
+        fnunc = aspci(fncomp, interval='frequentist-confidence')
+
+        # get the absorption path length
+        dXtot = self.__find_dXtot__(survey, zbins, cosmo=None)
+
+        # find the nhi bin size
+        dNHI = np.power(10, nhbins[1:]) - np.power(10, nhbins[:-1])
+
+        # calculate the fN values
+        fn = np.transpose(np.transpose(fncomp / dXtot) / dNHI)
+        fn_lo = np.transpose(np.transpose(fnunc[0] / dXtot) / dNHI)
+        fn_hi = np.transpose(np.transpose(fnunc[1] / dXtot) / dNHI)
+
+        if log:
+            return np.log10(fn), np.log10(fn) - np.log10(fn_lo), np.log10(fn_hi) - np.log10(fn)
+        else:
+            return fn, fn - fn_lo, fn_hi - fn
+
+    def __generate_fncomp__(self, nhbins, zbins):
+        """  Generate binned evaluation of f(NHI,X)
+
+        Parameters
+        ----------
+        nhbins : list
+          Bins of NHI for f(NHI,X) evaluation, e.g.
+            [[20.3, 20.4], [20.4, 20.5]]
+        zbins : list
+
+        Returns
+        -------
+        fncomp : ndarray
+          f(NHI,X)
+
+        """
+
+        # calculate the total absorption path length g(X) from g(z)
+        z, gX = self.__calculate_gX__()
+
+        # create the fn array
+        zabs = self.__getattr__('zabs')
+        nhi = self.__getattr__('NHI')
+        fncomp = np.histogram2d(nhi, zabs, bins=[nhbins, zbins])[0]
+
+        return fncomp
+
+    def __find_dXtot__(self, survey, zbins, cosmo=None):
+
+        # get z, g(X)
+        z, gX = self.__calculate_gX__(survey, cosmo=None)
+
+        dXtot = np.zeros(len(zbins) - 1)
+        for kk in range(len(zbins) - 1):
+            # the indices of values within the redshift range
+            idx = np.where((z >= zbins[kk]) & (z < zbins[kk + 1]))
+            dXtot[kk] = np.sum(gX[idx])
+
+        return dXtot
+
+    def __find_NHtot__(self, survey, zbins, NH_mnx):
+
+        # import the values from the survey
+        zabs = survey.__getattr__('zabs')
+        nhi = survey.__getattr__('NHI')
+
+        # trim the data to only the NHI values in the range
+        idx = np.where((nhi >= NH_mnx[0]) & (nhi < NH_mnx[1]))
+        zabs = zabs[idx]
+        nhi = nhi[idx]
+
+        # find the total column density
+        NHtot = np.zeros(len(zbins) - 1)
+        for kk in range(len(zbins) - 1):
+            idx2 = np.where((zabs >= zbins[kk]) & (zabs < zbins[kk + 1]))
+            # total column density in the zbin
+            NHtot[kk] = np.sum(np.power(10., nhi[idx2]))
+
+        return NHtot
+
+    def __calculate_gX__(self):
+        """ Calculate g(X) from g(z)
+        Returns
+        -------
+        z : ndarray
+          Redshifts where g(z) is evaluated
+        gX : ndarray
+          g(X)
+        """
+        from pyigm import utils as pyigmu
+
+        # calculate the total absorption path length g(X) from g(z)
+        z, gz = self.calculate_gz()
+        dz = z[1] - z[0]
+        dXdz = pyigmu.cosm_xz(z, cosmo=self.cosmo, flg_return=1)
+        gX = gz * dXdz * dz
+
+        return z, gX
+
+    def __bootstrap_rhohi__(self, fncomp, nhbins, zbins, nboot=1000):
+
+        # calculate the uncertainty on fncomp
+        fnunc = aspci(fncomp, interval='frequentist-confidence')
+
+        # create a nboot, len(nhbins)-1, len(zbins)-1, array
+        tfncomp = np.array([fncomp, ] * nboot)
+
+        # populate the array with different realizations of the distribution
+        randarr = np.random.randn(nboot, len(nhbins) - 1, len(zbins) - 1)
+        tfncomp = (tfncomp + randarr.clip(0, 99) * (fnunc[1, :, :] - fncomp) +
+                   randarr.clip(-99, 0) * (fncomp - fnunc[0, :, :]))
+
+        # calculate the average column density
+        Ntot = np.sum(tfncomp, axis=1)
+        NH_avg = np.power(10., (nhbins[:-1] + 0.2 * (nhbins[1:] - nhbins[:-1])))  ##NOTE THE KLUDGE!
+        NH_tavg = np.dot(NH_avg, tfncomp) / Ntot
+
+        # trim the 1 sigma edges off and find the min/max
+        # trimmed=scipy.stats.trimboth(NH_tot,scipy.special.erfc(1),axis=0)
+        # NHunc=np.array([trimmed.min(axis=0),trimmed.max(axis=0)])
+
+        # just calculate the standard deviation of the distribution
+        NHunc = np.std(NH_tavg, axis=0)
+
+        return NHunc
 
 
 def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
