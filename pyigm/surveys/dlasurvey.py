@@ -810,7 +810,6 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
         # In stat?
         if close[qq]:
             if (np.abs(idla.zem-qsos['ZEM'][idx[qq]]) < zem_tol) or (skip_zem):
-                pdb.set_trace()
                 if ((idla.zabs >= zmin[idx[qq]]) &
                         (idla.zabs <= qsos['Z_END'][idx[qq]]) & (qsos[idx[qq]]['FLG_BAL'] != 2)):
                         msk_smpl[qq] = True
