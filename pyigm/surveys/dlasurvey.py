@@ -104,12 +104,13 @@ class DLASurvey(IGMSurvey):
         # Stat?
         if sample in ['all', 'all_sys']:
             return dla_survey
-        pdb.set_trace()
         mask = dla_stat(dla_survey, stat_survey)
         if sample == 'stat':
             dla_survey.mask = mask
         else:
             dla_survey.mask = ~mask
+        # Return
+        return dla_survey
 
     @classmethod
     def load_H100(cls, grab_spectra=False, load_sys=True, isys_path=None):  #skip_trans=True):
