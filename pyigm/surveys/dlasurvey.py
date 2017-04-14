@@ -6,6 +6,8 @@ import numpy as np
 import os
 import imp, glob
 import pdb
+import warnings
+
 try:
     from urllib2 import urlopen # Python 2.7
 except ImportError:
@@ -70,9 +72,9 @@ class DLASurvey(IGMSurvey):
         if load_sys:  # This approach takes ~120s
             print('H100: Loading systems.  This takes ~120s')
             if isys_path is not None:
-                dla_survey = pyisu.load_sys_files(isys_path, 'DLA', sys_path=True)
+                dla_survey = pyisu.load_sys_files(isys_path, 'DLA', sys_path=True, use_coord=True)
             else:
-                dla_survey = pyisu.load_sys_files(sys_files, 'DLA')
+                dla_survey = pyisu.load_sys_files(sys_files, 'DLA', use_coord=True)
             dla_survey.fill_ions(use_components=True)
         else:
             # Read
@@ -114,7 +116,7 @@ class DLASurvey(IGMSurvey):
 
         # Spectra?
         if grab_spectra:
-            pdb.set_trace()  # USE IGMSPEC!!
+            warnings.warn("All of these spectra are in igmspec at https://github.com/specdb/specdb")
             specfils = glob.glob(spath+'H100_J*.fits')
             if len(specfils) < 100:
                 import tarfile
@@ -401,7 +403,8 @@ class DLASurvey(IGMSurvey):
         Parameters
         ----------
         zbins : list
-          List of lists or tuples, e.g.  [ [0., 1.], [1., 2.], [2.,3]]
+          Defines redshift intervals
+          e.g.  [2., 2.5, 3., 4.]
         NHI_mnx : tuple, optional
           min/max of NHI for evaluation
 
@@ -429,20 +432,35 @@ class DLASurvey(IGMSurvey):
 
         return lX, lX - lX_lo, lX_hi - lX
 
-    def calculate_rhoHI(self, survey, zbins, nhbins, cosmo=None):
+    def calculate_rhoHI(self, zbins, nhbins=(20.3, 23.), nboot=1000):
+        """ Calculate the mass density in HI
 
+        Parameters
+        ----------
+        zbins : list
+        nhbins : list
 
+        Returns
+        -------
+        rhoHI : ndarray
+          Evaluation of HI mass density, with units
+        rhoHI_lo : ndarray
+          Error estimate (low side)
+        rhoHI_hi : ndarray
+          Error estimate (high side)
+        """
         # generate the fN components
-        fncomp = self.__generate_fncomp__(survey, nhbins, zbins, cosmo=None)
+        fncomp = self.__generate_fncomp__(nhbins, zbins)
 
         # get the absorption path length
-        dXtot = self.__find_dXtot__(survey, zbins, cosmo=None)
+        dXtot = self.__find_dXtot__(zbins)
 
         # get the total column density per zbin
-        NHtot = self.__find_NHtot__(survey, zbins, NH_mnx=(np.min(nhbins), np.max(nhbins)))
+        NHtot = self.__find_NHtot__(zbins, NH_mnx=(np.min(nhbins), np.max(nhbins)))
 
         # bootstrap NH_average uncertainty
-        NHunc = self.__bootstrap_rhohi__(fncomp, nhbins, zbins, nboot=1000)
+        #NHunc = self.__bootstrap_rhohi__(fncomp, nhbins, zbins, nboot=nboot)
+        NHunc = 1e20
 
         # total number of absorbers + poisson uncertainty
         Ntot = fncomp.sum(axis=0)
@@ -456,25 +474,42 @@ class DLASurvey(IGMSurvey):
         rhoHI_hi = rhoHI * frac_unc[1, :]
 
         # Constants
-        rhoHI = rhoHI * (const.m_p.cgs * cosmo.H0 /
+        rhoHI = rhoHI * (const.m_p.cgs * self.cosmo.H0 /
                          const.c.cgs / (u.cm ** 2)).to(u.Msun / u.Mpc ** 3)
-        rhoHI_lo = rhoHI_lo * (const.m_p.cgs * cosmo.H0 /
+        rhoHI_lo = rhoHI_lo * (const.m_p.cgs * self.cosmo.H0 /
                                const.c.cgs / (u.cm ** 2)).to(u.Msun / u.Mpc ** 3)
-        rhoHI_hi = rhoHI_hi * (const.m_p.cgs * cosmo.H0 /
+        rhoHI_hi = rhoHI_hi * (const.m_p.cgs * self.cosmo.H0 /
                                const.c.cgs / (u.cm ** 2)).to(u.Msun / u.Mpc ** 3)
 
         return rhoHI, rhoHI_lo, rhoHI_hi
 
-    def calculate_fn(self, survey, nhbins, zbins, cosmo=None, log=False):
+    def calculate_fn(self, nhbins, zbins, log=False):
+        """
+        Parameters
+        ----------
+        nhbins : list
+        zbins : list
+        log : bool, optional
+
+        Returns
+        -------
+        fn : ndarray
+          log10 f(N,X)
+        fn_lo : ndarray
+          error in fn (low side)
+        fn_hi : ndarray
+          error in fn (high side)
+
+        """
 
         # generate the fN components
-        fncomp = self.__generate_fncomp__(survey, nhbins, zbins, cosmo=None)
+        fncomp = self.__generate_fncomp__(nhbins, zbins)
 
         # calculate the uncertainty on the bins
         fnunc = aspci(fncomp, interval='frequentist-confidence')
 
         # get the absorption path length
-        dXtot = self.__find_dXtot__(survey, zbins, cosmo=None)
+        dXtot = self.__find_dXtot__(zbins)
 
         # find the nhi bin size
         dNHI = np.power(10, nhbins[1:]) - np.power(10, nhbins[:-1])
@@ -495,8 +530,8 @@ class DLASurvey(IGMSurvey):
         Parameters
         ----------
         nhbins : list
-          Bins of NHI for f(NHI,X) evaluation, e.g.
-            [[20.3, 20.4], [20.4, 20.5]]
+          Defines NHI bins for f(NHI,X) evaluation, e.g.
+            [20.3, 20.6, 21.0, 21.5, 23.]
         zbins : list
 
         Returns
@@ -516,10 +551,22 @@ class DLASurvey(IGMSurvey):
 
         return fncomp
 
-    def __find_dXtot__(self, survey, zbins, cosmo=None):
+    def __find_dXtot__(self, zbins):
+        """
+        Parameters
+        ----------
+        zbins : list
+
+        Returns
+        -------
+        dXtot : ndarray
+          dX for the full survey
+
+        """
+
 
         # get z, g(X)
-        z, gX = self.__calculate_gX__(survey, cosmo=None)
+        z, gX = self.__calculate_gX__()
 
         dXtot = np.zeros(len(zbins) - 1)
         for kk in range(len(zbins) - 1):
@@ -529,11 +576,24 @@ class DLASurvey(IGMSurvey):
 
         return dXtot
 
-    def __find_NHtot__(self, survey, zbins, NH_mnx):
+    def __find_NHtot__(self, zbins, NH_mnx):
+        """ Calculate the summed NHI
+
+        Parameters
+        ----------
+        zbins : list
+        NH_mnx : list or tuple
+          Min/max for the sum
+
+        Returns
+        -------
+        NHtot : ndarray
+          Sum in the zbin intervals
+        """
 
         # import the values from the survey
-        zabs = survey.__getattr__('zabs')
-        nhi = survey.__getattr__('NHI')
+        zabs = self.__getattr__('zabs')
+        nhi = self.__getattr__('NHI')
 
         # trim the data to only the NHI values in the range
         idx = np.where((nhi >= NH_mnx[0]) & (nhi < NH_mnx[1]))
@@ -569,6 +629,21 @@ class DLASurvey(IGMSurvey):
         return z, gX
 
     def __bootstrap_rhohi__(self, fncomp, nhbins, zbins, nboot=1000):
+        """ Calculate standard deviation in <NHI> with a bootstrap technique
+
+        Parameters
+        ----------
+        fncomp
+        nhbins
+        zbins
+        nboot
+
+        Returns
+        -------
+        NHunc : float
+          Standard deviation in <NHI> boostratp realizations
+
+        """
 
         # calculate the uncertainty on fncomp
         fnunc = aspci(fncomp, interval='frequentist-confidence')
@@ -589,6 +664,8 @@ class DLASurvey(IGMSurvey):
         # trim the 1 sigma edges off and find the min/max
         # trimmed=scipy.stats.trimboth(NH_tot,scipy.special.erfc(1),axis=0)
         # NHunc=np.array([trimmed.min(axis=0),trimmed.max(axis=0)])
+
+        # Should we do this in log space??  Does it matter??
 
         # just calculate the standard deviation of the distribution
         NHunc = np.std(NH_tavg, axis=0)
