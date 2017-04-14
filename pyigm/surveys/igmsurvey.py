@@ -76,7 +76,7 @@ class IGMSurvey(object):
 
     @classmethod
     def from_sfits(cls, summ_fits, **kwargs):
-        """Generate the Survey from a summary FITS file
+        """Generate the Survey from a summary FITS file or Table
 
         Handles SPEC_FILES too.
 
@@ -97,7 +97,7 @@ class IGMSurvey(object):
         nsys = len(systems)
         # Dict
         kdict = dict(NHI=['NHI', 'logNHI'],
-                     sig_NHI=['sig(logNHI)', 'SIGNHI'],
+                     sig_NHI=['sig(logNHI)', 'SIGNHI', 'NHI_ERR'],
                      name=['Name'], vlim=['vlim'],
                      zabs=['Z_LLS', 'ZABS', 'zabs'],
                      zem=['Z_QSO', 'QSO_ZEM'],

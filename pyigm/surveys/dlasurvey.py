@@ -35,6 +35,83 @@ class DLASurvey(IGMSurvey):
 
     """
     @classmethod
+    def load_HST16(cls, sample='stat'):
+        """ HST Survey by Neeleman+16
+
+        Parameters
+        ----------
+        sample : str, optional
+
+        Returns
+        -------
+        dla_survey
+
+        """
+        # Read DLAs
+        dlas = Table.read(pyigm_path + '/data/DLA/HST/HSTDLA.dat', format='ascii')
+
+        # Read Quasars
+        #qsos = Table.read(pyigm_path + '/all_qso_table.txt', format='ascii')
+
+        # Read Sightlines
+        survey = Table.read(pyigm_path + '/data/DLA/HST/hstpath.dat', format='ascii')
+
+        # Add info to DLA table
+        ras, decs, zems = [], [], []
+        for dla in dlas:
+            mt = np.where(survey['QSO'] == dla['NAME'])[0]
+            if len(mt) == 0:
+                pdb.set_trace()
+                raise ValueError("Uh oh")
+            else:
+                mt = mt[0]
+            # Generate RA/DEC
+            row = survey[mt]
+            coord = ltu.radec_to_coord('J{:02d}{:02d}{:f}{:s}{:02d}{:02d}{:f}'.format(
+                row['RAh'], row['RAm'], row['RAs'], row['DE-'], row['DEd'], row['DEm'],
+                row['DEs']))
+            ras.append(coord.ra.value)
+            decs.append(coord.dec.value)
+            # zem
+            zems.append(row['ZEM'])
+        dlas['RA'] = ras
+        dlas['DEC'] = decs
+        dlas['QSO_ZEM'] = zems
+
+        # Instantiate
+        dla_survey = cls.from_sfits(dlas)
+        dla_survey.ref = 'Neeleman+16'
+
+        # Fiddle a bit
+        survey.rename_column('STTMIN', 'Z_START')
+        survey.rename_column('STTMAX', 'Z_END')
+        stat = survey['Z_END'] > 0
+        stat_survey = survey[stat]
+        ras, decs, zems = [], [], []
+        for row in stat_survey:
+            coord = ltu.radec_to_coord('J{:02d}{:02d}{:f}{:s}{:02d}{:02d}{:f}'.format(
+                    row['RAh'], row['RAm'], row['RAs'], row['DE-'], row['DEd'], row['DEm'],
+                    row['DEs']))
+            ras.append(coord.ra.value)
+            decs.append(coord.dec.value)
+        stat_survey['RA'] = ras
+        stat_survey['DEC'] = decs
+        stat_survey['FLG_BAL'] = 0
+
+        # Sightlines
+        dla_survey.sightlines = stat_survey
+
+        # Stat?
+        if sample in ['all', 'all_sys']:
+            return dla_survey
+        pdb.set_trace()
+        mask = dla_stat(dla_survey, stat_survey)
+        if sample == 'stat':
+            dla_survey.mask = mask
+        else:
+            dla_survey.mask = ~mask
+
+    @classmethod
     def load_H100(cls, grab_spectra=False, load_sys=True, isys_path=None):  #skip_trans=True):
         """ Sample of unbiased HIRES DLAs compiled and analyzed by Neeleman+13
 
@@ -484,12 +561,14 @@ class DLASurvey(IGMSurvey):
         return rhoHI, rhoHI_lo, rhoHI_hi
 
     def calculate_fn(self, nhbins, zbins, log=False):
-        """
+        """ Calculate f(N,X)
+
         Parameters
         ----------
         nhbins : list
         zbins : list
         log : bool, optional
+          Report log10 values?
 
         Returns
         -------
@@ -721,7 +800,7 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
     zmin = ltu.z_from_dv(vmin*np.ones(len(qsos)), qsos['Z_START'].data) # vmin must be array-like to be applied to each individual qsos['Z_START']
 
     # Make some lists
-    qsos_coord = SkyCoord(ra=qsos['RA'], dec=qsos['DEC'])
+    qsos_coord = SkyCoord(ra=qsos['RA'], dec=qsos['DEC'], unit='deg')
     dla_coord = DLAs.coord
 
     idx, d2d, d3d = match_coordinates_sky(dla_coord, qsos_coord, nthneighbor=1)
@@ -731,6 +810,7 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
         # In stat?
         if close[qq]:
             if (np.abs(idla.zem-qsos['ZEM'][idx[qq]]) < zem_tol) or (skip_zem):
+                pdb.set_trace()
                 if ((idla.zabs >= zmin[idx[qq]]) &
                         (idla.zabs <= qsos['Z_END'][idx[qq]]) & (qsos[idx[qq]]['FLG_BAL'] != 2)):
                         msk_smpl[qq] = True
