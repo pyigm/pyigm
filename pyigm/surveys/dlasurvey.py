@@ -390,7 +390,7 @@ class DLASurvey(IGMSurvey):
         ref = 'P03'
         qsos_fil = pyigm_path+'/data/DLA/P03/P03_zpath.fit'
         #
-        dla_survey = cls.load_lit(dla_fil, qsos_fil, ref, sample=sample)
+        dla_survey = cls.load_lit(dla_fil, qsos_fil, ref, sample=sample, skip_zem=True)
         return dla_survey
 
 
@@ -421,7 +421,7 @@ class DLASurvey(IGMSurvey):
         qsos_fil = pyigm_path+'/data/DLA/G09/G09_zpath.fit'
         #
         dla_survey = cls.load_lit(dla_fil, qsos_fil, ref,
-                                  Pdla_fil=Pdla_fil, sample=sample)
+                                  Pdla_fil=Pdla_fil, sample=sample, skip_zem=True)
         return dla_survey
 
     @classmethod

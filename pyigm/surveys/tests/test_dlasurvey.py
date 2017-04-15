@@ -44,11 +44,18 @@ def test_read_h100():
     gdSiII = np.where(SiII_clms['flag_N'] > 0)[0]
     assert len(gdSiII) == 98
 
-def test_read_xq100_nosys():
+def test_read_xq100():
     """ XQ-100 """
     xq100 = DLASurvey.load_XQ100(sample='stat')
     assert xq100.nsys == 36
 
+def test_read_p03_g09():
+    """ XQ-100 """
+    p03 = DLASurvey.load_P03()
+    assert p03.nsys == 105
+
+    g09 = DLASurvey.load_G09()
+    assert g09.nsys == 38
 
 def test_dat_list():
     """JXP format :: Likely to be Deprecated
