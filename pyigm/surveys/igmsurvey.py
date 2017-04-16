@@ -441,6 +441,7 @@ class IGMSurvey(object):
 
     def __getattr__(self, k):
         """ Generate an array of attribute 'k' from the IGMSystems
+        NOTE: We only get here if the Class doesn't have this attribute set already
 
         Mask is applied
 
@@ -453,6 +454,9 @@ class IGMSurvey(object):
         -------
         numpy array
         """
+        # Catch length 0 list
+        if len(self._abs_sys) == 0:
+            raise ValueError("Attribute does not exist")
         try:
             lst = [getattr(abs_sys, k) for abs_sys in self._abs_sys]
         except ValueError:

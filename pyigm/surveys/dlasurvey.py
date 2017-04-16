@@ -23,6 +23,7 @@ from linetools import utils as ltu
 
 from pyigm.surveys.igmsurvey import IGMSurvey
 from pyigm.surveys import utils as pyisu
+from pyigm import utils as pyigmu
 
 pyigm_path = imp.find_module('pyigm')[1]
 
@@ -473,11 +474,15 @@ class DLASurvey(IGMSurvey):
         IGMSurvey.__init__(self, 'DLA', **kwargs)
 
         # define the cosmology (for H0)
-        if not hasattr(self, 'cosmo'):
+        try:
+            _ = self.cosmo
+        except ValueError:
             self.cosmo = acc.FlatLambdaCDM(70., 0.3)
 
-    def calculate_lox(self, zbins, NHI_mnx=(20.3, 23.00)):
-        """
+    def calculate_loz(self, zbins, NHI_mnx=(20.3, 23.00)):
+        """ Calculate l(z) in zbins for an interval in NHI
+        Wrapper on lox
+
         Parameters
         ----------
         zbins : list
@@ -485,6 +490,25 @@ class DLASurvey(IGMSurvey):
           e.g.  [2., 2.5, 3., 4.]
         NHI_mnx : tuple, optional
           min/max of NHI for evaluation
+
+        Returns
+        -------
+        lz, sig_lz_lower, sig_lz_upper : ndarray
+        """
+        return self.calculate_lox(zbins, NHI_mnx=NHI_mnx, use_Dz=True)
+
+    def calculate_lox(self, zbins, NHI_mnx=(20.3, 23.00), use_Dz=False):
+        """ Calculate l(X) in zbins for an interval in NHI
+        Parameters
+        ----------
+        zbins : list
+          Defines redshift intervals
+          e.g.  [2., 2.5, 3., 4.]
+        NHI_mnx : tuple, optional
+          min/max of NHI for evaluation
+        use_gz : bool, optional
+          Use gz instead of gX.
+          This forces the calculation of l(z) instead of l(X)
 
         Returns
         -------
@@ -497,7 +521,7 @@ class DLASurvey(IGMSurvey):
         fncomp = self.__generate_fncomp__(nhbins, zbins)
 
         # get the absorption path length
-        dXtot = self.__find_dXtot__(zbins)
+        dXtot = self.__find_dXtot__(zbins, calc_Dz=use_Dz)
 
         # total number of absorbers + poisson uncertainty
         Ntot = fncomp.sum(axis=0)
@@ -620,9 +644,8 @@ class DLASurvey(IGMSurvey):
           f(NHI,X)
 
         """
-
         # calculate the total absorption path length g(X) from g(z)
-        z, gX = self.__calculate_gX__()
+        #z, gX = self.__calculate_gX__()
 
         # create the fn array
         zabs = self.__getattr__('zabs')
@@ -631,11 +654,13 @@ class DLASurvey(IGMSurvey):
 
         return fncomp
 
-    def __find_dXtot__(self, zbins):
-        """
+    def __find_dXtot__(self, zbins, calc_Dz=False):
+        """ Calculate DX in zbins
         Parameters
         ----------
         zbins : list
+        calc_Dz : bool, optional
+          Return Dztot instead of DXtot
 
         Returns
         -------
@@ -643,16 +668,20 @@ class DLASurvey(IGMSurvey):
           dX for the full survey
 
         """
-
-
-        # get z, g(X)
-        z, gX = self.__calculate_gX__()
+        # get z, g(z)
+        z, gz = self.calculate_gz()
+        dz = z[1] - z[0]
+        #
+        if not calc_Dz:
+            dXdz = pyigmu.cosm_xz(z, cosmo=self.cosmo, flg_return=1)
+        else:
+            dXdz = 1.
 
         dXtot = np.zeros(len(zbins) - 1)
         for kk in range(len(zbins) - 1):
             # the indices of values within the redshift range
             idx = np.where((z >= zbins[kk]) & (z < zbins[kk + 1]))
-            dXtot[kk] = np.sum(gX[idx])
+            dXtot[kk] = np.sum((gz*dz*dXdz)[idx])
 
         return dXtot
 
@@ -689,6 +718,7 @@ class DLASurvey(IGMSurvey):
 
         return NHtot
 
+    '''
     def __calculate_gX__(self):
         """ Calculate g(X) from g(z)
         Returns
@@ -698,15 +728,14 @@ class DLASurvey(IGMSurvey):
         gX : ndarray
           g(X)
         """
-        from pyigm import utils as pyigmu
 
         # calculate the total absorption path length g(X) from g(z)
         z, gz = self.calculate_gz()
-        dz = z[1] - z[0]
         dXdz = pyigmu.cosm_xz(z, cosmo=self.cosmo, flg_return=1)
-        gX = gz * dXdz * dz
+        gX = gz / dXdz #* dz  # THIS LOOKS WRONG TO ME!
 
         return z, gX
+    '''
 
     def __bootstrap_rhohi__(self, fncomp, nhbins, zbins, nboot=1000):
         """ Calculate standard deviation in <NHI> with a bootstrap technique
