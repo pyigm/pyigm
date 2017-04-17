@@ -20,6 +20,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function, absolute_import, division, unicode_literals
 
 import pdb
  
@@ -49,7 +50,7 @@ def run_mcmc(args):
             observ.append((data['ion'][sets[ii]],data['logn'][sets[ii]],data['elogn'][sets[ii]],data['flag'][sets[ii]]))
 
     #run the mcmc
-    print 'Ready to run mcmc for {}'.format(sy)
+    print('Ready to run mcmc for {}'.format(sy))
     if args.optim in ['guess', 'guess_NHI']:
         obsinfo['met'] = args.met
         obsinfo['dens'] = args.dens
@@ -62,18 +63,18 @@ def run_mcmc(args):
                    nsamp=(args.nsamp), optim=optim, threads=args.nthread,
                    outsave=args.outsave, testing=args.testing)
 
-    print 'All done with this batch'
+    print('All done with this batch')
     
     #return
 
 def main(args=None):
     import argparse
     #get the call
-    parser = argparse.ArgumentParser(description='Running grid on shared memory system')
+    parser = argparse.ArgumentParser(description='Running grid on shared memory system [v1.1]')
     parser.add_argument('sy', type=str, help='Name of the System to analyze')
-    parser.add_argument('fileinput')
-    parser.add_argument('outsave')
-    parser.add_argument('grid')
+    parser.add_argument('fileinput', help='Filename of column density data')
+    parser.add_argument('outsave', help='Output directory')
+    parser.add_argument('grid', help='File name of Cloudy grid')
     parser.add_argument('-nthread', type=int, help='Number of threads')
     parser.add_argument('-nwalkers', type=int, help='Number of walkers')
     parser.add_argument('-nsamp', type=int, help='Number of samples')
