@@ -11,6 +11,7 @@ import json
 
 from astropy import units as u
 from astropy.coordinates import SkyCoord
+from astropy.cosmology import Planck15 as cosmo
 
 from ..cgm import CGM, CGMAbsSys
 from ..cgmsurvey import CGMAbsSurvey
@@ -37,9 +38,9 @@ def test_init_cgmabssys():
     radec_qso = (125*u.deg, 45.203*u.deg)
     igmsys = IGMSystem(radec_qso, gal.z, [-500,500]*u.km/u.s, abs_type='CGM')
     # Instantiate
-    cgmabs = CGMAbsSys(gal, igmsys)
+    cgmabs = CGMAbsSys(gal, igmsys, cosmo=cosmo)
     # Test
-    np.testing.assert_allclose(cgmabs.rho.value, 48.72077748027017)
+    np.testing.assert_allclose(cgmabs.rho.value, 49.6141071, rtol=1e-5)
 
 def test_init_cgmabssurvey():
     cgmsurvey = CGMAbsSurvey(survey='cos-halos', ref='Tumlinson+13, Werk+13')
@@ -47,6 +48,7 @@ def test_init_cgmabssurvey():
     assert cgmsurvey.survey == 'cos-halos'
 
 def test_to_dict():
+    from linetools import utils as ltu
     radec = (125*u.deg, 45.2*u.deg)
     gal = Galaxy(radec,z=0.3)
     radec_qso = (125*u.deg, 45.203*u.deg)
@@ -55,9 +57,7 @@ def test_to_dict():
     cgmabs = CGMAbsSys(gal, igmsys)
     # Test
     cdict = cgmabs.to_dict()
-    with io.open('tmp.json', 'w', encoding='utf-8') as f:
-        f.write(unicode(json.dumps(cdict, sort_keys=True, indent=4,
-                                   separators=(',', ': '))))
+    ltu.savejson('tmp.json', cdict, overwrite=True)
 
 def test_cgm_from_igmsystems():
     # Load sightlines

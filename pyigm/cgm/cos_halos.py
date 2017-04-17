@@ -27,6 +27,11 @@ from .cgm import CGMAbsSys
 from pyigm.abssys.igmsys import IGMSystem
 import pyigm
 
+try:
+    basestring
+except NameError:  # For Python 3
+    basestring = str
+
 class COSHalos(CGMAbsSurvey):
     """Inherits CGM Abs Survey
 
@@ -369,7 +374,7 @@ class COSHalos(CGMAbsSurvey):
 
         """
         fh5=h5py.File(ZH_fil, 'r')
-        mkeys = fh5['met'].keys()
+        mkeys = list(fh5['met'].keys())
         mkeys.remove('left_edge_bins')
         mkeys.remove('right_edge_bins')
         mkeys = np.array(mkeys)

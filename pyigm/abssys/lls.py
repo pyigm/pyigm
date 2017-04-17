@@ -296,8 +296,8 @@ class LLSSystem(IGMSystem):
             # Attributes
             aline.attrib['N'] = Nval
             aline.attrib['b'] = bval
-            aline.attrib['z'] = self.zabs
-            aline.analy['vlim'] = self.vlim
+            aline.setz(self.zabs)
+            aline.limits.set(self.vlim)
             aline.analy['do_analysis'] = do_analysis
             aline.attrib['coord'] = self.coord
             self.lls_lines.append(aline)
