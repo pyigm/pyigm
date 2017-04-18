@@ -70,7 +70,7 @@ def test_parallel():
     fN_model = FNModel.default_model()
     # Lines
     HI = LineList('HI')
-    tst_wv = HI._data['wrest']
+    tst_wv = u.Quantity(HI._data['wrest'])
     #
     adict = []
     for wrest in tst_wv:
