@@ -222,11 +222,17 @@ class DLASurvey(IGMSurvey):
 
         Parameters
         ----------
+        dla_fil : str or Table
+          Name of file containting a Table (or the Table itself) on DLAs
+        qsos_fil : str or Table
+          Name of file containting a Table (or the Table itself) on QSO sightlines
         sample : str, optional
           DLA sample
             stat : Statistical sample
             all : All LLS
             nonstat : Non-statistical sample
+        **kwargs : optional
+          Passed to dla_stat()
 
         Returns
         -------
