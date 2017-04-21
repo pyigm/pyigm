@@ -71,7 +71,7 @@ def get_telfer_spec(zqso=0., igm=False, fN_gamma=None,
         #with open(EW_FIL, 'r') as infile:
         #    EW_spline = yaml.load(infile)  # dict from mk_ew_lyman_spline
         HI = LineList('HI')
-        twrest = HI._data['wrest']
+        twrest = u.Quantity(HI._data['wrest'])
         # Parallel
         if LL_flatten:
             igm_wv = np.where((telfer['wrest'] > 900.) & (telfer['wrest'] < 1220.))[0]
