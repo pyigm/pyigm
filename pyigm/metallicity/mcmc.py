@@ -65,7 +65,6 @@ mpl.use('Agg')
 
 import warnings
 import pdb
-import copy
 
 #Here some general import
 import matplotlib.pyplot as plt

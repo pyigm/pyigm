@@ -151,8 +151,8 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
          -- Recorded only if cumul is not None
     EW_spline : spline, optional
       Speeds up execution if input
-    HI : LineList, optional
-      HI line list.  Speeds up execution
+    wrest : Quantity array, optional
+      rest wavelengths to apply
 
     Returns
     -------
@@ -184,7 +184,7 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
     # Lines
     if wrest is None:
         HI = LineList('HI')
-        wrest = HI._data['wrest']
+        wrest = u.Quantity(HI._data['wrest'])
 
     # Find the lines
     gd_Lyman = wrest[(Lambda/(1+zem)) < wrest]

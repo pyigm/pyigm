@@ -291,13 +291,13 @@ class LLSSystem(IGMSystem):
 
         self.lls_lines = []
         Nval = 10**self.NHI / u.cm**2
-        for lline in HIlines._data:
-            aline = AbsLine(lline['wrest'], linelist=HIlines)
+        for wrest in u.Quantity(HIlines._data['wrest']):
+            aline = AbsLine(wrest, linelist=HIlines)
             # Attributes
             aline.attrib['N'] = Nval
             aline.attrib['b'] = bval
-            aline.attrib['z'] = self.zabs
-            aline.analy['vlim'] = self.vlim
+            aline.setz(self.zabs)
+            aline.limits.set(self.vlim)
             aline.analy['do_analysis'] = do_analysis
             aline.attrib['coord'] = self.coord
             self.lls_lines.append(aline)

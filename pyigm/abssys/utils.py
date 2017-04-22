@@ -42,7 +42,7 @@ def dict_to_ions(idict):
     #  Could probably use add_row or dict instantiation
     table = None
     for ion in idict.keys():
-        Zion = ltai.name_ion(ion)
+        Zion = ltai.name_to_ion(ion)
         if table is None:
             tkeys = idict[ion].keys()
             lst = [[idict[ion][tkey]] for tkey in tkeys]
@@ -105,6 +105,7 @@ def hi_model(abssys, spec, lya_only=False, add_lls=False, ret_tau=False,
       List of AbsLine's that contributed to the model
 
     """
+    from astropy.units import Quantity
     from linetools.spectra.xspectrum1d import XSpectrum1D
     from linetools.spectralline import AbsLine
     from linetools.analysis.voigt import voigt_from_abslines
@@ -156,7 +157,7 @@ def hi_model(abssys, spec, lya_only=False, add_lls=False, ret_tau=False,
                 lyman_lines.append(lya_line)
             else:
                 HIlines = LineList('HI')
-                wrest = HIlines._data['wrest']
+                wrest = Quantity(HIlines._data['wrest'])
                 for iwrest in wrest:
                     # On the spectrum?
                     if iwrest >= spec.wvmin/(1+abssys.zabs):

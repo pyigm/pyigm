@@ -6,7 +6,10 @@ import numpy as np
 import os
 import imp, glob
 import pdb
-import urllib2
+try:
+    from urllib2 import urlopen # Python 2.7
+except ImportError:
+    from urllib.request import urlopen
 import json
 
 from astropy.table import QTable, Column, Table, vstack
@@ -115,7 +118,7 @@ class DLASurvey(IGMSurvey):
                 print('H100: Downloading a 141Mb file.  Be patient..')
                 url = 'https://dl.dropboxusercontent.com/u/6285549/DLA/H100/H100_DLA_spectra.tar.gz'
                 spectra_fil = pyigm_path+'/data/DLA/H100/H100_spectra.tar.gz'
-                f = urllib2.urlopen(url)
+                f = urlopen(url)
                 with open(spectra_fil, "wb") as code:
                     code.write(f.read())
                 # Unpack
@@ -213,17 +216,23 @@ class DLASurvey(IGMSurvey):
         return dla_survey
 
     @classmethod
-    def load_lit(cls, dla_fil, qsos_fil, ref, sample='stat', Pdla_fil=None):
+    def load_lit(cls, dla_fil, qsos_fil, ref, sample='stat', Pdla_fil=None, **kwargs):
         """ Load the DLA from a literature sample using the files
         provided by Ruben (see Sanchez-Ramirez et al. 2016, MNRAS, 456, 4488)
 
         Parameters
         ----------
+        dla_fil : str or Table
+          Name of file containting a Table (or the Table itself) on DLAs
+        qsos_fil : str or Table
+          Name of file containting a Table (or the Table itself) on QSO sightlines
         sample : str, optional
           DLA sample
             stat : Statistical sample
             all : All LLS
             nonstat : Non-statistical sample
+        **kwargs : optional
+          Passed to dla_stat()
 
         Returns
         -------
@@ -258,13 +267,17 @@ class DLASurvey(IGMSurvey):
         qsos.rename_column('zem', 'ZEM')
         dla_survey.sightlines = qsos
 
+        # BAL?
+        if 'FLG_BAL' not in qsos.keys():
+            qsos['FLG_BAL'] = 0
+
         # All?
         if sample == 'all':
             return dla_survey
 
         # Stat
         # Generate mask
-        mask = dla_stat(dla_survey, qsos)
+        mask = dla_stat(dla_survey, qsos, **kwargs)
         if sample == 'stat':
             dla_survey.mask = mask
         else:
@@ -300,7 +313,7 @@ class DLASurvey(IGMSurvey):
         ref = 'P03'
         qsos_fil = pyigm_path+'/data/DLA/P03/P03_zpath.fit'
         #
-        dla_survey = cls.load_lit(dla_fil, qsos_fil, ref, sample=sample)
+        dla_survey = cls.load_lit(dla_fil, qsos_fil, ref, sample=sample, skip_zem=True)
         return dla_survey
 
 
@@ -331,7 +344,7 @@ class DLASurvey(IGMSurvey):
         qsos_fil = pyigm_path+'/data/DLA/G09/G09_zpath.fit'
         #
         dla_survey = cls.load_lit(dla_fil, qsos_fil, ref,
-                                  Pdla_fil=Pdla_fil, sample=sample)
+                                  Pdla_fil=Pdla_fil, sample=sample, skip_zem=True)
         return dla_survey
 
     @classmethod
@@ -359,7 +372,7 @@ class DLASurvey(IGMSurvey):
         qsos_fil = pyigm_path+'/data/DLA/XQ-100/XQ100_zpath.fit'
         #
         dla_survey = cls.load_lit(dla_fil, qsos_fil, ref,Pdla_fil=Pdla_fil,
-                                  sample=sample)
+                                  sample=sample, skip_zem=True)
         return dla_survey
 
     @classmethod
@@ -386,7 +399,7 @@ class DLASurvey(IGMSurvey):
 def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
              zem_min=0., flg_zsrch=0, vmin=0.*u.km/u.s,
              LLS_CUT=None, partial=False, prox=False,
-             zem_tol=0.03):
+             zem_tol=0.03, skip_zem=False):
     """ Identify the statistical DLA in a survey
     Note that this algorithm ignores any existing mask
 
@@ -410,6 +423,9 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
       Proximate LLS? [PLLS]
     zem_tol : float, optional
       Tolerance in zem
+    skip_zem : bool, optional
+      Skip check on zem?? -- For proximates
+      XQ-100 needs to be skipped
 
     Returns
     -------
@@ -437,7 +453,7 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
     for qq, idla in enumerate(DLAs._abs_sys):
         # In stat?
         if close[qq]:
-            if np.abs(idla.zem-qsos['ZEM'][idx[qq]]) < zem_tol:
+            if (np.abs(idla.zem-qsos['ZEM'][idx[qq]]) < zem_tol) or (skip_zem):
                 if ((idla.zabs >= zmin[idx[qq]]) &
                         (idla.zabs <= qsos['Z_END'][idx[qq]]) & (qsos[idx[qq]]['FLG_BAL'] != 2)):
                         msk_smpl[qq] = True
