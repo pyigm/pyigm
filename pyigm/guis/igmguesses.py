@@ -1553,10 +1553,13 @@ class FiddleComponentWidget(QWidget):
             print('Need to generate a component first!')
         else:
             # Grab values
-            self.component.attrib['logN'] = (float(self.Nwidget.box.text()))
-            self.component.attrib['z'] = (float(self.zwidget.box.text()))
-            self.component.attrib['b'] = (float(self.bwidget.box.text()))*u.km/u.s
-            self.component.comment = str(self.Cwidget.box.text())
+            try:
+                self.component.attrib['logN'] = (float(self.Nwidget.box.text()))
+                self.component.attrib['z'] = (float(self.zwidget.box.text()))
+                self.component.attrib['b'] = (float(self.bwidget.box.text()))*u.km/u.s
+                self.component.comment = str(self.Cwidget.box.text())
+            except ValueError:  # this is when the str cannot be converted to float
+                print("The new value is not valid. Try again.")
             #QtCore.pyqtRemoveInputHook()
             #pdb.set_trace()
             #QtCore.pyqtRestoreInputHook()
