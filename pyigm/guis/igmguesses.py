@@ -1007,7 +1007,7 @@ class IGGVelPlotWidget(QWidget):
         if event.key == '%':
             # GUI
             aux_table = self.llist[self.llist['List']]._data  # is a table of lines
-            z_aux = wvobs/aux_table['wrest'] - 1.
+            z_aux = wvobs/Quantity(aux_table['wrest']) - 1.
             aux_table['redshift'] = z_aux.value  # adding aux_z to the aux_table
             self.select_line_widg = ltgl.SelectLineWidget(aux_table)
             self.select_line_widg.exec_()
@@ -1656,20 +1656,41 @@ class ComponentListWidget(QWidget):
 
 def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
                      spec=None):
+    """
+    Parameters
+    ----------
+    z
+    wrest
+    linelist
+    vlim
+    spec
+
+    Returns
+    -------
+
+    """
     # Transitions
     all_trans = linelist.all_transitions(wrest)
     if isinstance(all_trans, dict):
-        all_trans = [all_trans]
+        all_wrest = [all_trans['wrest']]
+    else:
+        if len(all_trans) == 1:
+            all_wrest = [all_trans['wrest']]
+        else:
+            all_wrest = Quantity(all_trans['wrest'])
     abslines = []
     if spec is not None:
         wvmin, wvmax = spec.wvmin, spec.wvmax
     else:
         wvmin, wvmax = 0.*u.AA, 1e9*u.AA
-    for trans in all_trans:
+    for iwrest in all_wrest:
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
         # Restrict to those with spectral coverage!
-        if (trans['wrest'] * (1 + z) < wvmin) or (trans['wrest'] * (1 + z) > wvmax):
+        if (iwrest * (1 + z) < wvmin) or (iwrest * (1 + z) > wvmax):
             continue
-        aline = AbsLine(trans['wrest'],  linelist=linelist, z=z)
+        aline = AbsLine(iwrest, linelist=linelist, z=z)
         aline.limits.set(vlim)
         abslines.append(aline)
     if linelist.list != 'H2':

@@ -100,7 +100,9 @@ entry_points['console_scripts'] = [
     'pyigm_mtlmcmc = pyigm.scripts.pyigm_mtlmcmc:main',
     'pyigm_igmguesses = pyigm.scripts.pyigm_igmguesses:main',
     'pyigm_fitdla = pyigm.scripts.pyigm_fitdla:main',
+    'pyigm_fitlls = pyigm.scripts.pyigm_fitlls:main',
     'pyigm_showjson = pyigm.scripts.pyigm_showjson:main',
+    'pyigm_mkigmsys = pyigm.scripts.pyigm_mkigmsys:main',
 #    'astropy-package-template-example = packagename.example_mod:main',
 ]
 

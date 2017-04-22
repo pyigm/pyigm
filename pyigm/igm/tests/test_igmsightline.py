@@ -28,6 +28,6 @@ def test_make_igmsystems():
 def test_from_igmguesses():
     radec = ('10:22:55.55', '+01:32:33.33')
     zem = 1.0
-    igms = IGMSightline.from_igmguesses(radec, zem, data_path('J1022_igmg.json'))
+    igms = IGMSightline.from_igmguesses(radec, zem, data_path('SDSSJ080908_model.json'))
     # Test
-    assert len(igms._components) == 48
+    assert len(igms._components) == 2
