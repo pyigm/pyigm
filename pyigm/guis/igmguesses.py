@@ -75,7 +75,7 @@ class IGMGuessesGui(QMainWindow):
         30-Jul-2015 by JXP
     """
     def __init__(self, ispec, parent=None, previous_file=None, 
-        srch_id=True, outfil=None, fwhm=None,
+        srch_id=True, outfil=None, fwhm=None, screen_scale=1.,
         plot_residuals=True,n_max_tuple=None, min_strength=None,
                  min_ew=None, vlim_disp=None, external_model=None):
         QMainWindow.__init__(self, parent)
@@ -169,6 +169,7 @@ E         : toggle displaying/hiding the external absorption model
         self.create_status_bar()
 
         # Initialize
+        self.scale = screen_scale
         self.update = True
         self.previous_file = previous_file
         if outfil is None:
@@ -256,7 +257,7 @@ E         : toggle displaying/hiding the external absorption model
             self.llist[self.llist['List']], parent=self, init_select='All')
         self.fiddle_widg = FiddleComponentWidget(parent=self)
         self.comps_widg = ComponentListWidget([], parent=self)
-        self.velplot_widg = IGGVelPlotWidget(spec, z, 
+        self.velplot_widg = IGGVelPlotWidget(spec, z, screen_scale=self.scale,
             parent=self, llist=self.llist, fwhm=self.fwhm, plot_residuals=self.plot_residuals,
             vmnx=self.vlim_disp, external_model=self.external_model)
         self.wq_widg = ltgsm.WriteQuitWidget(parent=self)
@@ -272,8 +273,8 @@ E         : toggle displaying/hiding the external absorption model
 
         # Layout
         anly_widg = QWidget()
-        anly_widg.setMaximumWidth(500)
-        anly_widg.setMinimumWidth(250)
+        anly_widg.setMaximumWidth(int(500*self.scale))
+        anly_widg.setMinimumWidth(int(250*self.scale))
 
         vbox = QVBoxLayout()
         vbox.addWidget(self.fiddle_widg)
@@ -535,8 +536,8 @@ class IGGVelPlotWidget(QWidget):
           Adapted from VelPlotWidget in spec_guis
         14-Aug-2015 by JXP
     """
-    def __init__(self, ispec, z, parent=None, llist=None, norm=True,
-                 vmnx=[-500., 500.]*u.km/u.s, fwhm=0., plot_residuals=True, external_model=None):
+    def __init__(self, ispec, z, parent=None, llist=None, norm=True, screen_scale=1.,
+    vmnx=[-500., 500.]*u.km/u.s, fwhm=0., plot_residuals=True, external_model=None):
         '''
         spec = Spectrum1D
         Norm: Bool (False)
@@ -552,7 +553,8 @@ class IGGVelPlotWidget(QWidget):
         # Initialize
         self.parent = parent
         spec, spec_fil = ltgu.read_spec(ispec)
-        
+
+        self.scale = screen_scale
         self.spec = spec
         self.spec_fil = spec_fil
         self.fwhm = fwhm
@@ -611,7 +613,7 @@ class IGGVelPlotWidget(QWidget):
         
         # Create the mpl Figure and FigCanvas objects. 
         #
-        self.dpi = 150
+        self.dpi = int(150*self.scale)
         self.fig = Figure((8.0, 4.0), dpi=self.dpi)
         self.canvas = FigureCanvas(self.fig)
         self.canvas.setParent(self)
@@ -1338,8 +1340,14 @@ class IGGVelPlotWidget(QWidget):
                 else:
                     self.ax.get_xaxis().set_ticks([])
                 lbl = self.llist[self.llist['List']].name[idx]
+                if self.scale > 1.:
+                    fsize = 'large'
+                    fsize = 'medium'
+                else:
+                    fsize = 'x-small'
+                    fsize2 ='xx-small'
                 self.ax.text(0.01, 0.15, lbl, color=color, transform=self.ax.transAxes,
-                             size='x-small', ha='left', va='center', backgroundcolor='w',
+                             size=fsize, ha='left', va='center', backgroundcolor='w',
                              bbox={'pad':0, 'edgecolor':'none', 'facecolor':'w'})
 
                 # labels for individual components
@@ -1356,7 +1364,7 @@ class IGGVelPlotWidget(QWidget):
 
                         if self.flag_idlbl:
                             self.ax.text(v.value, 0.5, line_lbl[imt], color=color_label, backgroundcolor='w',
-                                bbox={'pad':0,'edgecolor':'none', 'facecolor':'w'}, size='xx-small',
+                                bbox={'pad':0,'edgecolor':'none', 'facecolor':'w'}, size=fsize2,
                                     rotation=90.,ha='center',va='center')
 
                         if (self.flag_plotmodel) and (self.flag_colorful):
