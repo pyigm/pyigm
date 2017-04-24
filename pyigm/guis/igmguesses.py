@@ -585,8 +585,9 @@ class IGGVelPlotWidget(QWidget):
                 self.ext_res = (self.spec.flux - self.external_model.flux) * self.residual_normalization_factor
 
         self.psdict = {} # Dict for spectra plotting
-        self.psdict['x_minmax'] = self.vmnx.value # Too much pain to use units with this
+        self.psdict['x_minmax'] = list(self.vmnx.value) # Too much pain to use units with this
         self.psdict['y_minmax'] = [-0.1, 1.1]
+        self.psdict['sv_xy_minmax'] = self.psdict['x_minmax'] + self.psdict['y_minmax']
         self.psdict['nav'] = ltgu.navigate(0,0,init=True)
 
 
