@@ -5,8 +5,6 @@ Script to run igmguesses GUI
 """
 from __future__ import (print_function, absolute_import, division, unicode_literals)
 
-from PyQt4 import QtGui
-from astropy import units as u
 import pdb
 
 try:
@@ -39,6 +37,7 @@ def parser(options=None):
                                                     is useful to get rid of extremely weak transitions from the model")
     parser.add_argument("--vlim", type=float, help="Velocity limit (in km/s) for the display. This limit will apply to both sides")
     parser.add_argument("--external_model", type=str, help="An external model spectrum (.fits)")
+    parser.add_argument("--scale", type=float, help="Scaling of screen [default=1.]")
 
     if options is None:
         args = parser.parse_args()
@@ -51,14 +50,20 @@ def main(args=None):
     pargs = parser(options=args)
     import sys
     from pyigm.guis.igmguesses import IGMGuessesGui
+    from PyQt5.QtWidgets import QApplication
+    from astropy import units as u
 
     if pargs.vlim is not None:
         vlim_disp = [-1*pargs.vlim, 1.*pargs.vlim]*u.km/u.s
     else:
         vlim_disp = pargs.vlim
+    if pargs.scale is not None:
+        scale = pargs.scale
+    else:
+        scale = 1.
 
 
-    app = QtGui.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     gui = IGMGuessesGui(pargs.in_file,
                         outfil=pargs.out_file,
                         fwhm=pargs.fwhm,
@@ -66,6 +71,7 @@ def main(args=None):
                         n_max_tuple=pargs.n_max_tuple,
                         min_strength=pargs.min_strength,
                         min_ew=pargs.min_ew,
+                        screen_scale=scale,
                         vlim_disp=vlim_disp,
                         external_model=pargs.external_model)
     gui.show()
