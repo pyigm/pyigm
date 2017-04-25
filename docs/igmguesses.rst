@@ -56,7 +56,7 @@ Optional arguments
                                                     for getting rid of very weak transitions from
                                                     the model
     --vlim VLIM                                     Velocity limit (in km/s) for the display        500.
-    --external_model                                Name of an external spectrum model fits file
+    --external_model EXTERNAL_MODEL                 Name of an external spectrum model fits file
     --scale SCALE                                   Scaling of screen                               1.
     =============================================== =============================================== ==============
 
