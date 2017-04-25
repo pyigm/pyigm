@@ -57,6 +57,7 @@ Optional arguments
                                                     the model
     --vlim VLIM                                     Velocity limit (in km/s) for the display        500.
     --external_model                                Name of an external spectrum model fits file
+    --scale SCALE                                   Scaling of screen                               1.
     =============================================== =============================================== ==============
 
 The number of transitions available for some ions  can be excessive for many,
