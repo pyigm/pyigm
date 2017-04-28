@@ -1348,7 +1348,7 @@ class IGGVelPlotWidget(QWidget):
                 lbl = self.llist[self.llist['List']].name[idx]
                 if self.scale > 1.:
                     fsize = 'large'
-                    fsize = 'medium'
+                    fsize2 = 'small'
                 else:
                     fsize = 'x-small'
                     fsize2 ='xx-small'
@@ -1454,7 +1454,6 @@ class FiddleComponentWidget(QWidget):
         self.Nwidget = ltgsm.EditBox(-1., 'Nc=', '{:0.2f}')
         self.bwidget = ltgsm.EditBox(-1., 'bc=', '{:0.1f}')
 
-        self.button = QPushButton('Update', self)
         # self.button.move(20,80)
 
         self.ddlbl = QLabel('Reliability')
@@ -1473,9 +1472,8 @@ class FiddleComponentWidget(QWidget):
 
         # Connect
         self.ddlist.activated[str].connect(self.setReliability)
-        self.button.clicked.connect(self.setbzNc)
         # self.button.move(20,80)
-        self.show()
+        #self.show()
         # self.Nwidget.box.textChanged[str].connect(self.setbzNc)
         # self.zwidget.box.textChanged[str].connect(self.setbzNc)
         # self.bwidget.box.textChanged[str].connect(self.setbzNc)
@@ -1501,12 +1499,18 @@ class FiddleComponentWidget(QWidget):
         hbox3.addWidget(self.Cwidget)
         commwidg.setLayout(hbox3)
 
+        # Button
+        self.ubtn = UpdateWidget(parent=self)
+
         # Layout
         vbox = QVBoxLayout()
         vbox.addWidget(self.label)
         vbox.addWidget(zNbwidg)
         vbox.addWidget(commwidg)
+        vbox.addWidget(self.ubtn)
+
         self.setLayout(vbox)
+        #self.show()
 
     def init_component(self,component):
         '''Setup Widget for the input component'''
@@ -1923,4 +1927,23 @@ def from_igmguesses_to_joebvp(infile, outfile):
     ltiu.joebvp_from_components(comp_list, igmg_dict['spec_file'], outfile)
 
 
+
+class UpdateWidget(QWidget):
+    def __init__(self, parent=None):
+        """
+        """
+        super(UpdateWidget, self).__init__(parent)
+        self.parent = parent
+
+        # Generate Buttons
+        wbtn = QPushButton(self)
+        wbtn.setText('Update')
+        wbtn.setAutoDefault(False)
+        wbtn.clicked.connect(self.parent.setbzNc)
+
+
+        # Layout
+        hbox = QHBoxLayout()
+        hbox.addWidget(wbtn)
+        self.setLayout(hbox)
 
