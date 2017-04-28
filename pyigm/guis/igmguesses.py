@@ -1347,7 +1347,7 @@ class IGGVelPlotWidget(QWidget):
                 lbl = self.llist[self.llist['List']].name[idx]
                 if self.scale > 1.:
                     fsize = 'large'
-                    fsize = 'medium'
+                    fsize2 = 'small'
                 else:
                     fsize = 'x-small'
                     fsize2 ='xx-small'
