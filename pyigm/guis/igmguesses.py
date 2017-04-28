@@ -592,8 +592,9 @@ class IGGVelPlotWidget(QWidget):
                 self.ext_res = (self.spec.flux - self.external_model.flux) * self.residual_normalization_factor
 
         self.psdict = {} # Dict for spectra plotting
-        self.psdict['x_minmax'] = self.vmnx.value # Too much pain to use units with this
+        self.psdict['x_minmax'] = list(self.vmnx.value) # Too much pain to use units with this
         self.psdict['y_minmax'] = [-0.1, 1.1]
+        self.psdict['sv_xy_minmax'] = self.psdict['x_minmax'] + self.psdict['y_minmax']
         self.psdict['nav'] = ltgu.navigate(0,0,init=True)
 
 
@@ -1453,6 +1454,9 @@ class FiddleComponentWidget(QWidget):
         self.Nwidget = ltgsm.EditBox(-1., 'Nc=', '{:0.2f}')
         self.bwidget = ltgsm.EditBox(-1., 'bc=', '{:0.1f}')
 
+        self.button = QPushButton('Update', self)
+        # self.button.move(20,80)
+
         self.ddlbl = QLabel('Reliability')
         self.ddlist = QComboBox(self)
         self.ddlist.addItem('None')
@@ -1469,10 +1473,13 @@ class FiddleComponentWidget(QWidget):
 
         # Connect
         self.ddlist.activated[str].connect(self.setReliability)
-        self.Nwidget.box.textChanged[str].connect(self.setbzN)
-        self.zwidget.box.textChanged[str].connect(self.setbzN)
-        self.bwidget.box.textChanged[str].connect(self.setbzN)
-        self.Cwidget.box.textChanged[str].connect(self.setbzN)
+        self.button.clicked.connect(self.setbzNc)
+        # self.button.move(20,80)
+        self.show()
+        # self.Nwidget.box.textChanged[str].connect(self.setbzNc)
+        # self.zwidget.box.textChanged[str].connect(self.setbzNc)
+        # self.bwidget.box.textChanged[str].connect(self.setbzNc)
+        # self.Cwidget.box.textChanged[str].connect(self.setbzNc)
 
         # Layout
         zNbwidg = QWidget()
@@ -1553,12 +1560,14 @@ class FiddleComponentWidget(QWidget):
             self.label.setText('Component:')
 
     @pyqtSlot()
-    def setbzN(self):
-        '''Set the component column density or redshift from the boxes'''
+    def setbzNc(self):
+        '''Set the component attributes from the boxes, including comment'''
+
         if self.update is False:
             return
         if self.component is None:
             print('Need to generate a component first!')
+            return
         else:
             # Grab values
             try:
@@ -1568,6 +1577,7 @@ class FiddleComponentWidget(QWidget):
                 self.component.comment = str(self.Cwidget.box.text())
             except ValueError:  # this is when the str cannot be converted to float
                 print("The new value is not valid. Try again.")
+
             #QtCore.pyqtRemoveInputHook()
             #pdb.set_trace()
             #QtCore.pyqtRestoreInputHook()
