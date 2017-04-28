@@ -300,7 +300,8 @@ class DLASurvey(IGMSurvey):
         return dla_survey
 
     @classmethod
-    def load_lit(cls, dla_fil, qsos_fil, ref, sample='stat', Pdla_fil=None, **kwargs):
+    def load_lit(cls, dla_fil, qsos_fil, ref, sample='stat', fmt=None,
+        Pdla_fil=None, **kwargs):
         """ Load the DLA from a literature sample using the files
         provided by Ruben (see Sanchez-Ramirez et al. 2016, MNRAS, 456, 4488)
 
@@ -310,6 +311,8 @@ class DLASurvey(IGMSurvey):
           Name of file containting a Table (or the Table itself) on DLAs
         qsos_fil : str or Table
           Name of file containting a Table (or the Table itself) on QSO sightlines
+        fmt : str, optional
+          Format for Table.read()
         sample : str, optional
           DLA sample
             stat : Statistical sample
@@ -324,7 +327,7 @@ class DLASurvey(IGMSurvey):
 
         """
         # DLA files
-        stat_dlas = Table.read(dla_fil)
+        stat_dlas = Table.read(dla_fil, format=fmt)
         if Pdla_fil is not None:
             Pdlas = Table.read(Pdla_fil)
             dlas = vstack([stat_dlas,Pdlas])
@@ -332,8 +335,12 @@ class DLASurvey(IGMSurvey):
             dlas = stat_dlas
 
         # Rename some columns?
-        dlas.rename_column('Dec', 'DEC')
-        dlas.rename_column('logN', 'NHI')
+        try:
+            dlas.rename_column('Dec', 'DEC')
+        except KeyError:
+            pass
+        else:
+            dlas.rename_column('logN', 'NHI')
 
         # Cut on NHI
         gd_dla = dlas['NHI'] >= 20.3
@@ -344,11 +351,15 @@ class DLASurvey(IGMSurvey):
 
         # g(z) file
         print('Loading QSOs file {:s}'.format(qsos_fil))
-        qsos = Table.read(qsos_fil)
-        qsos.rename_column('zmin', 'Z_START')
-        qsos.rename_column('zmax', 'Z_END')
-        qsos.rename_column('Dec', 'DEC')
-        qsos.rename_column('zem', 'ZEM')
+        qsos = Table.read(qsos_fil, format=fmt)
+        try:
+            qsos.rename_column('zmin', 'Z_START')
+        except KeyError:
+            pass
+        else:
+            qsos.rename_column('zmax', 'Z_END')
+            qsos.rename_column('Dec', 'DEC')
+            qsos.rename_column('zem', 'ZEM')
         dla_survey.sightlines = qsos
 
         # BAL?
@@ -360,7 +371,7 @@ class DLASurvey(IGMSurvey):
             return dla_survey
 
         # Stat
-        # Generate mask
+        # Generate mask  (True = good)
         mask = dla_stat(dla_survey, qsos, **kwargs)
         if sample == 'stat':
             dla_survey.mask = mask
@@ -429,6 +440,29 @@ class DLASurvey(IGMSurvey):
         #
         dla_survey = cls.load_lit(dla_fil, qsos_fil, ref,
                                   Pdla_fil=Pdla_fil, sample=sample, skip_zem=True)
+        return dla_survey
+
+    @classmethod
+    def load_GGG(cls, sample='stat'):
+        """ Load the DLA from GGG
+
+        (Crighton et al. 2015, MNRAS, 452, 217
+        http://adsabs.harvard.edu/abs/2015MNRAS.452..217C)
+
+        Parameters
+        ----------
+        sample : str, optional
+
+        Returns
+        -------
+        dla_survey : DLASurvey
+        """
+        # DLA files
+        dla_fil = pyigm_path+'/data/DLA/GGG/GGG_DLA.dat'
+        ref = 'GGG'
+        qsos_fil = pyigm_path+'/data/DLA/GGG/GGG_QSO.dat'
+        #
+        dla_survey = cls.load_lit(dla_fil, qsos_fil, ref, sample=sample, fmt='ascii')
         return dla_survey
 
     @classmethod

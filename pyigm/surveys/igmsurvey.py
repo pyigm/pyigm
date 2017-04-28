@@ -100,7 +100,7 @@ class IGMSurvey(object):
                      sig_NHI=['sig(logNHI)', 'SIGNHI', 'NHI_ERR'],
                      name=['Name'], vlim=['vlim'],
                      zabs=['Z_LLS', 'ZABS', 'zabs'],
-                     zem=['Z_QSO', 'QSO_ZEM'],
+                     zem=['Z_QSO', 'QSO_ZEM', 'ZEM'],
                      RA=['RA'], Dec=['DEC', 'Dec'])
         # Parse the Table
         inputs = {}
