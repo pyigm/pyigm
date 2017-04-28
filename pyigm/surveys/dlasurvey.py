@@ -378,7 +378,7 @@ class DLASurvey(IGMSurvey):
         else:
             dla_survey.mask = ~mask
         # Return
-        print('Loaded')
+        print('Loaded survey')
         return dla_survey
 
     @classmethod
