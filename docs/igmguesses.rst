@@ -56,7 +56,8 @@ Optional arguments
                                                     for getting rid of very weak transitions from
                                                     the model
     --vlim VLIM                                     Velocity limit (in km/s) for the display        500.
-    --external_model                                Name of an external spectrum model fits file
+    --external_model EXTERNAL_MODEL                 Name of an external spectrum model fits file
+    --scale SCALE                                   Scaling of screen                               1.
     =============================================== =============================================== ==============
 
 The number of transitions available for some ions  can be excessive for many,
@@ -178,8 +179,9 @@ main panels, these are:
   component, i.e. (N, b, z). You can slightly increase/decrease the current
   values using the keystrokes 'N'/'n', 'V'/'v' and '<'/'>', respectively. You
   can also modify them directly by hand just editing the respective values on
-  the widget itself. Reliability flags must be chosen from the available list (see
-  above for definitions). A string comment can also be entered
+  the widget itself. After done with editing, make sure you press the "Update" button.
+  Reliability flags must be chosen from the available list (see
+  above for definitions). A string comment can also be entered.
 
 - **Components List** *(middle right)*: This widget displays and allows to
   navigate between currently defined components. The name of the component
