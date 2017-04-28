@@ -452,9 +452,9 @@ E         : toggle displaying/hiding the external absorption model
             self.velplot_widg.current_comp.attrib['b'] = igmg_dict['cmps'][key]['bfit']*u.km/u.s
             self.velplot_widg.current_comp.attrib['logN'] = igmg_dict['cmps'][key]['Nfit']
             try: # This should me removed in the future
-                self.velplot_widg.current_comp.attrib['Reliability'] = igmg_dict['cmps'][key]['Reliability']
+                self.velplot_widg.current_comp.reliability = igmg_dict['cmps'][key]['Reliability']
             except:
-                self.velplot_widg.current_comp.attrib['Reliability'] = igmg_dict['cmps'][key]['Quality']  # old version compatibility
+                self.velplot_widg.current_comp.reliability = igmg_dict['cmps'][key]['Quality']  # old version compatibility
             self.velplot_widg.current_comp.comment = igmg_dict['cmps'][key]['Comment']
             # Sync
             sync_comp_lines(self.velplot_widg.current_comp)
@@ -504,8 +504,8 @@ E         : toggle displaying/hiding the external absorption model
             out_dict['cmps'][key]['bfit'] = comp.attrib['b'].value
             out_dict['cmps'][key]['wrest'] = comp.init_wrest.value
             out_dict['cmps'][key]['vlim'] = list(comp.vlim.value)
-            out_dict['cmps'][key]['Reliability'] = str(comp.attrib['Reliability'])
-            out_dict['cmps'][key]['Comment'] = str(comp.comment)
+            out_dict['cmps'][key]['Reliability'] = comp.reliability
+            out_dict['cmps'][key]['Comment'] = comp.comment
             out_dict['cmps'][key]['mask_abslines'] = comp.mask_abslines
         # Write bad/good pixels out
         # good_pixels = np.where(self.velplot_widg.spec.good_pixels == 1)[0]
@@ -1237,10 +1237,10 @@ class IGGVelPlotWidget(QWidget):
                 line_color = []
                 line_wvobs_lims = []
                 for comp in components:
-                    if comp.attrib['Reliability'] == 'None':
+                    if comp.reliability == 'none':
                         la = ''
                     else:
-                        la = comp.attrib['Reliability']
+                        la = comp.reliability
                     for ii, line in enumerate(comp._abslines):
                         if comp.mask_abslines[ii] == 0:  # do not plot these masked out lines
                             continue
@@ -1458,7 +1458,7 @@ class FiddleComponentWidget(QWidget):
 
         self.ddlbl = QLabel('Reliability')
         self.ddlist = QComboBox(self)
-        self.ddlist.addItem('None')
+        self.ddlist.addItem('none')
         self.ddlist.addItem('a')
         self.ddlist.addItem('b')
         self.ddlist.addItem('c')
@@ -1523,14 +1523,14 @@ class FiddleComponentWidget(QWidget):
         self.Cwidget.set_text(self.component.comment)
         self.update = True  # Avoids a bit of an internal loop
         # Reliability
-        idx = self.ddlist.findText(self.component.attrib['Reliability'])
+        idx = self.ddlist.findText(self.component.reliability)
         self.ddlist.setCurrentIndex(idx)
         # Label
         self.set_label()
 
     def setReliability(self, text):
         if self.component is not None:
-            self.component.attrib['Reliability'] = text
+            self.component.reliability = text
 
     def reset(self):
         #
@@ -1765,7 +1765,7 @@ def comp_init_attrib(comp):
                'logN': 0., 'sig_logN': 0.,
                'b': 0.*u.km/u.s, 'bsig': 0.*u.km/u.s,  # Doppler
                'z': comp.zcomp, 'zsig': 0.,
-               'Reliability': 'None'}
+               'Reliability': 'none'}
 
 
 def sync_comp_lines(comp, only_lims=False):
