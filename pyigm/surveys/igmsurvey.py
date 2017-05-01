@@ -199,13 +199,17 @@ class IGMSurvey(object):
         # Append
         self._abs_sys.append(abs_sys)
 
-    def calculate_gz(self, zstep=1e-4):
+    def calculate_gz(self, zstep=1e-4, zmin=None, zmax=None):
         """ Uses sightlines table to generate a g(z) array
 
         Parameters
         ----------
         zstep : float, optional
           Step size for g(z) array
+        zmin : float, optional
+          Minimum redshift of evaluated array.  Default is minimum in the sightlines
+        zmax : float, optional
+          Maximum redshift of evaluated array.  Default is maximum in the sightlines
 
         Returns
         -------
@@ -217,8 +221,10 @@ class IGMSurvey(object):
         if self.sightlines is None:
             raise IOError("calculate_gz: Need to set sightlines table")
         # zeval
-        zmin = np.min(self.sightlines['Z_START'])
-        zmax = np.max(self.sightlines['Z_END'])
+        if zmin is None:
+            zmin = np.min(self.sightlines['Z_START'])
+        if zmax is None:
+            zmax = np.max(self.sightlines['Z_END'])
         zeval = np.arange(zmin, zmax, step=zstep)
         gz = np.zeros_like(zeval).astype(int)
         # Evaluate
