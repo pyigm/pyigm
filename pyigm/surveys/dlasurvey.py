@@ -107,7 +107,7 @@ class DLASurvey(IGMSurvey):
             return dla_survey
         mask = dla_stat(dla_survey, stat_survey)
         if sample == 'stat':
-            dla_survey.mask = mask
+            dla_survey.mask = mask & (dlas['STAT_FLG'] == 1)
         else:
             dla_survey.mask = ~mask
         # Return
