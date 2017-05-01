@@ -50,6 +50,12 @@ def test_read_h100():
     gdSiII = np.where(SiII_clms['flag_N'] > 0)[0]
     assert len(gdSiII) == 98
 
+def test_read_HST():
+    """ Neeleman+16
+    """
+    hst16 = DLASurvey.load_HST16()
+    assert hst16.nsys == 4
+
 def test_read_xq100():
     """ XQ-100 """
     xq100 = DLASurvey.load_XQ100(sample='stat')
