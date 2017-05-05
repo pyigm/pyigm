@@ -27,8 +27,14 @@ def test_sdss():
     # Testing
     assert sdss.nsys == 1182
     # Stat
-    sdss = DLASurvey.load_SDSS_DR5()
-    assert len(sdss.NHI) == 737
+    sdss_stat = DLASurvey.load_SDSS_DR5()
+    assert len(sdss_stat.NHI) == 737
+    # Binned
+    lX, lX_lo, lX_hi = sdss_stat.calculate_lox([2., 2.5, 3])
+    assert np.isclose(lX[0], 0.04625038, atol=1e-5)
+    fN, fN_lo, fN_hi = sdss_stat.calculate_fn([20.3, 20.5, 21., 21.5, 22.], [2, 2.5], log=True)
+    assert fN.size == 4
+    assert np.isclose(fN_lo[0], 0.0682087, atol=1e-5)
 
 
 def test_read_h100_nosys():
@@ -43,6 +49,12 @@ def test_read_h100():
     SiII_clms = h100.ions((14, 2))
     gdSiII = np.where(SiII_clms['flag_N'] > 0)[0]
     assert len(gdSiII) == 98
+
+def test_read_HST():
+    """ Neeleman+16
+    """
+    hst16 = DLASurvey.load_HST16()
+    assert hst16.nsys == 4
 
 def test_read_xq100():
     """ XQ-100 """

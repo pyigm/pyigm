@@ -6,18 +6,24 @@ import numpy as np
 import os
 import imp, glob
 import pdb
+import warnings
+
 try:
     from urllib2 import urlopen # Python 2.7
 except ImportError:
     from urllib.request import urlopen
-import json
 
 from astropy.table import QTable, Column, Table, vstack
 from astropy import units as u
-#from astropy.coordinates import SkyCoord
+from astropy.stats import poisson_conf_interval as aspci
+from astropy import constants as const
+from astropy.cosmology import core as acc
+
 from linetools import utils as ltu
+
 from pyigm.surveys.igmsurvey import IGMSurvey
 from pyigm.surveys import utils as pyisu
+from pyigm import utils as pyigmu
 
 pyigm_path = imp.find_module('pyigm')[1]
 
@@ -29,6 +35,87 @@ class DLASurvey(IGMSurvey):
     Attributes:
 
     """
+    @classmethod
+    def load_HST16(cls, sample='stat'):
+        """ HST Survey by Neeleman+16
+
+        Parameters
+        ----------
+        sample : str, optional
+
+        Returns
+        -------
+        dla_survey
+
+        """
+        # Read DLAs
+        dlas = Table.read(pyigm_path + '/data/DLA/HST/HSTDLA.dat', format='ascii')
+
+        # Read Quasars
+        #qsos = Table.read(pyigm_path + '/all_qso_table.txt', format='ascii')
+
+        # Read Sightlines
+        survey = Table.read(pyigm_path + '/data/DLA/HST/hstpath.dat', format='ascii')
+
+        # Add info to DLA table
+        ras, decs, zems = [], [], []
+        for dla in dlas:
+            mt = np.where(survey['QSO'] == dla['NAME'])[0]
+            if len(mt) == 0:
+                pdb.set_trace()
+                raise ValueError("Uh oh")
+            else:
+                mt = mt[0]
+            # Generate RA/DEC
+            row = survey[mt]
+            coord = ltu.radec_to_coord('J{:02d}{:02d}{:f}{:s}{:02d}{:02d}{:f}'.format(
+                row['RAh'], row['RAm'], row['RAs'], row['DE-'], row['DEd'], row['DEm'],
+                row['DEs']))
+            ras.append(coord.ra.value)
+            decs.append(coord.dec.value)
+            # zem
+            zems.append(row['ZEM'])
+        dlas['RA'] = ras
+        dlas['DEC'] = decs
+        dlas['QSO_ZEM'] = zems
+
+        # Instantiate
+        dla_survey = cls.from_sfits(dlas)
+        dla_survey.ref = 'Neeleman+16'
+
+        # Fiddle a bit
+        survey.rename_column('STTMIN', 'Z_START')
+        survey.rename_column('STTMAX', 'Z_END')
+        stat = survey['Z_END'] > 0
+        stat_survey = survey[stat]
+        # Restrict to statistical sightlines
+        if sample == 'stat':
+            stat_survey = stat_survey[stat_survey['F_STT'] == 1]
+        ras, decs, zems = [], [], []
+        for row in stat_survey:
+            coord = ltu.radec_to_coord('J{:02d}{:02d}{:f}{:s}{:02d}{:02d}{:f}'.format(
+                    row['RAh'], row['RAm'], row['RAs'], row['DE-'], row['DEd'], row['DEm'],
+                    row['DEs']))
+            ras.append(coord.ra.value)
+            decs.append(coord.dec.value)
+        stat_survey['RA'] = ras
+        stat_survey['DEC'] = decs
+        stat_survey['FLG_BAL'] = 0
+
+        # Sightlines
+        dla_survey.sightlines = stat_survey
+
+        # Stat?
+        if sample in ['all', 'all_sys']:
+            return dla_survey
+        mask = dla_stat(dla_survey, stat_survey)
+        if sample == 'stat':
+            dla_survey.mask = mask & (dlas['STAT_FLG'] == 1)
+        else:
+            dla_survey.mask = ~mask
+        # Return
+        return dla_survey
+
     @classmethod
     def load_H100(cls, grab_spectra=False, load_sys=True, isys_path=None):  #skip_trans=True):
         """ Sample of unbiased HIRES DLAs compiled and analyzed by Neeleman+13
@@ -67,9 +154,9 @@ class DLASurvey(IGMSurvey):
         if load_sys:  # This approach takes ~120s
             print('H100: Loading systems.  This takes ~120s')
             if isys_path is not None:
-                dla_survey = pyisu.load_sys_files(isys_path, 'DLA', sys_path=True)
+                dla_survey = pyisu.load_sys_files(isys_path, 'DLA', sys_path=True, use_coord=True)
             else:
-                dla_survey = pyisu.load_sys_files(sys_files, 'DLA')
+                dla_survey = pyisu.load_sys_files(sys_files, 'DLA', use_coord=True)
             dla_survey.fill_ions(use_components=True)
         else:
             # Read
@@ -111,7 +198,7 @@ class DLASurvey(IGMSurvey):
 
         # Spectra?
         if grab_spectra:
-            pdb.set_trace()  # USE IGMSPEC!!
+            warnings.warn("All of these spectra are in igmspec at https://github.com/specdb/specdb")
             specfils = glob.glob(spath+'H100_J*.fits')
             if len(specfils) < 100:
                 import tarfile
@@ -216,17 +303,26 @@ class DLASurvey(IGMSurvey):
         return dla_survey
 
     @classmethod
-    def load_lit(cls, dla_fil, qsos_fil, ref, sample='stat', Pdla_fil=None, **kwargs):
+    def load_lit(cls, dla_fil, qsos_fil, ref, sample='stat', fmt=None,
+        Pdla_fil=None, **kwargs):
         """ Load the DLA from a literature sample using the files
         provided by Ruben (see Sanchez-Ramirez et al. 2016, MNRAS, 456, 4488)
 
         Parameters
         ----------
+        dla_fil : str or Table
+          Name of file containting a Table (or the Table itself) on DLAs
+        qsos_fil : str or Table
+          Name of file containting a Table (or the Table itself) on QSO sightlines
+        fmt : str, optional
+          Format for Table.read()
         sample : str, optional
           DLA sample
             stat : Statistical sample
             all : All LLS
             nonstat : Non-statistical sample
+        **kwargs : optional
+          Passed to dla_stat()
 
         Returns
         -------
@@ -234,7 +330,7 @@ class DLASurvey(IGMSurvey):
 
         """
         # DLA files
-        stat_dlas = Table.read(dla_fil)
+        stat_dlas = Table.read(dla_fil, format=fmt)
         if Pdla_fil is not None:
             Pdlas = Table.read(Pdla_fil)
             dlas = vstack([stat_dlas,Pdlas])
@@ -242,8 +338,12 @@ class DLASurvey(IGMSurvey):
             dlas = stat_dlas
 
         # Rename some columns?
-        dlas.rename_column('Dec', 'DEC')
-        dlas.rename_column('logN', 'NHI')
+        try:
+            dlas.rename_column('Dec', 'DEC')
+        except KeyError:
+            pass
+        else:
+            dlas.rename_column('logN', 'NHI')
 
         # Cut on NHI
         gd_dla = dlas['NHI'] >= 20.3
@@ -254,11 +354,15 @@ class DLASurvey(IGMSurvey):
 
         # g(z) file
         print('Loading QSOs file {:s}'.format(qsos_fil))
-        qsos = Table.read(qsos_fil)
-        qsos.rename_column('zmin', 'Z_START')
-        qsos.rename_column('zmax', 'Z_END')
-        qsos.rename_column('Dec', 'DEC')
-        qsos.rename_column('zem', 'ZEM')
+        qsos = Table.read(qsos_fil, format=fmt)
+        try:
+            qsos.rename_column('zmin', 'Z_START')
+        except KeyError:
+            pass
+        else:
+            qsos.rename_column('zmax', 'Z_END')
+            qsos.rename_column('Dec', 'DEC')
+            qsos.rename_column('zem', 'ZEM')
         dla_survey.sightlines = qsos
 
         # BAL?
@@ -270,14 +374,14 @@ class DLASurvey(IGMSurvey):
             return dla_survey
 
         # Stat
-        # Generate mask
+        # Generate mask  (True = good)
         mask = dla_stat(dla_survey, qsos, **kwargs)
         if sample == 'stat':
             dla_survey.mask = mask
         else:
             dla_survey.mask = ~mask
         # Return
-        print('Loaded')
+        print('Loaded survey')
         return dla_survey
 
     @classmethod
@@ -342,6 +446,29 @@ class DLASurvey(IGMSurvey):
         return dla_survey
 
     @classmethod
+    def load_GGG(cls, sample='stat'):
+        """ Load the DLA from GGG
+
+        (Crighton et al. 2015, MNRAS, 452, 217
+        http://adsabs.harvard.edu/abs/2015MNRAS.452..217C)
+
+        Parameters
+        ----------
+        sample : str, optional
+
+        Returns
+        -------
+        dla_survey : DLASurvey
+        """
+        # DLA files
+        dla_fil = pyigm_path+'/data/DLA/GGG/GGG_DLA.dat'
+        ref = 'GGG'
+        qsos_fil = pyigm_path+'/data/DLA/GGG/GGG_QSO.dat'
+        #
+        dla_survey = cls.load_lit(dla_fil, qsos_fil, ref, sample=sample, fmt='ascii')
+        return dla_survey
+
+    @classmethod
     def load_XQ100(cls, sample='stat'):
         """ Load the DLA from XQ-100
 
@@ -388,6 +515,314 @@ class DLASurvey(IGMSurvey):
 
     def __init__(self, **kwargs):
         IGMSurvey.__init__(self, 'DLA', **kwargs)
+
+        # define the cosmology (for H0)
+        try:
+            _ = self.cosmo
+        except ValueError:
+            self.cosmo = acc.FlatLambdaCDM(70., 0.3)
+
+    def calculate_loz(self, zbins, NHI_mnx=(20.3, 23.00)):
+        """ Calculate l(z) in zbins for an interval in NHI
+        Wrapper on lox
+
+        Parameters
+        ----------
+        zbins : list
+          Defines redshift intervals
+          e.g.  [2., 2.5, 3., 4.]
+        NHI_mnx : tuple, optional
+          min/max of NHI for evaluation
+
+        Returns
+        -------
+        lz, sig_lz_lower, sig_lz_upper : ndarray
+        """
+        return self.calculate_lox(zbins, NHI_mnx=NHI_mnx, use_Dz=True)
+
+    def calculate_lox(self, zbins, NHI_mnx=(20.3, 23.00), use_Dz=False):
+        """ Calculate l(X) in zbins for an interval in NHI
+        Parameters
+        ----------
+        zbins : list
+          Defines redshift intervals
+          e.g.  [2., 2.5, 3., 4.]
+        NHI_mnx : tuple, optional
+          min/max of NHI for evaluation
+        use_gz : bool, optional
+          Use gz instead of gX.
+          This forces the calculation of l(z) instead of l(X)
+
+        Returns
+        -------
+        lX, sig_lX_lower, sig_lX_upper : ndarray
+        """
+        # assign the nhbins
+        nhbins = np.array(NHI_mnx)
+
+        # generate the fN components
+        fncomp = self.__generate_fncomp__(nhbins, zbins)
+
+        # get the absorption path length
+        dXtot = self.__find_dXtot__(zbins, calc_Dz=use_Dz)
+
+        # total number of absorbers + poisson uncertainty
+        Ntot = fncomp.sum(axis=0)
+        Nunc = aspci(Ntot, interval='frequentist-confidence')
+
+        # l(X)
+        lX = Ntot / dXtot
+        lX_lo = Nunc[0, :] / dXtot
+        lX_hi = Nunc[1, :] / dXtot
+
+        return lX, lX - lX_lo, lX_hi - lX
+
+    def calculate_rhoHI(self, zbins, nhbins=(20.3, 23.), nboot=1000):
+        """ Calculate the mass density in HI
+
+        Parameters
+        ----------
+        zbins : list
+        nhbins : list
+
+        Returns
+        -------
+        rhoHI : ndarray
+          Evaluation of HI mass density, with units
+        rhoHI_lo : ndarray
+          Error estimate (low side)
+        rhoHI_hi : ndarray
+          Error estimate (high side)
+        """
+        # generate the fN components
+        fncomp = self.__generate_fncomp__(nhbins, zbins)
+
+        # get the absorption path length
+        dXtot = self.__find_dXtot__(zbins)
+
+        # get the total column density per zbin
+        NHtot = self.__find_NHtot__(zbins, NH_mnx=(np.min(nhbins), np.max(nhbins)))
+
+        # bootstrap NH_average uncertainty
+        #NHunc = self.__bootstrap_rhohi__(fncomp, nhbins, zbins, nboot=nboot)
+        NHunc = 1e20
+
+        # total number of absorbers + poisson uncertainty
+        Ntot = fncomp.sum(axis=0)
+        Nunc = aspci(Ntot, interval='frequentist-confidence')
+
+        frac_unc = np.sqrt(np.power(abs(Nunc - Ntot) / Ntot, 2) +
+                           np.power(np.array([NHunc / (NHtot / Ntot), ] * 2), 2))
+        # rho_HI
+        rhoHI = NHtot / dXtot
+        rhoHI_lo = rhoHI * frac_unc[0, :]
+        rhoHI_hi = rhoHI * frac_unc[1, :]
+
+        # Constants
+        rhoHI = rhoHI * (const.m_p.cgs * self.cosmo.H0 /
+                         const.c.cgs / (u.cm ** 2)).to(u.Msun / u.Mpc ** 3)
+        rhoHI_lo = rhoHI_lo * (const.m_p.cgs * self.cosmo.H0 /
+                               const.c.cgs / (u.cm ** 2)).to(u.Msun / u.Mpc ** 3)
+        rhoHI_hi = rhoHI_hi * (const.m_p.cgs * self.cosmo.H0 /
+                               const.c.cgs / (u.cm ** 2)).to(u.Msun / u.Mpc ** 3)
+
+        return rhoHI, rhoHI_lo, rhoHI_hi
+
+    def calculate_fn(self, nhbins, zbins, log=False):
+        """ Calculate f(N,X)
+
+        Parameters
+        ----------
+        nhbins : list
+        zbins : list
+        log : bool, optional
+          Report log10 values?
+
+        Returns
+        -------
+        fn : ndarray
+          log10 f(N,X)
+        fn_lo : ndarray
+          error in fn (low side)
+        fn_hi : ndarray
+          error in fn (high side)
+
+        """
+
+        # generate the fN components
+        fncomp = self.__generate_fncomp__(nhbins, zbins)
+
+        # calculate the uncertainty on the bins
+        fnunc = aspci(fncomp, interval='frequentist-confidence')
+
+        # get the absorption path length
+        dXtot = self.__find_dXtot__(zbins)
+
+        # find the nhi bin size
+        dNHI = np.power(10, nhbins[1:]) - np.power(10, nhbins[:-1])
+
+        # calculate the fN values
+        fn = np.transpose(np.transpose(fncomp / dXtot) / dNHI)
+        fn_lo = np.transpose(np.transpose(fnunc[0] / dXtot) / dNHI)
+        fn_hi = np.transpose(np.transpose(fnunc[1] / dXtot) / dNHI)
+
+        if log:
+            return np.log10(fn), np.log10(fn) - np.log10(fn_lo), np.log10(fn_hi) - np.log10(fn)
+        else:
+            return fn, fn - fn_lo, fn_hi - fn
+
+    def __generate_fncomp__(self, nhbins, zbins):
+        """  Generate binned evaluation of f(NHI,X)
+
+        Parameters
+        ----------
+        nhbins : list
+          Defines NHI bins for f(NHI,X) evaluation, e.g.
+            [20.3, 20.6, 21.0, 21.5, 23.]
+        zbins : list
+
+        Returns
+        -------
+        fncomp : ndarray
+          f(NHI,X)
+
+        """
+        # calculate the total absorption path length g(X) from g(z)
+        #z, gX = self.__calculate_gX__()
+
+        # create the fn array
+        zabs = self.__getattr__('zabs')
+        nhi = self.__getattr__('NHI')
+        fncomp = np.histogram2d(nhi, zabs, bins=[nhbins, zbins])[0]
+
+        return fncomp
+
+    def __find_dXtot__(self, zbins, calc_Dz=False):
+        """ Calculate DX in zbins
+        Parameters
+        ----------
+        zbins : list
+        calc_Dz : bool, optional
+          Return Dztot instead of DXtot
+
+        Returns
+        -------
+        dXtot : ndarray
+          dX for the full survey
+
+        """
+        # get z, g(z)
+        z, gz = self.calculate_gz()
+        dz = z[1] - z[0]
+        #
+        if not calc_Dz:
+            dXdz = pyigmu.cosm_xz(z, cosmo=self.cosmo, flg_return=1)
+        else:
+            dXdz = 1.
+
+        dXtot = np.zeros(len(zbins) - 1)
+        for kk in range(len(zbins) - 1):
+            # the indices of values within the redshift range
+            idx = np.where((z >= zbins[kk]) & (z < zbins[kk + 1]))
+            dXtot[kk] = np.sum((gz*dz*dXdz)[idx])
+
+        return dXtot
+
+    def __find_NHtot__(self, zbins, NH_mnx):
+        """ Calculate the summed NHI
+
+        Parameters
+        ----------
+        zbins : list
+        NH_mnx : list or tuple
+          Min/max for the sum
+
+        Returns
+        -------
+        NHtot : ndarray
+          Sum in the zbin intervals
+        """
+
+        # import the values from the survey
+        zabs = self.__getattr__('zabs')
+        nhi = self.__getattr__('NHI')
+
+        # trim the data to only the NHI values in the range
+        idx = np.where((nhi >= NH_mnx[0]) & (nhi < NH_mnx[1]))
+        zabs = zabs[idx]
+        nhi = nhi[idx]
+
+        # find the total column density
+        NHtot = np.zeros(len(zbins) - 1)
+        for kk in range(len(zbins) - 1):
+            idx2 = np.where((zabs >= zbins[kk]) & (zabs < zbins[kk + 1]))
+            # total column density in the zbin
+            NHtot[kk] = np.sum(np.power(10., nhi[idx2]))
+
+        return NHtot
+
+    '''
+    def __calculate_gX__(self):
+        """ Calculate g(X) from g(z)
+        Returns
+        -------
+        z : ndarray
+          Redshifts where g(z) is evaluated
+        gX : ndarray
+          g(X)
+        """
+
+        # calculate the total absorption path length g(X) from g(z)
+        z, gz = self.calculate_gz()
+        dXdz = pyigmu.cosm_xz(z, cosmo=self.cosmo, flg_return=1)
+        gX = gz / dXdz #* dz  # THIS LOOKS WRONG TO ME!
+
+        return z, gX
+    '''
+
+    def __bootstrap_rhohi__(self, fncomp, nhbins, zbins, nboot=1000):
+        """ Calculate standard deviation in <NHI> with a bootstrap technique
+
+        Parameters
+        ----------
+        fncomp
+        nhbins
+        zbins
+        nboot
+
+        Returns
+        -------
+        NHunc : float
+          Standard deviation in <NHI> boostratp realizations
+
+        """
+
+        # calculate the uncertainty on fncomp
+        fnunc = aspci(fncomp, interval='frequentist-confidence')
+
+        # create a nboot, len(nhbins)-1, len(zbins)-1, array
+        tfncomp = np.array([fncomp, ] * nboot)
+
+        # populate the array with different realizations of the distribution
+        randarr = np.random.randn(nboot, len(nhbins) - 1, len(zbins) - 1)
+        tfncomp = (tfncomp + randarr.clip(0, 99) * (fnunc[1, :, :] - fncomp) +
+                   randarr.clip(-99, 0) * (fncomp - fnunc[0, :, :]))
+
+        # calculate the average column density
+        Ntot = np.sum(tfncomp, axis=1)
+        NH_avg = np.power(10., (nhbins[:-1] + 0.2 * (nhbins[1:] - nhbins[:-1])))  ##NOTE THE KLUDGE!
+        NH_tavg = np.dot(NH_avg, tfncomp) / Ntot
+
+        # trim the 1 sigma edges off and find the min/max
+        # trimmed=scipy.stats.trimboth(NH_tot,scipy.special.erfc(1),axis=0)
+        # NHunc=np.array([trimmed.min(axis=0),trimmed.max(axis=0)])
+
+        # Should we do this in log space??  Does it matter??
+
+        # just calculate the standard deviation of the distribution
+        NHunc = np.std(NH_tavg, axis=0)
+
+        return NHunc
 
 
 def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
@@ -438,7 +873,7 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
     zmin = ltu.z_from_dv(vmin*np.ones(len(qsos)), qsos['Z_START'].data) # vmin must be array-like to be applied to each individual qsos['Z_START']
 
     # Make some lists
-    qsos_coord = SkyCoord(ra=qsos['RA'], dec=qsos['DEC'])
+    qsos_coord = SkyCoord(ra=qsos['RA'], dec=qsos['DEC'], unit='deg')
     dla_coord = DLAs.coord
 
     idx, d2d, d3d = match_coordinates_sky(dla_coord, qsos_coord, nthneighbor=1)
