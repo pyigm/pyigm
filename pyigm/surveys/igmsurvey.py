@@ -76,7 +76,7 @@ class IGMSurvey(object):
 
     @classmethod
     def from_sfits(cls, summ_fits, **kwargs):
-        """Generate the Survey from a summary FITS file
+        """Generate the Survey from a summary FITS file or Table
 
         Handles SPEC_FILES too.
 
@@ -97,10 +97,10 @@ class IGMSurvey(object):
         nsys = len(systems)
         # Dict
         kdict = dict(NHI=['NHI', 'logNHI'],
-                     sig_NHI=['sig(logNHI)', 'SIGNHI'],
+                     sig_NHI=['sig(logNHI)', 'SIGNHI', 'NHI_ERR'],
                      name=['Name'], vlim=['vlim'],
                      zabs=['Z_LLS', 'ZABS', 'zabs'],
-                     zem=['Z_QSO', 'QSO_ZEM'],
+                     zem=['Z_QSO', 'QSO_ZEM', 'ZEM'],
                      RA=['RA'], Dec=['DEC', 'Dec'])
         # Parse the Table
         inputs = {}
@@ -199,13 +199,17 @@ class IGMSurvey(object):
         # Append
         self._abs_sys.append(abs_sys)
 
-    def calculate_gz(self, zstep=1e-4):
+    def calculate_gz(self, zstep=1e-4, zmin=None, zmax=None):
         """ Uses sightlines table to generate a g(z) array
 
         Parameters
         ----------
         zstep : float, optional
           Step size for g(z) array
+        zmin : float, optional
+          Minimum redshift of evaluated array.  Default is minimum in the sightlines
+        zmax : float, optional
+          Maximum redshift of evaluated array.  Default is maximum in the sightlines
 
         Returns
         -------
@@ -217,8 +221,10 @@ class IGMSurvey(object):
         if self.sightlines is None:
             raise IOError("calculate_gz: Need to set sightlines table")
         # zeval
-        zmin = np.min(self.sightlines['Z_START'])
-        zmax = np.max(self.sightlines['Z_END'])
+        if zmin is None:
+            zmin = np.min(self.sightlines['Z_START'])
+        if zmax is None:
+            zmax = np.max(self.sightlines['Z_END'])
         zeval = np.arange(zmin, zmax, step=zstep)
         gz = np.zeros_like(zeval).astype(int)
         # Evaluate
@@ -441,6 +447,7 @@ class IGMSurvey(object):
 
     def __getattr__(self, k):
         """ Generate an array of attribute 'k' from the IGMSystems
+        NOTE: We only get here if the Class doesn't have this attribute set already
 
         Mask is applied
 
@@ -453,6 +460,9 @@ class IGMSurvey(object):
         -------
         numpy array
         """
+        # Catch length 0 list
+        if len(self._abs_sys) == 0:
+            raise ValueError("Attribute does not exist")
         try:
             lst = [getattr(abs_sys, k) for abs_sys in self._abs_sys]
         except ValueError:
