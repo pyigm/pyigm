@@ -88,6 +88,9 @@ class DLASurvey(IGMSurvey):
         survey.rename_column('STTMAX', 'Z_END')
         stat = survey['Z_END'] > 0
         stat_survey = survey[stat]
+        # Restrict to statistical sightlines
+        if sample == 'stat':
+            stat_survey = stat_survey[stat_survey['F_STT'] == 1]
         ras, decs, zems = [], [], []
         for row in stat_survey:
             coord = ltu.radec_to_coord('J{:02d}{:02d}{:f}{:s}{:02d}{:02d}{:f}'.format(
