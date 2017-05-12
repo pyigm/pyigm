@@ -151,7 +151,8 @@ class ModifiedNFW(CGMPhase):
 
         Parameters
         ----------
-        xyz
+        xyz : ndarray
+          Coordinate(s) in kpc
 
         Returns
         -------
