@@ -108,24 +108,36 @@ This will grab 154Mb of data from the internet, and place
 them within pyigm/data/LLS/HD-LLS.
 
 
-DLA
-+++
+DLAs
+++++
 
-Subclass for DLA survey.  Presently handles the .dat and .lst files used
-by JXP.   See :doc:`DLASurvey_examples` for more.
-
-Here is a Table describing the various samples that may
-be accessed.
-
+.. _DLASurvey_examples: https://github.com/pyigm/pyigm/blob/master/docs/examples/DLASurvey_examples.ipynb
 .. _PW09: http://adsabs.harvard.edu/abs/2009ApJ...696.1543P
 .. _Neeleman+13: http://adsabs.harvard.edu/abs/2013ApJ...769...54N
+.. _Neeleman+16: http://adsabs.harvard.edu/abs/2016ApJ...818..113N
+.. _P03: http://adsabs.harvard.edu/abs/2003MNRAS.346.1103P
+.. _G09: http://adsabs.harvard.edu/abs/2009A%26A...508..133G
+.. _GGG: http://adsabs.harvard.edu/abs/2015MNRAS.452..217C
+.. _XQ100: http://adsabs.harvard.edu/abs/2016MNRAS.456.4488S
+
+Subclass for DLA surveys.
+Here is a Table describing the various DLA surveys that may
+be loaded and manipulated.
+
 
 ========== =============================  =================== ================================
 Survey     Call                           Reference(s)              Description
 ========== =============================  =================== ================================
-SDSS_DR5   DLASurvey.load_SDSS_DR5()      `PW09`_             DR5
+HST16      DLASurvey.load_HST16()         `Neeleman+16`_      Blind survey of HST UV spectra
 H100       DLASurvey.load_H100()          `Neeleman+13`_      100 unbiased HIRES spectra
+SDSS_DR5   DLASurvey.load_SDSS_DR5()      `PW09`_             DR5
+P03        DLASurvey.load_P03()           `P03`_              Compilation by Peroux et al.
+G09        DLASurvey.load_G09()           `G09`_              Compilation by Guimaraes et al.
+GGG        DLASurvey.load_GGG()           `GGG`_              Giant Gemini GMOS survey
+XQ100      DLASurvey.load_XQ100()         `XQ100`_            Survey of XQ-100 spectra
 ========== =============================  =================== ================================
+
+See `DLASurvey_examples`_ for usage example.
 
 Plots
 =====
