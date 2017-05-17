@@ -138,7 +138,7 @@ class DLASurvey(IGMSurvey):
         ------
         dla_survey
         """
-        # Pull from Internet (as necessary)
+        # Read
         summ_fil = pyigm_path+"/data/DLA/H100/H100_DLA.fits"
         print('H100: Loading summary file {:s}'.format(summ_fil))
 
@@ -166,32 +166,6 @@ class DLASurvey(IGMSurvey):
             dla_survey.fill_ions(jfile=ions_fil)
 
         dla_survey.ref = 'Neeleman+13'
-
-        """
-        # Load transitions
-        names = list(dla_survey.name)
-        if not skip_trans:
-            print('H100: Loading transitions file {:s}'.format(trans_fil))
-            tar = tarfile.open(trans_fil)
-            for member in tar.getmembers():
-                if '.' not in member.name:
-                    print('Skipping a likely folder: {:s}'.format(member.name))
-                    continue
-                # Extract
-                f = tar.extractfile(member)
-                # Need to fix for 3.4
-                tdict = json.load(f)
-                # Find system
-                i0 = member.name.rfind('/')
-                i1 = member.name.rfind('_clm')
-                try:
-                    idx = names.index(member.name[i0+1:i1])
-                except ValueError:
-                    pdb.set_trace()
-                # Fill up
-                dla_survey._abs_sys[idx].load_components(tdict)
-        """
-
 
         spath = pyigm_path+"/data/DLA/H100/Spectra/"
         for dla in dla_survey._abs_sys:
