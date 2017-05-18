@@ -1020,8 +1020,12 @@ class IGGVelPlotWidget(QWidget):
 
             quant = line.split('::')[1].lstrip()
             spltw = quant.split(' ')
-            wrest = Quantity(float(spltw[0]), unit=spltw[1])
+            wrest = Quantity(float(spltw[0]), unit='AA')
             #
+            # QtCore.pyqtRemoveInputHook()
+            # pdb.set_trace()
+            # QtCore.pyqtRestoreInputHook()
+
             self.z = (wvobs/wrest - 1.).value
             #self.statusBar().showMessage('z = {:f}'.format(z))
             self.init_lines()
