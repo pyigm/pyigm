@@ -1057,7 +1057,6 @@ class IGGVelPlotWidget(QWidget):
             self.parent.statusBar().showMessage('IGMGuessesGUI: '+ s)
 
 
-
         if event.key == 'F':  # Load Full ISM
             self.llist['List'] = 'ISM'
             # self.parent.update_available_lines(linelist=self.llist['ISM'])
@@ -1870,7 +1869,7 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s):
     # pdb.set_trace()
     # QtCore.pyqtRestoreInputHook()
 
-    grouped_comps = ltiu.group_coincident_compoments(comps_copy, output_type='list')
+    grouped_comps = ltiu.group_coincident_components(comps_copy, output_type='list')
     isolated = []
     grouped = []
     for group in grouped_comps:
