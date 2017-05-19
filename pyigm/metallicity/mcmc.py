@@ -101,12 +101,73 @@ import scipy.optimize as op
 
 from linetools import utils as ltu
 
+
+##For logUconstraint
+import sys
+sys.path.append(os.getcwd())
+import cloudyiongrid as cld
+from astropy import constants as const
+from scipy import integrate 
+from scipy.interpolate import interp1d
+
+def logUToDens(logU, redshift, UVB):
+    """
+    Convert logU to n_H (total H number density) using the given UVB.
+    The only two UVBs for this are HM05 and HM12 because that's all I have packaged up.
+    """
+    ##This was taken almost directly from "getionisation.py" from Michele Fumagalli
+
+    #init UVB at given redshift
+    if UVB == 'HM05' or UVB == 'HM05logU':
+        uvb=cld.Cldyion(uvb='HM05logU')
+        ##This should be taken care of when calling cld.Cldyion(uvb='HM05logU')
+        ##  but I'm going to do this again, just in case.
+        uvb.uvbtype='HM05logU'
+    else:
+        uvb=cld.Cldyion(uvb='HM12')
+        ##This should be taken care of when calling cld.Cldyion(uvb='HM12')
+        ##  but I'm going to do this again, just in case.
+        uvb.uvbtype='HM12'
+
+    uvb.redshift=redshift
+
+    #Get the freqeunce Log of Hz and UVB Log of erg/s/cm2/Hz
+    uvb.inituvb()
+
+    #now integrate 4pi Jnu / h  in d log nu
+    sort=np.argsort(uvb.source['lgnu'])
+    uvb.source['lgnu']=uvb.source['lgnu'][sort]
+    uvb.source['lgfpiJ']=uvb.source['lgfpiJ'][sort]
+
+    #define integral quantity (integrate in d log nu)
+    lognu=np.log(10**uvb.source['lgnu'])
+    hplanck = 6.6260755e-27 # erg/s
+    integrand=10**uvb.source['lgfpiJ']/hplanck
+
+    #Define min-max in log_natural Hz
+    maxnu=np.max(lognu)
+    ionnu=np.log((const.c.to('cm/s')/(912*1e-8)).value)
+
+    #integrate [checked against cloudy output]
+    fint = interp1d(lognu,integrand)
+    phi,err = integrate.quad(fint,ionnu,maxnu)
+
+    #now compute the ionization parameter
+    # den=result['tags'].index('dens')
+    # Uparam=np.log10(phi)-result['pdfs'][:,den]-np.log10(const.c.to('cm/s').value)
+    dens=np.log10(phi)-np.log10(const.c.to('cm/s').value)-logU
+
+    return dens
+
+
+
+
 class Emceebones(object):
     """
     This is a class that does all the fun stuff like bookeeping, plots, driver for emcee etc..
     """
 
-    def __init__(self,data,infodata,model,nwalkers,nsamp,threads,outsave,optim,effnhi):
+    def __init__(self,data,infodata,model,nwalkers,nsamp,threads,outsave,optim,effnhi,logUconstraint=False,UVB='HM05'):
         """ First, do some bookeeping like finding ions and preparing the grid
         Parameters
         ----------
@@ -140,6 +201,8 @@ class Emceebones(object):
         self.final=0
         self.optim=optim      #flag to switch type of optimisation
         self.effnhi=effnhi    #flag to use effective NHI
+        self.logUconstraint=str(logUconstraint)
+        self.UVB=UVB
 
         #load the grid of models to memory
         self.loadmodel(data,model)
@@ -179,7 +242,7 @@ class Emceebones(object):
             #append axis value in a list
             self.mod_axisval.append(modl[1][tt])
 
-        print("The problem as dimension {}".format(self.ndim))
+        print("The problem has dimension {}".format(self.ndim))
         print("There are {} models".format(self.nmodels))
 
 
@@ -345,6 +408,30 @@ class Emceebones(object):
         #
         if(emc.effnhi):
             emc.nhigrid=self.nhigrid
+
+        ############
+        ##logUconstraint setup begin
+        ############
+        ##We do this here so we only have to do it ONCE for each sightline
+        ##  rather than every time lnprior() is called
+        emc.logUconstraint=self.logUconstraint
+        ##Hard-code the mean and sigma
+        logUmean=-3.094
+        logUsig=0.552
+
+        ##calculate the density Gaussian based on the logU Gaussian
+        ##NOTE: here we assume that it is symmetric
+        emc.densGaussMean=logUToDens(logUmean, self.info['z'], self.UVB)
+        # densGaussSigPos=logUToDens(logUmean+logUsig, self.info['z'], self.UVB) - densGaussMean
+        # densGaussSigNeg=densGaussMean - logUToDens(logUmean-logUsig, self.info['z'], self.UVB)
+        # densGaussSig=max([densGaussSigPos,densGaussSigNeg])
+        ##It turns out, the scaling between logU and logn
+        ##  is linear, so sigma(dens) = sigma(logU). Makes it faster.
+        emc.densGaussSig=logUsig
+        ############
+        ##logUconstraint setup end
+        ############
+
         # Save internally
         self.emc = emc
         #
@@ -512,6 +599,12 @@ class Emceebones(object):
                     #now assign value to starting balls
                     for i in range(self.nwalkers):
                         pos[i][pp]=ballst[i]
+        
+        if self.logUconstraint.lower() == 'true':
+            print('Using constraint on logU (and therefore on dens), assuming a '+self.UVB+' UVB')
+        
+        else:
+            print('Not using constraint on logU (and therefore on dens)')
 
         print('Running {} chains for {} steps on {} processors'.format(self.nwalkers,self.nsamp,self.threads))
 
@@ -592,6 +685,10 @@ class Emceeutils():
         self.hiinterp=0
         self.effnhi=False
         self.nhigrid=0
+        ##For logUconstraint
+        self.logUconstraint=str(False)
+        self.densGaussMean=0
+        self.densGaussSig=0
 
         return
 
@@ -649,8 +746,20 @@ class Emceeutils():
                 #gaussian priors
                 pri_nhi=-1*np.log(np.sqrt(2*np.pi)*self.info['eNHI'])-(self.info['NHI']-currentnhi)**2/(2*self.info['eNHI']**2)
 
+            ##For logUconstraint
+            #now compute prior with density (based on logU)
+            if self.logUconstraint.lower() == 'true':
+                # print("Using logU constraint")
+                densindex=self.mod_axistag.index('dens')
+                ##compute the prior
+                pri_dens=-1*np.log(np.sqrt(2*np.pi)*self.densGaussSig)-\
+                    (self.densGaussMean-param[densindex])**2/(2*self.densGaussSig**2)
+            else:
+                pri_dens=0
+
+
             #add together [log product]
-            prior=pri_red+pri_nhi
+            prior=pri_red+pri_nhi+pri_dens
 
         else:
             #if outside return -inf
@@ -894,7 +1003,7 @@ class Emceeutils():
             return lh + lp
 
 
-def mcmc_ions(data,infodata,model,nwalkers=500,nsamp=250,threads=12,
+def mcmc_ions(data,infodata,model,logUconstraint=False, UVB='HM05', nwalkers=500,nsamp=250,threads=12,
               outsave='emceeout', optim=False, effnhi=True, testing=False):
     """ This is the main, which does not do much
 
@@ -930,7 +1039,7 @@ def mcmc_ions(data,infodata,model,nwalkers=500,nsamp=250,threads=12,
     # initialise the mcmc for this problem
     # load the observations and the model
     mcmc=Emceebones(data,infodata,model,nwalkers,
-                    nsamp,threads,outsave,optim,effnhi)
+                    nsamp,threads,outsave,optim,effnhi,logUconstraint=logUconstraint,UVB=UVB)
 
     # make space for output if needed
     if not os.path.isdir(outsave):
