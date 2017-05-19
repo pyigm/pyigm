@@ -54,12 +54,15 @@ def run_mcmc(args):
     if args.optim in ['guess', 'guess_NHI']:
         obsinfo['met'] = args.met
         obsinfo['dens'] = args.dens
+        obsinfo['carbalpha'] = args.carbalpha
         optim = args.optim
     else:
         optim = False
 
     #pick optimised values for 12 processors - cosma (proc*NN walkers, proc*YY samples)
-    mcmc=mcmc_ions(observ,obsinfo, args.grid, nwalkers=(args.nwalkers),
+    mcmc=mcmc_ions(observ,obsinfo, args.grid,
+                   logUconstraint=args.logUconstraint, UVB=args.UVB,
+                   nwalkers=(args.nwalkers),
                    nsamp=(args.nsamp), optim=optim, threads=args.nthread,
                    outsave=args.outsave, testing=args.testing)
 
@@ -75,12 +78,15 @@ def main(args=None):
     parser.add_argument('fileinput', help='Filename of column density data')
     parser.add_argument('outsave', help='Output directory')
     parser.add_argument('grid', help='File name of Cloudy grid')
+    parser.add_argument('-logUconstraint', type=str, help='Should we use logU constraint on density')
+    parser.add_argument('-UVB', type=str, help='The UVB to use when we are using the logU constraint on density')
     parser.add_argument('-nthread', type=int, help='Number of threads')
     parser.add_argument('-nwalkers', type=int, help='Number of walkers')
     parser.add_argument('-nsamp', type=int, help='Number of samples')
     parser.add_argument('-optim', type=str, help='Optimization method')
     parser.add_argument('-dens', type=float, help='Guess at density (optim=guess)')
     parser.add_argument('-met', type=float, help='Guess at metallicity (optim=guess)')
+    parser.add_argument('-carbalpha', type=float, help='Guess at carbalpha (optim=guess)')
     parser.add_argument("--testing", help="Set to test (over-rides nwalkers)", action="store_true")
     pargs = parser.parse_args()
 
