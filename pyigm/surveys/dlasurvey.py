@@ -164,33 +164,31 @@ class DLASurvey(IGMSurvey):
             # Load ions
             dla_survey.fill_ions(jfile=ions_fil)
 
+        # Metallicities
+        tbl2 = Table.read('H100_table2.dat', format='cds')
+        names = dla_survey.name
+        qsonames = []
+        zabs = []
+        for name in names:
+            prs = name.split('_')
+            qsonames.append(prs[0])
+            zabs.append(float(prs[1][1:]))
+        qsonames = np.array(qsonames)
+        zabs = np.array(zabs)
+        for ii, iqso, izabs in zip(range(len(tbl2)), tbl2['QSO'], tbl2['zabs']):
+            mt = np.where((qsonames == iqso) & (np.abs(izabs-zabs) < 1e-3))[0]
+            if len(mt) == 0:
+                pdb.set_trace()
+            elif len(mt) != 1:
+                pdb.set_trace()
+            # Fill in
+            dla_survey._abs_sys[mt[0]].ZH = tbl2['[M/H]'][ii]
+            dla_survey._abs_sys[mt[0]].sig_ZH = tbl2['e_[M/H]'][ii]
+            dla_survey._abs_sys[mt[0]].kin['dv'] = tbl2['dv'][ii]
+            dla_survey._abs_sys[mt[0]].kin['trans'] = tbl2['trans'][ii]
+            dla_survey._abs_sys[mt[0]].selection = tbl2['Select'][ii]
+
         dla_survey.ref = 'Neeleman+13'
-
-        """
-        # Load transitions
-        names = list(dla_survey.name)
-        if not skip_trans:
-            print('H100: Loading transitions file {:s}'.format(trans_fil))
-            tar = tarfile.open(trans_fil)
-            for member in tar.getmembers():
-                if '.' not in member.name:
-                    print('Skipping a likely folder: {:s}'.format(member.name))
-                    continue
-                # Extract
-                f = tar.extractfile(member)
-                # Need to fix for 3.4
-                tdict = json.load(f)
-                # Find system
-                i0 = member.name.rfind('/')
-                i1 = member.name.rfind('_clm')
-                try:
-                    idx = names.index(member.name[i0+1:i1])
-                except ValueError:
-                    pdb.set_trace()
-                # Fill up
-                dla_survey._abs_sys[idx].load_components(tdict)
-        """
-
 
         spath = pyigm_path+"/data/DLA/H100/Spectra/"
         for dla in dla_survey._abs_sys:
