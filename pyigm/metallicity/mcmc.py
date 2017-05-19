@@ -234,29 +234,29 @@ class Emceebones(object):
         """
         print('Writing outputs...')
 
+        ##Save both pickle and hd5 outputs
         #pickle the results to disk
-        if use_pkl:
-            wout=open(self.outsave+'/'+self.info['name']+'_emcee.pkl','w')
-            pickle.dump(self.final,wout)
-            wout.close()
-        else:  # hd5
-            import h5py
-            import json
-            with h5py.File(self.outsave+'/'+self.info['name']+'_emcee.hd5', 'w') as f:
-                # Input
-                in_group = f.create_group('inputs')
-                for in_key in ['data', 'ions', 'guess']:
-                    in_group[in_key] = self.final[in_key]
-                for key in self.final['info']:
-                    in_group.attrs[key] = self.final['info'][key]
-                # Output
-                out_group = f.create_group('outputs')
-                mcmc_dict = dict(nwalkers=self.nwalkers, nsamp=self.nsamp,
-                                 nburn=self.burn, nthread=self.threads)
-                out_group.attrs['mcmc'] = unicode(json.dumps(mcmc_dict))
-                for out_key in ['tags', 'results', 'pdfs', 'best_fit',
-                                'effNHI', 'acceptance']:
-                    out_group[out_key] = self.final[out_key]
+        wout=open(self.outsave+'/'+self.info['name']+'_emcee.pkl','w')
+        pickle.dump(self.final,wout)
+        wout.close()
+        # hd5
+        import h5py
+        import json
+        with h5py.File(self.outsave+'/'+self.info['name']+'_emcee.hd5', 'w') as f:
+            # Input
+            in_group = f.create_group('inputs')
+            for in_key in ['data', 'ions', 'guess']:
+                in_group[in_key] = self.final[in_key]
+            for key in self.final['info']:
+                in_group.attrs[key] = self.final['info'][key]
+            # Output
+            out_group = f.create_group('outputs')
+            mcmc_dict = dict(nwalkers=self.nwalkers, nsamp=self.nsamp,
+                             nburn=self.burn, nthread=self.threads)
+            out_group.attrs['mcmc'] = unicode(json.dumps(mcmc_dict))
+            for out_key in ['tags', 'results', 'pdfs', 'best_fit',
+                            'effNHI', 'acceptance']:
+                out_group[out_key] = self.final[out_key]
 
         #Start by plotting the chains with initial guess and final values
         fig=plt.figure()
