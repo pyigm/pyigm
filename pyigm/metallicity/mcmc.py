@@ -269,7 +269,7 @@ class Emceebones(object):
             thischain=sampler.chain[:,:,ii]
             ax = fig.add_subplot(self.ndim, 1, ii+1)
             for jj in range(self.nwalkers):
-                ax.plot(xaxis,thischain[jj,:],color='grey')
+                ax.plot(xaxis,thischain[jj,:],color='grey',alpha=0.5)
             ax.set_ylabel(self.mod_axistag[ii])
 
             #overplot burnt in cut
@@ -281,11 +281,13 @@ class Emceebones(object):
 
         #Last plot
         ax.set_xlabel('Steps')
+        fig.text(0.3,0.93,self.info['name'],fontsize=16)
         fig.savefig(self.outsave+'/'+self.info['name']+'_chains.pdf')
 
         #now do a corner plot
         samples = sampler.chain[:,self.burn:, :].reshape((-1,self.ndim))
         cfig = corner.corner(samples, labels=self.mod_axistag, quantiles=[0.05,0.5,0.95],verbose=False)
+        cfig.text(0.65,0.7,self.info['name'])
         cfig.savefig(self.outsave+'/'+self.info['name']+'_corner.pdf')
 
         #now plot the residuals
@@ -313,6 +315,7 @@ class Emceebones(object):
 
         plt.xticks(xaxis,axlab,rotation='vertical')
         plt.ylabel('Log Column')
+        plt.title(self.info['name'])
         rfig.savefig(self.outsave+'/'+self.info['name']+'_residual.pdf')
 
         print('All done with system {}!'.format(self.info['name']))
