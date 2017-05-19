@@ -523,7 +523,8 @@ class Emceebones(object):
         print("[good range 0.25-0.5. Low is bad!]")
 
         #remove burnt in to generate "clean" PDFs
-        self.burn = 45
+        # self.burn = 45
+        self.burn = 150
         if self.burn >= self.nsamp:
             raise ValueError("Burn out exceeds number of samples!")
 
