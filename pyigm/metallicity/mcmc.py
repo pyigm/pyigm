@@ -1031,9 +1031,9 @@ def mcmc_ions(data,infodata,model,logUconstraint=False, UVB='HM05', nwalkers=500
 
     print('Getting started...')
 
-    # Do not run with less than 100 samples or 400 walkers
+    # Do not run with less than 300 samples or 400 walkers
     if not testing:
-        nsamp=np.max([nsamp,100])
+        nsamp=np.max([nsamp,300])
         nwalkers=np.max([nwalkers,400])
 
     # initialise the mcmc for this problem
