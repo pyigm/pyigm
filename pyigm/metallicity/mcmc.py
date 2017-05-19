@@ -413,6 +413,8 @@ class Emceebones(object):
                         initguess.append(self.info['met'])
                     elif tag == 'dens':
                         initguess.append(self.info['dens'])
+                    elif tag == 'carbalpha':
+                        initguess.append(self.info['carbalpha'])
                     else:
                         raise ValueError("Not ready for this one")
                 else:
