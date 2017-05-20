@@ -165,7 +165,8 @@ class DLASurvey(IGMSurvey):
             dla_survey.fill_ions(jfile=ions_fil)
 
         # Metallicities
-        tbl2 = Table.read('H100_table2.dat', format='cds')
+        tbl2_file = pyigm_path+"/data/DLA/H100/H100_table2.dat"
+        tbl2 = Table.read(tbl2_file, format='cds')
         names = dla_survey.name
         qsonames = []
         zabs = []
