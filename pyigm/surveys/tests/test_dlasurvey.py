@@ -43,6 +43,8 @@ def test_read_h100_nosys():
 
 @remote_data
 def test_read_h100():
+    """ Takes ~2min to load
+    """
     h100 = DLASurvey.load_H100()
     assert h100.nsys == 100
 
