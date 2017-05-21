@@ -1,4 +1,4 @@
-##1: Create MCMC input files
+#1: Create MCMC input files
 
 Create the file that holds the observed column densities, etc. (See examples in `input_files/`.) Make sure each name and redshift is unique so they don't overwrite each other. (I usually name them as `mcmc.SIGHTLINE_zREDSHIFT.in` so that both the sightline AND redshift info will be printed on the output plots.)
 
@@ -10,7 +10,7 @@ Copy these to a directory on the CRC called `input_files/` in your working direc
 
 
 
-##2: Run MCMC
+#2: Run MCMC
 
 Note: This was designed to run a job array (runs of multiple different sightlines simultaneously) on Notre Dame's supercomputing cluster. A couple things might change for you.
 
