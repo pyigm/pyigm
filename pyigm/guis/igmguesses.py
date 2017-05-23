@@ -19,7 +19,7 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import numpy as np
 import warnings
 import copy
-import pdb
+import datetime
 
 #from PyQt4 import QtGui
 #from PyQt4 import QtCore
@@ -1952,17 +1952,19 @@ def init_meta():
 
     """
     meta = dict()
-    meta['RA_deg'] = 0.
-    meta['DEC_deg'] = 0.
-    meta['object'] = "unknown"
+    meta['JNAME'] = 'unknown'
+    meta['ALTNAME'] = 'unknown'
+    meta['RA'] = 0.
+    meta['DEC'] = 0.
     meta['zem'] = 0.
-    meta['instrument'] = 'unknown'
-    meta['creator'] = 'unknown'
+    meta['Instrument'] = 'unknown'
+    meta['Creator'] = 'unknown'
+    meta['Date'] = 'unknown'
     return meta
 
 def fill_meta(meta):
-    """If a meta value is equal to the default, ask the user
-    for input
+    """If a meta[key] value is equal to the default, ask the user
+    for input to fill it in.
 
     Parameter
     ---------
@@ -1973,28 +1975,33 @@ def fill_meta(meta):
     -------
     meta_updated : dict
         A new meta dictionary with values given by user
+        from prompt
 
     """
     meta_ref = init_meta()
-    if (meta["RA_deg"] == meta_ref["RA_deg"]) and (meta["DEC_deg"] == meta_ref["DEC_deg"]):
-        radec = raw_input("Please provide (RA,DEC) J2000 in degrees (e.g. 123.45678,-98.7654): ")
+    if (meta["RA"] == meta_ref["RA"]) and (meta["DEC"] == meta_ref["DEC"]):
+        radec = raw_input("Please provide (RA,DEC) J2000 in degrees (e.g. 123.45678,-87.6543): ")
         if radec == "":
-            meta["RA_deg"] = meta_ref["RA_deg"]
-            meta["DEC_deg"] = meta_ref["DEC_deg"]
+            meta["RA"] = meta_ref["RA"]
+            meta["DEC"] = meta_ref["DEC"]
         else:
             radec = radec.split(",")
-            meta["RA_deg"] = radec[0]
-            meta["DEC_deg"] = radec[1]
+            meta["RA"] = radec[0]
+            meta["DEC"] = radec[1]
+    # JNAME
+    coord = SkyCoord(meta['RA'], meta['DEC'], unit='deg')
+    jname = ltu.name_from_coord(coord, precision=(2, 1))
+    meta['JNAME'] = jname
 
-    for key in ['object', 'zem', 'instrument', 'creator']:
+    for key in ['ALTNAME', 'zem', 'Instrument', 'Creator']:
         if meta[key] == meta_ref[key]:
-            if key == 'object':
+            if key == 'ALTNAME':
                 eg_str = "(e.g. PG0953+414)"
             elif key == 'zem':
                 eg_str = "(e.g. 0.239)"
-            elif key == 'instrument':
+            elif key == 'Instrument':
                 eg_str = "(e.g. HST/COS/G130M)"
-            elif key == 'creator':
+            elif key == 'Creator':
                 eg_str = "(e.g. John Smith)"
             var = raw_input("Please provide value for {} {}: ".format(key, eg_str))
             if var != "":
@@ -2002,8 +2009,14 @@ def fill_meta(meta):
             else:
                 meta[key] = meta_ref[key]
     # reformat
-    for key in ['zem', 'RA_deg', 'DEC_deg']:
+    for key in ['zem', 'RA', 'DEC']:
         meta[key] = float(meta[key])
+
+    # add date
+    date = str(datetime.date.today().strftime('%Y-%b-%d'))
+    meta['Date'] = date
+
+    #return
     return meta
 
 class UpdateWidget(QWidget):
