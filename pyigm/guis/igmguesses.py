@@ -1972,7 +1972,7 @@ def fill_meta(meta):
     Returns
     -------
     meta_updated : dict
-        A new meta dictionary with values that are not default
+        A new meta dictionary with values given by user
 
     """
     meta_ref = init_meta()
