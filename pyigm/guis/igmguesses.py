@@ -405,6 +405,8 @@ E         : toggle displaying/hiding the external absorption model
             self.meta = init_meta()
         # fill and reformat (e.g. from str to float)
         self.meta = fill_meta(self.meta)
+        # update coord
+        self.coord = SkyCoord(self.meta['RA'], self.meta['DEC'], unit='deg')
 
         # Check FWHM
         if igmg_dict['fwhm'] != self.fwhm:
