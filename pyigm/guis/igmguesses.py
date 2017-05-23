@@ -402,7 +402,7 @@ E         : toggle displaying/hiding the external absorption model
         try:
             self.meta = igmg_dict['meta']
         except KeyError:  # for backwards compatibility
-            self.meta = fill_meta(init_meta())
+            self.meta = init_meta()
         # fill and reformat (e.g. from str to float)
         self.meta = fill_meta(self.meta)
 
