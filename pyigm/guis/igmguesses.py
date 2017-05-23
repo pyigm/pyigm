@@ -1988,7 +1988,7 @@ def fill_meta(meta):
             radec = radec.split(",")
             meta["RA"] = radec[0]
             meta["DEC"] = radec[1]
-    # JNAME
+    # JNAME (will also check whether coordinates are sensible)
     coord = SkyCoord(meta['RA'], meta['DEC'], unit='deg')
     jname = ltu.name_from_coord(coord, precision=(2, 1))
     meta['JNAME'] = jname
