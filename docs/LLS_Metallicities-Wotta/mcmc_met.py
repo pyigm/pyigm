@@ -38,8 +38,8 @@ def run_full_mcmc(infile='MgIIsurvey_MTL.ascii', nthread=4, met_guess='-1.0', de
     ##which means the options here may be overridden later
     ##(depending on your choices here).
     
-    nwalkers = 400
-    nsteps = 400
+    nwalkers = int(400) ##make sure it's an integer
+    nsteps = int(400) ##make sure it's an integer
     testing = False
     optim = 'guess' ##or False
     outsave = 'MCMC_FULL'
@@ -98,13 +98,14 @@ def run_full_mcmc(infile='MgIIsurvey_MTL.ascii', nthread=4, met_guess='-1.0', de
     ##Should we optimize?
     print 'Ready to run mcmc for {}'.format(sy)
     if optim in ['guess', 'guess_NHI']:
-        obsinfo['met'] = met_guess
-        obsinfo['dens'] = dens_guess
-        obsinfo['carbalpha'] = carbalpha_guess
+        obsinfo['met'] = float(met_guess) ##make sure it's a float
+        obsinfo['dens'] = float(dens_guess) ##make sure it's a float
+        obsinfo['carbalpha'] = float(carbalpha_guess) ##make sure it's a float
     else:
         optim = False
     
     logUconstraint = str(logUconstraint) ##convert to string
+    nthread = int(nthread) ##make sure it's an integer
     
     ##Run
     mcmc=mcmc_ions(observ, obsinfo, grid_fil, 
