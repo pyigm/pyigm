@@ -536,7 +536,7 @@ E         : toggle displaying/hiding the external absorption model
         with io.open(self.outfil, 'w', encoding='utf-8') as f:
             f.write(ustr(json.dumps(gd_dict, sort_keys=True, indent=4,
                                        separators=(',', ': '))))
-        print('Wrote: {:s}'.format(self.outfil))
+        print('IGMGuesses: wrote {:s} on date {}'.format(self.outfil, self.meta['Date']))
 
     # Write + Quit
     @pyqtSlot()
