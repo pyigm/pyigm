@@ -10,7 +10,7 @@
 #;   14-Aug-2015 by JXP
 #;-
 #;- NT: New version using linetools' AbsComponent
-#;-
+#;- NT: New version with enhancements
 #;------------------------------------------------------------------------------
 """
 from __future__ import print_function, absolute_import, division, unicode_literals
@@ -186,6 +186,7 @@ E         : toggle displaying/hiding the external absorption model
             self.fwhm = 3.
         else:
             self.fwhm = fwhm
+
         self.plot_residuals = plot_residuals
         self.n_max_tuple = n_max_tuple
         self.min_strength = min_strength
@@ -193,6 +194,8 @@ E         : toggle displaying/hiding the external absorption model
         if vlim_disp is None:
             vlim_disp = [-500.,500.] * u.km/u.s
         self.vlim_disp = vlim_disp
+
+
 
         # Load spectrum
         spec, spec_fil = ltgu.read_spec(ispec)
@@ -265,7 +268,9 @@ E         : toggle displaying/hiding the external absorption model
 
         # Load prevoius file
         if self.previous_file is not None:
-            self.read_previous()
+            self.read_previous()  # (self.meta is defined here)
+
+
         # Connections (buttons are above)
         #self.spec_widg.canvas.mpl_connect('key_press_event', self.on_key)
         #self.abssys_widg.abslist_widget.itemSelectionChanged.connect(
@@ -392,6 +397,15 @@ E         : toggle displaying/hiding the external absorption model
         # Read the JSON file
         with open(self.previous_file) as data_file:    
             igmg_dict = json.load(data_file)
+
+        # load metadata
+        try:
+            self.meta = igmg_dict['meta']
+        except KeyError:  # for backwards compatibility
+            self.meta = fill_meta(init_meta())
+        # fill and reformat (e.g. from str to float)
+        self.meta = fill_meta(self.meta)
+
         # Check FWHM
         if igmg_dict['fwhm'] != self.fwhm:
             raise ValueError('Input FWHMs do not match. Please fix it!')
@@ -476,9 +490,9 @@ E         : toggle displaying/hiding the external absorption model
         """ Write to a JSON file"""
         import json, io
         # Create dict of the components
-        out_dict = dict(cmps={},
-                        spec_file=self.velplot_widg.spec.filename,
-                        fwhm=self.fwhm, bad_pixels=[])
+        out_dict = dict(meta=self.meta, spec_file=self.velplot_widg.spec.filename,
+                        fwhm=self.fwhm, cmps={}, bad_pixels=[])
+
 
         # Write components out
         # We need a deep copy here because ._abslines will be modified before writting
@@ -1929,7 +1943,68 @@ def from_igmguesses_to_joebvp(infile, outfile):
 
     ltiu.joebvp_from_components(comp_list, igmg_dict['spec_file'], outfile)
 
+def init_meta():
+    """Creates a general meta dictionary
 
+    Returns
+    -------
+    meta : dict
+
+    """
+    meta = dict()
+    meta['RA_deg'] = 0.
+    meta['DEC_deg'] = 0.
+    meta['object'] = "unknown"
+    meta['zem'] = 0.
+    meta['instrument'] = 'unknown'
+    meta['creator'] = 'unknown'
+    return meta
+
+def fill_meta(meta):
+    """If a meta value is equal to the default, ask the user
+    for input
+
+    Parameter
+    ---------
+    meta : dict
+        The original meta dict
+
+    Returns
+    -------
+    meta_updated : dict
+        A new meta dictionary with values that are not default
+
+    """
+    meta_ref = init_meta()
+    if (meta["RA_deg"] == meta_ref["RA_deg"]) and (meta["DEC_deg"] == meta_ref["DEC_deg"]):
+        radec = raw_input("Please provide (RA,DEC) J2000 in degrees (e.g. 123.45678,-98.7654): ")
+        if radec == "":
+            meta["RA_deg"] = meta_ref["RA_deg"]
+            meta["DEC_deg"] = meta_ref["DEC_deg"]
+        else:
+            radec = radec.split(",")
+            meta["RA_deg"] = radec[0]
+            meta["DEC_deg"] = radec[1]
+
+    for key in ['object', 'zem', 'instrument', 'creator']:
+        if meta[key] == meta_ref[key]:
+            if key == 'object':
+                eg_str = "(e.g. PG0953+414)"
+            elif key == 'zem':
+                eg_str = "(e.g. 0.239)"
+            elif key == 'instrument':
+                eg_str = "(e.g. HST/COS/G130M)"
+            elif key == 'creator':
+                eg_str = "(e.g. John Smith)"
+            var = raw_input("Please provide value for {} {}: ".format(key, eg_str))
+            if var != "":
+                meta[key] = var
+            else:
+                meta[key] = meta_ref[key]
+    # reformat
+    for key in ['zem', 'RA_deg', 'DEC_deg']:
+        meta[key] = float(meta[key])
+    return meta
 
 class UpdateWidget(QWidget):
     def __init__(self, parent=None):
