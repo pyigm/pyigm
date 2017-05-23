@@ -199,8 +199,7 @@ E         : toggle displaying/hiding the external absorption model
 
         # Load spectrum
         spec, spec_fil = ltgu.read_spec(ispec)
-        # Should do coordinates properly eventually
-        self.coord = zero_coord
+
         # Normalize
         if spec.co_is_set:
             spec.normalize(co=spec.co)
@@ -268,8 +267,11 @@ E         : toggle displaying/hiding the external absorption model
 
         # Load prevoius file
         if self.previous_file is not None:
-            self.read_previous()  # (self.meta is defined here)
-
+            self.read_previous()  # (self.meta and self.coord are defined here)
+        else:
+            self.meta = init_meta()
+            self.meta = fill_meta(self.meta)
+            self.coord = SkyCoord(self.meta['RA'], self.meta['DEC'], unit='deg')
 
         # Connections (buttons are above)
         #self.spec_widg.canvas.mpl_connect('key_press_event', self.on_key)
