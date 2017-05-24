@@ -1172,9 +1172,8 @@ class IGGVelPlotWidget(QWidget):
 
         # print component info
         if event.key == '@':  #  for develop; this will be deleted in future.
-            print('Computing blends between components, it may take a while...\n')
             # Write joebvp files; for developing.
-            blending_info(self.parent.comps_widg.all_comp, self.spec_fil)  # this one writes them internally. Should be cleaned.
+            blending_info(self.parent.comps_widg.all_comp, self.spec_fil, ask_user=True)  # this one writes them internally. Should be cleaned.
             print('IGMGuesses: wrote a bunch of .joebvp files.')
 
             # joebvp_output = self.parent.outfil.replace('.json', '.joebvp')
@@ -1877,11 +1876,12 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s, min_ew=0.02*u.AA,
         Writes output files.
 
     """
+    print('IGMGuesses: computing blends between components, it may take a while...\n')
     if ask_user:
-        gui = ltgsm.AnsBox("Please provide the minimum rest-frame equivalent\nwidth for the AbsLines (in AA):", float)
+        gui = ltgsm.AnsBox("Please provide the minimum rest-frame\n equivalent width for the AbsLines (in AA):", float)
         gui.exec_()
         min_ew = gui.value * u.AA
-        gui = ltgsm.AnsBox("Please provide the minimum rest-frame velocity\nlimit for the AbsLines (in km/s):", float)
+        gui = ltgsm.AnsBox("Please provide the minimum rest-frame\n velocity limit for the AbsLines (in km/s):", float)
         gui.exec_()
         min_vlim = gui.value * u.km/u.s
 
