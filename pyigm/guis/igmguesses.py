@@ -20,6 +20,7 @@ import numpy as np
 import warnings
 import copy
 import datetime
+import pdb
 
 #from PyQt4 import QtGui
 #from PyQt4 import QtCore
@@ -1174,10 +1175,11 @@ class IGGVelPlotWidget(QWidget):
             print('Computing blends between components, it may take a while...\n')
             # Write joebvp files; for developing.
             blending_info(self.parent.comps_widg.all_comp, self.spec_fil)  # this one writes them internally. Should be cleaned.
+            print('IGMGuesses: wrote a bunch of .joebvp files.')
 
-            joebvp_output = self.parent.outfil.replace('.json', '.joebvp')
-            from_igmguesses_to_joebvp(self.parent.outfil, joebvp_output)
-            print('Wrote: {:s}'.format(joebvp_output))
+            # joebvp_output = self.parent.outfil.replace('.json', '.joebvp')
+            # from_igmguesses_to_joebvp(self.parent.outfil, joebvp_output)
+            # print('Wrote: {:s}'.format(joebvp_output))
 
         """
         # AODM plot
@@ -1850,7 +1852,7 @@ def set_fontsize(ax,fsz):
 
 
 # Some info about the blending between components
-def blending_info(components, specfile, min_vlim=100*u.km/u.s):
+def blending_info(components, specfile, min_vlim=100*u.km/u.s, min_ew=0.02*u.AA, ask_user=True):
     """Computes blending info, and store the components in files that group them together
     depending on overlapping in wobs space. Very useful for speeding up automatic Voigt
     profile fitting
@@ -1864,15 +1866,38 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s):
     min_vlim : Quantity
         Minimum velocity limit for components for overlap considerations;
         should be equal or larger than the LSF core
+    min_ew : Quantity
+        The minimum equivalent width for the AbsLines to keep
+        (assuming optically thin regime).
+    ask_user : bool
+        Whether to ask the user for `min_vlim` and `min_ew` from prompt
 
     Returns
     -------
         Writes output files.
 
     """
+    if ask_user:
+        gui = ltgsm.AnsBox("Please provide the minimum rest-frame equivalent\nwidth for the AbsLines (in AA):", float)
+        gui.exec_()
+        min_ew = gui.value * u.AA
+        gui = ltgsm.AnsBox("Please provide the minimum rest-frame velocity\nlimit for the AbsLines (in km/s):", float)
+        gui.exec_()
+        min_vlim = gui.value * u.km/u.s
 
     # create a copy of component list that has a minimum vlim incorporated
     comps_copy = copy.copy(components)
+
+    # first keep only lines with ew >= min_ew
+    for comp in comps_copy:
+        good_abslines = []
+        for line in comp._abslines:
+            if line.get_Wr_from_N(line.attrib['N']) >= min_ew:
+                good_abslines += [line]
+        # replace abslines within the component
+        comp._abslines = good_abslines
+
+    # increase the vlims if necessary
     for comp in comps_copy:
         for line in comp._abslines:
             # add minimum velocity limit consideration for blends; should be larger than the LSF core
@@ -1881,11 +1906,7 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s):
                 vlim[0] = -1 * min_vlim
             if np.fabs(vlim[1]) < min_vlim:
                 vlim[1] = min_vlim
-            line.limits.set(vlim)
-
-    # QtCore.pyqtRemoveInputHook()
-    # pdb.set_trace()
-    # QtCore.pyqtRestoreInputHook()
+                line.limits.set(vlim)
 
     grouped_comps = ltiu.group_coincident_components(comps_copy, output_type='list')
     isolated = []
