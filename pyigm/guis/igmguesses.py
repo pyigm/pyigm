@@ -1886,7 +1886,7 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s, min_ew=0.005*u.AA
     print('IGMGuesses: computing blends between components, it may take a while...\n')
 
     # create a copy of component list that has a minimum vlim incorporated
-    comps_copy = copy.copy(components)
+    comps_copy = copy.deepcopy(components)
 
     # first keep only lines with ew >= min_ew
     for comp in comps_copy:
