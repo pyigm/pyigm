@@ -1869,11 +1869,11 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s, min_ew=0.02*u.AA,
         The minimum equivalent width for the AbsLines to keep
         (assuming optically thin regime).
     ask_user : bool
-        Whether to ask the user for `min_vlim` and `min_ew` from prompt
+        Whether to ask the user for `min_vlim` and `min_ew`.
 
     Returns
     -------
-        Writes output files.
+        Writes .joebvp output files.
 
     """
     print('IGMGuesses: computing blends between components, it may take a while...\n')
@@ -1906,7 +1906,7 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s, min_ew=0.02*u.AA,
                 vlim[0] = -1 * min_vlim
             if np.fabs(vlim[1]) < min_vlim:
                 vlim[1] = min_vlim
-                line.limits.set(vlim)
+            line.limits.set(vlim)
 
     grouped_comps = ltiu.group_coincident_components(comps_copy, output_type='list')
     isolated = []
