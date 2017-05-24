@@ -1851,7 +1851,7 @@ def set_fontsize(ax,fsz):
 
 
 # Some info about the blending between components
-def blending_info(components, specfile, min_vlim=100*u.km/u.s, min_ew=0.02*u.AA, ask_user=True):
+def blending_info(components, specfile, min_vlim=100*u.km/u.s, min_ew=0.005*u.AA, ask_user=True):
     """Computes blending info, and store the components in files that group them together
     depending on overlapping in wobs space. Very useful for speeding up automatic Voigt
     profile fitting
@@ -1876,7 +1876,6 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s, min_ew=0.02*u.AA,
         Writes .joebvp output files.
 
     """
-    print('IGMGuesses: computing blends between components, it may take a while...\n')
     if ask_user:
         gui = ltgsm.AnsBox("Please provide the minimum rest-frame\n equivalent width for the AbsLines (in AA):", float)
         gui.exec_()
@@ -1884,6 +1883,7 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s, min_ew=0.02*u.AA,
         gui = ltgsm.AnsBox("Please provide the minimum rest-frame\n velocity limit for the AbsLines (in km/s):", float)
         gui.exec_()
         min_vlim = gui.value * u.km/u.s
+    print('IGMGuesses: computing blends between components, it may take a while...\n')
 
     # create a copy of component list that has a minimum vlim incorporated
     comps_copy = copy.copy(components)
