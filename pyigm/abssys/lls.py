@@ -87,6 +87,11 @@ class LLSSystem(IGMSystem):
         from linetools.isgm.abssystem import add_comps_from_dict, add_other_from_dict
         kwargs = dict(zem=idict['zem'], NHI=idict['NHI'],
                       sig_NHI=idict['sig_NHI'], name=idict['Name'])
+        # Optional
+        for key in ['flag_NHI']:
+            if key in idict.keys():
+                kwargs[key] = idict[key]
+        # Instantiate
         slf = cls(SkyCoord(ra=idict['RA']*u.deg, dec=idict['DEC']*u.deg),
                   idict['zabs'], idict['vlim']*u.km/u.s, **kwargs)
         #
