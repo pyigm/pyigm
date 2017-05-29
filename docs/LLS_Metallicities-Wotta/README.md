@@ -46,7 +46,7 @@ If you just want to run a quick job (e.g., without allowing carbon/alpha to vary
 
 ## Extract MCMC output
 
-Please see `output-understanding_MCMC_output.py` for how to extract MCMC output information from the `*.pkl` format files.
+Please see `README-understanding_MCMC_output` for how to extract MCMC output information from the `*.pkl` format files.
 
 
 
