@@ -15,6 +15,17 @@ except NameError:  # For Python 3
     basestring = str
 
 def rad3d2(xyz):
+    """ Calculate radius to x,y,z inputted
+    Assumes the origin is 0,0,0
+    Parameters
+    ----------
+    xyz : Tuple or ndarray
+
+    Returns
+    -------
+    rad3d : float or ndarray
+
+    """
     return xyz[0]**2 + xyz[1]**2 + xyz[-1]**2
 
 # Constants
@@ -63,7 +74,7 @@ class CGMPhase(object):
     Parameters:
     -----------
     phase : str
-      'hot'
+      'hot' : T > 10^6 K
 
     """
     def __init__(self, phase, **kwargs):
@@ -95,7 +106,7 @@ class ModifiedNFW(CGMPhase):
 
     Parameters:
     -----------
-    M_halo : float, optional
+    log_Mhalo : float, optional
       log10 of the Halo mass (solar masses)
     c : float, optional
       concentration of the halo
@@ -106,11 +117,12 @@ class ModifiedNFW(CGMPhase):
     y0 : float, optional
       Parameter to modify NFW profile position
     """
-    def __init__(self, M_halo=12.2, c=7.67, f_hot=0.9, alpha=0., y0=1., **kwargs):
+    def __init__(self, log_Mhalo=12.2, c=7.67, f_hot=0.9, alpha=0., y0=1., **kwargs):
         # Init
         CGMPhase.__init__(self, 'hot')
         # Param
-        self.M_halo = M_halo
+        self.log_Mhalo = log_Mhalo
+        self.M_halo = 10.**self.log_Mhalo * const.M_sun.cgs
         self.c = c
         self.alpha = alpha
         self.y0 = y0
@@ -126,7 +138,7 @@ class ModifiedNFW(CGMPhase):
         self.fb = 0.16       # Baryon fraction
         self.rhoc = 9.2e-30 * u.g / u.cm**3
         # Dark Matter
-        self.r200 = (((3*10**self.M_halo * const.M_sun.cgs) / (4*np.pi*200*self.rhoc))**(1/3)).to('kpc')
+        self.r200 = (((3*self.M_halo) / (4*np.pi*200*self.rhoc))**(1/3)).to('kpc')
         self.rho0 = 200*self.rhoc/3  * self.c**3 / self.fy(self.c)   # Central density
         # Misc
         self.mu = 1.33   # Reduced mass correction for Helium
@@ -170,7 +182,8 @@ class ModifiedNFW(CGMPhase):
 
         Parameters
         ----------
-        xyz
+        xyz : ndarray
+          Coordinate(s) in kpc
 
         Returns
         -------
