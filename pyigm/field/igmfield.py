@@ -135,6 +135,7 @@ class IgmGalaxyField(object):
         #
         gd_rho = np.where(rho < R)[0]
         if len(gd_rho) == 0:
+            warnings.warn("No galaxies found.  Returning None")
             return None
         # Return
         return gdz_gal[gd_rho], rho[gd_rho]
