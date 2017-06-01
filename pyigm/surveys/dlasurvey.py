@@ -13,6 +13,8 @@ try:
 except ImportError:
     from urllib.request import urlopen
 
+from pkg_resources import resource_filename
+
 from astropy.table import QTable, Column, Table, vstack
 from astropy import units as u
 from astropy.stats import poisson_conf_interval as aspci
@@ -49,13 +51,15 @@ class DLASurvey(IGMSurvey):
 
         """
         # Read DLAs
-        dlas = Table.read(pyigm_path + '/data/DLA/HST/HSTDLA.dat', format='ascii')
+        dat_file = resource_filename('pyigm', '/data/DLA/HST/HSTDLA.dat')
+        dlas = Table.read(dat_file, format='ascii')
 
         # Read Quasars
         #qsos = Table.read(pyigm_path + '/all_qso_table.txt', format='ascii')
 
         # Read Sightlines
-        survey = Table.read(pyigm_path + '/data/DLA/HST/hstpath.dat', format='ascii')
+        srvy_file = resource_filename('pyigm', '/data/DLA/HST/hstpath.dat')
+        survey = Table.read(srvy_file, format='ascii')
 
         # Add info to DLA table
         ras, decs, zems = [], [], []
@@ -138,18 +142,18 @@ class DLASurvey(IGMSurvey):
         dla_survey
         """
         # Pull from Internet (as necessary)
-        summ_fil = pyigm_path+"/data/DLA/H100/H100_DLA.fits"
+        summ_fil = resource_filename('pyigm', "/data/DLA/H100/H100_DLA.fits")
         print('H100: Loading summary file {:s}'.format(summ_fil))
 
         # Ions
-        ions_fil = pyigm_path+"/data/DLA/H100/H100_DLA_ions.json"
+        ions_fil = resource_filename('pyigm', "/data/DLA/H100/H100_DLA_ions.json")
         print('H100: Loading ions file {:s}'.format(ions_fil))
 
         # Transitions
-        trans_fil = pyigm_path+"/data/DLA/H100/H100_DLA_clms.tar.gz"
+        trans_fil = resource_filename('pyigm', "/data/DLA/H100/H100_DLA_clms.tar.gz")
 
         # System files
-        sys_files = pyigm_path+"/data/DLA/H100/H100_DLA_sys.tar.gz"
+        sys_files = resource_filename('pyigm', "/data/DLA/H100/H100_DLA_sys.tar.gz")
 
         if load_sys:  # This approach takes ~120s
             print('H100: Loading systems.  This takes ~120s')
@@ -164,33 +168,42 @@ class DLASurvey(IGMSurvey):
             # Load ions
             dla_survey.fill_ions(jfile=ions_fil)
 
+        # Metallicities
+        tbl2_file = resource_filename('pyigm', "/data/DLA/H100/H100_table2.dat")
+        tbl2 = Table.read(tbl2_file, format='cds')
+        names = dla_survey.name
+        qsonames = []
+        zabs = []
+        for name in names:
+            prs = name.split('_')
+            qsonames.append(prs[0])
+            zabs.append(float(prs[1][1:]))
+        qsonames = np.array(qsonames)
+        zabs = np.array(zabs)
+        for ii, iqso, izabs in zip(range(len(tbl2)), tbl2['QSO'], tbl2['zabs']):
+            mt = np.where((qsonames == iqso) & (np.abs(izabs-zabs) < 1e-3))[0]
+            if len(mt) == 0:
+                pdb.set_trace()
+            elif len(mt) != 1:
+                pdb.set_trace()
+            # Metallicity
+            dla_survey._abs_sys[mt[0]].ZH = tbl2['[M/H]'][ii]
+            dla_survey._abs_sys[mt[0]].sig_ZH = tbl2['e_[M/H]'][ii]
+            if tbl2['M'][ii] in ['S','Si','O']:
+                dla_survey._abs_sys[mt[0]].flag_ZH = 1  # Alpha
+            elif tbl2['M'][ii] in ['Zn']:
+                dla_survey._abs_sys[mt[0]].flag_ZH = 2  # Zn
+            elif tbl2['M'][ii] in ['Fe']:
+                dla_survey._abs_sys[mt[0]].flag_ZH = 4  # Fe
+            else:
+                raise ValueError("Bad metal")
+            dla_survey._abs_sys[mt[0]].elm_Z = tbl2['M'][ii]
+            # Kin
+            dla_survey._abs_sys[mt[0]].kin['dv'] = tbl2['dv'][ii]
+            dla_survey._abs_sys[mt[0]].kin['trans'] = tbl2['trans'][ii]
+            dla_survey._abs_sys[mt[0]].selection = tbl2['Select'][ii]
+
         dla_survey.ref = 'Neeleman+13'
-
-        """
-        # Load transitions
-        names = list(dla_survey.name)
-        if not skip_trans:
-            print('H100: Loading transitions file {:s}'.format(trans_fil))
-            tar = tarfile.open(trans_fil)
-            for member in tar.getmembers():
-                if '.' not in member.name:
-                    print('Skipping a likely folder: {:s}'.format(member.name))
-                    continue
-                # Extract
-                f = tar.extractfile(member)
-                # Need to fix for 3.4
-                tdict = json.load(f)
-                # Find system
-                i0 = member.name.rfind('/')
-                i1 = member.name.rfind('_clm')
-                try:
-                    idx = names.index(member.name[i0+1:i1])
-                except ValueError:
-                    pdb.set_trace()
-                # Fill up
-                dla_survey._abs_sys[idx].load_components(tdict)
-        """
-
 
         spath = pyigm_path+"/data/DLA/H100/Spectra/"
         for dla in dla_survey._abs_sys:
