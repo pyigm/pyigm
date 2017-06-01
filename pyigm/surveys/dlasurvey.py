@@ -194,9 +194,10 @@ class DLASurvey(IGMSurvey):
             elif tbl2['M'][ii] in ['Zn']:
                 dla_survey._abs_sys[mt[0]].flag_ZH = 2  # Zn
             elif tbl2['M'][ii] in ['Fe']:
-                dla_survey._abs_sys[mt[0]].flag_ZH = 4  # Zn
+                dla_survey._abs_sys[mt[0]].flag_ZH = 4  # Fe
             else:
                 raise ValueError("Bad metal")
+            dla_survey._abs_sys[mt[0]].elm_Z = tbl2['M'][ii]
             # Kin
             dla_survey._abs_sys[mt[0]].kin['dv'] = tbl2['dv'][ii]
             dla_survey._abs_sys[mt[0]].kin['trans'] = tbl2['trans'][ii]
