@@ -13,6 +13,8 @@ try:
 except ImportError:
     from urllib.request import urlopen
 
+from pkg_resources import resource_filename
+
 from astropy.table import QTable, Column, Table, vstack
 from astropy import units as u
 from astropy.stats import poisson_conf_interval as aspci
@@ -49,13 +51,15 @@ class DLASurvey(IGMSurvey):
 
         """
         # Read DLAs
-        dlas = Table.read(pyigm_path + '/data/DLA/HST/HSTDLA.dat', format='ascii')
+        dat_file = resource_filename('pyigm', '/data/DLA/HST/HSTDLA.dat')
+        dlas = Table.read(dat_file, format='ascii')
 
         # Read Quasars
         #qsos = Table.read(pyigm_path + '/all_qso_table.txt', format='ascii')
 
         # Read Sightlines
-        survey = Table.read(pyigm_path + '/data/DLA/HST/hstpath.dat', format='ascii')
+        srvy_file = resource_filename('pyigm', '/data/DLA/HST/hstpath.dat')
+        survey = Table.read(srvy_file, format='ascii')
 
         # Add info to DLA table
         ras, decs, zems = [], [], []
@@ -138,18 +142,18 @@ class DLASurvey(IGMSurvey):
         dla_survey
         """
         # Pull from Internet (as necessary)
-        summ_fil = pyigm_path+"/data/DLA/H100/H100_DLA.fits"
+        summ_fil = resource_filename('pyigm', "/data/DLA/H100/H100_DLA.fits")
         print('H100: Loading summary file {:s}'.format(summ_fil))
 
         # Ions
-        ions_fil = pyigm_path+"/data/DLA/H100/H100_DLA_ions.json"
+        ions_fil = resource_filename('pyigm', "/data/DLA/H100/H100_DLA_ions.json")
         print('H100: Loading ions file {:s}'.format(ions_fil))
 
         # Transitions
-        trans_fil = pyigm_path+"/data/DLA/H100/H100_DLA_clms.tar.gz"
+        trans_fil = resource_filename('pyigm', "/data/DLA/H100/H100_DLA_clms.tar.gz")
 
         # System files
-        sys_files = pyigm_path+"/data/DLA/H100/H100_DLA_sys.tar.gz"
+        sys_files = resource_filename('pyigm', "/data/DLA/H100/H100_DLA_sys.tar.gz")
 
         if load_sys:  # This approach takes ~120s
             print('H100: Loading systems.  This takes ~120s')
@@ -165,7 +169,7 @@ class DLASurvey(IGMSurvey):
             dla_survey.fill_ions(jfile=ions_fil)
 
         # Metallicities
-        tbl2_file = pyigm_path+"/data/DLA/H100/H100_table2.dat"
+        tbl2_file = resource_filename('pyigm', "/data/DLA/H100/H100_table2.dat")
         tbl2 = Table.read(tbl2_file, format='cds')
         names = dla_survey.name
         qsonames = []
@@ -182,9 +186,18 @@ class DLASurvey(IGMSurvey):
                 pdb.set_trace()
             elif len(mt) != 1:
                 pdb.set_trace()
-            # Fill in
+            # Metallicity
             dla_survey._abs_sys[mt[0]].ZH = tbl2['[M/H]'][ii]
             dla_survey._abs_sys[mt[0]].sig_ZH = tbl2['e_[M/H]'][ii]
+            if tbl2['M'][ii] in ['S','Si','O']:
+                dla_survey._abs_sys[mt[0]].flag_ZH = 1  # Alpha
+            elif tbl2['M'][ii] in ['Zn']:
+                dla_survey._abs_sys[mt[0]].flag_ZH = 2  # Zn
+            elif tbl2['M'][ii] in ['Fe']:
+                dla_survey._abs_sys[mt[0]].flag_ZH = 4  # Zn
+            else:
+                raise ValueError("Bad metal")
+            # Kin
             dla_survey._abs_sys[mt[0]].kin['dv'] = tbl2['dv'][ii]
             dla_survey._abs_sys[mt[0]].kin['trans'] = tbl2['trans'][ii]
             dla_survey._abs_sys[mt[0]].selection = tbl2['Select'][ii]
