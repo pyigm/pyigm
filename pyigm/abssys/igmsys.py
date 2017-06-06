@@ -68,6 +68,14 @@ class HISystem(IGMSystem):
         """"Return a string representing the type of vehicle this is."""
         return 'HI'
 
+
+class MgIISystem(IGMSystem):
+    """Class for MgII System
+    """
+    def __init__(self, radec, zabs, vlim, **kwargs):
+        IGMSystem.__init__(self, radec, zabs, vlim, abs_type='MgII', **kwargs)
+
+
 class AbsSubSystem(object):
     """
     Sub system.  Most frequently used in LLS
