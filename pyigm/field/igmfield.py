@@ -85,6 +85,10 @@ class IgmGalaxyField(object):
         if isinstance(obj['RA'], Quantity):
             ora = obj['RA']
             odec = obj['DEC']
+        # Handle if IGMGalaxyField.galaxies is given back this method
+        elif ('unit' in dir(obj['RA'])):
+            ora = obj['RA']
+            odec = obj['DEC']
         else:
             ora = obj['RA']*u.deg
             odec = obj['DEC']*u.deg
