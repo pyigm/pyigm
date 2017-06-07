@@ -20,6 +20,10 @@ def test_init():
     dlas = DLASurvey(ref='null')
     assert dlas.abs_type == 'DLA'
 
+def test_read_h100_nosys():
+    h100 = DLASurvey.load_H100(load_sys=False)
+    assert h100.nsys == 100
+
 
 def test_sdss():
     # All
@@ -36,10 +40,6 @@ def test_sdss():
     assert fN.size == 4
     assert np.isclose(fN_lo[0], 0.0682087, atol=1e-5)
 
-
-def test_read_h100_nosys():
-    h100 = DLASurvey.load_H100(load_sys=False)
-    assert h100.nsys == 100
 
 @remote_data
 def test_read_h100():
