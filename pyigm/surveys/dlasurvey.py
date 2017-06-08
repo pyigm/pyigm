@@ -171,15 +171,25 @@ class DLASurvey(IGMSurvey):
         # Metallicities
         tbl2_file = resource_filename('pyigm', "/data/DLA/H100/H100_table2.dat")
         tbl2 = Table.read(tbl2_file, format='cds')
-        names = dla_survey.name
-        qsonames = []
-        zabs = []
-        for name in names:
-            prs = name.split('_')
-            qsonames.append(prs[0])
-            zabs.append(float(prs[1][1:]))
-        qsonames = np.array(qsonames)
-        zabs = np.array(zabs)
+        # Parse for matching
+        if load_sys:
+            names = dla_survey.name
+            qsonames = []
+            zabs = []
+            for name in names:
+                prs = name.split('_')
+                qsonames.append(prs[0])
+                try:
+                    zabs.append(float(prs[-1][1:]))
+                except ValueError:
+                    pdb.set_trace()
+            qsonames = np.array(qsonames)
+            zabs = np.array(zabs)
+        else:
+            tbl3 = Table.read(summ_fil)
+            qsonames = tbl3['QSO']
+            zabs = dla_survey.zabs
+        # Match
         for ii, iqso, izabs in zip(range(len(tbl2)), tbl2['QSO'], tbl2['zabs']):
             mt = np.where((qsonames == iqso) & (np.abs(izabs-zabs) < 1e-3))[0]
             if len(mt) == 0:

@@ -42,11 +42,17 @@ class IGMSystem(AbsSystem):
 
     # Output
     def __repr__(self):
-        return ('<{:s}: {:s} {:s} {:s}, {:g}, NHI={:g}, Z/H={:g}>'.format(
+        txt = '<{:s}: {:s} {:s} {:s}, zabs={:g}, Z/H={:g}'.format(
                 self.__class__.__name__, self.abs_type,
                  self.coord.fk5.ra.to_string(unit=u.hour, sep=':', pad=True),
                  self.coord.fk5.dec.to_string(sep=':', pad=True),
-                 self.zabs, self.NHI, self.ZH))
+                 self.zabs, self.ZH)
+        # NHI
+        if self.NHI is not None:
+            txt = txt + ', NHI={:g}'.format(self.NHI)
+        # Finish
+        txt = txt + '>'
+        return (txt)
 
 
 class HISystem(IGMSystem):
@@ -67,6 +73,14 @@ class HISystem(IGMSystem):
     def print_abs_type(self):
         """"Return a string representing the type of vehicle this is."""
         return 'HI'
+
+
+class MgIISystem(IGMSystem):
+    """Class for MgII System
+    """
+    def __init__(self, radec, zabs, vlim, **kwargs):
+        IGMSystem.__init__(self, radec, zabs, vlim, abs_type='MgII', **kwargs)
+
 
 class AbsSubSystem(object):
     """
