@@ -14,6 +14,7 @@ Notebooks
 
    CGM Examples <CGM_examples>
    CGM P11 <CGM_P11>
+   CGMModel <CGM_Models>
 
 Overview
 ========
@@ -151,3 +152,11 @@ are included in the data directory.  You can read in the dataset with::
 See the Notebook in examples for further details.
 
 
+CGMModel
+========
+
+Simple models designed to reproduce observations of the CGM
+may be generated using the CGMModel class.  Current implementation
+is based on the Mathews & Prochaska (2017) halo profile.
+
+See the CGM_Models Notebook for examples.
