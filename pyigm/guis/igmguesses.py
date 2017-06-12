@@ -56,6 +56,13 @@ try:
 except NameError:  # For Python 3
     ustr = str
 
+try:
+    input = raw_input  # For Python 2.
+except NameError:
+    pass
+
+
+
 # Global variables; defined as globals mainly to increase speed and convenience
 c_kms = const.c.to('km/s').value
 COLOR_MODEL = '#999966'
@@ -746,7 +753,13 @@ class IGGVelPlotWidget(QWidget):
             try:
                 cond = new_comp._abslines[0].analy['wvlim'] == [0,0]*u.AA
             except:
-                cond = new_comp._abslines[0].limits.wvlim == [0,0]*u.AA
+                try:
+                    cond = new_comp._abslines[0].limits.wvlim == [0,0]*u.AA
+                except:
+                    print('IGMGuesses: Please contact N.Tejos (ntejos@gmail.com) for solving this problem.')
+                    QtCore.pyqtRemoveInputHook()
+                    pdb.set_trace()
+                    QtCore.pyqtRestoreInputHook()
 
             if np.sum(cond)>0:
                 #sync wvlims
@@ -2005,7 +2018,7 @@ def fill_meta(meta):
     """
     meta_ref = init_meta()
     if (meta["RA"] == meta_ref["RA"]) and (meta["DEC"] == meta_ref["DEC"]):
-        radec = raw_input("Please provide (RA,DEC) J2000 in degrees (e.g. 123.45678,-87.6543): ")
+        radec = input("Please provide (RA,DEC) J2000 in degrees (e.g. 123.45678,-87.6543): ")
         if radec == "":
             meta["RA"] = meta_ref["RA"]
             meta["DEC"] = meta_ref["DEC"]
@@ -2028,7 +2041,7 @@ def fill_meta(meta):
                 eg_str = "(e.g. HST/COS/G130M)"
             elif key == 'Creator':
                 eg_str = "(e.g. John Smith)"
-            var = raw_input("Please provide value for {} {}: ".format(key, eg_str))
+            var = input("Please provide value for {} {}: ".format(key, eg_str))
             if var != "":
                 meta[key] = var
             else:
