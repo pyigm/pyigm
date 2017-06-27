@@ -50,6 +50,7 @@ from linetools.guis import line_widgets as ltgl
 from linetools.guis import simple_widgets as ltgsm
 from linetools.guis import spec_widgets as ltspw
 from linetools import utils as ltu
+from linetools.spectra.io import readspec
 
 try:
     ustr = unicode
@@ -206,7 +207,9 @@ E         : toggle displaying/hiding the external absorption model
 
 
         # Load spectrum
-        spec, spec_fil = ltgu.read_spec(ispec)
+        # spec, spec_fil = ltgu.read_spec(ispec, masking='edges')
+        spec = readspec(ispec, masking='edges')
+
 
         # Normalize
         if spec.co_is_set:
@@ -217,7 +220,7 @@ E         : toggle displaying/hiding the external absorption model
 
         # Load external model spectrum
         if external_model is not None:
-            self.external_model, _ = ltgu.read_spec(external_model)
+            self.external_model = readspec(external_model)
         else:
             self.external_model = None
 
@@ -232,7 +235,7 @@ E         : toggle displaying/hiding the external absorption model
 
         # Full spectrum model
         self.model = XSpectrum1D.from_tuple(
-            (spec.wavelength, np.ones(len(spec.wavelength))))
+            (spec.wavelength, np.ones(len(spec.wavelength))), masking='edges')
 
         # LineList (Grab ISM, Strong and HI as defaults)
         print('Loading built in LineList: ISM, HI and Strong.')
@@ -583,11 +586,11 @@ class IGGVelPlotWidget(QWidget):
 
         # Initialize
         self.parent = parent
-        spec, spec_fil = ltgu.read_spec(ispec)
+        spec = readspec(ispec)
 
         self.scale = screen_scale
         self.spec = spec
-        self.spec_fil = spec_fil
+        self.spec_fil = spec.filename
         self.fwhm = fwhm
         self.z = z
         self.vmnx = vmnx
