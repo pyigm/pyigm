@@ -1,6 +1,7 @@
 import astropy.units as u
 from astropy.coordinates import SkyCoord, match_coordinates_sky
 from linetools.spectra.io import get_table_column
+import numpy as np
 
 
 def check_dup_coord(coords, tol=1*u.arcsec):
@@ -68,3 +69,32 @@ def check_dup_table(table, tol=1*u.arcsec, ra_tags=['TARG_RA','ra','RA'], dec_ta
     isdup, idx = check_dup_coord(coords, tol=tol)
 
     return isdup, idx, coords
+
+
+def cluster1d(clvals, bw):
+    ''' Perform clustering analysis to group values within some tolerance.
+    Useful for structures in redshift space.
+
+    Parameters:
+    -----------
+    clvals: 1XN array
+        Values within which to find clustering
+    bw: float
+        Tolerance to determine width of each cluster identified
+
+
+    Outputs:
+    --------
+    ccs: 1XM array
+        cluster centers (M = # of clusters found)
+    labels: 1XN array
+        indices of identified cluster centers for each of clvals
+    '''
+
+    from sklearn.cluster import MeanShift, estimate_bandwidth
+    X = np.array(zip(clvals, np.zeros(len(clvals))), dtype=float)
+    ms = MeanShift(bandwidth=bw)
+    ms.fit(X)
+    labels = ms.labels_
+    ccs = ms.cluster_centers_
+    return ccs[:,0],labels
