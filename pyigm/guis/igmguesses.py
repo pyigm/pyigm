@@ -584,13 +584,17 @@ class IGGVelPlotWidget(QWidget):
         # init help message
         self.help_message = parent.help_message
 
+        # QtCore.pyqtRemoveInputHook()
+        # pdb.set_trace()
+        # QtCore.pyqtRestoreInputHook()
+
         # Initialize
         self.parent = parent
-        spec = readspec(ispec)
+        self.spec = ispec
+        self.spec_fil = self.spec.filename
 
         self.scale = screen_scale
-        self.spec = spec
-        self.spec_fil = spec.filename
+
         self.fwhm = fwhm
         self.z = z
         self.vmnx = vmnx
@@ -606,7 +610,7 @@ class IGGVelPlotWidget(QWidget):
         self.wrest = 0.
         self.avmnx = np.array([0.,0.])*u.km/u.s
         self.model = XSpectrum1D.from_tuple(
-            (spec.wavelength, np.ones(len(spec.wavelength))))
+            (self.spec.wavelength, np.ones(len(self.spec.wavelength))))
 
         # define external model
         self.external_model = external_model
