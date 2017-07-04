@@ -48,6 +48,17 @@ def read_guesses_file(guesses_file, row_index_to_run):
           'uvb_in',
           'notes_in')
     
+    fmts=('str',
+        'str',
+        'float',
+        'float',
+        'float',
+        'str',
+        'str',
+        'str',
+        'str',
+        )
+    
     input_dict={}
     for key in keys:
         input_dict[key] = []
@@ -59,7 +70,10 @@ def read_guesses_file(guesses_file, row_index_to_run):
             linespl = line.strip().split()
             ##
             for ls in xrange(len(linespl)):
-                input_dict[keys[ls]].append(linespl[ls])
+                if fmts[ls] == 'float':
+                    input_dict[keys[ls]].append(float(linespl[ls]))
+                else:
+                    input_dict[keys[ls]].append(linespl[ls])
     
     infile.close()
 
