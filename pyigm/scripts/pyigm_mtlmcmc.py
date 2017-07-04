@@ -277,4 +277,4 @@ def main(args=None):
 # pyigm_mtlmcmc J012156.03+144823.8_z2.662 alldata.txt savehere grid_minimal.pkl -nthread=1 -nwalkers=80 -nsamp=80
 
 ##Wotta Example
-# pyigm_mtlmcmc --wotta -guessesfile="MCMC_initial_guesses-run_met.dat" -row=2 -nthread=12 -nwalkers=400 -nsamp=400
+# pyigm_mtlmcmc --wotta -guessesfile="MCMC_initial_guesses-run_me.dat" -row=2 -nthread=12 -nwalkers=400 -nsamp=400
