@@ -68,7 +68,7 @@ def read_guesses_file(guesses_file, row_index_to_run):
     thisrow = [input_dict[key][row_index_to_run] for key in keys]
     
     ##Return the array as separate values, not as an array
-    return *thisrow
+    return thisrow
 
 
 
@@ -225,7 +225,7 @@ def run_mcmc(args):
     
     #pick optimised values for 12 processors - cosma (proc*NN walkers, proc*YY samples)
     mcmc=mcmc_ions(observ,obsinfo, args.grid, 
-                   logUconstraint=args.logUconstraint, logUmean=args.logUmean, logUsigma=args.logUsigma
+                   logUconstraint=args.logUconstraint, logUmean=args.logUmean, logUsigma=args.logUsigma,
                    UVB=args.UVB,
                    nwalkers=(args.nwalkers),
                    nsamp=(args.nsamp), optim=optim, threads=args.nthread,
