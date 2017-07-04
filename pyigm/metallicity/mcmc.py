@@ -237,8 +237,8 @@ class Emceebones(object):
     This is a class that does all the fun stuff like bookkeeping, plots, driver for emcee etc..
     """
 
-    def __init__(self,data,infodata,model,nwalkers,nsamp,threads,outsave,optim,effnhi,logUconstraint=False,logUmean=logUmean,logUsigma=logUsigma,UVB='HM05'):
-        """ First, do some bookeeping like finding ions and preparing the grid
+    def __init__(self,data,infodata,model,nwalkers,nsamp,threads,outsave,optim,effnhi,logUconstraint=False,logUmean=-2.968,logUsigma=0.481,UVB='HM05'):
+        """ First, do some bookkeeping like finding ions and preparing the grid
         Parameters
         ----------
         data : list of tuples
