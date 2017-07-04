@@ -437,7 +437,7 @@ class Cldyion():
         #from astropy import constants as const
 
         #load cuba
-        input_spectrum = resource_filename("UVB_HM12.dat", "/data/euvb/")
+        input_spectrum = resource_filename("pyigm", "/data/euvb/UVB_HM12.dat")
         uvb=open(input_spectrum)
         flag=0
 
@@ -544,7 +544,7 @@ class Cldyion():
         #from astropy import constants as const
 
         #load hm05cbw
-        input_spectrum = resource_filename("UVB_HM05.dat", "/data/euvb/")
+        input_spectrum = resource_filename("pyigm", "/data/euvb/UVB_HM05.dat")
         uvb=open(input_spectrum)
         flag=0
         
