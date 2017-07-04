@@ -128,10 +128,10 @@ def run_mcmc_wotta(args):
     ##Test whether to include the carbalpha parameter
     if str(carbalpha_use).lower() == 'false':
         ##Do NOT use the carbalpha parameter
-        args.grid = os.getcwd()+'/../Cloudy_grids_'+uvb+'/grid_minimal.pkl'
+        args.grid = os.getcwd()+'/../Cloudy_grids_'+args.UVB+'/grid_minimal.pkl'
     else:
         ##Use the carbalpha parameter
-        args.grid = os.getcwd()+'/../Cloudy_grids_'+uvb+'/grid_minimal_carbalpha.pkl'
+        args.grid = os.getcwd()+'/../Cloudy_grids_'+args.UVB+'/grid_minimal_carbalpha.pkl'
 
 
 
@@ -271,6 +271,12 @@ def main(args=None):
         run_mcmc_wotta(pargs)
     else:
         run_mcmc(pargs)
+
+
+
+if __name__ == '__main__':
+    args=sys.argv
+    main(args)
 
 
 # Example
