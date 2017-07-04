@@ -36,7 +36,7 @@ Compute the ionisation paramater along the chains - assumes HM12
 
 def getions_uparam(result,base):
 
-    #print 'Get ionisation paramater for ', result['info']['name']
+    #print('Get ionisation paramater for ', result['info']['name'])
   
     #init UVB at given redshift
     uvb=cld.Cldyion(uvb='HM05logU')
@@ -84,7 +84,7 @@ Compute the XHI along the chains
 
 def getions_xhi(result,base,interp):
 
-    #print 'Get XHI  for ', result['info']['name']
+    #print('Get XHI  for ', result['info']['name'])
 
     #grab XHI [tested against cloudy]
     xhichian=interp['HI'](result['pdfs'])
@@ -101,7 +101,7 @@ Compute the X_SiII ionisation correction along the chains
 
 def getions_xsi2(result,base,interp):
 
-    #print 'Get XSiII  for ', result['info']['name']
+    #print('Get XSiII  for ', result['info']['name'])
     xhichian=interp['HI'](result['pdfs'])
     xsi2chian=interp['SiII'](result['pdfs'])
     diff=xsi2chian-xhichian
@@ -117,7 +117,7 @@ Compute the X_SiIII along the chains
 
 def getions_xsi3(result,base,interp):
 
-    #print 'Get XSiII  for ', result['info']['name']
+    #print('Get XSiII  for ', result['info']['name'])
     xsi3chian=interp['SiIII'](result['pdfs'])
     hist,edge=np.histogram(xsi3chian,bins=base)
     hist=hist/(1.*len(xsi3chian))
@@ -231,7 +231,7 @@ Main function
 
 """
 
-if __name__ == "__main__":
+def main()
     
     ##CBW adjust
     #define the model and grid
@@ -244,7 +244,7 @@ if __name__ == "__main__":
     #load the models
     figname=modelsdir
     listin=glob.glob(modelsdir+'/*emcee*hd5')
-    print 'Found {} fits'.format(len(listin))
+    print('Found {} fits'.format(len(listin)))
     
     #store arrays for distributions
     allname=[]
@@ -283,7 +283,7 @@ if __name__ == "__main__":
     #compress results
     for fit in listin:
 
-        print 'Process ', fit
+        print('Process ', fit)
 
         fl=open(fit)
         result=pickle.load(fl)
@@ -369,3 +369,7 @@ if __name__ == "__main__":
                  'XCIII_base':XC3_hist_bin,'XCIII_hist':XC3_hist,'XCIII_med':XC3_medians,
                  'XCIV_base':XC4_hist_bin,'XCIV_hist':XC4_hist,'XCIV_med':XC4_medians,
                  'name':allname},open(modelsdir+"/"+figname+'_ionisation.pkl',"w"))
+
+
+if __name__ == "__main__":
+    main()
