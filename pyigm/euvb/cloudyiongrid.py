@@ -33,12 +33,14 @@ from scipy.interpolate import interp1d
 import os
 import re
 
+from pkg_resources import resource_filename
+
 
 class Cldyion():
 
     """
     Define a class to run ionization modeling to do cloudy grids of elements 
-    By deafult, use the HM2005. Other UVB that can be included are: HM2012, FG09
+    By default, use the HM2005. Other UVB that can be included are: HM2012, FG09
 
     """
 
@@ -309,7 +311,7 @@ class Cldyion():
             os.makedirs(self.path+"/")
 
         ##CBW don't write to stdout every time
-        # print 'Write ', self.root
+        # print('Write {}'.format(self.root))
 
         fil=open(self.path+"/"+self.root+".in","w")
 
@@ -420,7 +422,7 @@ class Cldyion():
             self.initcafg()
 
         else:
-            print 'Unknown UVB!'
+            print('Unknown UVB!')
             exit()
 
 
@@ -435,7 +437,8 @@ class Cldyion():
         #from astropy import constants as const
 
         #load cuba
-        uvb=open("UVB_HM12.dat")
+        input_spectrum = resource_filename("UVB_HM12.dat", "/data/euvb/")
+        uvb=open(input_spectrum)
         flag=0
 
         #store the input cuba
@@ -500,7 +503,7 @@ class Cldyion():
         #interpolate to give redshift
         for ii in range(cuba_wave.size):
             cuba_int[ii]=np.interp([self.redshift],cuba_int_red,[cuba_one[ii],cuba_two[ii],cuba_three[ii]])
-            #print cuba_wave[ii], cuba_int[ii]
+            #print(cuba_wave[ii], cuba_int[ii])
 
         #cuba has the same wave twice at discontinuities.
         #cloudy does not like that, so perturbe these values 
@@ -541,7 +544,8 @@ class Cldyion():
         #from astropy import constants as const
 
         #load hm05cbw
-        uvb=open("UVB_HM05.dat")
+        input_spectrum = resource_filename("UVB_HM05.dat", "/data/euvb/")
+        uvb=open(input_spectrum)
         flag=0
         
         #store the input hm05cbw
@@ -606,7 +610,7 @@ class Cldyion():
         #interpolate to give redshift
         for ii in range(hm05cbw_wave.size):
             hm05cbw_int[ii]=np.interp([self.redshift],hm05cbw_int_red,[hm05cbw_one[ii],hm05cbw_two[ii],hm05cbw_three[ii]])
-            #print hm05cbw_wave[ii], hm05cbw_int[ii]
+            #print(hm05cbw_wave[ii], hm05cbw_int[ii])
             
         #hm05cbw has the same wave twice at discontinuities.
         #cloudy does not like that, so perturbe these values 
@@ -646,7 +650,7 @@ class Cldyion():
         try:
             fgtab=np.loadtxt(nameuvb,dtype={'names': ('nu','f'),'formats':('f10','f10')})
         except:
-            print 'Could not read UVB file {}'.format(nameuvb)
+            print('Could not read UVB file {}'.format(nameuvb))
             exit()
 
         #from Ry to Hz
@@ -716,7 +720,7 @@ class Cldyion():
         linestop=''
         if filthere:
             status=True
-            #print 'Parse output for warnings'
+            #print('Parse output for warnings')
             file1=open(filname,"r")
             #loop entire file
             for line in file1:
@@ -730,12 +734,12 @@ class Cldyion():
 
             #if exit condition not clean, raise warning
             if warning:
-                print "Warning: cloudy issues for {}".format(self.root)
+                print("Warning: cloudy issues for {}".format(self.root))
 
             #check if stopped because of unwanted reasons:
             if stop:
                 if ("H0 column dens reached" not in linestop) and ("H0-H0+H2 column dens reached" not in linestop):
-                    print "Stop: condition not met in {0}".format(self.root)
+                    print("Stop: condition not met in {0}".format(self.root))
 
         return status 
 
@@ -759,7 +763,7 @@ class Cldyion():
             try:
                 file1=open(filname,"r")
             except:
-                print "Ion not found"
+                print("Ion not found")
                 return
 
             #now parse
@@ -779,7 +783,7 @@ class Cldyion():
             file1.close()
 
         else:
-            print "Check model... Something is wrong!"
+            print("Check model... Something is wrong!")
             return
 
     def getcolumn(self):
@@ -803,7 +807,7 @@ class Cldyion():
             try:
                 file1=open(filname,"r")
             except:
-                print "Column not found"
+                print("Column not found")
                 return
 
             #now parse
@@ -816,7 +820,7 @@ class Cldyion():
 
             #parity check 
             if (clmd.size != header.size):
-                print "Something wrong in parser column"
+                print("Something wrong in parser column")
                 return
 
             for ii in range(header.size):
@@ -827,7 +831,7 @@ class Cldyion():
             file1.close()
 
         else:
-            print "Check model... Something is wrong!"
+            print("Check model... Something is wrong!")
             return
 
 
@@ -852,7 +856,7 @@ class Cldyion():
             try:
                 file1=open(filname,"r")
             except:
-                print "Overview not found"
+                print("Overview not found")
                 return
 
             #parse header
@@ -877,7 +881,7 @@ class Cldyion():
             file1.close()
 
         else:
-            print "Check model... Something is wrong!"
+            print("Check model... Something is wrong!")
             return
 
 
@@ -902,7 +906,7 @@ class Cldyion():
             try:
                 file1=open(filname,"r")
             except:
-                print "Abundance not found"
+                print("Abundance not found")
                 return
 
             #parse header
@@ -928,5 +932,5 @@ class Cldyion():
             file1.close()
 
         else:
-            print "Check model... Something is wrong!"
+            print("Check model... Something is wrong!")
             return
