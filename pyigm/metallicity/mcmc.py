@@ -440,13 +440,14 @@ class Emceebones(object):
 
         #Last plot
         ax.set_xlabel('Steps')
-        fig.text(0.1,0.93,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='left',fontsize=12)
+        # fig.text(0.1,0.93,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='left',fontsize=10)
+        plt.title(self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),fontsize=10)
         fig.savefig(self.outsave+'/'+self.info['name']+'_chains.pdf')
 
         #now do a corner plot
         samples = sampler.chain[:,self.burn:, :].reshape((-1,self.ndim))
         cfig = corner.corner(samples, labels=self.mod_axistag, quantiles=[0.05,0.5,0.95],verbose=False)
-        cfig.text(0.45,0.7,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='left',fontsize=12)
+        cfig.text(0.33,0.90,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='left',fontsize=10)
         cfig.savefig(self.outsave+'/'+self.info['name']+'_corner.pdf')
 
         #now plot the residuals
@@ -474,8 +475,8 @@ class Emceebones(object):
 
         plt.xticks(xaxis,axlab,rotation='vertical')
         plt.ylabel('Log Column')
-        # plt.title(self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint), fontsize=12)
-        fig.text(0.1,0.93,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='left',fontsize=12)
+        plt.title(self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),fontsize=10)
+        # fig.text(0.1,0.93,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='left',fontsize=12)
         rfig.savefig(self.outsave+'/'+self.info['name']+'_residual.pdf')
 
         print('All done with system {}!'.format(self.info['name']))
@@ -697,38 +698,15 @@ class Emceebones(object):
 
         print('Running {} chains for {} steps on {} processors'.format(self.nwalkers,self.nsamp,self.threads))
 
-        ##CBW testing
-        # print('emc.mod_colm[0]: ',emc.mod_colm[0])
-        # print("")
-        # print('emc.mod_colm_tag: ',emc.mod_colm_tag)
-        # print("")
-        # print('emc.mod_axistag: ',emc.mod_axistag)
-        # print("")
-        # print('emc.mod_axisval: ',emc.mod_axisval)
-        # print("")
-        # print('emc.data: ',emc.data)
-        # print("")
-        # print('emc.info: ',emc.info)
-        # print("")
-        # print('pos[0]: ',pos[0][:])
-        # print("")
-        # idx0 = (np.abs((emc.mod_axisval[0])-(pos[0][0]))).argmin()
-        # idx1 = (np.abs((emc.mod_axisval[1])-(pos[0][1]))).argmin()
-        # idx2 = (np.abs((emc.mod_axisval[2])-(pos[0][2]))).argmin()
-        # idx3 = (np.abs((emc.mod_axisval[3])-(pos[0][3]))).argmin()
-        # idx4 = (np.abs((emc.mod_axisval[4])-(pos[0][4]))).argmin()
-        # print("idx: ",idx0,idx1,idx2,idx3,idx4)
-        # print("Number of ions: ",len(emc.mod_colm))
-        # print(len(emc.mod_colm[0]))
-        # print(len(emc.mod_colm[0][0]))
-        # print(len(emc.mod_colm[0][0][0]))
-        # print(len(emc.mod_colm[0][0][0][0]))
-        # print(len(emc.mod_colm[0][0][0][0][0]))
-        # print('True CII: ',emc.data[0][1])
-        # print('Carbalpha: ',pos[0][4])
-        # print('All CII: ',emc.mod_colm[0][idx0][idx1][idx2][idx3])
-        # print('Closest CII (to starting pos): ',emc.mod_colm[0][idx0][idx1][idx2][idx3][idx4])
-        ##CBW end testing
+
+        ##Check burn-in time before the sample runs
+        # self.burn = 45 ##CBW: This is the original value
+        self.burn = 150 ##CBW
+        if self.burn >= self.nsamp:
+            # raise ValueError("Burn out exceeds number of samples!")
+            self.burn = self.nsamp//2
+            print("Burn-in exceeds number of samples... Changing burn-in to {}".format(self.burn))
+
 
         #init the sampler and run
         sampler = emcee.EnsembleSampler(self.nwalkers, self.ndim, emc, threads=self.threads)
@@ -740,13 +718,6 @@ class Emceebones(object):
         print("[good range 0.25-0.5. Low is bad!]")
 
         #remove burnt in to generate "clean" PDFs
-        # self.burn = 45 ##CBW: This is the original value
-        self.burn = 150 ##CBW
-        if self.burn >= self.nsamp:
-            # raise ValueError("Burn out exceeds number of samples!")
-            self.burn = self.nsamp//2
-            print("Burn-in exceeds number of samples!")
-            print("Changing burn-in to {}".format(self.burn))
 
         #get nsamples * ndim pdfs
         samples = sampler.chain[:, self.burn:, :].reshape((-1,self.ndim))
@@ -1158,10 +1129,10 @@ def mcmc_ions(data,infodata,model,logUconstraint=False, logUmean=-2.968, logUsig
 
     print('Getting started...')
 
-    # Do not run with less than 100 samples or 400 walkers
+    # Do not run with less than nsamp_min samples or nwalkers_min walkers
     if not testing:
-        nsamp=np.max([nsamp_min,100])
-        nwalkers=np.max([nwalkers_min,400])
+        nsamp=np.max([nsamp, nsamp_min])
+        nwalkers=np.max([nwalkers, nwalkers_min])
 
     # initialise the mcmc for this problem
     # load the observations and the model
