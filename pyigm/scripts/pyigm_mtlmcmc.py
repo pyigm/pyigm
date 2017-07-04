@@ -131,7 +131,7 @@ def run_mcmc_wotta(args):
         args.dens, \
         args.carbalpha, \
         carbalpha_use, \
-        args.logUconstraint_use, \
+        args.logUconstraint, \
         args.UVB, \
         notes = read_guesses_file(args.guessesfile, row_index)
 
