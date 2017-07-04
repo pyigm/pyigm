@@ -508,15 +508,15 @@ class Emceebones(object):
         emc.logUconstraint=str(self.logUconstraint)
         
         # logUGaussx = np.arange(-6.0,0.0+buff,0.10)
-        # logUGauss  = np.array(1/(np.sqrt(2*np.pi*logUsig**2))*np.exp(-(logUGaussx-logUmean)**2/(2*logUsig**2)))
+        # logUGauss  = np.array(1/(np.sqrt(2*np.pi*logUsigma**2))*np.exp(-(logUGaussx-logUmean)**2/(2*logUsigma**2)))
 
         ##calculate the density Gaussian based on the logU Gaussian
         ##NOTE: here we assume that it is symmetric
         emc.densGaussMean=logUToDens(self.logUmean, self.info['z'], self.UVB)
-        # densGaussSigPos=logUToDens(logUmean+logUsig, self.info['z'], self.UVB) - densGaussMean
-        # densGaussSigNeg=densGaussMean - logUToDens(logUmean-logUsig, self.info['z'], self.UVB)
+        # densGaussSigPos=logUToDens(logUmean+logUsigma, self.info['z'], self.UVB) - densGaussMean
+        # densGaussSigNeg=densGaussMean - logUToDens(logUmean-logUsigma, self.info['z'], self.UVB)
         # densGaussSig=max([densGaussSigPos,densGaussSigNeg])
-        emc.densGaussSig=self.logUsig
+        emc.densGaussSig=self.logUsigma
         ##CBW end
         #
         if(emc.effnhi):
@@ -743,8 +743,10 @@ class Emceebones(object):
         # self.burn = 45 ##CBW: This is the original value
         self.burn = 150 ##CBW
         if self.burn >= self.nsamp:
-            raise ValueError("Burn out exceeds number of samples!")
+            # raise ValueError("Burn out exceeds number of samples!")
             self.burn = self.nsamp//2
+            print("Burn-in exceeds number of samples!")
+            print("Changing burn-in to {}".format(self.burn))
 
         #get nsamples * ndim pdfs
         samples = sampler.chain[:, self.burn:, :].reshape((-1,self.ndim))
@@ -1129,7 +1131,7 @@ class Emceeutils():
 
 
 def mcmc_ions(data,infodata,model,logUconstraint=False, logUmean=-2.968, logUsigma=0.481, UVB='HM05', nwalkers=400,nsamp=400,threads=12,
-              outsave='emceeout', optim=False, effnhi=True, testing=False, nwalkers_min=400, nsamp_min=100):
+              outsave='emceeout', optim=False, effnhi=True, testing=False, nwalkers_min=400, nsamp_min=400):
     """ This is the main, which does not do much
 
     Parameters
