@@ -221,3 +221,20 @@ class CGMAbsSys(object):
                  self.galaxy.coord.fk5.ra.to_string(unit=u.hour,sep=':',pad=True),
                  self.galaxy.coord.fk5.dec.to_string(sep=':',pad=True,alwayssign=True),
                  self.galaxy.z, self.rho))
+
+    def write_json(self, outfil=None):
+        """ Generate a JSON file from a CGMAbsSys object
+
+        Returns
+        -------
+
+        """
+        # Generate the dict
+        odict = self.to_dict()
+        # Write
+        if outfil is None:
+            outfil = self.name+'.json'
+        ltu.savejson(outfil, odict, overwrite=True, easy_to_read=True)
+        # Finish
+        print("Wrote {:s} system to {:s} file".format(self.name, outfil))
+
