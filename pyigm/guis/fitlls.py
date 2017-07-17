@@ -332,8 +332,10 @@ class XFitLLSGUI(QMainWindow):
             iline.attrib['N'] = 10**self.abssys_widg.all_abssys[idx].NHI * u.cm**-2
             iline.attrib['b'] = self.abssys_widg.all_abssys[idx].bval
         # Update the rest
+        '''
         self.update_model()
         self.draw()
+        '''
 
     def update_boxes(self):
         """Update Nbz boxes"""
@@ -512,7 +514,7 @@ class XFitLLSGUI(QMainWindow):
                 print("Cannot use F on an LLS with z > z_qso + 0.05")
                 return
             self.auto_plls(event.xdata, event.ydata)
-        elif event.key in ['L','a','N','n','v','V','D','$','g','E','M']: # LLS-centric
+        elif event.key in ['L','a','N','n','v','V','D','$','g','E','M','U']: # LLS-centric
             idx = self.get_sngl_sel_sys()
             if idx is None:
                 return
@@ -520,6 +522,8 @@ class XFitLLSGUI(QMainWindow):
                 self.abssys_widg.all_abssys[idx].zabs = event.xdata/911.7633 - 1.
             elif event.key == 'a': #Lya
                 self.abssys_widg.all_abssys[idx].zabs = event.xdata/1215.6700-1.
+            elif event.key == 'U': # Simply update the model
+                self.update_model()
             elif event.key == 'g': # Move nearest Lyman line to cursor
                 wrest = event.xdata/(1+self.abssys_widg.all_abssys[idx].zabs)
                 awrest = np.array([iline.wrest.value for iline in self.abssys_widg.all_abssys[idx].lls_lines])
