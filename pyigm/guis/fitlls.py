@@ -167,7 +167,9 @@ class XFitLLSGUI(QMainWindow):
                                            abs_sys=self.abssys_widg.abs_sys,
                                            vlines=vlines, plotzero=1,
                                                  norm=norm)
-        self.spec_widg.canvas.mpl_connect('button_press_event', self.on_click)
+        #self.spec_widg.canvas.mpl_connect('button_press_event', self.on_click)
+        # Multi spec
+        self.mspec_widg = ltgsp.MultiSpecWidget(self.spec_widg)
         # Initialize continuum (and LLS if from a file)
         if lls_fit_file is not None:
             self.init_LLS(lls_fit_file,spec)
@@ -210,6 +212,7 @@ class XFitLLSGUI(QMainWindow):
             spec.wavelength,np.ones(len(spec.wavelength))))
         if self.smooth is None:
             self.smooth = smooth
+        self.llist['Plot'] = False
 
         # Initialize as needed
         if lls_fit_file is not None:
@@ -268,6 +271,7 @@ class XFitLLSGUI(QMainWindow):
         vbox.addWidget(self.Cwidget)
         vbox.addWidget(self.abssys_widg)
         vbox.addWidget(buttons)
+        vbox.addWidget(self.mspec_widg)
         anly_widg.setLayout(vbox)
 
         hbox = QHBoxLayout()
@@ -419,9 +423,12 @@ class XFitLLSGUI(QMainWindow):
         # Finish
         self.full_model.flux = self.lls_model * self.continuum.flux
         # Over-absorbed
-        self.spec_widg.bad_model = np.where( (self.lls_model < 0.7) &
-            (self.full_model.flux < (self.spec_widg.spec.flux-
-                self.spec_widg.spec.sig*1.5)))[0]
+        try:
+            self.spec_widg.bad_model = np.where( (self.lls_model < 0.7) &
+                (self.full_model.flux < (self.spec_widg.spec.flux-
+                    self.spec_widg.spec.sig*1.5)))[0]
+        except:
+            pass
         # Model
         self.spec_widg.model = self.full_model
 
@@ -445,6 +452,7 @@ class XFitLLSGUI(QMainWindow):
             idx = self.abssys_widg.all_items.index(item.text())
             return idx
 
+    '''
     def on_click(self, event):
         """ Over-loads click events
         """
@@ -468,6 +476,7 @@ class XFitLLSGUI(QMainWindow):
             # Draw by default
             self.update_boxes()
             self.draw()
+    '''
 
 
     def on_key(self,event):
@@ -503,7 +512,7 @@ class XFitLLSGUI(QMainWindow):
                 print("Cannot use F on an LLS with z > z_qso + 0.05")
                 return
             self.auto_plls(event.xdata, event.ydata)
-        elif event.key in ['L','a','N','n','v','V','D','$','g']: # LLS-centric
+        elif event.key in ['L','a','N','n','v','V','D','$','g','E','M']: # LLS-centric
             idx = self.get_sngl_sel_sys()
             if idx is None:
                 return
@@ -511,9 +520,18 @@ class XFitLLSGUI(QMainWindow):
                 self.abssys_widg.all_abssys[idx].zabs = event.xdata/911.7633 - 1.
             elif event.key == 'a': #Lya
                 self.abssys_widg.all_abssys[idx].zabs = event.xdata/1215.6700-1.
-            elif event.key == 'g': # Move nearest line to cursor
+            elif event.key == 'g': # Move nearest Lyman line to cursor
                 wrest = event.xdata/(1+self.abssys_widg.all_abssys[idx].zabs)
                 awrest = np.array([iline.wrest.value for iline in self.abssys_widg.all_abssys[idx].lls_lines])
+                imn = np.argmin(np.abs(wrest-awrest))
+                newz = event.xdata/awrest[imn]-1.
+                self.abssys_widg.all_abssys[idx].zabs = newz
+            elif event.key == 'M': # Move nearest line in line list (typically metal) to cursor
+                wrest = event.xdata/(1+self.abssys_widg.all_abssys[idx].zabs)
+                awrest = self.llist[self.llist['List']].wrest.value
+                #QtCore.pyqtRemoveInputHook()
+                #pdb.set_trace()
+                #QtCore.pyqtRestoreInputHook()
                 imn = np.argmin(np.abs(wrest-awrest))
                 newz = event.xdata/awrest[imn]-1.
                 self.abssys_widg.all_abssys[idx].zabs = newz
@@ -530,9 +548,9 @@ class XFitLLSGUI(QMainWindow):
                 idx = None
             elif event.key == '$': # Toggle metal-lines
                 self.llist['Plot'] = not self.llist['Plot']
-                #QtCore.pyqtRemoveInputHook()
-                #xdb.set_trace()
-                #QtCore.pyqtRestoreInputHook()
+            elif event.key == 'E': # Toggle wveval
+                self.skip_wveval = not self.skip_wveval
+                print("Toggled WVEVAL for model")
             else:
                 raise ValueError('Not ready for this keystroke')
             # Update the lines
