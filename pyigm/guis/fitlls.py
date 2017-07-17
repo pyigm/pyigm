@@ -86,7 +86,7 @@ class XFitLLSGUI(QMainWindow):
     """
     def __init__(self, ispec, zqso, parent=None, lls_fit_file=None,
         outfil=None, smooth=3., fN_gamma=None, template=None,
-        dw=0.1, skip_wveval=False, norm=True):
+        dw=0.1, skip_wveval=False, coord=None, norm=True):
         QMainWindow.__init__(self, parent)
         '''
         ispec : Spectrum1D or specfil
@@ -126,6 +126,7 @@ class XFitLLSGUI(QMainWindow):
             self.outfil = outfil
         self.count_lls = 0
         self.lls_model = None
+        self.coord = coord
         self.smooth = None
         self.base_continuum = None
         self.all_forest = []
@@ -844,11 +845,16 @@ class XFitLLSGUI(QMainWindow):
             out_dict['LLS'][key]['NHI'] = lls.NHI
             out_dict['LLS'][key]['bval'] = lls.lls_lines[0].attrib['b'].value
             out_dict['LLS'][key]['comment'] = str(lls.comment).strip()
-        # Write
         #QtCore.pyqtRemoveInputHook()
         #xdb.set_trace()
         #QtCore.pyqtRestoreInputHook()
+        # Add coord
+        if self.coord is not None:
+            out_dict['RA'] = self.coord.ra.value
+            out_dict['DEC'] = self.coord.dec.value
+        # Clean for JSON
         clean_dict = ltu.jsonify(out_dict)
+        # Write
         with io.open(self.outfil, 'w', encoding='utf-8') as f:
             f.write(ustr(json.dumps(clean_dict, sort_keys=True, indent=4,
                 separators=(',', ': '))))
