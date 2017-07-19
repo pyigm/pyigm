@@ -104,6 +104,17 @@ class CGMAbsSys(object):
         # Return
         return slf
 
+    @classmethod
+    def from_json(cls, jfile, **kwargs):
+        """
+        Parameters
+        ----------
+        jfile : str
+        """
+        idict = ltu.loadjson(jfile)
+        slf = cls.from_dict(idict, **kwargs)
+        return slf
+
     def __init__(self, galaxy, igm_sys, cosmo=None, name=None, rho=None, PA=None,
                  ang_sep=None, correct_lowz=True, **kwargs):
         """
