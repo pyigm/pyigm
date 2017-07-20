@@ -54,8 +54,8 @@ class CGM(object):
 
     def __repr__(self):
         return ('<CGM: {:s} {:s}, z={:g}>'.format(
-                self.galaxy.coord.fk5.ra.to_string(unit=u.hour, sep=':', pad=True),
-                self.galaxy.coord.fk5.dec.to_string(sep=':', pad=True, alwayssign=True),
+                self.galaxy.coord.icrs.ra.to_string(unit=u.hour, sep=':', pad=True),
+                self.galaxy.coord.icrs.dec.to_string(sep=':', pad=True, alwayssign=True),
                 self.galaxy.z))
 
 
@@ -101,6 +101,7 @@ class CGMAbsSys(object):
                 kwargs2['rho'] = idict['rho']*u.kpc
         # Instantiate
         slf = cls(galaxy, igm_sys, **kwargs2)
+        pdb.set_trace()
         # Return
         return slf
 
@@ -166,8 +167,8 @@ class CGMAbsSys(object):
         # Standard name
         if name is None:
             self.name = 'J{:s}{:s}_{:d}_{:d}'.format(
-                    self.igm_sys.coord.fk5.ra.to_string(unit=u.hour,sep='',pad=True)[0:4],
-                    self.igm_sys.coord.fk5.dec.to_string(sep='',pad=True,alwayssign=True)[0:5],
+                    self.igm_sys.coord.icrs.ra.to_string(unit=u.hour,sep='',pad=True)[0:4],
+                    self.igm_sys.coord.icrs.dec.to_string(sep='',pad=True,alwayssign=True)[0:5],
                     int(np.round(self.PA.to('deg').value)),
                     int(np.round(self.ang_sep.to('arcsec').value)))
         else:
@@ -188,8 +189,8 @@ class CGMAbsSys(object):
         outdict = dict(Name=self.name, z=self.galaxy.z, rho=self.rho.value,
                        ang_sep=self.ang_sep.value,
                        PA=self.PA.value,
-                       RA=self.galaxy.coord.fk5.ra.value,
-                       DEC=self.galaxy.coord.fk5.dec.value,
+                       RA=self.galaxy.coord.icrs.ra.value,
+                       DEC=self.galaxy.coord.icrs.dec.value,
                        cosmo = self.cosmo.name,
                        CreationDate=date,
                        user=user
@@ -229,8 +230,8 @@ class CGMAbsSys(object):
         return ('<{:s}: {:s} Galaxy RA/DEC={:s}{:s}, zgal={:g}, rho={:g}>'.format(
                 self.__class__.__name__,
                 self.name,
-                 self.galaxy.coord.fk5.ra.to_string(unit=u.hour,sep=':',pad=True),
-                 self.galaxy.coord.fk5.dec.to_string(sep=':',pad=True,alwayssign=True),
+                 self.galaxy.coord.icrs.ra.to_string(unit=u.hour,sep=':',pad=True),
+                 self.galaxy.coord.icrs.dec.to_string(sep=':',pad=True,alwayssign=True),
                  self.galaxy.z, self.rho))
 
     def write_json(self, outfil=None):
