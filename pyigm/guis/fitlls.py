@@ -485,6 +485,9 @@ class XFitLLSGUI(QMainWindow):
     def on_key(self,event):
         if event.key in ['C','1','2','!','@']:  # Set continuum level
             if event.key == 'C':
+                if event.xdata is None:
+                    print("No key strokes outside the plot window")
+                    return
                 imin = np.argmin(np.abs(
                     self.continuum.wavelength.value-event.xdata))
                 self.conti_dict['Norm'] = float(event.ydata /
