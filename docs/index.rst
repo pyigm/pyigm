@@ -39,7 +39,17 @@ Contents:
 ..
    To be added:
 
-**Methods and Scripts**
+**GUIs**
+
+.. toctree::
+   :maxdepth: 1
+
+      IGMGuesses <igmguesses>
+      XFitDLA <fitdla>
+      XFitLLS <fitlls>
+
+
+**Misc**
 
 .. toctree::
    :maxdepth: 1

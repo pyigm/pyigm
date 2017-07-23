@@ -3,7 +3,8 @@
 # TEST_UNICODE_LITERALS
 
 import numpy as np
-import os, pdb
+import os
+import pytest
 
 from astropy import units as u
 from astropy.coordinates import SkyCoord
@@ -16,10 +17,10 @@ import linetools
 
 from pyigm.abssys.dla import DLASystem
 
+
 def data_path(filename):
     data_dir = os.path.join(os.path.dirname(__file__), 'files')
     return os.path.join(data_dir, filename)
-
 
 
 def test_simple_dla_init():
@@ -43,6 +44,18 @@ def test_dat_init():
     np.testing.assert_allclose(dla.zabs, 2.309)
 
 
+def test_model_abs():
+    # Simple system (without an absline)
+    dla = DLASystem.from_json(data_path('J010311.38+131616.7_z2.309_ESI.json'))
+    spec_fil = linetools.__path__[0]+'/spectra/tests/files/PH957_f.fits'
+    spec = lsio.readspec(spec_fil)
+    model, lya_lines = dla.model_abs(spec)
+    # import pdb; pdb.set_trace()
+    # Check core
+    ipx = np.argmin(np.abs(spec.wavelength.value-(1+dla.zabs)*1215.67))
+    assert model.flux[ipx].value < 1e-4
+
+
 def test_parse_ion():
     # JXP .ion file
     if os.getenv('DLA') is None:
@@ -55,22 +68,27 @@ def test_parse_ion():
     dla.get_ions(use_Nfile=True)
     assert len(dla._ionN) == 14
 
+
 def test_dla_from_dict():
     dla = DLASystem.from_json(data_path('J010311.38+131616.7_z2.309_ESI.json'))
     assert len(dla._components) == 16
 
+
 def test_DLA_from_components():
     radec = SkyCoord(ra=123.1143*u.deg, dec=-12.4321*u.deg)
     # HI Lya, Lyb
-    lya = AbsLine(1215.670*u.AA)
+    lya = AbsLine(1215.670*u.AA, z=2.92939)
     lya.analy['vlim'] = [-300.,300.]*u.km/u.s
-    lya.attrib['z'] = 2.92939
+    lya.attrib['flag_N'] = 1
     lya.attrib['N'] = 3e20 / u.cm**2
-    lyb = AbsLine(1025.7222*u.AA)
+    lya.attrib['sig_N'] = 1 / u.cm**2
+    lyb = AbsLine(1025.7222*u.AA, z=lya.z)
     lyb.analy['vlim'] = [-300.,300.]*u.km/u.s
-    lyb.attrib['z'] = lya.attrib['z']
     lyb.attrib['N'] = 3e20 / u.cm**2
+    lyb.attrib['flag_N'] = 1
+    lyb.attrib['sig_N'] = 1 / u.cm**2
     abscomp = AbsComponent.from_abslines([lya,lyb])
+    abscomp.synthesize_colm()
     abscomp.coord = radec
     # Instantiate
     HIsys = DLASystem.from_components([abscomp])
@@ -112,4 +130,6 @@ def test_dla_XY():
     dla.XY = RelAbund.from_ionclm_table((1,21.37,0.08), dla._ionN)
     tbl = dla.XY.table()
     assert len(tbl) == 8
+
+
 

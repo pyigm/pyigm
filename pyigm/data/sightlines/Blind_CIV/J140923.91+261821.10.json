@@ -1,0 +1,35 @@
+{
+    "CreationDate": "2016-Nov-18",
+    "DEC": 26.305861111111113,
+    "RA": 212.34962499999997,
+    "class": "IGMSightline",
+    "components": {
+        "CIV_z0.07221": {
+            "A": null,
+            "DEC": 26.305861111111113,
+            "Ej": 0.0,
+            "Name": "CIV_z0.07221",
+            "RA": 212.34962499999997,
+            "Zion": [
+                6,
+                4
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 13.47,
+            "sig_logN": 0.04,
+            "vlim": [
+                -31.112698372208094,
+                31.112698372208094
+            ],
+            "zcomp": 0.07220919596869912
+        }
+    },
+    "em_type": null,
+    "name": "J140923.91+261821.1",
+    "sl_type": "IGM",
+    "user": "xavier",
+    "zem": 0.94
+}

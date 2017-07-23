@@ -1,0 +1,57 @@
+{
+    "CreationDate": "2016-Nov-18",
+    "DEC": 60.4225,
+    "RA": 142.15824999999998,
+    "class": "IGMSightline",
+    "components": {
+        "CIV_z0.01486": {
+            "A": null,
+            "DEC": 60.4225,
+            "Ej": 0.0,
+            "Name": "CIV_z0.01486",
+            "RA": 142.15824999999998,
+            "Zion": [
+                6,
+                4
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 1,
+            "lines": {},
+            "logN": 13.77,
+            "sig_logN": 0.03,
+            "vlim": [
+                -35.35533905932738,
+                35.35533905932738
+            ],
+            "zcomp": 0.014862134065160505
+        },
+        "HI_z0.01494": {
+            "A": null,
+            "DEC": 60.4225,
+            "Ej": 0.0,
+            "Name": "HI_z0.01494",
+            "RA": 142.15824999999998,
+            "Zion": [
+                1,
+                1
+            ],
+            "class": "AbsComponent",
+            "comment": "",
+            "flag_N": 3,
+            "lines": {},
+            "logN": 14.19,
+            "sig_logN": 9999.0,
+            "vlim": [
+                -100.0,
+                100.0
+            ],
+            "zcomp": 0.01494
+        }
+    },
+    "em_type": null,
+    "name": "J092837.98+602521",
+    "sl_type": "IGM",
+    "user": "xavier",
+    "zem": 0.296
+}

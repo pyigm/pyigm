@@ -65,7 +65,6 @@ mpl.use('Agg')
 
 import warnings
 import pdb
-import copy
 
 #Here some general import
 import matplotlib.pyplot as plt
@@ -705,8 +704,7 @@ class Emceeutils():
 
 
     def init_interpolators(self):
-        """
-        This seeds the linear interpolator. For each parameter in the model,
+        """ This seeds the linear interpolator. For each parameter in the model,
         perform linear interpolation along each dimension of the column for one ion
         to return the column density value at an input position
 

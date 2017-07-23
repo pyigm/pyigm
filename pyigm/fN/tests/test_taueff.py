@@ -4,6 +4,7 @@
 
 import numpy as np
 import copy
+import pytest
 
 import astropy.units as u
 
@@ -15,6 +16,21 @@ def data_path(filename):
     data_dir = os.path.join(os.path.dirname(__file__), 'files')
     return os.path.join(data_dir, filename)
 '''
+
+def test_lya_obs():
+    # Float
+    teff = pyteff.lyman_alpha_obs(1.)
+    assert isinstance(teff, float)
+    np.testing.assert_allclose(teff,0.0327531536838541)
+    # Array
+    teff = pyteff.lyman_alpha_obs(np.linspace(0., 4.5, 100))
+    assert len(teff) == 100
+    np.testing.assert_allclose(teff[-1], 1.21192628)
+    # Extrap fail
+    with pytest.raises(ValueError):
+        teff = pyteff.lyman_alpha_obs(np.linspace(0., 5., 100))
+    # Extrap ok
+    teff = pyteff.lyman_alpha_obs(np.linspace(0., 5., 100), zmax=9.)
 
 def test_teff():
     fN_default = FNModel.default_model()
@@ -54,7 +70,7 @@ def test_parallel():
     fN_model = FNModel.default_model()
     # Lines
     HI = LineList('HI')
-    tst_wv = HI._data['wrest']
+    tst_wv = u.Quantity(HI._data['wrest'])
     #
     adict = []
     for wrest in tst_wv:
@@ -68,8 +84,10 @@ def test_parallel():
                                np.array([0.238569, 0.206972,  0.225049]),
                                rtol=1e-4)
 
-
 def test_DM():
     DM = pyteff.DM(1.)
     assert DM.unit == u.pc/u.cm**3
     np.testing.assert_allclose(DM.value, 1235.8727960316237)
+
+
+

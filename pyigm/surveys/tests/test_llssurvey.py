@@ -44,7 +44,7 @@ def test_dat_list():
     lls = LLSSurvey.from_flist('Lists/lls_metals.lst', tree=os.getenv('LLSTREE'))
     # tests
     np.testing.assert_allclose(lls.NHI[0], 19.25)
-    assert lls.nsys == 165
+    assert lls.nsys == 164
 
 
 def test_sdss():

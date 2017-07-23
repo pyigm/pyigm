@@ -235,7 +235,7 @@ class FNModel(object):
         if infinity is True:
             # This is risky...
             # Best to cut it off
-            neval2 = 1000L
+            neval2 = 1000
             lgNHI2 = NHI_max + (99.-NHI_max)*np.arange(neval2)/(neval2-1.)
             dlgN = lgNHI2[1] - lgNHI2[0]
             lgfNX = np.zeros((neval2, nz))

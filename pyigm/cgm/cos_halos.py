@@ -25,6 +25,12 @@ from pyigm.cgm.cgmsurvey import CGMAbsSurvey
 from pyigm.field.galaxy import Galaxy
 from .cgm import CGMAbsSys
 from pyigm.abssys.igmsys import IGMSystem
+import pyigm
+
+try:
+    basestring
+except NameError:  # For Python 3
+    basestring = str
 
 class COSHalos(CGMAbsSurvey):
     """Inherits CGM Abs Survey
@@ -44,11 +50,11 @@ class COSHalos(CGMAbsSurvey):
         self.ref = 'Tumlinson+11; Werk+12; Tumlinson+13; Werk+13; Werk+14'
         #
         if cdir is None:
-            if os.environ.get('COSHALOS_DATA') is None:
-                raise ValueError("Need to set COSHALOS_DATA variable")
-            self.cdir = os.environ.get('COSHALOS_DATA')
+            self.cdir = pyigm.__path__[0]+'/data/CGM/COS_Halos/'
         else:
             self.cdir = cdir
+        # Spectra dir
+        self.data_dir = os.getenv('COSHALOS_DATA')
         # Summary Tables
         if fits_path is None:
             self.fits_path = self.cdir+'/Summary/'
@@ -149,7 +155,6 @@ class COSHalos(CGMAbsSurvey):
             all_ion.append(iont['ZION'][0][1])
             # AbsLines
             abslines = []
-            #for kk in range(iont['NTRANS']):
             ntrans = len(np.where(iont['LAMBDA'][0] > 1.)[0])
             for kk in range(ntrans):
                 flg = iont['FLG'][0][kk]
@@ -332,7 +337,7 @@ class COSHalos(CGMAbsSurvey):
             tarfiles = glob.glob(self.cdir+'cos-halos_systems.v*.tar.gz')
             tarfiles.sort()
             tfile = tarfiles[-1]
-        print("Be patient, using {:s} to load COS-Halos".format(tfile))
+        print("Be patient, using {:s} to load".format(tfile))
         # Empty
         if empty:
             self.cgm_abs = []
@@ -369,7 +374,7 @@ class COSHalos(CGMAbsSurvey):
 
         """
         fh5=h5py.File(ZH_fil, 'r')
-        mkeys = fh5['met'].keys()
+        mkeys = list(fh5['met'].keys())
         mkeys.remove('left_edge_bins')
         mkeys.remove('right_edge_bins')
         mkeys = np.array(mkeys)
@@ -509,7 +514,7 @@ class COSHalos(CGMAbsSurvey):
         # Init
         cgm_abs = self[inp]
         # Directories
-        galdir = self.cdir+'/Galaxies/'
+        galdir = self.data_dir+'/Galaxies/'
         #fielddir = 'fields/'+cgm_abs.field+'/'
         #sysdir = cgm_abs.gal_id+'/spec1d/'
         sysname = cgm_abs.galaxy.field+'_'+cgm_abs.galaxy.gal_id
@@ -550,7 +555,7 @@ class COSHalos(CGMAbsSurvey):
         sysname = cgm_abs.galaxy.field+'_'+sysdir
 
         # Transition
-        templ_fil = self.cdir+'/Targets/system_template.lst'
+        templ_fil = self.data_dir+'/Targets/system_template.lst'
         tab = ascii.read(templ_fil)
         mt = np.argmin(np.abs(tab['col1']-wrest.value))
         if np.abs(tab['col1'][mt]-wrest.value) > 1e-2:
@@ -558,7 +563,7 @@ class COSHalos(CGMAbsSurvey):
         trans = tab['col2'][mt]+tab['col3'][mt]
 
         # Read
-        slicedir = self.cdir+'/Targets/fitting/'
+        slicedir = self.data_dir+'/Targets/fitting/'
         slicename = sysname+'_'+trans+'_slice.fits'
         try:
             spec = lsio.readspec(slicedir+slicename,
@@ -659,7 +664,7 @@ class COSHalos(CGMAbsSurvey):
             raise ValueError("Multiple hits.  Should not happen")
 
 
-def update_cos_halos(self):
+def update_cos_halos(v10=False, v11=True):
     """ Updates the JSON tarball
     Returns
     -------
@@ -667,48 +672,98 @@ def update_cos_halos(self):
     print("See the COS-Halos_database notebook for details")
 
     # Generate v1.0
-    print("Generate v1.0 of the JSON tarball")
-    cos_halos = COSHalos()
-    cos_halos.load_mega()
-    tarfil = cos_halos.cdir+'/cos-halos_systems.v1.0.tar.gz'
-    cos_halos.write_survey(tarfil)
-    del cos_halos
+    if v10:
+        print("Generate v1.0 of the JSON tarball")
+        cos_halos = COSHalos()
+        cos_halos.load_mega()
+        tarfil = cos_halos.cdir+'/cos-halos_systems.v1.0.tar.gz'
+        cos_halos.write_survey(tarfil)
+        del cos_halos
 
     # Generate v1.1 which uses the NHI measurements from P+16 and
     #   modifies a few ions and transitions as limits or NG
-    print("Generate v1.1 of the JSON tarball")
-    cos_halos_v10 = COSHalos()
-    cos_halos_v10.load_sys(tfile=cos_halos.cdir+'/cos-halos_systems.v1.0.tar.gz')
-    # NHI
-    LLS_file = cos_halos_v10.cdir + '/Updates/COS_Halos_LLS.json'
-    with open(LLS_file) as json_file:
-        fdict = json.load(json_file)
-    # Loop on systems
-    names = cos_halos_v10.name
-    for key in fdict.keys():
-        # Match
-        mt = np.where(names == key)[0]
-        if len(mt) != 1:
-            raise ValueError("No match?!")
-        # Fill in
-        if fdict[key]['flag_NHI'] == 1:
-            cos_halos_v10.cgm_abs[mt[0]].igm_sys.NHI = fdict[key]['fit_NHI'][0]
-            cos_halos_v10.cgm_abs[mt[0]].igm_sys.sig_NHI = (fdict[key]['fit_NHI'][2]-fdict[key]['fit_NHI'][1])/2.
-            cos_halos_v10.cgm_abs[mt[0]].igm_sys.flag_NHI = 1
-        elif fdict[key]['flag_NHI'] == 2:
-            cos_halos_v10.cgm_abs[mt[0]].igm_sys.NHI = fdict[key]['fit_NHI'][1]
-            cos_halos_v10.cgm_abs[mt[0]].igm_sys.flag_NHI = 2
-        elif fdict[key]['flag_NHI'] == 3:
-            cos_halos_v10.cgm_abs[mt[0]].igm_sys.NHI = fdict[key]['fit_NHI'][2]
-            cos_halos_v10.cgm_abs[mt[0]].igm_sys.flag_NHI = 3
-    # Bad ions
-    filename = cos_halos_v10.cdir + '/Updates/COS_Halos_ions_updates.yaml'
-    with open(filename, 'r') as infile:
-            up_ion_data = yaml.load(infile)
-    #
+    if v11:
+        print("Generate v1.1 of the JSON tarball")
+        cos_halos_v10 = COSHalos(load=False)
+        tfile = pyigm.__path__[0]+'/data/CGM/COS_Halos/cos-halos_systems.v1.0.tar.gz'
+        cos_halos_v10.load_sys(tfile=tfile)
+        # NHI
+        LLS_file = pyigm.__path__[0]+'/data/CGM/COS_Halos/COS_Halos_LLS.json'
+        with open(LLS_file) as json_file:
+            fdict = json.load(json_file)
+        # Loop on systems
+        names = cos_halos_v10.name
+        for key in fdict.keys():
+            # Match
+            mt = np.where(names == key)[0]
+            if len(mt) != 1:
+                raise ValueError("No match?!")
+            # Fill in
+            if fdict[key]['flag_NHI'] == 1:
+                cos_halos_v10.cgm_abs[mt[0]].igm_sys.NHI = fdict[key]['fit_NHI'][0]
+                cos_halos_v10.cgm_abs[mt[0]].igm_sys.sig_NHI = [fdict[key]['fit_NHI'][0]-fdict[key]['fit_NHI'][1],
+                                                                fdict[key]['fit_NHI'][2]-fdict[key]['fit_NHI'][0]]
+                cos_halos_v10.cgm_abs[mt[0]].igm_sys.flag_NHI = 1
+            elif fdict[key]['flag_NHI'] == 2:
+                cos_halos_v10.cgm_abs[mt[0]].igm_sys.NHI = fdict[key]['fit_NHI'][1]
+                cos_halos_v10.cgm_abs[mt[0]].igm_sys.flag_NHI = 2
+            elif fdict[key]['flag_NHI'] == 3:
+                cos_halos_v10.cgm_abs[mt[0]].igm_sys.NHI = fdict[key]['fit_NHI'][2]
+                cos_halos_v10.cgm_abs[mt[0]].igm_sys.flag_NHI = 3
+        # Bad ions
+        filename = pyigm.__path__[0]+'/data/CGM/COS_Halos/COS_Halos_ions_updates_v1.0.yaml'
+        with open(filename, 'r') as infile:
+                up_ion_data = yaml.load(infile)
+        for key in up_ion_data.keys():
+            # Match
+            mt = np.where(names == key)[0]
+            if len(mt) != 1:
+                raise ValueError("No match?!")
+            igm_sys = cos_halos_v10.cgm_abs[mt[0]].igm_sys
+            # Fill in
+            for mod_type in up_ion_data[key].keys():
+                if mod_type == 'ion':
+                    for ionkey in up_ion_data[key][mod_type].keys():
+                        Zion = tuple([int(ii) for ii in ionkey.split(',')])
+                        #
+                        Zicomp = [comp.Zion for comp in igm_sys._components]
+                        mtZi = Zicomp.index(Zion)
+                        # Set
+                        for att_key in up_ion_data[key][mod_type][ionkey].keys():
+                            if att_key == 'flag_N':
+                                #cos_halos_v10.cgm_abs[mt[0]].igm_sys._components[mtZi].flag_N = up_ion_data[key][mod_type][ionkey][att_key]
+                                igm_sys._components[mtZi].flag_N = up_ion_data[key][mod_type][ionkey][att_key]
+                            else:
+                                raise ValueError("Bad key for attribute")
+                        print(cos_halos_v10.cgm_abs[mt[0]].igm_sys._components[mtZi])
+                elif mod_type == 'trans':
+                    for transkey in up_ion_data[key][mod_type].keys():
+                        # Update AbsLine
+                        lines = igm_sys.list_of_abslines()
+                        trans = [iline.name for iline in lines]
+                        aline = lines[trans.index(transkey)]
+                        comp = igm_sys.get_comp_from_absline(aline)  # Grab it now before it changes
+                        if att_key == 'flag_N':
+                            aline.attrib['flag_N'] = up_ion_data[key][mod_type][transkey][att_key]
+                        # Remake component
+                        try:
+                            comp.synthesize_colm(overwrite=True)
+                        except ValueError:
+                            pdb.set_trace()
+                else:
+                    raise ValueError("Bad mod_type")
+        # Metallicity
+        mtlfil = pyigm.__path__[0]+'/data/CGM/COS_Halos/COS_Halos_MTL_final.hdf5'
+        cos_halos_v10.load_mtl_pdfs(mtlfil)
+        #
+        for cgm_abs in cos_halos_v10.cgm_abs:
+            if hasattr(cgm_abs.igm_sys, 'metallicity'):
+                cgm_abs.igm_sys.ZH = cgm_abs.igm_sys.metallicity.medianZH
+                cgm_abs.igm_sys.sig_ZH = cgm_abs.igm_sys.metallicity.confidence_limits(0.68)
+        # Write
+        tarfil = pyigm.__path__[0]+'/data/CGM/COS_Halos/cos-halos_systems.v1.1.tar.gz'
+        cos_halos_v10.write_survey(tarfil)
 
-    # Write
-    tarfil = cos_halos_v10.cdir+'/cos-halos_systems.v1.1.tar.gz'
 
 class COSDwarfs(COSHalos):
     """Inherits COS Halos Class

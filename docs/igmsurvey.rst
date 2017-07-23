@@ -14,7 +14,7 @@ Notebooks
 
    Simple Examples <IGMSurvey_examples>
    LLS <LLSSurvey_examples>
-   DLA <DLASystem_examples>
+   DLA <DLASurvey_examples>
 
 Overview
 ========
@@ -146,6 +146,40 @@ selection function :math:`g(z)` curve::
    # DLA
    sdss = DLASurvey.load_SDSS_DR5()
    zeval, gz = sdss.calculate_gz()
+
+
+f(N,X)
+++++++
+
+Calculate the NHI frequency distribituion in bins of NHI and z.  e.g., ::
+
+    fN, fN_lo, fN_hi = sdss_stat.calculate_fn([20.3, 20.5, 21., 21.5, 22.], [2, 2.5], log=True)
+
+Setting log=True returns log10 values for f(N) and its error.
+
+l(X)
+++++
+
+Calculate the incidence per unit dX in binned redshift
+intervals.  Default is over all NHI values.  Here is an
+example::
+
+    lX, lX_lo, lX_hi = sdss_stat.calculate_lox([2., 2.5, 3])
+
+This calculates lX and its error in the intervals z=[2,2.5]
+and z=[2.5,3.].
+
+rhoHI
++++++
+
+Similar to the last two methods but now for the HI mass density.
+Here is an example::
+
+    zbins = [2., 2.5, 3.]
+    NHImnx = (20.3, 23.)
+    rho, rho_lo, rho_hi = sdss_stat.calculate_rhoHI(zbins, NHImnx)
+
+rho will have units of Solar mass per Mpc^3.
 
 Output
 ======

@@ -20,6 +20,7 @@ def load_sys_files(inp, type, ref=None, sys_path=False, **kwargs):
     Parameters
     ----------
     inp : str
+      Name of JSON tarball or if sys_path=True then the path to a folder of JSON files
     type : str
       type of IGMSystem, e.g. LLS
     ref : str, optional

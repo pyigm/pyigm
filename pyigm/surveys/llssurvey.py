@@ -5,9 +5,12 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import numpy as np
 import imp, glob
 import pdb
-import urllib2
 import h5py
 import json
+try:
+    from urllib2 import urlopen # Python 2.7
+except ImportError:
+    from urllib.request import urlopen
 
 
 from astropy.table import QTable, Column, Table
@@ -95,6 +98,55 @@ class LLSSurvey(IGMSurvey):
         return lls_survey
 
     @classmethod
+    def load_lowz(cls, grab_spectra=False, isys_path=None):
+        """ LLS from Wotta+16 (includes Lehner+13)
+        Updated to include systems excluded by Wotta+16 (high NHI)
+
+        Parameters
+        ----------
+        grab_spectra : bool, optional
+          Not implemented
+
+        Return
+        ------
+        lls_survey
+        """
+
+        # System files
+        l13_files = pyigm_path+'/data/LLS/Literature/lehner13.tar.gz'
+        w16_files = pyigm_path+'/data/LLS/Literature/wotta16.tar.gz'
+
+
+        # Load systems via the sys tarball.  Includes transitions
+        L13_survey = pyisu.load_sys_files(l13_files, 'LLS', ref='Lehner+13')
+        W16_survey = pyisu.load_sys_files(w16_files, 'LLS', ref='Wotta+16')
+        lowz_LLS = L13_survey+W16_survey
+
+        # Spectra?
+        if grab_spectra:
+            raise NotImplementedError("NOPE")
+            specfils = glob.glob(spath+'HD-LLS_J*.fits')
+            if len(specfils) < 100:
+                import tarfile
+                print('HD-LLS: Downloading a 155Mb file.  Be patient..')
+                url = 'http://www.ucolick.org/~xavier/HD-LLS/DR1/HD-LLS_spectra.tar.gz'
+                spectra_fil = pyigm_path+'/data/LLS/HD-LLS/HD-LLS_spectra.tar.gz'
+                f = urlopen(url)
+                with open(spectra_fil, "wb") as code:
+                    code.write(f.read())
+                # Unpack
+                print('HD-LLS: Unpacking..')
+                outdir = pyigm_path+"/data/LLS/HD-LLS"
+                t = tarfile.open(spectra_fil, 'r:gz')
+                t.extractall(outdir)
+                # Done
+                print('HD-LLS: All done')
+            else:
+                print('HD-LLS: Using files in {:s}'.format(spath))
+
+        return lowz_LLS
+
+    @classmethod
     def load_HDLLS(cls, load_sys=True, grab_spectra=False, isys_path=None):
         """ Default sample of LLS (HD-LLS, DR1)
 
@@ -175,7 +227,7 @@ class LLSSurvey(IGMSurvey):
         ras = []
         decs = []
         zval = []
-        mkeys = fh5['met'].keys()
+        mkeys = list(fh5['met'].keys())  # Python 3
         mkeys.remove('left_edge_bins')
         for key in mkeys:
             radec, z = key.split('z')
@@ -199,6 +251,8 @@ class LLSSurvey(IGMSurvey):
                 raise ValueError("Bad match")
             elif len(mt) > 1:  # Take closest
                 mt = np.argmin(sep)
+            else:
+                mt = mt[0]
             # Save
             lls.metallicity = MetallicityPDF(fh5['met']['left_edge_bins']+
                                              fh5['met']['left_edge_bins'].attrs['BINSIZE']/2.,
@@ -212,7 +266,7 @@ class LLSSurvey(IGMSurvey):
                 print('HD-LLS: Downloading a 155Mb file.  Be patient..')
                 url = 'http://www.ucolick.org/~xavier/HD-LLS/DR1/HD-LLS_spectra.tar.gz'
                 spectra_fil = pyigm_path+'/data/LLS/HD-LLS/HD-LLS_spectra.tar.gz'
-                f = urllib2.urlopen(url)
+                f = urlopen(url)
                 with open(spectra_fil, "wb") as code:
                     code.write(f.read())
                 # Unpack
@@ -401,7 +455,7 @@ def lls_stat(LLSs, qsos, vprox=3000.*u.km/u.s, maxdz=99.99,
     msk_smpl : bool array
       True = statistical
     """
-    from linetools.utils import z_from_v
+
     # Search redshift
     if flg_zsrch == 0:
         zsrch = qsos['ZT2']
@@ -416,7 +470,7 @@ def lls_stat(LLSs, qsos, vprox=3000.*u.km/u.s, maxdz=99.99,
 
     # LLS
     msk_smpl = LLSs.zem != LLSs.zem
-    zmax = z_from_v(qsos['ZEM'], vprox)
+    zmax = ltu.z_from_dv(vprox*np.ones(len(qsos)), qsos['ZEM'].data)  # vprox must be array-like to be applied to each individual qsos['ZEM']
 
     # Make some lists
     lls_coord = LLSs.coord

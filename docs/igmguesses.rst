@@ -55,12 +55,16 @@ Optional arguments
                                                     shown/stored within a component. This is useful 0.005
                                                     for getting rid of very weak transitions from
                                                     the model
+    --vlim VLIM                                     Velocity limit (in km/s) for the display        500.
+    --external_model EXTERNAL_MODEL                 Name of an external spectrum model fits file
+    --scale SCALE                                   Scaling of screen                               1.
     =============================================== =============================================== ==============
 
 The number of transitions available for some ions  can be excessive for many,
 especially low-redshift spectra (e.g. CI, CI**), so using the default argument
 "--n_max_tuple 5" is a decent starting option. Feel free however to try different
-values depending on your scientific needs.
+values depending on your scientific needs. If an external model is given, you can toggle
+displaying/hiding it using the keystroke 'E' (for external).
 
 
 Component definition
@@ -175,8 +179,9 @@ main panels, these are:
   component, i.e. (N, b, z). You can slightly increase/decrease the current
   values using the keystrokes 'N'/'n', 'V'/'v' and '<'/'>', respectively. You
   can also modify them directly by hand just editing the respective values on
-  the widget itself. Reliability flags must be chosen from the available list (see
-  above for definitions). A string comment can also be entered
+  the widget itself. After done with editing, make sure you press the "Update" button.
+  Reliability flags must be chosen from the available list (see
+  above for definitions). A string comment can also be entered.
 
 - **Components List** *(middle right)*: This widget displays and allows to
   navigate between currently defined components. The name of the component
@@ -259,3 +264,5 @@ Other options for model visualization include:
     (see above)
 
     - **Show/hide model**: use 'M' to toggle on/off the model being displayed.
+
+    - **Show/hide external model**: use 'E' to toggle on/off the model being displayed.
