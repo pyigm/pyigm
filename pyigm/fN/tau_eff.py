@@ -71,7 +71,7 @@ def lyman_limit(fN_model, z912, zem, N_eval=5000, N_zeval=100, cosmo=None, debug
     N_eval : int, optional
       Discretization parameter for NHI values (5000)
     N_zeval : int, optional
-      Discretization parameter for z (5000)
+      Discretization parameter for z (100)
     debug : bool, optional
 
     Returns

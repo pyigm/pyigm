@@ -470,7 +470,7 @@ class FNModel(object):
         else:
             return log_fNX
 
-    def mfp(self, zem, neval=5000, cosmo=None, zmin=0.6):
+    def mfp(self, zem, neval=5000, nzeval=100, cosmo=None, zmin=0.6):
         """ Calculate mean free path
 
         Parameters
@@ -480,7 +480,7 @@ class FNModel(object):
         cosmo : astropy.cosmology, optional
           Cosmological model to adopt (as needed)
         neval : int, optional
-          Discretization parameter (5000)
+          Discretization parameter for NHI (5000)
         zmin: float, optional
           Minimum redshift in the calculation (0.5)
 
@@ -497,11 +497,12 @@ class FNModel(object):
             cosmo = cosmology.core.FlatLambdaCDM(70., 0.3)
 
         # Calculate teff
-        zval, teff_LL = pyteff.lyman_limit(self, zmin, zem, N_eval=neval, cosmo=cosmo)
+        zval, teff_LL = pyteff.lyman_limit(self, zmin, zem, N_eval=neval, N_zeval=nzeval, cosmo=cosmo)
 
         # Find tau=1
         zt_interp = scii.interp1d(teff_LL, zval)
         ztau1 = zt_interp(1.)  # Will probably break if 1 is not covered
+        print('ztau1 = {}'.format(ztau1))
 
         # MFP
         mfp = np.fabs(cosmo.lookback_distance(ztau1) -
