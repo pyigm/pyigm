@@ -390,7 +390,7 @@ class FNModel(object):
                                         np.log10(1+z_val)))  #; (1+z)^gamma
                 z_grid2 = np.outer( np.ones(lenfX)*((1./(1+self.zpivot))**self.gamma), 
                             np.ones(len(z_val)))
-                log_fNX = lgNHI_grid + np.log10(z_grid1*z_grid2) 
+                log_fNX = lgNHI_grid + np.log10(z_grid1*z_grid2)
 
         # Gamma function (e.g. Inoue+14)
         elif self.mtype == 'Gamma':

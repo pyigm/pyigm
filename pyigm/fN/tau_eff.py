@@ -53,7 +53,7 @@ def DM(z, cosmo=None):
     return DM.to('pc/cm**3')
 
 
-def lyman_limit(fN_model, z912, zem, N_eval=5000, cosmo=None, debug=False):
+def lyman_limit(fN_model, z912, zem, N_eval=5000, N_zeval=100, cosmo=None, debug=False):
     """ Calculate teff_LL
 
     Effective opacity from LL absorption at z912 from zem
@@ -69,7 +69,9 @@ def lyman_limit(fN_model, z912, zem, N_eval=5000, cosmo=None, debug=False):
     cosmo : astropy.cosmology, optional
       Cosmological model to adopt (as needed)
     N_eval : int, optional
-      Discretization parameter (5000)
+      Discretization parameter for NHI values (5000)
+    N_zeval : int, optional
+      Discretization parameter for z (5000)
     debug : bool, optional
 
     Returns
@@ -86,7 +88,7 @@ def lyman_limit(fN_model, z912, zem, N_eval=5000, cosmo=None, debug=False):
     Nval = 10.**lgNval
 
     # z array
-    zval = z912 + (zem-z912)*np.arange(N_eval)/(N_eval-1.)
+    zval = z912 + (zem-z912)*np.arange(N_zeval)/(N_zeval-1.)
     dz = np.fabs(zval[1]-zval[0])
 
     teff_LL = np.zeros(N_eval)
@@ -113,7 +115,7 @@ def lyman_limit(fN_model, z912, zem, N_eval=5000, cosmo=None, debug=False):
     sumz_first = False
     if sumz_first is False:
         #; Sum in N first
-        N_summed = np.sum(intg * np.outer(Nval, np.ones(N_eval)),  0) * dlgN * np.log(10.)
+        N_summed = np.sum(intg * np.outer(Nval, np.ones(N_zeval)),  0) * dlgN * np.log(10.)
         # Sum in z
         teff_LL = (np.cumsum(N_summed[::-1]))[::-1] * dz
 

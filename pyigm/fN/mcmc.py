@@ -10,18 +10,16 @@ import pdb
 import pymc
 #import MCMC_errors
 
+from pkg_resources import resource_filename
+
 from astropy.table import Table
 
-import pyigm
 from pyigm.fN import plots
 from pyigm.fN.fnmodel import FNModel
 from pyigm.fN.constraints import FNConstraint
 from pyigm.fN import tau_eff
 
 from time import gmtime, strftime
-
-pyigm_path = imp.find_module('pyigm')[1]
-
 
 def set_fn_model(flg=0, use_p14=False):
     """ Load up f(N) model
@@ -42,8 +40,11 @@ def set_fn_model(flg=0, use_p14=False):
         sfN_model = FNModel('Gamma')
     elif flg==2:
         tfN_model = FNModel.default_model()
+        # GGG analysis
+        pdb.set_trace() # BEING DEVELOPED IN GGG/LLS/Analysis/py
         zpivot = 4.4
-        NHI_pivots = [11., 15., 17.0, 20.0, 21.5, 22.]
+        #NHI_pivots = [11., 15., 17.0, 20.0, 21.5, 22.]
+        NHI_pivots = [11., 15., 17.0, 18.0, 20.0, 21.5, 22.]
         if use_p14:
             param = []
             for NHI in NHI_pivots:
@@ -53,7 +54,7 @@ def set_fn_model(flg=0, use_p14=False):
                     (1+zpivot)/(1+tfN_model.zpivot))**tfN_model.gamma)
                 param.append(adj_parm)
         else:
-            param = [-8.45, -13.959, -18.06, -21.000, -23.735, -24.88]
+            #param = [-8.45, -13.959, -18.06, -21.000, -23.735, -24.88]
             if len(param) != len(NHI_pivots):
                 raise ValueError("Incorrect number of parameters")
         # Init
@@ -65,7 +66,7 @@ def set_fn_model(flg=0, use_p14=False):
     return sfN_model
 
 
-def set_fn_data(flg=2, sources=None, extra_fNc=[]):
+def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1.):
     """ Load up f(N) data
 
     Parameters
@@ -76,6 +77,8 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[]):
     sources : list, optional
       References for constraints
     extra_fNc : list, optional
+    sigteff_boost : float, optional
+      Boost the error in teff by this factor (it can be *too* constraining)
 
     Returns
     -------
@@ -86,9 +89,9 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[]):
         if sources is None:
             sources = ['OPB07', 'OPW12', 'OPW13', 'K05', 'K13R13', 'N12']
 
-        fn_file = pyigm_path+'/data/fN/fn_constraints_z2.5_vanilla.fits'
-        k13r13_file = pyigm_path+'/data/fN/fn_constraints_K13R13_vanilla.fits'
-        n12_file = pyigm_path+'/data/fN/fn_constraints_N12_vanilla.fits'
+        fn_file = resource_filename('pyigm', '/data/fN/fN_constraints_z2.5_vanilla.fits')
+        k13r13_file = resource_filename('pyigm', '/data/fN/fN_constraints_K13R13_vanilla.fits')
+        n12_file = resource_filename('pyigm', '/data/fN/fN_constraints_N12_vanilla.fits')
         all_fN_cs = FNConstraint.from_fitsfile([fn_file,k13r13_file,n12_file])
 
         # Add on, e.g. user-supplied
@@ -113,7 +116,7 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[]):
             pdb.set_trace()
     elif flg == 5:
         if sources is None:
-            sources = ['Worseck+14', 'Crighton+15', 'Crighton+16', 'Becker+13']
+            sources = ['Worseck+14', 'Crighton+15', 'Crighton+17', 'Becker+13']
         chk_sources = sources[:]
 
         #all_fN_cs = FNConstraint.from_fitsfile([fn_file,k13r13_file,n12_file])
@@ -123,10 +126,13 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[]):
         fN_MFPb = FNConstraint('MFP', 4.86, ref='Worseck+14', flavor='\\lmfp', data=dict(MFP=15.1,SIG_MFP=1.8, COSM='VANILLA'))
         fN_MFPc = FNConstraint('MFP', 5.16, ref='Worseck+14', flavor='\\lmfp', data=dict(MFP=10.3,SIG_MFP=1.6, COSM='VANILLA'))
         fN_MFP = [fN_MFPa, fN_MFPb, fN_MFPc]
-        # LLS (Crighton+16)
-        fN_LLSa = FNConstraint('LLS', np.mean([3.75,4.40]), ref='Crighton+16', flavor='\\tlox', data=dict(LX=0.628,SIG_LX=0.095, TAU_LIM=2., COSM='VANILLA'))
-        fN_LLSb = FNConstraint('LLS', np.mean([4.40,4.70]), ref='Crighton+16', flavor='\\tlox', data=dict(LX=0.601,SIG_LX=0.102, TAU_LIM=2., COSM='VANILLA'))
-        fN_LLSc = FNConstraint('LLS', np.mean([4.70, 5.40]), ref='Crighton+16', flavor='\\tlox', data=dict(LX=0.928,SIG_LX=0.151, TAU_LIM=2., COSM='VANILLA'))
+        # LLS (Crighton+17)
+        #fN_LLSa = FNConstraint('LLS', np.mean([3.75,4.40]), ref='Crighton+16', flavor='\\tlox', data=dict(LX=0.628,SIG_LX=0.095, TAU_LIM=2., COSM='VANILLA'))
+        #fN_LLSb = FNConstraint('LLS', np.mean([4.40,4.70]), ref='Crighton+16', flavor='\\tlox', data=dict(LX=0.601,SIG_LX=0.102, TAU_LIM=2., COSM='VANILLA'))
+        #fN_LLSc = FNConstraint('LLS', np.mean([4.70, 5.40]), ref='Crighton+16', flavor='\\tlox', data=dict(LX=0.928,SIG_LX=0.151, TAU_LIM=2., COSM='VANILLA'))
+        fN_LLSa = FNConstraint('LLS', np.mean([3.75,4.40]), ref='Crighton+17', flavor='\\tlox', data=dict(LX=0.529,SIG_LX=0.073, TAU_LIM=2., COSM='VANILLA'))
+        fN_LLSb = FNConstraint('LLS', np.mean([4.40,4.70]), ref='Crighton+17', flavor='\\tlox', data=dict(LX=0.576,SIG_LX=0.090, TAU_LIM=2., COSM='VANILLA'))
+        fN_LLSc = FNConstraint('LLS', np.mean([4.70, 5.40]), ref='Crighton+17', flavor='\\tlox', data=dict(LX=0.637,SIG_LX=0.089, TAU_LIM=2., COSM='VANILLA'))
         fN_LLS = [fN_LLSa, fN_LLSb, fN_LLSc]
         # DLA (Crighton+15)
         tau_lim = 10.**(20.3-17.19)
@@ -144,14 +150,14 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[]):
 
         fN_DLA = [fN_DLAa, fN_DLAb, fN_DLAc]
         # tau_eff (Becker+13)
-        b13_tab2 = Table.read(pyigm.__path__[0]+'/data/teff/becker13_tab2.dat', format='ascii')
+        b13_tab2 = Table.read(resource_filename('pyigm','/data/teff/becker13_tab2.dat'), format='ascii')
         fN_teff = []
         for row in b13_tab2:
             if row['z'] < 4.:
                 continue
             # calculate
             teff = -1*np.log(row['F'])
-            sigteff = row['s(F)']/row['F']
+            sigteff = row['s(F)']/row['F']*sigteff_boost
             # Generate
             fN = FNConstraint('teff', row['z'], ref='Becker+13', flavor='\\tlya',
                               data=dict(Z_TEFF=row['z'], TEFF=teff, SIG_TEFF=sigteff,
@@ -185,7 +191,7 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[]):
 ##########################################
 #   Prepare the variables and their limits
 ##########################################
-def set_pymc_var(fN_model,lim=2.):
+def set_pymc_var(fN_model,lim=2., tauv=0.025):
     """ Generate pymc variables
 
     Parameters
@@ -212,7 +218,7 @@ def set_pymc_var(fN_model,lim=2.):
             #iparm = np.append(iparm, pymc.Uniform(nm, lower=fN_model.param[ii]-lim,
             #                                    upper=fN_model.param[ii]+lim, doc=doc))
             #iparm = np.append(iparm, pymc.Normal(nm, mu=fN_model.param['sply'][ii]*(1+rand[ii]), tau=1./0.025, doc=doc))
-            iparm = np.append(iparm, pymc.Normal(nm, mu=fN_model.param['sply'][ii], tau=1./0.025, doc=doc))
+            iparm = np.append(iparm, pymc.Normal(nm, mu=fN_model.param['sply'][ii], tau=1./tauv, doc=doc))
     elif fN_model.fN_mtype == 'Gamma':  # Inoue+14
         raise ValueError("NOT UPDATED FOR THIS")
         rand = 0.2*(np.random.rand(4)-0.5) 
@@ -279,6 +285,10 @@ def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
     lX_inputs = []
     lX = []
     sig_lX = []
+    flg_MFP = 0
+    MFP_inputs = []
+    MFP = []
+    sig_MFP = []
     for fN_c in fN_cs:
         # Standard f(N)
         if fN_c.fN_dtype == 'fN':
@@ -312,8 +322,11 @@ def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
             # Save input for later usage
             lX_inputs.append((fN_c.zeval, fN_c.data['TAU_LIM']))
         elif fN_c.fN_dtype == 'MFP':
-            warnings.warn("Skipping MFP for now")
-            continue
+            flg_MFP += 1
+            MFP.append(fN_c.data['MFP'])
+            sig_MFP.append(fN_c.data['SIG_MFP'])
+            MFP_inputs.append(fN_c.zeval)
+            #warnings.warn("Skipping MFP for now")
         else:
             raise IOError("Not ready for fNConstraint of type {:s}".format(fN_c.fN_dtype))
             
@@ -338,6 +351,16 @@ def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
         pymc_list.append(pymc_fn_model)
 
     if flg_teff:
+        # Load for speed up
+        import yaml
+        from astropy import units as u
+        from linetools.lists.linelist import LineList
+        EW_FIL = resource_filename('pyigm', '/data/fN/EW_SPLINE_b24.yml')
+        with open(EW_FIL, 'r') as infile:
+            EW_spline = yaml.load(infile)  # dict from mk_ew_lyman_spline
+        # More
+        HI = LineList('HI')
+        wrest = u.Quantity(HI._data['wrest'])
         # Define teff model for PyMC
         @pymc.deterministic(plot=False)
         def pymc_teff_model(parm=parm):
@@ -348,7 +371,8 @@ def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
             model_teff = []
             for teff_input in teff_inputs:
                 model_teff.append(tau_eff.lyman_ew(1215.6701*(1+teff_input[0]), teff_input[0]+0.1,
-                                               fN_model, NHI_MIN=teff_input[1], NHI_MAX=teff_input[2]))
+                                               fN_model, NHI_MIN=teff_input[1], NHI_MAX=teff_input[2],
+                                        EW_spline=EW_spline, wrest=wrest))
             return np.array(model_teff)
         pymc_list.append(pymc_teff_model)
 
@@ -366,6 +390,22 @@ def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
             return np.array(model_lX)
         pymc_list.append(pymc_lX_model)
 
+    if flg_MFP:
+        # Define l(X) model for PyMC
+        @pymc.deterministic(plot=False)
+        def pymc_MFP_model(parm=parm):
+            # Set parameters
+            aparm = np.array([parm[i] for i in range(parm.size)])
+            fN_model.update_parameters(aparm)
+            # Calculate MFP
+            model_MFP = []
+            for MFP_input in MFP_inputs:
+                # neval=100 speeds things up 2500x
+                # zmin=MFP_input-1. will *break* at z<3
+                model_MFP.append(fN_model.mfp(MFP_input, neval=1000, zmin=MFP_input-1.).to('Mpc').value)
+            return np.array(model_MFP)
+        pymc_list.append(pymc_MFP_model)
+
     """
     Generate the Data
     """
@@ -382,29 +422,33 @@ def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
                                 value=np.array(teff), observed=True)
         pymc_list.append(pymc_teff_data)
 
-    # Define l(X)_LLS model for PyMC
+    # Define l(X) model for PyMC
     if flg_lX:
         pymc_lls_data = pymc.Normal(str('lXdata'), mu=pymc_lX_model, tau=1.0/np.array(sig_lX)**2,
                                 value=np.array(lX), observed=True)
         pymc_list.append(pymc_lls_data)
 
-
+    # Define MFP model for PyMC
+    if flg_MFP:
+        pymc_MFP_data = pymc.Normal(str('MFPdata'), mu=pymc_MFP_model, tau=1.0/np.array(sig_MFP)**2,
+                                    value=np.array(MFP), observed=True)
+        pymc_list.append(pymc_MFP_data)
     """
     RUN THE MCMC
     """
 
     if outfile is not None:
         MC = pymc.MCMC(pymc_list, **mcmc_kwargs)
-        #db=str('hdf5'), dbname=str(outfile), dbmode=str('w'))
+             #db=str('hdf5'), dbname=str(outfile), dbmode=str('w')) -- These are set above
     else:
         MC = pymc.MCMC(pymc_list)#,verbose=2)
     # Force step method to be Metropolis!
     for ss in MC.stochastics-MC.observed_stochastics:
         MC.use_step_method(pymc.Metropolis, ss, proposal_sd=0.025, proposal_distribution='Normal')
-    #xdb.set_trace()
 
     # Run a total of 40000 samples, but ignore the first 10000.
     # Verbose just prints some details to screen.
+    pdb.set_trace()
     MC.sample(nsample, nburn, verbose=2, **kwargs)
 
     if debug:
@@ -440,6 +484,7 @@ def geterrors(array):
     err1 = np.array([value-arrsort[int(round(0.15866*arrsize))],arrsort[int(round(0.84134*arrsize))]-value])
     err2 = np.array([value-arrsort[int(round(0.02275*arrsize))],arrsort[int(round(0.97725*arrsize))]-value])
     return value, err1, err2
+
 
 def print_errors(MC):
     """
@@ -632,10 +677,10 @@ def chain_stats(chain_file, burn_frac=0.3, cl=0.683):
         #; Sort
         srt = np.sort(row)
         # Simple CDF
-        lowv = srt[np.round(sz[1]*(1-cl)/2.)]
+        lowv = srt[int(np.round(sz[1]*(1-cl)/2.))]
         outp['sig'][cnt,0] = np.fabs(outp['best_p'][cnt] - lowv)
         #
-        hiv = srt[np.round(sz[1]*(1.-((1-cl)/2.)))]
+        hiv = srt[int(np.round(sz[1]*(1.-((1-cl)/2.))))]
         outp['sig'][cnt,1] = np.fabs(hiv-outp['best_p'][cnt])
         cnt += 1
 

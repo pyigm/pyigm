@@ -7,11 +7,10 @@ import numpy as np
 import imp
 import pdb
 
+from pkg_resources import resource_filename
+
 from astropy.io import fits
 from astropy import cosmology
-
-# Path for pyigm
-pyigm_path = imp.find_module('pyigm')[1]
 
 
 class FNConstraint(object):
@@ -154,9 +153,9 @@ class FNConstraint(object):
         all_fN_cs : list
           list of FNConstraint objects
         """
-        fn_file = pyigm_path+'/data/fN/fN_constraints_z2.5_vanilla.fits'
-        k13r13_file = pyigm_path+'/data/fN/fN_constraints_K13R13_vanilla.fits'
-        n12_file = pyigm_path+'/data/fN/fN_constraints_N12_vanilla.fits'
+        fn_file = resource_filename('pyigm', '/data/fN/fN_constraints_z2.5_vanilla.fits')
+        k13r13_file = resource_filename('pyigm', '/data/fN/fN_constraints_K13R13_vanilla.fits')
+        n12_file = resource_filename('pyigm', '/data/fN/fN_constraints_N12_vanilla.fits')
         # Load
         all_fN_cs = cls.from_fitsfile([fn_file,k13r13_file, n12_file])
         # Return
