@@ -86,7 +86,7 @@ class XFitLLSGUI(QMainWindow):
     """
     def __init__(self, ispec, zqso, parent=None, lls_fit_file=None,
         outfil=None, smooth=3., fN_gamma=None, template=None,
-        dw=0.1, skip_wveval=False, coord=None, norm=True):
+        dw=0.1, skip_wveval=False, coord=None):
         QMainWindow.__init__(self, parent)
         '''
         ispec : Spectrum1D or specfil
@@ -107,9 +107,6 @@ class XFitLLSGUI(QMainWindow):
         skip_wveval : bool, optional
           Skip rebinning of wavelengths in the Voigt profile generation.
           This can speed up the code considerably, but use it wisely.
-        norm : bool, optional
-          Whether to normalize the spectrum by dividing by the
-          continuum (default True).
         '''
 
         # Build a widget combining several others
@@ -124,8 +121,11 @@ class XFitLLSGUI(QMainWindow):
             self.outfil = 'LLS_fit.json'
         else:
             self.outfil = outfil
+        self.zqso = zqso
         self.count_lls = 0
+        self.model_spec = -1
         self.lls_model = None
+        self.template = template
         self.coord = coord
         self.smooth = None
         self.base_continuum = None
@@ -167,46 +167,22 @@ class XFitLLSGUI(QMainWindow):
                                            llist=self.llist, key_events=False,
                                            abs_sys=self.abssys_widg.abs_sys,
                                            vlines=vlines, plotzero=1,
-                                                 norm=norm)
+                                                 norm=False)
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
         #self.spec_widg.canvas.mpl_connect('button_press_event', self.on_click)
         # Multi spec
         self.mspec_widg = ltgsp.MultiSpecWidget(self.spec_widg)
+
         # Initialize continuum (and LLS if from a file)
         if lls_fit_file is not None:
             self.init_LLS(lls_fit_file,spec)
-        else:
-            self.conti_dict = pycc.init_conti_dict(
-                Norm=float(np.median(spec.flux.value)),
-                piv_wv=1215.*(1+zqso),
-                #piv_wv2=915.*(1+zqso),
-                igm='True')
-        if self.base_continuum is None:
-            if zqso is not None:
-                self.zqso = zqso
-                # Read Telfer and apply IGM
-                if template is not None:
-                    tspec = lsi.readspec(template)
-                    # assume wavelengths
-                    tspec = XSpectrum1D.from_tuple(
-                        (tspec.wavelength.value * (1 + zqso),
-                        tspec.flux.value))
-                else:
-                    tspec = pycq.get_telfer_spec(zqso=zqso,
-                              igm=(self.conti_dict['igm']=='True'))
-                # Rebin
-                self.continuum = tspec.rebin(spec.wavelength)
-                # Reset pivot wave
-                self.conti_dict['piv_wv'] = 915.*(1+zqso)
-                #self.conti_dict['piv_wv'] = 1215.*(1+zqso)
-                #self.conti_dict['piv_wv2'] = 915.*(1+zqso)
-            else:
-                self.zqso = None
-                self.continuum = XSpectrum1D.from_tuple((
-                    spec.wavelength,np.ones(len(spec.wavelength))))
-            self.base_continuum = self.continuum.flux
-        self.update_conti()
+            self.update_conti()
+            self.spec_widg.continuum = self.continuum
 
-        self.spec_widg.continuum = self.continuum
+        if self.model_spec < 0:
+            print("NOTE: You must specific the spectrum for fitting the LLS with # before modeling will begin")
 
         # Full Model (LLS+continuum)
         self.full_model = XSpectrum1D.from_tuple((
@@ -382,8 +358,10 @@ class XFitLLSGUI(QMainWindow):
                     self.conti_dict['piv_wv'])**self.conti_dict['tilt'])
         if self.lls_model is not None:
             self.full_model.flux = self.lls_model * self.continuum.flux
+        else:
+            self.spec_widg.model = self.continuum
         # For plotting
-        self.spec_widg.spec.co = self.continuum.flux.value
+        #self.spec_widg.spec.co = self.continuum.flux.value
 
     def update_model(self):
         '''Update absorption model '''
@@ -393,6 +371,12 @@ class XFitLLSGUI(QMainWindow):
             self.lls_model = None
             self.spec_widg.model = None
             return
+        '''
+        # Regenerate (in case we have switched between multiple spectra)
+        if self.spec_widg.spec.nspec > 1:
+            self.full_model = XSpectrum1D.from_tuple((
+                self.spec_widg.spec.wavelength,np.ones(len(self.spec_widg.spec.wavelength))))
+        '''
         # use finer wavelength array to resolve absorption features.
         wa = self.full_model.wavelength
         # Angstroms
@@ -493,6 +477,9 @@ class XFitLLSGUI(QMainWindow):
                 self.conti_dict['Norm'] = float(event.ydata /
                     (self.base_continuum[imin].value*(event.xdata/
                         self.conti_dict['piv_wv'])**self.conti_dict['tilt']))
+                #QtCore.pyqtRemoveInputHook()
+                #pdb.set_trace()
+                #QtCore.pyqtRestoreInputHook()
             elif event.key == '1':
                 self.conti_dict['tilt'] += 0.1
             elif event.key == '2':
@@ -502,11 +489,22 @@ class XFitLLSGUI(QMainWindow):
             elif event.key == '@':
                 self.conti_dict['tilt2'] -= 0.1
             self.update_conti()
+        elif event.key == '#': #LLS
+            self.model_spec = self.spec_widg.spec.select
+            self.init_conti()
+            self.draw()
+            print("Setting the current spectrum for modeling LLS")
         elif event.key == 'A':  # New LLS
+            if self.model_spec < 0:
+                print("WARNING:  You need to specify the model spec with # first!!")
+                return
             # Generate
             z = event.xdata/911.7633 - 1.
             self.add_LLS(z, bval=20.*u.km/u.s, NHI=17.3)
         elif event.key == 'F': # New LLS automagically
+            if self.model_spec < 0:
+                print("WARNING:  You need to specify the model spec with # first!!")
+                return
             # Check if redshift is higher than any existing
             new_z = event.xdata/911.7633 - 1.
             for absssys in self.abssys_widg.all_abssys:
@@ -786,6 +784,34 @@ class XFitLLSGUI(QMainWindow):
     #    gui = xspg.XVelPltGui(self.spec_widg.spec, outfil=iabs_sys.absid_file,
     #                           abs_sys=iabs_sys, norm=self.spec_widg.norm)
     #    gui.exec_()
+    def init_conti(self):
+        print("Initializing the continuum")
+        spec = self.spec_widg.orig_spec
+        spec.select = self.model_spec
+        self.conti_dict = pycc.init_conti_dict(
+            Norm=float(np.median(spec.flux.value)),
+            piv_wv=1215.*(1+self.zqso),
+            #piv_wv2=915.*(1+zqso),
+            igm='True')
+                # Read Telfer and apply IGM
+        if self.template is not None:
+            tspec = lsi.readspec(self.template)
+            # assume wavelengths
+            tspec = XSpectrum1D.from_tuple(
+                (tspec.wavelength.value * (1 + self.zqso),
+                 tspec.flux.value))
+        else:
+            tspec = pycq.get_telfer_spec(zqso=self.zqso,
+                                             igm=(self.conti_dict['igm']=='True'))
+            # Rebin
+            self.continuum = tspec.rebin(spec.wavelength)
+            # Reset pivot wave
+            self.conti_dict['piv_wv'] = 915.*(1+self.zqso)
+            #self.conti_dict['piv_wv'] = 1215.*(1+zqso)
+            #self.conti_dict['piv_wv2'] = 915.*(1+zqso)
+        self.base_continuum = self.continuum.flux
+        self.update_conti()
+        self.spec_widg.continuum = self.continuum
 
     # Read from a JSON file
     def init_LLS(self,fit_file,spec):
@@ -837,7 +863,9 @@ class XFitLLSGUI(QMainWindow):
         import json, io
         # Create dict
         out_dict = dict(LLS={},conti_model=self.conti_dict, conti=list(self.base_continuum.value),
-            spec_file=self.spec_widg.spec.filename,smooth=self.smooth)
+            spec_file=self.spec_widg.spec.filename,smooth=self.smooth, model_spec=self.model_spec)
+        if hasattr(self.spec_widg.spec, 'labels'):
+            out_dict['spec_label'] = self.spec_widg.spec.labels[self.model_spec]
         if self.zqso is not None:
             out_dict['zqso'] = self.zqso
         # Load
