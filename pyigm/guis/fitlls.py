@@ -27,6 +27,7 @@ from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout
 
 from astropy.units import Quantity
 from astropy import units as u
+from astropy.coordinates import SkyCoord
 
 from linetools.spectra.xspectrum1d import XSpectrum1D
 from linetools.spectra import convolve as lsc
@@ -177,7 +178,7 @@ class XFitLLSGUI(QMainWindow):
 
         # Initialize continuum (and LLS if from a file)
         if lls_fit_file is not None:
-            self.init_LLS(lls_fit_file,spec)
+            self.init_LLS(lls_fit_file, spec)
             self.update_conti()
             self.spec_widg.continuum = self.continuum
 
@@ -485,11 +486,8 @@ class XFitLLSGUI(QMainWindow):
             self.update_conti()
         elif event.key == '#': #LLS
             self.model_spec = self.spec_widg.spec.select
-            # Full Model (LLS+continuum)
-            self.full_model = XSpectrum1D.from_tuple((
-                self.spec_widg.spec.wavelength,np.ones(len(self.spec_widg.spec.wavelength))))
             # Continuum
-            self.init_conti()
+            self.init_conti_full()
             self.draw()
             print("Setting the current spectrum (index={:d}) for modeling LLS".format(self.model_spec))
         elif event.key == 'A':  # New LLS
@@ -782,10 +780,12 @@ class XFitLLSGUI(QMainWindow):
     #    gui = xspg.XVelPltGui(self.spec_widg.spec, outfil=iabs_sys.absid_file,
     #                           abs_sys=iabs_sys, norm=self.spec_widg.norm)
     #    gui.exec_()
-    def init_conti(self):
+    def init_conti_full(self):
         print("Initializing the continuum")
         spec = self.spec_widg.orig_spec
         spec.select = self.model_spec  # Just in case, but this should already be the case
+        # Full Model (LLS+continuum)
+        self.full_model = XSpectrum1D.from_tuple((spec.wavelength,np.ones(len(spec.wavelength))))
         self.conti_dict = pycc.init_conti_dict(
             Norm=float(np.median(spec.flux.value)),
             piv_wv=1215.*(1+self.zqso),
@@ -852,6 +852,23 @@ class XFitLLSGUI(QMainWindow):
             self.zqso = lls_dict['zqso']
         except KeyError:
             self.zqso = None
+        # Coord
+        try:
+            ra = lls_dict['RA']
+        except KeyError:
+            warnings.warn("No RA/DEC in your fit file.  Not recommended")
+            pass
+        else:
+            dec = lls_dict['RA']
+            self.coord = SkyCoord(ra=ra, dec=dec, unit='deg')
+        # Check labels, etc.
+        if 'model_spec' in lls_dict.keys():
+            self.model_spec = lls_dict['model_spec']
+            assert lls_dict['spec_label'] == spec.labels[self.model_spec]
+        else:
+            warnings.warn("No model spec.  Am assuming you ran this awhile ago and you have only 1 spectrum")
+            self.model_spec = 0
+        self.init_conti_full()
         # Updates
         #self.update_boxes()
         #self.update_model()
