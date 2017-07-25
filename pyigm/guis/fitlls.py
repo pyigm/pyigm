@@ -184,9 +184,6 @@ class XFitLLSGUI(QMainWindow):
         if self.model_spec < 0:
             print("NOTE: You must specific the spectrum for fitting the LLS with # before modeling will begin")
 
-        # Full Model (LLS+continuum)
-        self.full_model = XSpectrum1D.from_tuple((
-            spec.wavelength,np.ones(len(spec.wavelength))))
         if self.smooth is None:
             self.smooth = smooth
         self.llist['Plot'] = False
@@ -477,9 +474,6 @@ class XFitLLSGUI(QMainWindow):
                 self.conti_dict['Norm'] = float(event.ydata /
                     (self.base_continuum[imin].value*(event.xdata/
                         self.conti_dict['piv_wv'])**self.conti_dict['tilt']))
-                #QtCore.pyqtRemoveInputHook()
-                #pdb.set_trace()
-                #QtCore.pyqtRestoreInputHook()
             elif event.key == '1':
                 self.conti_dict['tilt'] += 0.1
             elif event.key == '2':
@@ -491,9 +485,13 @@ class XFitLLSGUI(QMainWindow):
             self.update_conti()
         elif event.key == '#': #LLS
             self.model_spec = self.spec_widg.spec.select
+            # Full Model (LLS+continuum)
+            self.full_model = XSpectrum1D.from_tuple((
+                self.spec_widg.spec.wavelength,np.ones(len(self.spec_widg.spec.wavelength))))
+            # Continuum
             self.init_conti()
             self.draw()
-            print("Setting the current spectrum for modeling LLS")
+            print("Setting the current spectrum (index={:d}) for modeling LLS".format(self.model_spec))
         elif event.key == 'A':  # New LLS
             if self.model_spec < 0:
                 print("WARNING:  You need to specify the model spec with # first!!")
@@ -787,7 +785,7 @@ class XFitLLSGUI(QMainWindow):
     def init_conti(self):
         print("Initializing the continuum")
         spec = self.spec_widg.orig_spec
-        spec.select = self.model_spec
+        spec.select = self.model_spec  # Just in case, but this should already be the case
         self.conti_dict = pycc.init_conti_dict(
             Norm=float(np.median(spec.flux.value)),
             piv_wv=1215.*(1+self.zqso),
@@ -812,6 +810,9 @@ class XFitLLSGUI(QMainWindow):
         self.base_continuum = self.continuum.flux
         self.update_conti()
         self.spec_widg.continuum = self.continuum
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
 
     # Read from a JSON file
     def init_LLS(self,fit_file,spec):
