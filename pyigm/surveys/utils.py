@@ -62,6 +62,8 @@ def load_sys_files(inp, type, ref=None, sys_path=False, **kwargs):
             abssys = system.from_dict(tdict, chk_sep=False, **kwargs)   # Consider use_coord=True as default
             survey._abs_sys.append(abssys)
         tar.close()
+    # Set coordinates
+    pdb.set_trace()
     # Return
     return survey
 

@@ -20,10 +20,6 @@ def test_init():
     dlas = DLASurvey(ref='null')
     assert dlas.abs_type == 'DLA'
 
-def test_read_h100_nosys():
-    h100 = DLASurvey.load_H100(load_sys=False)
-    assert h100.nsys == 100
-
 
 def test_sdss():
     # All
@@ -40,6 +36,9 @@ def test_sdss():
     assert fN.size == 4
     assert np.isclose(fN_lo[0], 0.0682087, atol=1e-5)
 
+def test_read_h100_nosys():
+    h100 = DLASurvey.load_H100(load_sys=False)
+    assert h100.nsys == 100
 
 @remote_data
 def test_read_h100():
@@ -52,16 +51,21 @@ def test_read_h100():
     gdSiII = np.where(SiII_clms['flag_N'] > 0)[0]
     assert len(gdSiII) == 98
 
-def test_read_HST():
-    """ Neeleman+16
-    """
+
+def test_read_hst16():
+    # Statistical
     hst16 = DLASurvey.load_HST16()
     assert hst16.nsys == 4
+    # All
+    hst16_all = DLASurvey.load_HST16(sample='all')
+    assert hst16_all.nsys == 48
+
 
 def test_read_xq100():
     """ XQ-100 """
     xq100 = DLASurvey.load_XQ100(sample='stat')
     assert xq100.nsys == 36
+
 
 def test_read_p03_g09():
     """ XQ-100 """
