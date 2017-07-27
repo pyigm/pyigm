@@ -402,7 +402,7 @@ def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
             for MFP_input in MFP_inputs:
                 # neval=100 speeds things up 2500x
                 # zmin=MFP_input-1. will *break* at z<3
-                model_MFP.append(fN_model.mfp(MFP_input, neval=1000, zmin=MFP_input-1.).to('Mpc').value)
+                model_MFP.append(fN_model.mfp(MFP_input, neval=1000, nzeval=300, zmin=MFP_input-0.5).to('Mpc').value)
             return np.array(model_MFP)
         pymc_list.append(pymc_MFP_model)
 
@@ -448,7 +448,6 @@ def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
 
     # Run a total of 40000 samples, but ignore the first 10000.
     # Verbose just prints some details to screen.
-    pdb.set_trace()
     MC.sample(nsample, nburn, verbose=2, **kwargs)
 
     if debug:

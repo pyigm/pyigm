@@ -470,7 +470,7 @@ class FNModel(object):
         else:
             return log_fNX
 
-    def mfp(self, zem, neval=5000, nzeval=100, cosmo=None, zmin=0.6):
+    def mfp(self, zem, neval=5000, nzeval=300, cosmo=None, zmin=0.6):
         """ Calculate mean free path
 
         Parameters
@@ -502,7 +502,6 @@ class FNModel(object):
         # Find tau=1
         zt_interp = scii.interp1d(teff_LL, zval)
         ztau1 = zt_interp(1.)  # Will probably break if 1 is not covered
-        print('ztau1 = {}'.format(ztau1))
 
         # MFP
         mfp = np.fabs(cosmo.lookback_distance(ztau1) -
