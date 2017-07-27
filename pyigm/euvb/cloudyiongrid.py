@@ -211,7 +211,8 @@ class Cldyion():
         qso_nu=[]
         qso_f=[]
 
-        fil=open('Scripts/richards_qsosed.txt')
+        richardsqsosed = resource_filename("pyigm", "/data/euvb/richards_qsosed.txt")
+        fil=open(richardsqsosed)
 
         for ll in fil:
             fields=ll.split()
