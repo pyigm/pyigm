@@ -7,6 +7,8 @@ import glob
 import json
 import pdb
 
+from astropy.coordinates import SkyCoord
+
 from linetools import utils as ltu
 
 from pyigm.abssys import utils as pyasu
@@ -63,7 +65,8 @@ def load_sys_files(inp, type, ref=None, sys_path=False, **kwargs):
             survey._abs_sys.append(abssys)
         tar.close()
     # Set coordinates
-    pdb.set_trace()
+    icoords = [isys.coord for isys in survey._abs_sys]
+    survey.coords = SkyCoord(icoords)
     # Return
     return survey
 

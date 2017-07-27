@@ -192,9 +192,16 @@ class IGMSurvey(object):
         inp : int
 
         """
-        isys = self._abs_sys[inp]
+        # Mask?
+        if self.mask is not None:
+            idx = np.where(self.mask)[0][inp]
+        else:
+            idx = inp
+        # Pull the system
+        isys = self._abs_sys[idx]
+        # Add coord
         if fill_coord:
-            isys.coord = self.coords[inp]
+            isys.coord = self.coords[idx]
         return isys
 
     def init_mask(self):
