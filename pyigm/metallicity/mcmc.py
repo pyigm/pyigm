@@ -295,13 +295,12 @@ class Emceebones(object):
         -------
 
         """
-
-
+        
         #load the model in a format that can be handled later on
-        fil=open(model)
+        fil=open(model,'br')
         modl=pickle.load(fil)
         fil.close()
-
+    
         #unpack axis tag, axis value, grid column, grid ions
         self.mod_axistag=modl[0]
         self.mod_axisval=[]
@@ -326,14 +325,12 @@ class Emceebones(object):
 
         #loop over all the ions observed
         for obs in data:
-
             # Check for zero error (causes unexepcted failure)
             if obs[2] <= 0.:
                 raise ValueError("Cannot have 0 error on the column density, even in a limit.  Fix {}".format(obs[0]))
 
             #check obs one by one for corresponding entries in model
-            if modl[2].has_key(obs[0]):
-
+            if (obs[0] in modl[2]):
                 #stack the observable
                 #[list of tuples for observations with (ion,column,error)]
                 self.data.append(obs)
@@ -396,27 +393,32 @@ class Emceebones(object):
 
         ##CBW do both!!
         #pickle the results to disk
-        wout=open(self.outsave+'/'+self.info['name']+'_emcee.pkl','w')
+        wout=open(self.outsave+'/'+self.info['name']+'_emcee.pkl','wb')
         pickle.dump(self.final,wout)
         wout.close()
         import h5py
         import json
-        with h5py.File(self.outsave+'/'+self.info['name']+'_emcee.hd5', 'w') as f:
-            # Input
-            in_group = f.create_group('inputs')
-            for in_key in ['data', 'ions', 'guess']:
-                in_group[in_key] = self.final[in_key]
-            for key in self.final['info']:
-                in_group.attrs[key] = self.final['info'][key]
-            # Output
-            out_group = f.create_group('outputs')
-            mcmc_dict = dict(nwalkers=self.nwalkers, nsamp=self.nsamp,
-                             nburn=self.burn, nthread=self.threads)
-            out_group.attrs['mcmc'] = unicode(json.dumps(mcmc_dict))
-            for out_key in ['tags', 'results', 'pdfs', 'best_fit',
-                            'effNHI', 'acceptance']:
-                out_group[out_key] = self.final[out_key]
 
+        #this bit appears prone to crash with python3 due to some ascii encoding issue with hdf5 in python 3
+        #giving a chance to the code to run anyway if hdf5 
+        try:
+            with h5py.File(self.outsave+'/'+self.info['name']+'_emcee.hd5', 'w') as f:
+                # Input
+                in_group = f.create_group('inputs')
+                for in_key in ['data', 'ions', 'guess']:
+                    in_group[in_key] = self.final[in_key]
+                for key in self.final['info']:
+                    in_group.attrs[key] = self.final['info'][key]
+                # Output
+                out_group = f.create_group('outputs')
+                mcmc_dict = dict(nwalkers=self.nwalkers, nsamp=self.nsamp,
+                                 nburn=self.burn, nthread=self.threads)
+                out_group.attrs['mcmc'] = unicode(json.dumps(mcmc_dict))
+                for out_key in ['tags', 'results', 'pdfs', 'best_fit','effNHI', 'acceptance']:
+                    out_group[out_key] = self.final[out_key]
+        except:
+            pass
+                    
         #Start by plotting the chains with initial guess and final values
         fig=plt.figure()
         xaxis=np.arange(0,self.nsamp,1)
