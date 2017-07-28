@@ -7,6 +7,7 @@ import copy
 import pytest
 
 import astropy.units as u
+from astropy.cosmology import FlatLambdaCDM
 
 from pyigm.fN.fnmodel import FNModel
 from pyigm.fN import tau_eff as pyteff
@@ -50,6 +51,11 @@ def test_lya():
     # Test
     #np.testing.assert_allclose(teff, 0.19821452949713764)
     np.testing.assert_allclose(teff, 0.1981831995528795)  # scipy 0.17
+    # Change cosmology
+    cosmo = FlatLambdaCDM(H0=60, Om0=0.2)
+    fN_model2 = FNModel.default_model(cosmo=cosmo)
+    teff2 = pyteff.lyman_ew(lamb, 2.5, fN_model2, NHI_MIN=12., NHI_MAX=17.)
+    np.testing.assert_allclose(teff2, 0.2379, rtol=1e-4)
 
 
 def test_lyx():
