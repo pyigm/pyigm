@@ -451,10 +451,11 @@ class Emceebones(object):
         cfig = corner.corner(samples, labels=self.mod_axistag, quantiles=[0.05,0.5,0.95],verbose=False)
         cfig.text(0.33,0.90,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='left',fontsize=10)
         cfig.savefig(self.outsave+'/'+self.info['name']+'_corner.pdf')
-
+        plt.close(fig)
+        
         #now plot the residuals
         rfig=plt.figure()
-
+        
         #plot values
         xaxis=np.arange(0,self.nions,1)
         axlab=[]
@@ -480,6 +481,7 @@ class Emceebones(object):
         plt.title(self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),fontsize=10)
         # fig.text(0.1,0.93,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='left',fontsize=12)
         rfig.savefig(self.outsave+'/'+self.info['name']+'_residual.pdf')
+        plt.close(rfig)
 
         print('All done with system {}!'.format(self.info['name']))
 
