@@ -874,7 +874,9 @@ class XFitLLSGUI(QMainWindow):
             warnings.warn("No RA/DEC in your fit file.  Not recommended")
             pass
         else:
-            dec = lls_dict['RA']
+            #MF - I think this should be DEC
+            #dec = lls_dict['RA']
+            dec = lls_dict['DEC']
             self.coord = SkyCoord(ra=ra, dec=dec, unit='deg')
         #self.init_conti_full()
         # Updates
