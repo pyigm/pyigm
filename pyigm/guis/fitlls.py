@@ -352,6 +352,9 @@ class XFitLLSGUI(QMainWindow):
             self.continuum.flux[~lowwv] = (cflux[~lowwv] * (self.continuum.wavelength.value[~lowwv]/
                                             self.conti_dict['piv_wv'])**self.conti_dict['tilt'])
         else:
+            #QtCore.pyqtRemoveInputHook()
+            #pdb.set_trace()
+            #QtCore.pyqtRestoreInputHook()
             self.continuum.flux = (cflux * (self.continuum.wavelength.value/
                     self.conti_dict['piv_wv'])**self.conti_dict['tilt'])
         if self.lls_model is not None:
@@ -820,7 +823,14 @@ class XFitLLSGUI(QMainWindow):
         # Read the JSON file
         with open(fit_file) as data_file:
             lls_dict = json.load(data_file)
-        # Init continuum
+        # Check labels, etc.
+        if 'model_spec' in lls_dict.keys():
+            self.model_spec = lls_dict['model_spec']
+            assert lls_dict['spec_label'] == spec.labels[self.model_spec]
+        else:
+            warnings.warn("No model spec.  Am assuming you ran this awhile ago and you have only 1 spectrum")
+            self.model_spec = 0
+        # Init continuum and full model
         try:
             self.conti_dict = lls_dict['conti_model']
         except KeyError: # Historic
@@ -832,9 +842,14 @@ class XFitLLSGUI(QMainWindow):
                 print('Will generate a new base continuum')
                 self.base_continuum = None
             else:
+                spec.select = self.model_spec
                 self.continuum = XSpectrum1D.from_tuple((
-                    spec.wavelength,np.ones(len(spec.wavelength))))
+                    spec.wavelength,np.ones(spec.npix)))
+                self.full_model = XSpectrum1D.from_tuple((spec.wavelength,np.ones(len(spec.wavelength))))
         #self.update_conti()
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
         # Check spectra names
         if spec.filename != lls_dict['spec_file']:
             warnings.warn('Spec file names do not match!')
@@ -861,20 +876,10 @@ class XFitLLSGUI(QMainWindow):
         else:
             dec = lls_dict['RA']
             self.coord = SkyCoord(ra=ra, dec=dec, unit='deg')
-        # Check labels, etc.
-        if 'model_spec' in lls_dict.keys():
-            self.model_spec = lls_dict['model_spec']
-            assert lls_dict['spec_label'] == spec.labels[self.model_spec]
-        else:
-            warnings.warn("No model spec.  Am assuming you ran this awhile ago and you have only 1 spectrum")
-            self.model_spec = 0
-        self.init_conti_full()
+        #self.init_conti_full()
         # Updates
         #self.update_boxes()
         #self.update_model()
-        #QtCore.pyqtRemoveInputHook()
-        #xdb.set_trace()
-        #QtCore.pyqtRestoreInputHook()
 
     # Write
     def write_out(self):
