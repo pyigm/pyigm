@@ -179,6 +179,9 @@ class XFitLLSGUI(QMainWindow):
         # Initialize continuum (and LLS if from a file)
         if lls_fit_file is not None:
             self.init_LLS(lls_fit_file, spec)
+            #QtCore.pyqtRemoveInputHook()
+            #pdb.set_trace()
+            #QtCore.pyqtRestoreInputHook()
             self.update_conti()
             self.spec_widg.continuum = self.continuum
 
@@ -191,8 +194,9 @@ class XFitLLSGUI(QMainWindow):
 
         # Initialize as needed
         if lls_fit_file is not None:
-            self.update_boxes()
-            self.update_model()
+            if len(self.abssys_widg.all_abssys) > 0:
+                self.update_boxes()
+                self.update_model()
 
         # Outfil
         wbtn = QPushButton('Write', self)
@@ -534,9 +538,6 @@ class XFitLLSGUI(QMainWindow):
             elif event.key == 'M': # Move nearest line in line list (typically metal) to cursor
                 wrest = event.xdata/(1+self.abssys_widg.all_abssys[idx].zabs)
                 awrest = self.llist[self.llist['List']].wrest.value
-                #QtCore.pyqtRemoveInputHook()
-                #pdb.set_trace()
-                #QtCore.pyqtRestoreInputHook()
                 imn = np.argmin(np.abs(wrest-awrest))
                 newz = event.xdata/awrest[imn]-1.
                 self.abssys_widg.all_abssys[idx].zabs = newz
@@ -874,8 +875,6 @@ class XFitLLSGUI(QMainWindow):
             warnings.warn("No RA/DEC in your fit file.  Not recommended")
             pass
         else:
-            #MF - I think this should be DEC
-            #dec = lls_dict['RA']
             dec = lls_dict['DEC']
             self.coord = SkyCoord(ra=ra, dec=dec, unit='deg')
         #self.init_conti_full()
