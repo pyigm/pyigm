@@ -27,6 +27,7 @@ from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout
 
 from astropy.units import Quantity
 from astropy import units as u
+from astropy.coordinates import SkyCoord
 
 from linetools.spectra.xspectrum1d import XSpectrum1D
 from linetools.spectra import convolve as lsc
@@ -86,7 +87,7 @@ class XFitLLSGUI(QMainWindow):
     """
     def __init__(self, ispec, zqso, parent=None, lls_fit_file=None,
         outfil=None, smooth=3., fN_gamma=None, template=None,
-        dw=0.1, skip_wveval=False, norm=True):
+        dw=0.1, skip_wveval=False, coord=None):
         QMainWindow.__init__(self, parent)
         '''
         ispec : Spectrum1D or specfil
@@ -107,9 +108,6 @@ class XFitLLSGUI(QMainWindow):
         skip_wveval : bool, optional
           Skip rebinning of wavelengths in the Voigt profile generation.
           This can speed up the code considerably, but use it wisely.
-        norm : bool, optional
-          Whether to normalize the spectrum by dividing by the
-          continuum (default True).
         '''
 
         # Build a widget combining several others
@@ -124,8 +122,12 @@ class XFitLLSGUI(QMainWindow):
             self.outfil = 'LLS_fit.json'
         else:
             self.outfil = outfil
+        self.zqso = zqso
         self.count_lls = 0
+        self.model_spec = -1
         self.lls_model = None
+        self.template = template
+        self.coord = coord
         self.smooth = None
         self.base_continuum = None
         self.all_forest = []
@@ -166,55 +168,35 @@ class XFitLLSGUI(QMainWindow):
                                            llist=self.llist, key_events=False,
                                            abs_sys=self.abssys_widg.abs_sys,
                                            vlines=vlines, plotzero=1,
-                                                 norm=norm)
-        self.spec_widg.canvas.mpl_connect('button_press_event', self.on_click)
+                                                 norm=False)
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
+        #self.spec_widg.canvas.mpl_connect('button_press_event', self.on_click)
+        # Multi spec
+        self.mspec_widg = ltgsp.MultiSpecWidget(self.spec_widg)
+
         # Initialize continuum (and LLS if from a file)
         if lls_fit_file is not None:
-            self.init_LLS(lls_fit_file,spec)
-        else:
-            self.conti_dict = pycc.init_conti_dict(
-                Norm=float(np.median(spec.flux.value)),
-                piv_wv=1215.*(1+zqso),
-                #piv_wv2=915.*(1+zqso),
-                igm='True')
-        if self.base_continuum is None:
-            if zqso is not None:
-                self.zqso = zqso
-                # Read Telfer and apply IGM
-                if template is not None:
-                    tspec = lsi.readspec(template)
-                    # assume wavelengths
-                    tspec = XSpectrum1D.from_tuple(
-                        (tspec.wavelength.value * (1 + zqso),
-                        tspec.flux.value))
-                else:
-                    tspec = pycq.get_telfer_spec(zqso=zqso,
-                              igm=(self.conti_dict['igm']=='True'))
-                # Rebin
-                self.continuum = tspec.rebin(spec.wavelength)
-                # Reset pivot wave
-                self.conti_dict['piv_wv'] = 915.*(1+zqso)
-                #self.conti_dict['piv_wv'] = 1215.*(1+zqso)
-                #self.conti_dict['piv_wv2'] = 915.*(1+zqso)
-            else:
-                self.zqso = None
-                self.continuum = XSpectrum1D.from_tuple((
-                    spec.wavelength,np.ones(len(spec.wavelength))))
-            self.base_continuum = self.continuum.flux
-        self.update_conti()
+            self.init_LLS(lls_fit_file, spec)
+            #QtCore.pyqtRemoveInputHook()
+            #pdb.set_trace()
+            #QtCore.pyqtRestoreInputHook()
+            self.update_conti()
+            self.spec_widg.continuum = self.continuum
 
-        self.spec_widg.continuum = self.continuum
+        if self.model_spec < 0:
+            print("NOTE: You must specific the spectrum for fitting the LLS with # before modeling will begin")
 
-        # Full Model (LLS+continuum)
-        self.full_model = XSpectrum1D.from_tuple((
-            spec.wavelength,np.ones(len(spec.wavelength))))
         if self.smooth is None:
             self.smooth = smooth
+        self.llist['Plot'] = False
 
         # Initialize as needed
         if lls_fit_file is not None:
-            self.update_boxes()
-            self.update_model()
+            if len(self.abssys_widg.all_abssys) > 0:
+                self.update_boxes()
+                self.update_model()
 
         # Outfil
         wbtn = QPushButton('Write', self)
@@ -268,6 +250,7 @@ class XFitLLSGUI(QMainWindow):
         vbox.addWidget(self.Cwidget)
         vbox.addWidget(self.abssys_widg)
         vbox.addWidget(buttons)
+        vbox.addWidget(self.mspec_widg)
         anly_widg.setLayout(vbox)
 
         hbox = QHBoxLayout()
@@ -328,8 +311,10 @@ class XFitLLSGUI(QMainWindow):
             iline.attrib['N'] = 10**self.abssys_widg.all_abssys[idx].NHI * u.cm**-2
             iline.attrib['b'] = self.abssys_widg.all_abssys[idx].bval
         # Update the rest
+        '''
         self.update_model()
         self.draw()
+        '''
 
     def update_boxes(self):
         """Update Nbz boxes"""
@@ -371,12 +356,17 @@ class XFitLLSGUI(QMainWindow):
             self.continuum.flux[~lowwv] = (cflux[~lowwv] * (self.continuum.wavelength.value[~lowwv]/
                                             self.conti_dict['piv_wv'])**self.conti_dict['tilt'])
         else:
+            #QtCore.pyqtRemoveInputHook()
+            #pdb.set_trace()
+            #QtCore.pyqtRestoreInputHook()
             self.continuum.flux = (cflux * (self.continuum.wavelength.value/
                     self.conti_dict['piv_wv'])**self.conti_dict['tilt'])
         if self.lls_model is not None:
             self.full_model.flux = self.lls_model * self.continuum.flux
+        else:
+            self.spec_widg.model = self.continuum
         # For plotting
-        self.spec_widg.spec.co = self.continuum.flux.value
+        #self.spec_widg.spec.co = self.continuum.flux.value
 
     def update_model(self):
         '''Update absorption model '''
@@ -386,6 +376,12 @@ class XFitLLSGUI(QMainWindow):
             self.lls_model = None
             self.spec_widg.model = None
             return
+        '''
+        # Regenerate (in case we have switched between multiple spectra)
+        if self.spec_widg.spec.nspec > 1:
+            self.full_model = XSpectrum1D.from_tuple((
+                self.spec_widg.spec.wavelength,np.ones(len(self.spec_widg.spec.wavelength))))
+        '''
         # use finer wavelength array to resolve absorption features.
         wa = self.full_model.wavelength
         # Angstroms
@@ -419,9 +415,12 @@ class XFitLLSGUI(QMainWindow):
         # Finish
         self.full_model.flux = self.lls_model * self.continuum.flux
         # Over-absorbed
-        self.spec_widg.bad_model = np.where( (self.lls_model < 0.7) &
-            (self.full_model.flux < (self.spec_widg.spec.flux-
-                self.spec_widg.spec.sig*1.5)))[0]
+        try:
+            self.spec_widg.bad_model = np.where( (self.lls_model < 0.7) &
+                (self.full_model.flux < (self.spec_widg.spec.flux-
+                    self.spec_widg.spec.sig*1.5)))[0]
+        except:
+            pass
         # Model
         self.spec_widg.model = self.full_model
 
@@ -445,6 +444,7 @@ class XFitLLSGUI(QMainWindow):
             idx = self.abssys_widg.all_items.index(item.text())
             return idx
 
+    '''
     def on_click(self, event):
         """ Over-loads click events
         """
@@ -468,11 +468,15 @@ class XFitLLSGUI(QMainWindow):
             # Draw by default
             self.update_boxes()
             self.draw()
+    '''
 
 
     def on_key(self,event):
         if event.key in ['C','1','2','!','@']:  # Set continuum level
             if event.key == 'C':
+                if event.xdata is None:
+                    print("No key strokes outside the plot window")
+                    return
                 imin = np.argmin(np.abs(
                     self.continuum.wavelength.value-event.xdata))
                 self.conti_dict['Norm'] = float(event.ydata /
@@ -487,11 +491,23 @@ class XFitLLSGUI(QMainWindow):
             elif event.key == '@':
                 self.conti_dict['tilt2'] -= 0.1
             self.update_conti()
+        elif event.key == '#': #LLS
+            self.model_spec = self.spec_widg.spec.select
+            # Continuum
+            self.init_conti_full()
+            self.draw()
+            print("Setting the current spectrum (index={:d}) for modeling LLS".format(self.model_spec))
         elif event.key == 'A':  # New LLS
+            if self.model_spec < 0:
+                print("WARNING:  You need to specify the model spec with # first!!")
+                return
             # Generate
             z = event.xdata/911.7633 - 1.
             self.add_LLS(z, bval=20.*u.km/u.s, NHI=17.3)
         elif event.key == 'F': # New LLS automagically
+            if self.model_spec < 0:
+                print("WARNING:  You need to specify the model spec with # first!!")
+                return
             # Check if redshift is higher than any existing
             new_z = event.xdata/911.7633 - 1.
             for absssys in self.abssys_widg.all_abssys:
@@ -503,7 +519,7 @@ class XFitLLSGUI(QMainWindow):
                 print("Cannot use F on an LLS with z > z_qso + 0.05")
                 return
             self.auto_plls(event.xdata, event.ydata)
-        elif event.key in ['L','a','N','n','v','V','D','$','g']: # LLS-centric
+        elif event.key in ['L','a','N','n','v','V','D','$','g','E','M','U']: # LLS-centric
             idx = self.get_sngl_sel_sys()
             if idx is None:
                 return
@@ -511,9 +527,17 @@ class XFitLLSGUI(QMainWindow):
                 self.abssys_widg.all_abssys[idx].zabs = event.xdata/911.7633 - 1.
             elif event.key == 'a': #Lya
                 self.abssys_widg.all_abssys[idx].zabs = event.xdata/1215.6700-1.
-            elif event.key == 'g': # Move nearest line to cursor
+            elif event.key == 'U': # Simply update the model
+                self.update_model()
+            elif event.key == 'g': # Move nearest Lyman line to cursor
                 wrest = event.xdata/(1+self.abssys_widg.all_abssys[idx].zabs)
                 awrest = np.array([iline.wrest.value for iline in self.abssys_widg.all_abssys[idx].lls_lines])
+                imn = np.argmin(np.abs(wrest-awrest))
+                newz = event.xdata/awrest[imn]-1.
+                self.abssys_widg.all_abssys[idx].zabs = newz
+            elif event.key == 'M': # Move nearest line in line list (typically metal) to cursor
+                wrest = event.xdata/(1+self.abssys_widg.all_abssys[idx].zabs)
+                awrest = self.llist[self.llist['List']].wrest.value
                 imn = np.argmin(np.abs(wrest-awrest))
                 newz = event.xdata/awrest[imn]-1.
                 self.abssys_widg.all_abssys[idx].zabs = newz
@@ -530,9 +554,9 @@ class XFitLLSGUI(QMainWindow):
                 idx = None
             elif event.key == '$': # Toggle metal-lines
                 self.llist['Plot'] = not self.llist['Plot']
-                #QtCore.pyqtRemoveInputHook()
-                #xdb.set_trace()
-                #QtCore.pyqtRestoreInputHook()
+            elif event.key == 'E': # Toggle wveval
+                self.skip_wveval = not self.skip_wveval
+                print("Toggled WVEVAL for model")
             else:
                 raise ValueError('Not ready for this keystroke')
             # Update the lines
@@ -760,6 +784,39 @@ class XFitLLSGUI(QMainWindow):
     #    gui = xspg.XVelPltGui(self.spec_widg.spec, outfil=iabs_sys.absid_file,
     #                           abs_sys=iabs_sys, norm=self.spec_widg.norm)
     #    gui.exec_()
+    def init_conti_full(self):
+        print("Initializing the continuum")
+        spec = self.spec_widg.orig_spec
+        spec.select = self.model_spec  # Just in case, but this should already be the case
+        # Full Model (LLS+continuum)
+        self.full_model = XSpectrum1D.from_tuple((spec.wavelength,np.ones(len(spec.wavelength))))
+        self.conti_dict = pycc.init_conti_dict(
+            Norm=float(np.median(spec.flux.value)),
+            piv_wv=1215.*(1+self.zqso),
+            #piv_wv2=915.*(1+zqso),
+            igm='True')
+                # Read Telfer and apply IGM
+        if self.template is not None:
+            tspec = lsi.readspec(self.template)
+            # assume wavelengths
+            tspec = XSpectrum1D.from_tuple(
+                (tspec.wavelength.value * (1 + self.zqso),
+                 tspec.flux.value))
+        else:
+            tspec = pycq.get_telfer_spec(zqso=self.zqso,
+                                             igm=(self.conti_dict['igm']=='True'))
+            # Rebin
+            self.continuum = tspec.rebin(spec.wavelength)
+            # Reset pivot wave
+            self.conti_dict['piv_wv'] = 915.*(1+self.zqso)
+            #self.conti_dict['piv_wv'] = 1215.*(1+zqso)
+            #self.conti_dict['piv_wv2'] = 915.*(1+zqso)
+        self.base_continuum = self.continuum.flux
+        self.update_conti()
+        self.spec_widg.continuum = self.continuum
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
 
     # Read from a JSON file
     def init_LLS(self,fit_file,spec):
@@ -767,7 +824,14 @@ class XFitLLSGUI(QMainWindow):
         # Read the JSON file
         with open(fit_file) as data_file:
             lls_dict = json.load(data_file)
-        # Init continuum
+        # Check labels, etc.
+        if 'model_spec' in lls_dict.keys():
+            self.model_spec = lls_dict['model_spec']
+            assert lls_dict['spec_label'] == spec.labels[self.model_spec]
+        else:
+            warnings.warn("No model spec.  Am assuming you ran this awhile ago and you have only 1 spectrum")
+            self.model_spec = 0
+        # Init continuum and full model
         try:
             self.conti_dict = lls_dict['conti_model']
         except KeyError: # Historic
@@ -779,9 +843,14 @@ class XFitLLSGUI(QMainWindow):
                 print('Will generate a new base continuum')
                 self.base_continuum = None
             else:
+                spec.select = self.model_spec
                 self.continuum = XSpectrum1D.from_tuple((
-                    spec.wavelength,np.ones(len(spec.wavelength))))
+                    spec.wavelength,np.ones(spec.npix)))
+                self.full_model = XSpectrum1D.from_tuple((spec.wavelength,np.ones(len(spec.wavelength))))
         #self.update_conti()
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
         # Check spectra names
         if spec.filename != lls_dict['spec_file']:
             warnings.warn('Spec file names do not match!')
@@ -799,19 +868,28 @@ class XFitLLSGUI(QMainWindow):
             self.zqso = lls_dict['zqso']
         except KeyError:
             self.zqso = None
+        # Coord
+        try:
+            ra = lls_dict['RA']
+        except KeyError:
+            warnings.warn("No RA/DEC in your fit file.  Not recommended")
+            pass
+        else:
+            dec = lls_dict['DEC']
+            self.coord = SkyCoord(ra=ra, dec=dec, unit='deg')
+        #self.init_conti_full()
         # Updates
         #self.update_boxes()
         #self.update_model()
-        #QtCore.pyqtRemoveInputHook()
-        #xdb.set_trace()
-        #QtCore.pyqtRestoreInputHook()
 
     # Write
     def write_out(self):
         import json, io
         # Create dict
         out_dict = dict(LLS={},conti_model=self.conti_dict, conti=list(self.base_continuum.value),
-            spec_file=self.spec_widg.spec.filename,smooth=self.smooth)
+            spec_file=self.spec_widg.spec.filename,smooth=self.smooth, model_spec=self.model_spec)
+        if hasattr(self.spec_widg.spec, 'labels'):
+            out_dict['spec_label'] = self.spec_widg.spec.labels[self.model_spec]
         if self.zqso is not None:
             out_dict['zqso'] = self.zqso
         # Load
@@ -822,11 +900,16 @@ class XFitLLSGUI(QMainWindow):
             out_dict['LLS'][key]['NHI'] = lls.NHI
             out_dict['LLS'][key]['bval'] = lls.lls_lines[0].attrib['b'].value
             out_dict['LLS'][key]['comment'] = str(lls.comment).strip()
-        # Write
         #QtCore.pyqtRemoveInputHook()
         #xdb.set_trace()
         #QtCore.pyqtRestoreInputHook()
+        # Add coord
+        if self.coord is not None:
+            out_dict['RA'] = self.coord.ra.value
+            out_dict['DEC'] = self.coord.dec.value
+        # Clean for JSON
         clean_dict = ltu.jsonify(out_dict)
+        # Write
         with io.open(self.outfil, 'w', encoding='utf-8') as f:
             f.write(ustr(json.dumps(clean_dict, sort_keys=True, indent=4,
                 separators=(',', ': '))))
