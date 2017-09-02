@@ -174,7 +174,7 @@ def logUToDens(logU, redshift, UVB="HM05logU"):
     
 
 
-def densToLogU(dens, redshift, uvb='HM05logU'):
+def densToLogU(dens, redshift, UVB='HM05logU'):
     
     """
     This converts density (n_H) to logU.
@@ -212,7 +212,7 @@ def densToLogU(dens, redshift, uvb='HM05logU'):
     testDens = -999
     while abs(testDens - dens) > tolerance_dens:
         logU = logUarray[i]
-        testDens = logUToDens(logU, redshift, uvb=uvb)
+        testDens = logUToDens(logU, redshift, UVB=UVB)
         ##If it gets to this point, the tolerance has NOT been met
         
         ##If it's greater (i.e., positive), then
