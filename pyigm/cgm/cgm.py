@@ -235,7 +235,7 @@ class CGMAbsSys(object):
                  self.galaxy.z, self.rho))
 
     def write_json(self, outfil=None):
-        """ Generate a JSON file from a CGMAbsSys object
+        """ Generate a JSON file from a CGMAbsSys object 
 
         Parameters
         ----------
