@@ -14,7 +14,9 @@ Notebooks
 
    CGM Examples <CGM_examples>
    CGM P11 <CGM_P11>
-   CGMModel <CGM_Models>
+   CGMModel <https://github.com/pyigm/pyigm/blob/master/docs/examples/CGM_Models.ipynb>
+   COS-Halos <https://github.com/pyigm/pyigm/blob/master/docs/examples/COS_Halos_Examples.ipynb>
+
 
 Overview
 ========
@@ -143,7 +145,7 @@ All of the measurements related to the COS-Halos survey
 `Werk et al. (2011) <http://adsabs.harvard.edu/abs/2012ApJS..198....3W>`_,
 `Tumlinson et al. (2013) <http://adsabs.harvard.edu/abs/2013ApJ...777...59T>`_,
 `Werk et al. (2013) <http://adsabs.harvard.edu/abs/2013ApJS..204...17W>`_
-Prochaska et al. (2016, in prep),
+`Prochaska et al. (2017) <http://adsabs.harvard.edu/abs/2017ApJ...837..169P>`_
 are included in the data directory.  You can read in the dataset with::
 
    from pyigm.cgm import cos_halos as pch
