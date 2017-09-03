@@ -31,22 +31,16 @@ def cosm_xz(z, cosmo=None, flg_return=0):
     # Cosmology
     if cosmo is None:
         from astropy.cosmology import core as acc
-        cosmo = acc.FlatLambdaCDM(70., 0.3)
+        cosmo = acc.FlatLambdaCDM(H0=70., Om0=0.3)
 
     # Flat?
-    if cosmo.Ok(0.) == 0:
-        if flg_return == 0:  # X(z)
-            rslt = cosmo.absorption_distance(z)
-        elif flg_return == 1:  # dX/dz
-            try:
-                rslt = cosmo.abs_distance_integrand(z)
-            except AttributeError:
-                rslt = cosmo._xfunc(z)
-        else:
-            raise ValueError('pyigm.utils.cosm_xz: Bad flg {:d}'.format(flg_return))
-    else:
-        raise ValueError('pyigm.utils.cosm_xz: Not prepared for non-flat cosmology')
-
+    if flg_return == 0:  # X(z)
+        rslt = cosmo.absorption_distance(z)
+    elif flg_return == 1:  # dX/dz
+        try:
+            rslt = cosmo.abs_distance_integrand(z)
+        except AttributeError:  # Deprecated in astropy
+            rslt = cosmo._xfunc(z)
     #
     return rslt
 
