@@ -237,6 +237,11 @@ class CGMAbsSys(object):
     def write_json(self, outfil=None):
         """ Generate a JSON file from a CGMAbsSys object
 
+        Parameters
+        ----------
+        outfil : str
+          output file
+
         Returns
         -------
 
