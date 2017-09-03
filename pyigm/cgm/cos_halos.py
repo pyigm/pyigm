@@ -10,6 +10,8 @@ import warnings
 import h5py
 import json, yaml
 
+from pkg_resources import resource_filename
+
 from astropy.io import fits, ascii
 from astropy import units as u 
 from astropy.table import Table, Column
@@ -363,7 +365,7 @@ class COSHalos(CGMAbsSurvey):
         if ('Halos' in self.fits_path) and (self.werk14_cldy is not None):
                 self.load_werk14()
 
-    def load_mtl_pdfs(self, ZH_fil, keep_all=False):
+    def load_mtl_pdfs(self, ZH_fil=None, keep_all=False):
         """ Load the metallicity PDFs from an input file (usually hdf5)
 
         Parameters
@@ -373,6 +375,10 @@ class COSHalos(CGMAbsSurvey):
           Save the full metallicity data?
 
         """
+        # File
+        if ZH_fil is None:
+            ZH_fil = resource_filename('pyigm', 'data/CGM/COS_Halos/COS_Halos_MTL_final.hdf5')
+        # Load
         fh5=h5py.File(ZH_fil, 'r')
         mkeys = list(fh5['met'].keys())
         mkeys.remove('left_edge_bins')
