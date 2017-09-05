@@ -101,7 +101,6 @@ class CGMAbsSys(object):
                 kwargs2['rho'] = idict['rho']*u.kpc
         # Instantiate
         slf = cls(galaxy, igm_sys, **kwargs2)
-        pdb.set_trace()
         # Return
         return slf
 

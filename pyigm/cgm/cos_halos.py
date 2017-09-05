@@ -387,6 +387,10 @@ class COSHalos(CGMAbsSurvey):
 
         # Loop
         for cgm_abs in self.cgm_abs:
+            if '0943+0531_227_19' in cgm_abs.name:
+                print('Not including 0943+0531_227_19'.format(cgm_abs.name))
+                print('See Prochaska+17 for details')
+                continue
             # Match?
             mt = np.where(mkeys == cgm_abs.name)[0]
             if len(mt) == 0:

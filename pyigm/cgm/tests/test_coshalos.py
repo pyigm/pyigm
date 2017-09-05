@@ -48,14 +48,17 @@ def test_load_sngl_dwarf():
     cos_dwarfs.load_single( ('J0042-1037', '358_9'))
 """
 
-@remote_data
+
 def test_load_survey():
     # Class
-    cos_halos = COSHalos(debug=True)
-    assert len(cos_halos.cgm_abs) == 4
-    # Load
-    #cos_halos.load_mega()  # Only reads one file for the test, actually
-    #cos_halos.load_mega(skip_ions=True)
+    cos_halos = COSHalos()#debug=True)
+    assert len(cos_halos.cgm_abs) == 44
+    # Metallicity
+    cos_halos.load_mtl_pdfs()
+    # Confirm  J0943+0531_227_19 is out
+    cgm_j0943 = cos_halos[('J0943+0531','227_19')]
+    assert (not hasattr(cgm_j0943.igm_sys, 'metallicity'))
+
 
 def test_getitem():
     # Class
