@@ -86,7 +86,7 @@ class IGMGuessesGui(QMainWindow):
     def __init__(self, ispec, parent=None, previous_file=None, 
         srch_id=True, outfil=None, fwhm=None, screen_scale=1.,
         plot_residuals=True,n_max_tuple=None, min_strength=None,
-                 min_ew=None, vlim_disp=None, external_model=None):
+                 min_ew=None, vlim_disp=None, external_model=None, redsh=None): #added redsh=None
         QMainWindow.__init__(self, parent)
         """
         ispec : str
@@ -264,6 +264,10 @@ E         : toggle displaying/hiding the external absorption model
         # Define initial redshift
         z = 0.0
         self.llist['z'] = z
+        if redsh is not None:
+            z=redsh
+            self.llist['z'] = z
+            print("Redshift set to",z,redsh)
         
         # Grab the pieces and tie together
         self.slines_widg = ltgl.SelectedLinesWidget(
