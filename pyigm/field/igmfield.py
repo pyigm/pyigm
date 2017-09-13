@@ -6,6 +6,7 @@ import numpy as np
 import warnings
 import pdb
 
+import astropy
 from astropy import units as u
 from astropy.units import Quantity
 from astropy.coordinates import SkyCoord
@@ -82,7 +83,8 @@ class IgmGalaxyField(object):
         if los_coord is None:
             los_coord = self.coord
         # Coord
-        if isinstance(obj['RA'], Quantity):
+        if ((isinstance(obj['RA'], Quantity)) |
+                (isinstance(obj['RA'],astropy.table.column.MaskedColumn))):
             ora = obj['RA']
             odec = obj['DEC']
         else:
