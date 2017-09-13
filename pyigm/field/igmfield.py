@@ -18,7 +18,7 @@ import pyigm.field.utils as pfu
 #from xastropy.xutils import xdebug as xdb
 
 
-class IgmGalaxyField(object):
+class IgmGalaxyField(object): 
     """ Class for a field associating galaxies to the IGM/CGM
 
     Parameters
