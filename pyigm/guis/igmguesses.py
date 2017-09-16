@@ -341,9 +341,9 @@ E         : toggle displaying/hiding the external absorption model
         wvmax = self.velplot_widg.spec.wvmax
         wvlims = (wvmin / (1. + z), wvmax / (1. + z))
 
-        QtCore.pyqtRemoveInputHook()
-        pdb.set_trace()
-        QtCore.pyqtRestoreInputHook()
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
 
         transitions = linelist.available_transitions(
             wvlims, n_max_tuple=self.n_max_tuple, min_strength=self.min_strength)
