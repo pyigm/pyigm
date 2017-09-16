@@ -341,12 +341,13 @@ E         : toggle displaying/hiding the external absorption model
         wvmax = self.velplot_widg.spec.wvmax
         wvlims = (wvmin / (1. + z), wvmax / (1. + z))
 
+        QtCore.pyqtRemoveInputHook()
+        pdb.set_trace()
+        QtCore.pyqtRestoreInputHook()
+
         transitions = linelist.available_transitions(
             wvlims, n_max_tuple=self.n_max_tuple, min_strength=self.min_strength)
 
-        #QtCore.pyqtRemoveInputHook()
-        #pdb.set_trace()
-        #QtCore.pyqtRestoreInputHook()
 
         if transitions is None:
             print('  There are no transitions available!')
@@ -357,7 +358,7 @@ E         : toggle displaying/hiding the external absorption model
         else: # transitions should be a QTable
             names = list(np.array(transitions['name']))
         if len(names) > 0:
-            self.llist['available'] = linelist.subset_lines(subset=names, reset_data=True, verbose=True, sort_by='as_given')
+            self.llist['available'] = linelist.subset_lines(subset=names, verbose=True, sort_by='as_given')
             self.llist['List'] = 'available'
         print('Done.')
 
