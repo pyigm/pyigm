@@ -84,7 +84,8 @@ class IgmGalaxyField(object):
             los_coord = self.coord
         # Coord
         if ((isinstance(obj['RA'], Quantity)) |
-                (isinstance(obj['RA'],astropy.table.column.MaskedColumn))):
+                (isinstance(obj['RA'],astropy.table.column.MaskedColumn)) |
+                (isinstance(obj['RA'], astropy.table.column.Column))):
             ora = obj['RA']
             odec = obj['DEC']
         else:
