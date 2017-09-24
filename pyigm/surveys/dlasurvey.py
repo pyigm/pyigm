@@ -1067,7 +1067,7 @@ def fit_atan_dla_lz(surveys=None, nstep=20, bootstrap=True, nboot=10,
             boot_tbl[key] = [ifits['atan_lz'][key] for ifits in sv_fits]
         boot_tbl.write(outfile, overwrite=True)
         if verbose:
-            print("Wrote lz_boot.fits")
+            print("Wrote {:s}".format(outfile))
         return boot_tbl
     else:
         _, _, _, _ = Ln_lz_atan(Agrid, Bgrid, Cgrid, slgrid, all_z, write=True)

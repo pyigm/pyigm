@@ -2,6 +2,7 @@
 """
 from __future__ import print_function, absolute_import, division, unicode_literals
 
+# Execute with:  python mk_files -h
 
 
 def parser(options=None):
@@ -22,7 +23,7 @@ def parser(options=None):
 def main(args=None):
 
     from pkg_resources import resource_filename
-    from .dlasurvey import fit_atan_dla_lz
+    from pyigm.surveys.dlasurvey import fit_atan_dla_lz
 
     pargs = parser()
     if pargs.dla_lz or pargs.all:
@@ -30,6 +31,9 @@ def main(args=None):
         """
         outfile = resource_filename('pyigm', 'data/DLA/dla_lz_boot.fits.gz')
         fit_atan_dla_lz(nstep=100, bootstrap=True, nboot=50000, nproc=pargs.nproc,
-                        oufile=outfile)
+                        outfile=outfile)
 
 
+if __name__ == '__main__':
+    args = parser()
+    main(args)
