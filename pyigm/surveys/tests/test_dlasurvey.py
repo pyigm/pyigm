@@ -7,6 +7,7 @@ import os
 import pytest
 
 from pyigm.surveys.dlasurvey import DLASurvey
+from pyigm.surveys.dlasurvey import fit_atan_dla_lz
 
 remote_data = pytest.mark.remote_data
 
@@ -20,10 +21,15 @@ def test_init():
     dlas = DLASurvey(ref='null')
     assert dlas.abs_type == 'DLA'
 
+def test_fit_atan_lz():
+    boot_tbl = fit_atan_dla_lz(nproc=1)
+    for key in ['A','B','C']:
+        assert key in boot_tbl.keys()
+
+
 def test_read_h100_nosys():
     h100 = DLASurvey.load_H100(load_sys=False)
     assert h100.nsys == 100
-
 
 def test_sdss():
     # All

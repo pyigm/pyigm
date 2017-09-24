@@ -546,7 +546,7 @@ class DLASurvey(IGMSurvey):
             self.cosmo = acc.FlatLambdaCDM(70., 0.3)
 
     def calculate_loz(self, zbins, NHI_mnx=(20.3, 23.00)):
-        """ Calculate l(z) in zbins for an interval in NHI
+        """ Calculate l(z) empirically in zbins for an interval in NHI
         Wrapper on lox
 
         Parameters
@@ -652,7 +652,7 @@ class DLASurvey(IGMSurvey):
         return rhoHI, rhoHI_lo, rhoHI_hi
 
     def calculate_fn(self, nhbins, zbins, log=False):
-        """ Calculate f(N,X)
+        """ Calculate f(N,X) empirically in bins of NHI and z
 
         Parameters
         ----------
@@ -911,3 +911,234 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
                         msk_smpl[qq] = True
     # Return
     return msk_smpl
+
+
+def calc_slgrid_atan(surveys, Agrid, Bgrid, Cgrid, C2grid):
+    """ Calculate the sightline grid for the Atan l(z) fit
+    Breaking this off for bootstrap speed-up
+
+    Parameters
+    ----------
+    surveys : list of DLASurvey objects
+    Agrid
+    Bgrid
+    Cgrid
+    C2grid
+
+    Returns
+    -------
+    slgrid : ndarray
+      Sightline term in likelihood function
+    """
+    # Integrating over the sightlines
+    slgrid = np.zeros_like(Agrid)
+    # Int(atan[x-a]) = (a-x) atan(a-x) - 0.5 * ln(a**2 - 2ax + x**2 + 1)
+    for isurvey in surveys:
+        slines = isurvey.sightlines
+        gds = slines['Z_START'] < slines['Z_END']
+        zstart = slines['Z_START'][gds]
+        zend = slines['Z_END'][gds]
+        # Integrate constant term
+        AAgrid = Agrid * np.sum(zend-zstart)
+        slgrid += AAgrid
+        # Integrate second term
+        for iz in zend:
+            CCgrid = (Cgrid-iz) * np.arctan(Cgrid-iz) - 0.5 * np.log(
+                C2grid - 2*Cgrid*iz + iz**2 + 1)
+            slgrid += Bgrid * CCgrid
+            if np.min(CCgrid) < -0.1:
+                pdb.set_trace()
+        for iz in zstart:
+            CCgrid = (Cgrid-iz) * np.arctan(Cgrid-iz) - 0.5 * np.log(
+                C2grid - 2*Cgrid*iz + iz**2 + 1)
+            slgrid -= Bgrid * CCgrid
+    # Return
+    return slgrid
+
+
+def load_dla_surveys():
+    """ Load up a select set of the DLA surveys
+    for statistical analysis
+
+    Returns
+    -------
+    surveys : list of DLASurvey objects
+
+    """
+    # Load surveys
+    print("Loading DLA surveys...")
+    print('Loading HST')
+    hst = DLASurvey.load_HST16()
+    print('Loading SDSS-DR5')
+    sdss = DLASurvey.load_SDSS_DR5()
+    print('Loading XQ100')
+    xq100 = DLASurvey.load_XQ100()
+    print('Loading GGG')
+    ggg = DLASurvey.load_GGG()
+
+    # Return
+    surveys = (hst, sdss, xq100, ggg)
+    return surveys
+
+
+def fit_atan_dla_lz(surveys=None, nstep=20, bootstrap=True, nboot=10,
+                    nproc=2, outfile=None, verbose=True):
+    """ Fit a A + B * atan(z-C)  l(z) model to DLA data
+    Writes bootstrap analysis to hard-drive
+
+    Parameters
+    ----------
+    surveys : list of DLASurvey objects
+      If None, a default list is loaded
+    nstep : int, optional
+      Steps in each dimension of the grid
+    bootstrap : bool, optional
+      Perform bootstrap analysis
+    nboot : int, optional
+      Number of bootstrap iterations
+    nproc : int, optional
+      Number of processors to use
+    outfile : str, optional
+      Output filename
+    verbose : bool, optional
+
+    Returns
+    -------
+    boot_tbl : Table
+      Returned if bootstrap=True
+
+    """
+    # Init
+    if outfile is None:
+        outfile = './dla_lz_boot.fits.gz'
+    # Load surveys
+    if surveys is None:
+        surveys = load_dla_surveys()
+    # Synthesize
+    all_z = np.concatenate([isurvey.zabs for isurvey in surveys])
+    ndla = len(all_z)
+
+    # Model :  l(z) = A + B * atan(C-z)
+    Aparm = np.linspace(0.05, 0.5, num=nstep).astype(np.float32)
+    Bparm = np.linspace(0.05, 0.5, num=nstep).astype(np.float32)
+    Cparm = np.linspace(1., 6., num=nstep).astype(np.float32)
+
+    # Generate grids (float32)
+    Agrid, Bgrid, Cgrid = np.meshgrid(Aparm, Bparm, Cparm, copy=False)
+    C2grid = Cgrid**2
+
+    # Sightline grid
+    print("Sightline calculation...")
+    slgrid = calc_slgrid_atan(surveys, Agrid, Bgrid, Cgrid, C2grid)
+
+    if bootstrap:
+        print("Bootstrapping!")
+        sv_fits = []
+        rN = np.random.poisson(ndla, size=nboot)
+        # Boot me
+        z_list = []
+        for kk,irN in enumerate(rN):
+            # Draw nPoisson
+            rval = (np.random.uniform(size=irN)*ndla).astype(int)
+            # Draw from all_z
+            draw_z = all_z[rval]
+            z_list.append(draw_z)
+        # Run
+        if nproc == 1:
+            for draw_z in z_list:
+                if verbose:
+                    print("Working on iteration: {:d} of {:d}".format(kk, nboot))
+                dfits, _, _, _ = Ln_lz_atan(Agrid, Bgrid, Cgrid, slgrid, draw_z, write=False)
+                # Save
+                sv_fits.append(dfits.copy())
+        else:
+            import multiprocessing
+            pool = multiprocessing.Pool(nproc) # initialize thread pool N threads
+            inp_list = []
+            for ii in range(nboot):
+                inp_list.append(
+                    dict(A=Agrid, B=Bgrid, C=Cgrid, sl=slgrid, z=z_list[ii]))
+            if verbose:
+                print("Mapping...")
+            sv_fits = pool.map(map_Ln_atan, inp_list)
+        # Write
+        boot_tbl = Table()
+        for key in ['A', 'B', 'C']:
+            boot_tbl[key] = [ifits['atan_lz'][key] for ifits in sv_fits]
+        boot_tbl.write(outfile, overwrite=True)
+        if verbose:
+            print("Wrote lz_boot.fits")
+        return boot_tbl
+    else:
+        _, _, _, _ = Ln_lz_atan(Agrid, Bgrid, Cgrid, slgrid, all_z, write=True)
+    # Finish
+    return
+
+
+def Ln_lz_atan(Agrid, Bgrid, Cgrid, slgrid, all_z, write=True, verbose=True):
+    """ Likelihood function for arctan model
+
+    Parameters
+    ----------
+    Agrid
+    Bgrid
+    Cgrid
+    slgrid
+    all_z
+    write
+
+    Returns
+    -------
+    dfits
+    dlagrid
+    slgrid
+    lngrid
+
+    """
+    # z0 estimate from 21cm surveys
+    lz_z0 = dict(value=np.mean([0.026, 0.045]), sig=0.01)
+    # Init
+    dlagrid = np.zeros_like(Agrid)
+    # Generate Likelihood for DLAs
+    for z in all_z:
+        dlagrid += np.log(Agrid + Bgrid * np.arctan(z-Cgrid))
+    bad = np.isnan(dlagrid)
+    dlagrid[bad] = -1e9
+
+    # Likelihood
+    lngrid = dlagrid - slgrid
+
+    # z=0
+    model_z0 = Agrid + Bgrid * np.arctan(0.-Cgrid)
+    lnP = -1 * (model_z0-lz_z0['value'])**2 / 2 / (lz_z0['sig']**2)
+    lngrid += lnP
+    # Best
+    indices = np.where(lngrid == np.max(lngrid))
+    best = Agrid[indices][0], Bgrid[indices][0], Cgrid[indices][0]
+    if verbose:
+        print('Best fit: A={}, B={}, C={}'.format(best[0], best[1], best[2]))
+    # Load
+    dfits = {}
+    # Write
+    dfits['atan_lz'] = dict(A=Agrid[indices][0], B=Bgrid[indices][0], C=Cgrid[indices][0],
+                            form='A + B*atan(z-C)')
+    # Return
+    return dfits, dlagrid, slgrid, lngrid
+
+
+def map_Ln_atan(map_dict):
+    """ For multiprocessing the bootstrap
+
+    Parameters
+    ----------
+    map_dict
+
+    Returns
+    -------
+
+    """
+    dfits, _, _, _ = Ln_lz_atan(map_dict['A'], map_dict['B'], map_dict['C'],
+                                map_dict['sl'], map_dict['z'], write=False,
+                                verbose=False)
+    return dfits
+
