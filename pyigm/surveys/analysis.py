@@ -151,7 +151,7 @@ def fit_atan_dla_lz(surveys, nstep=20, bootstrap=True,
         # Write
         boot_tbl = Table()
         for key in ['A', 'B', 'C']:
-            boot_tbl[key] = [ifits['atan_lz'][key] for ifits in sv_fits]
+            boot_tbl[key] = [ifits['lz']['atan'][key] for ifits in sv_fits]
         boot_tbl.write(boot_out, overwrite=True)
         if verbose:
             print("Wrote {:s}".format(boot_out))

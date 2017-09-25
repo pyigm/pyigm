@@ -9,8 +9,8 @@ import pytest
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 
-from pyigm.surveys.dlasurvey import DLASurvey
-from pyigm.surveys.dlasurvey import fit_atan_dla_lz
+from pyigm.surveys.dlasurvey import DLASurvey, load_dla_surveys
+from pyigm.surveys.analysis import fit_atan_dla_lz
 from pyigm.abssys.dla import DLASystem
 
 remote_data = pytest.mark.remote_data
@@ -37,9 +37,19 @@ def test_init():
     dlas.add_abs_sys(dlasys2)
     assert dlas.nsys == 2
 
+def test_dla_fitted():
+    dlas = DLASurvey(ref='null')
+    # f(N) double power law
+    fN = dlas.fitted_fN(21.)
+    assert isinstance(fN, float)
+    assert np.isclose(fN, 12.661299335610309)
+    fN = dlas.fitted_fN(np.arange(20.3, 21.3, 0.1))
+    assert isinstance(fN, np.ndarray)
+
 
 def test_fit_atan_lz():
-    difts, boot_tbl = fit_atan_dla_lz(nproc=1)
+    surveys = load_dla_surveys()
+    difts, boot_tbl = fit_atan_dla_lz(surveys, nproc=1)
     for key in ['A','B','C']:
         assert key in boot_tbl.keys()
 

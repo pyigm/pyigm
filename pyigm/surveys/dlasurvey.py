@@ -544,9 +544,8 @@ class DLASurvey(IGMSurvey):
             _ = self.cosmo
         except ValueError:
             self.cosmo = acc.FlatLambdaCDM(70., 0.3)
-
-        # Load fitted quantities
-        self.fitted = self.load_fitted()
+        # Load fits
+        self.load_fitted()
 
     def binned_loz(self, zbins, NHI_mnx=(20.3, 23.00)):
         """ Calculate l(z) empirically in zbins for an interval in NHI
@@ -709,6 +708,38 @@ class DLASurvey(IGMSurvey):
 
         """
 
+    def fitted_fN(self, lgNHI, form='dpow'):
+        """ Evaluate f(N) for a double power-law
+        Without normalization
+
+        Parameters
+        ----------
+        lgNHI : float or ndarray
+          log10 NHI
+
+        Returns
+        -------
+        f(NHI) without normalization
+        """
+        if isinstance(lgNHI, float):
+            flg_float = True
+            lgNHI = np.array([lgNHI])
+        else:
+            flg_float = False
+        # Model -- consider using pyigm.fN.FNmodel
+        if form == 'dpow':
+            param = self.dla_fits['fN'][form]
+            # Evaluate
+            high = lgNHI > param['Nd']
+            fNHI = np.zeros_like(lgNHI)
+            fNHI[high] = (10**(lgNHI[high]-param['Nd']))**param['a4']
+            fNHI[~high] = (10**(lgNHI[~high]-param['Nd']))**param['a3']
+        # Finish
+        if flg_float:
+            return fNHI[0]
+        else:
+            return fNHI
+
     def load_fitted(self):
         """ Load the fit info
         Returns
@@ -716,11 +747,7 @@ class DLASurvey(IGMSurvey):
         dla_fits : dict
 
         """
-        # File
-        fits_file = resource_filename('pyigm','data/DLA/dla_fits.json')
-        dla_fits = ltu.loadjson(fits_file)
-        # Return
-        return dla_fits
+        self.dla_fits, _ = load_dla_fits()
 
 
     def __generate_fncomp__(self, nhbins, zbins):
@@ -970,7 +997,7 @@ def load_dla_surveys():
 def load_dla_fits(fit_file=None):
     if fit_file is None:
         fit_file = resource_filename('pyigm', 'data/DLA/dla_fits.json')
-    if os.path.isfile(fit_file):
+    if os.path.exists(fit_file):
         dla_fits = ltu.loadjson(fit_file)
     else:
         dla_fits = {}
@@ -989,13 +1016,13 @@ def update_dla_fits(new_fits):
     user = getpass.getuser()
     #
     for key in new_fits:
-        new_fits[key]['CreationDate'] = date
-        new_fits[key]['User'] = user
         # Add
         if key not in dla_fits.keys():
             dla_fits[key] = {}
         for subkey in new_fits[key]:
             dla_fits[key][subkey] = new_fits[key][subkey]
+            dla_fits[key][subkey]['CreationDate'] = date
+            dla_fits[key][subkey]['User'] = user
     # Write
     pdb.set_trace()
     jdfits = ltu.jsonify(dla_fits)
