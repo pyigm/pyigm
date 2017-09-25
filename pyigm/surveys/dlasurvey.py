@@ -701,6 +701,7 @@ class DLASurvey(IGMSurvey):
         Parameters
         ----------
         z : float or ndarray
+        form : str, optional
 
         Returns
         -------
@@ -729,6 +730,7 @@ class DLASurvey(IGMSurvey):
         ----------
         lgNHI : float or ndarray
           log10 NHI
+        form : str, optional
 
         Returns
         -------
@@ -753,6 +755,31 @@ class DLASurvey(IGMSurvey):
             return fNHI[0]
         else:
             return fNHI
+
+    def fitted_nenH(self, lgNHI, form='loglog'):
+        """
+        Parameters
+        ----------
+        logNHI : float or ndarray
+        form : str, optional
+
+        Returns
+        -------
+
+        """
+        if isinstance(lgNHI, float):
+            flg_float = True
+            lgNHI = np.array([lgNHI])
+        else:
+            flg_float = False
+        # Calculate
+        nenH_param = self.dla_fits['nenH'][form]
+        log_nenH = nenH_param['bp'] + nenH_param['m'] * (lgNHI-20.3)
+        # Return
+        if flg_float:
+            return log_nenH[0]
+        else:
+            return log_nenH
 
     def load_fitted(self):
         """ Load the fit info

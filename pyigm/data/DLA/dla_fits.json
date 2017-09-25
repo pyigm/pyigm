@@ -22,7 +22,7 @@
         }
     },
     "nenH": {
-        "loglin": {
+        "loglog": {
             "CreationDate": "2017-Sep-25",
             "Ref": "Neeleman+15; PN17",
             "User": "xavier",

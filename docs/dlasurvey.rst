@@ -75,6 +75,7 @@ be accessed.
 .. _G09: http://adsabs.harvard.edu/abs/2009A%26A...508..133G
 .. _Neeleman+13: http://adsabs.harvard.edu/abs/2013ApJ...769...54N
 .. _Crighton+15: http://adsabs.harvard.edu/abs/2015MNRAS.452..217C
+.. _Neeleman+15: http://adsabs.harvard.edu/abs/2015ApJ...800....7N
 .. _Neeleman+16: http://adsabs.harvard.edu/abs/2016ApJ...818..113N
 .. _Sanchez+16: http://adsabs.harvard.edu/abs/2016MNRAS.456.4488S
 .. _PN17: http://adsabs.harvard.edu/abs/2016MNRAS.456.4488S
@@ -180,7 +181,7 @@ Fitted
 ======
 
 By default, the Class loads pre-evaluated fits for various
-DLA quantities.  These are drawn from the litertaure and are
+DLA quantities.  These are drawn from the literature and are
 summarized in this Table:
 
 ========== =============================  =================== =====================================
@@ -188,15 +189,18 @@ Stat       Form                           Reference           Description
 ========== =============================  =================== =====================================
 l(z)       A + B*atan(z-C)                `PN17`_             Full redshift fit to l(z)
 f(N)       Double power law               `PHW05`_            Fitted only to DR3
+ne/nH      log10 (ne/NH) for logNHI       `Neeleman+15`_      Based on CII* analysis
 ========== =============================  =================== =====================================
 
-Here are a couple of examples::
+Here are a few examples::
 
     dlas = DLASurvey()
     # f(N)
     fN = dlas.fitted_fN(21.)  # Not normalized
     # l(z)
     lz = dlas.fitted_lz(1.)
+    # nenH
+    nenH = dlas.fitted_nenH(21.)
 
 Analysis
 ========
