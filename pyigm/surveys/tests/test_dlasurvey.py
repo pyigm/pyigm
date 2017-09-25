@@ -77,10 +77,10 @@ def test_sdss():
     assert len(sdss_stat.NHI) == 737
     # Binned
     lX, lX_lo, lX_hi = sdss_stat.binned_lox([2., 2.5, 3])
-    assert np.isclose(lX[0], 0.04625038, atol=1e-5)
+    assert np.isclose(lX[0], 0.04625038, atol=1e-4)
     fN, fN_lo, fN_hi = sdss_stat.binned_fn([20.3, 20.5, 21., 21.5, 22.], [2, 2.5], log=True)
     assert fN.size == 4
-    assert np.isclose(fN_lo[0], 0.0682087, atol=1e-5)
+    assert np.isclose(fN_lo[0], 0.0682087, atol=1e-4)
 
 
 @remote_data
