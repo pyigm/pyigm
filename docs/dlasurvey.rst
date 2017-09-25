@@ -12,8 +12,11 @@ Notebooks
 
    DLA <DLASurvey_examples>
 
-Overview
-========
+
+.. _dlasurvey:
+
+DLASurvey
+=========
 
 This Class, a child of :ref:`igmsurvey`, is designed to organize
 and analyze a survey of DLA systems

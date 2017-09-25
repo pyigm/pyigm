@@ -38,9 +38,8 @@ def test_init():
     assert dlas.nsys == 2
 
 
-
 def test_fit_atan_lz():
-    boot_tbl = fit_atan_dla_lz(nproc=1)
+    difts, boot_tbl = fit_atan_dla_lz(nproc=1)
     for key in ['A','B','C']:
         assert key in boot_tbl.keys()
 

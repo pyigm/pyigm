@@ -22,17 +22,24 @@ def parser(options=None):
 
 def main(args=None):
 
+
     from pkg_resources import resource_filename
-    from pyigm.surveys.dlasurvey import fit_atan_dla_lz
+
+    from linetools import utils as ltu
+
+    from pyigm.surveys.analysis import fit_atan_dla_lz
+    from pyigm.surveys.dlasurvey import load_dla_surveys, update_dla_fits
+
 
     pargs = parser()
     if pargs.dla_lz or pargs.all:
         """ Creates dla_lz_boot.fits
         """
+        surveys = load_dla_surveys()
         boot_file = resource_filename('pyigm', 'data/DLA/dla_lz_boot.fits.gz')
-        fit_file = resource_filename('pyigm', 'data/DLA/dla_lz_fit.json')
-        _ = fit_atan_dla_lz(nstep=100, bootstrap=True, nboot=50000, nproc=pargs.nproc,
-                        fit_out=fit_file, boot_out=boot_file)
+        dfits, _ = fit_atan_dla_lz(surveys, nstep=100, bootstrap=False, nboot=50000, nproc=pargs.nproc,
+                        boot_out=boot_file)
+        update_dla_fits(dfits)
 
 
 if __name__ == '__main__':

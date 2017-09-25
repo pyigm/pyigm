@@ -113,7 +113,7 @@ them within pyigm/data/LLS/HD-LLS.
 DLA
 +++
 
-Subclass for DLA survey.  Presently handles the .dat and .lst files used
+Subclass for :ref:`dlasurvey`.  Presently handles the .dat and .lst files used
 by JXP.   See :doc:`DLASurvey_examples` for more.
 
 Here is a Table describing the various samples that may
