@@ -12,7 +12,7 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 import astropy
 
-from ..utils import calc_rho
+from pyigm.cgm.utils import calc_rho
 from pyigm.field.galaxy import Galaxy
 from pyigm.abssys.igmsys import IGMSystem
 
