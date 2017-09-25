@@ -696,17 +696,30 @@ class DLASurvey(IGMSurvey):
         else:
             return fn, fn - fn_lo, fn_hi - fn
 
-    def fitted_lz(self, z):
+    def fitted_lz(self, z, form='atan'):
         """
         Parameters
         ----------
-        z
+        z : float or ndarray
 
         Returns
         -------
-        loz : float or ndarray
+        loz : float or ndarray  (depends on input z)
 
         """
+        if isinstance(z, float):
+            flg_float = True
+            z = np.array([z])
+        else:
+            flg_float = False
+        if form == 'atan':
+            param = self.dla_fits['lz'][form]
+            lz = param['A'] + param['B'] * np.arctan(z-param['C'])
+        # Finish
+        if flg_float:
+            return lz[0]
+        else:
+            return lz
 
     def fitted_fN(self, lgNHI, form='dpow'):
         """ Evaluate f(N) for a double power-law
@@ -719,7 +732,8 @@ class DLASurvey(IGMSurvey):
 
         Returns
         -------
-        f(NHI) without normalization
+        fNHI : float or ndarray
+          f(NHI) without normalization
         """
         if isinstance(lgNHI, float):
             flg_float = True

@@ -37,6 +37,7 @@ def test_init():
     dlas.add_abs_sys(dlasys2)
     assert dlas.nsys == 2
 
+
 def test_dla_fitted():
     dlas = DLASurvey(ref='null')
     # f(N) double power law
@@ -45,6 +46,10 @@ def test_dla_fitted():
     assert np.isclose(fN, 12.661299335610309)
     fN = dlas.fitted_fN(np.arange(20.3, 21.3, 0.1))
     assert isinstance(fN, np.ndarray)
+    # l(z)
+    lz = dlas.fitted_lz(1.)
+    assert isinstance(lz, float)
+    assert np.isclose(lz, 0.054821907396422453)
 
 
 def test_fit_atan_lz():

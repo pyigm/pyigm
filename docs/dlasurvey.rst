@@ -70,12 +70,14 @@ Here is a Table describing the various samples that may
 be accessed.
 
 .. _Peroux03: http://adsabs.harvard.edu/abs/2003MNRAS.346.1103P
+.. _PHW05: http://adsabs.harvard.edu/abs/2005ApJ...635..123P
 .. _PW09: http://adsabs.harvard.edu/abs/2009ApJ...696.1543P
 .. _G09: http://adsabs.harvard.edu/abs/2009A%26A...508..133G
 .. _Neeleman+13: http://adsabs.harvard.edu/abs/2013ApJ...769...54N
 .. _Crighton+15: http://adsabs.harvard.edu/abs/2015MNRAS.452..217C
 .. _Neeleman+16: http://adsabs.harvard.edu/abs/2016ApJ...818..113N
 .. _Sanchez+16: http://adsabs.harvard.edu/abs/2016MNRAS.456.4488S
+.. _PN17: http://adsabs.harvard.edu/abs/2016MNRAS.456.4488S
 
 ========== =============================  =================== =====================================
 Survey     Call                           Reference(s)              Description
@@ -174,5 +176,31 @@ Here is an example::
 
 rho will have units of Solar mass per Mpc^3.
 
-Output
+Fitted
 ======
+
+By default, the Class loads pre-evaluated fits for various
+DLA quantities.  These are drawn from the litertaure and are
+summarized in this Table:
+
+========== =============================  =================== =====================================
+Stat       Form                           Reference           Description
+========== =============================  =================== =====================================
+l(z)       A + B*atan(z-C)                `PN17`_             Full redshift fit to l(z)
+f(N)       Double power law               `PHW05`_            Fitted only to DR3
+========== =============================  =================== =====================================
+
+Here are a couple of examples::
+
+    dlas = DLASurvey()
+    # f(N)
+    fN = dlas.fitted_fN(21.)  # Not normalized
+    # l(z)
+    lz = dlas.fitted_lz(1.)
+
+Analysis
+========
+
+There are methods to fit aspects of the DLAs in
+pyigm.surveys.analysis, but these are mainly for
+the developers
