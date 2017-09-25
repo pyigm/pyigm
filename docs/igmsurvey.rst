@@ -16,8 +16,10 @@ Notebooks
    LLS <LLSSurvey_examples>
    DLA <DLASurvey_examples>
 
-Overview
-========
+.. _igmsurvey:
+
+IGMSurvey
+=========
 
 This Class is designed to organize and analyze a survey of
 absorption systems (defined as AbsSystem objects).

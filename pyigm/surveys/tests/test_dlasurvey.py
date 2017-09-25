@@ -6,8 +6,12 @@ import numpy as np
 import os
 import pytest
 
+from astropy.coordinates import SkyCoord
+from astropy import units as u
+
 from pyigm.surveys.dlasurvey import DLASurvey
 from pyigm.surveys.dlasurvey import fit_atan_dla_lz
+from pyigm.abssys.dla import DLASystem
 
 remote_data = pytest.mark.remote_data
 
@@ -20,6 +24,20 @@ def data_path(filename):
 def test_init():
     dlas = DLASurvey(ref='null')
     assert dlas.abs_type == 'DLA'
+
+    coord = SkyCoord(ra=123.1143, dec=-12.4321, unit='deg')
+    dlasys = DLASystem(coord, 1.244, [-300,300.]*u.km/u.s, 20.4)
+    dlasys.name = 'Sys1'
+    #
+    coord2 = SkyCoord(ra=223.1143, dec=42.4321, unit='deg')
+    dlasys2 = DLASystem(coord2, 1.744, [-300,300.]*u.km/u.s, 21.7)
+    dlasys2.name = 'Sys2'
+    # Add systems
+    dlas.add_abs_sys(dlasys)
+    dlas.add_abs_sys(dlasys2)
+    assert dlas.nsys == 2
+
+
 
 def test_fit_atan_lz():
     boot_tbl = fit_atan_dla_lz(nproc=1)
@@ -40,9 +58,9 @@ def test_sdss():
     sdss_stat = DLASurvey.load_SDSS_DR5()
     assert len(sdss_stat.NHI) == 737
     # Binned
-    lX, lX_lo, lX_hi = sdss_stat.calculate_lox([2., 2.5, 3])
+    lX, lX_lo, lX_hi = sdss_stat.binned_lox([2., 2.5, 3])
     assert np.isclose(lX[0], 0.04625038, atol=1e-5)
-    fN, fN_lo, fN_hi = sdss_stat.calculate_fn([20.3, 20.5, 21., 21.5, 22.], [2, 2.5], log=True)
+    fN, fN_lo, fN_hi = sdss_stat.binned_fn([20.3, 20.5, 21., 21.5, 22.], [2, 2.5], log=True)
     assert fN.size == 4
     assert np.isclose(fN_lo[0], 0.0682087, atol=1e-5)
 

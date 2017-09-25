@@ -29,7 +29,6 @@ from pyigm import utils as pyigmu
 
 pyigm_path = imp.find_module('pyigm')[1]
 
-
 # Class for DLA Survey
 class DLASurvey(IGMSurvey):
     """An DLA Survey class
@@ -121,7 +120,7 @@ class DLASurvey(IGMSurvey):
         return dla_survey
 
     @classmethod
-    def load_H100(cls, grab_spectra=False, load_sys=True, isys_path=None):  #skip_trans=True):
+    def load_H100(cls, grab_spectra=False, load_sys=True, isys_path=None):
         """ Sample of unbiased HIRES DLAs compiled and analyzed by Neeleman+13
 
         Neeleman, M. et al. 2013, ApJ, 769, 54
@@ -155,8 +154,8 @@ class DLASurvey(IGMSurvey):
         # System files
         sys_files = resource_filename('pyigm', "/data/DLA/H100/H100_DLA_sys.tar.gz")
 
-        if load_sys:  # This approach takes ~120s
-            print('H100: Loading systems.  This takes ~120s')
+        if load_sys:  # This approach takes ~90s
+            print('H100: Loading systems.  This takes ~90s')
             if isys_path is not None:
                 dla_survey = pyisu.load_sys_files(isys_path, 'DLA', sys_path=True, use_coord=True)
             else:
@@ -496,6 +495,7 @@ class DLASurvey(IGMSurvey):
         """ Load the DLA from XQ-100
 
         (Sanchez-Ramirez et al. 2016, MNRAS, 456, 4488)
+        http://adsabs.harvard.edu/abs/2016MNRAS.456.4488S
 
         Parameters
         ----------
@@ -545,7 +545,10 @@ class DLASurvey(IGMSurvey):
         except ValueError:
             self.cosmo = acc.FlatLambdaCDM(70., 0.3)
 
-    def calculate_loz(self, zbins, NHI_mnx=(20.3, 23.00)):
+        # Load fitted quantities
+        self.fitted = self.load_fitted()
+
+    def binned_loz(self, zbins, NHI_mnx=(20.3, 23.00)):
         """ Calculate l(z) empirically in zbins for an interval in NHI
         Wrapper on lox
 
@@ -563,7 +566,7 @@ class DLASurvey(IGMSurvey):
         """
         return self.calculate_lox(zbins, NHI_mnx=NHI_mnx, use_Dz=True)
 
-    def calculate_lox(self, zbins, NHI_mnx=(20.3, 23.00), use_Dz=False):
+    def binned_lox(self, zbins, NHI_mnx=(20.3, 23.00), use_Dz=False):
         """ Calculate l(X) in zbins for an interval in NHI
         Parameters
         ----------
@@ -600,7 +603,7 @@ class DLASurvey(IGMSurvey):
 
         return lX, lX - lX_lo, lX_hi - lX
 
-    def calculate_rhoHI(self, zbins, nhbins=(20.3, 23.), nboot=1000):
+    def binned_rhoHI(self, zbins, nhbins=(20.3, 23.), nboot=1000):
         """ Calculate the mass density in HI
 
         Parameters
@@ -651,7 +654,7 @@ class DLASurvey(IGMSurvey):
 
         return rhoHI, rhoHI_lo, rhoHI_hi
 
-    def calculate_fn(self, nhbins, zbins, log=False):
+    def binned_fn(self, nhbins, zbins, log=False):
         """ Calculate f(N,X) empirically in bins of NHI and z
 
         Parameters
@@ -693,6 +696,9 @@ class DLASurvey(IGMSurvey):
             return np.log10(fn), np.log10(fn) - np.log10(fn_lo), np.log10(fn_hi) - np.log10(fn)
         else:
             return fn, fn - fn_lo, fn_hi - fn
+
+    #def fitted_dlas(self):
+
 
     def __generate_fncomp__(self, nhbins, zbins):
         """  Generate binned evaluation of f(NHI,X)
@@ -981,10 +987,14 @@ def load_dla_surveys():
     return surveys
 
 
-def fit_atan_dla_lz(surveys=None, nstep=20, bootstrap=True, nboot=10,
-                    nproc=2, outfile=None, verbose=True):
+def fit_atan_dla_lz(surveys=None, nstep=20, bootstrap=True,
+                    nboot=10, nproc=2,
+                    fit_out=None, boot_out=None,
+                    verbose=True):
     """ Fit a A + B * atan(z-C)  l(z) model to DLA data
     Writes bootstrap analysis to hard-drive
+
+    Code used in Prochaska & Neeleman 2017
 
     Parameters
     ----------
@@ -998,19 +1008,27 @@ def fit_atan_dla_lz(surveys=None, nstep=20, bootstrap=True, nboot=10,
       Number of bootstrap iterations
     nproc : int, optional
       Number of processors to use
-    outfile : str, optional
-      Output filename
+    fit_out : str, optional
+      Output filename for best fit (JSON)
+    boot_out : str, optional
+      Output filename for bootstrap analysis
     verbose : bool, optional
 
     Returns
     -------
     boot_tbl : Table
       Returned if bootstrap=True
+      else return None
 
     """
+    # Name and date
+    import datetime
+    import getpass
     # Init
-    if outfile is None:
-        outfile = './dla_lz_boot.fits.gz'
+    if boot_out is None:
+        boot_out = './dla_lz_boot.fits.gz'
+    if fit_out is None:
+        fit_out = './dla_lz_fit.json'
     # Load surveys
     if surveys is None:
         surveys = load_dla_surveys()
@@ -1028,11 +1046,13 @@ def fit_atan_dla_lz(surveys=None, nstep=20, bootstrap=True, nboot=10,
     C2grid = Cgrid**2
 
     # Sightline grid
-    print("Sightline calculation...")
+    if verbose:
+        print("Sightline calculation...")
     slgrid = calc_slgrid_atan(surveys, Agrid, Bgrid, Cgrid, C2grid)
 
     if bootstrap:
-        print("Bootstrapping!")
+        if verbose:
+            print("Bootstrapping!")
         sv_fits = []
         rN = np.random.poisson(ndla, size=nboot)
         # Boot me
@@ -1048,7 +1068,7 @@ def fit_atan_dla_lz(surveys=None, nstep=20, bootstrap=True, nboot=10,
             for draw_z in z_list:
                 if verbose:
                     print("Working on iteration: {:d} of {:d}".format(kk, nboot))
-                dfits, _, _, _ = Ln_lz_atan(Agrid, Bgrid, Cgrid, slgrid, draw_z, write=False)
+                dfits, _, _ = Ln_lz_atan(Agrid, Bgrid, Cgrid, slgrid, draw_z, write=False)
                 # Save
                 sv_fits.append(dfits.copy())
         else:
@@ -1065,14 +1085,24 @@ def fit_atan_dla_lz(surveys=None, nstep=20, bootstrap=True, nboot=10,
         boot_tbl = Table()
         for key in ['A', 'B', 'C']:
             boot_tbl[key] = [ifits['atan_lz'][key] for ifits in sv_fits]
-        boot_tbl.write(outfile, overwrite=True)
+        boot_tbl.write(boot_out, overwrite=True)
         if verbose:
-            print("Wrote {:s}".format(outfile))
-        return boot_tbl
+            print("Wrote {:s}".format(boot_out))
     else:
-        _, _, _, _ = Ln_lz_atan(Agrid, Bgrid, Cgrid, slgrid, all_z, write=True)
+        boot_tbl = None
+    # Best
+    dfits, _, _ = Ln_lz_atan(Agrid, Bgrid, Cgrid, slgrid, all_z, write=True)
+    date = str(datetime.date.today().strftime('%Y-%b-%d'))
+    user = getpass.getuser()
+    dfits['CreationDate'] = date
+    dfits['User'] = user
+    # Write
+    jdfits = ltu.jsonify(dfits)
+    ltu.savejson(fit_out, jdfits, easy_to_read=True, overwrite=True)
+    print("Wrote: {:s}".format(fit_out))
+
     # Finish
-    return
+    return boot_tbl
 
 
 def Ln_lz_atan(Agrid, Bgrid, Cgrid, slgrid, all_z, write=True, verbose=True):
@@ -1089,10 +1119,11 @@ def Ln_lz_atan(Agrid, Bgrid, Cgrid, slgrid, all_z, write=True, verbose=True):
 
     Returns
     -------
-    dfits
-    dlagrid
-    slgrid
-    lngrid
+    dfits : dict
+      Contains best fit model
+    dlagrid : ndarray
+      for debugging
+    lngrid : ndarray
 
     """
     # z0 estimate from 21cm surveys
@@ -1123,7 +1154,7 @@ def Ln_lz_atan(Agrid, Bgrid, Cgrid, slgrid, all_z, write=True, verbose=True):
     dfits['atan_lz'] = dict(A=Agrid[indices][0], B=Bgrid[indices][0], C=Cgrid[indices][0],
                             form='A + B*atan(z-C)')
     # Return
-    return dfits, dlagrid, slgrid, lngrid
+    return dfits, dlagrid, lngrid
 
 
 def map_Ln_atan(map_dict):
@@ -1137,7 +1168,7 @@ def map_Ln_atan(map_dict):
     -------
 
     """
-    dfits, _, _, _ = Ln_lz_atan(map_dict['A'], map_dict['B'], map_dict['C'],
+    dfits, _, _ = Ln_lz_atan(map_dict['A'], map_dict['B'], map_dict['C'],
                                 map_dict['sl'], map_dict['z'], write=False,
                                 verbose=False)
     return dfits

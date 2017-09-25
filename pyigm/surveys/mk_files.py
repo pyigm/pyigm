@@ -29,9 +29,10 @@ def main(args=None):
     if pargs.dla_lz or pargs.all:
         """ Creates dla_lz_boot.fits
         """
-        outfile = resource_filename('pyigm', 'data/DLA/dla_lz_boot.fits.gz')
-        fit_atan_dla_lz(nstep=100, bootstrap=True, nboot=50000, nproc=pargs.nproc,
-                        outfile=outfile)
+        boot_file = resource_filename('pyigm', 'data/DLA/dla_lz_boot.fits.gz')
+        fit_file = resource_filename('pyigm', 'data/DLA/dla_lz_fit.json')
+        _ = fit_atan_dla_lz(nstep=100, bootstrap=True, nboot=50000, nproc=pargs.nproc,
+                        fit_out=fit_file, boot_out=boot_file)
 
 
 if __name__ == '__main__':

@@ -339,6 +339,7 @@ class IGMSurvey(object):
                     t.add_row( row )
                 continue
             else:
+                pdb.set_trace()
                 raise ValueError("Multple entries")
 
         # Return
