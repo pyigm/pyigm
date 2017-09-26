@@ -50,7 +50,7 @@ class GalaxyCGM(CGM):
         from linetools.lists.linelist import LineList
         from linetools.analysis.absline import linear_clm
 
-        llist = LineList('EUV',use_ISM_table=False)
+        llist = LineList('EUV')
         ovii = AbsLine('OVII 21', linelist=llist)
 
         # Fang+15  Table 1  [OVII]

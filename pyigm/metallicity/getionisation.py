@@ -231,7 +231,7 @@ Main function
 
 """
 
-def main()
+def main():
     
     ##CBW adjust
     #define the model and grid

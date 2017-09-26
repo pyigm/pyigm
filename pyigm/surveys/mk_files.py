@@ -40,7 +40,7 @@ def main(args=None):
     if pargs.dla_lz or pargs.all:
         surveys = load_dla_surveys()
         boot_file = resource_filename('pyigm', 'data/DLA/dla_lz_boot.fits.gz')
-        dfits, _ = fit_atan_dla_lz(surveys, nstep=100, bootstrap=False, nboot=50000, nproc=pargs.nproc,
+        dfits, _ = fit_atan_dla_lz(surveys, nstep=100, bootstrap=True, nboot=50000, nproc=pargs.nproc,
                         boot_out=boot_file)
         # Write
         dfits['lz']['atan']['Ref'] = 'Prochaska & Neeleman 2017'
@@ -59,8 +59,8 @@ def main(args=None):
     if pargs.dla_nenH or pargs.all:
         dfits = {}
         dfits['nenH'] = {}
-        dfits['nenH']['loglin'] = dict(bp=-2.592, m=-0.64)
-        dfits['nenH']['loglin']['Ref'] = 'Neeleman+15; PN17'
+        dfits['nenH']['loglog'] = dict(bp=-2.592, m=-0.64)
+        dfits['nenH']['loglog']['Ref'] = 'Neeleman+15; PN17'
         # Update
         update_dla_fits(dfits)
 

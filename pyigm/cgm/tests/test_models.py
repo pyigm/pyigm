@@ -27,7 +27,7 @@ def test_modified_NFW():
     assert rho.size == 100
     xyz0 = [100., 0., 0.]
     nH0 = mNFW.nH(xyz0)
-    assert np.isclose(nH0, 0.00025117200064614744)
+    assert np.isclose(nH0, 0.00025117200064614744, rtol=1e-3)
     # ne
     ne = mNFW.ne(xyz)
     assert np.all(ne > nH)

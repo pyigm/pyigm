@@ -190,6 +190,7 @@ def Ln_lz_atan(Agrid, Bgrid, Cgrid, slgrid, all_z, write=True, verbose=True):
     # Init
     dlagrid = np.zeros_like(Agrid)
     # Generate Likelihood for DLAs
+    np.seterr(invalid='ignore')
     for z in all_z:
         dlagrid += np.log(Agrid + Bgrid * np.arctan(z-Cgrid))
     bad = np.isnan(dlagrid)
