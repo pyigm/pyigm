@@ -22,6 +22,11 @@ from linetools.isgm import utils as ltiu
 from pyigm.abssys.igmsys import IGMSystem
 from pyigm.abssys.utils import class_by_type
 
+try:
+    unic = unicode
+except:
+    unic = str
+
 
 class IGMSurvey(object):
     """ Class for a survey of absorption line systems.
@@ -432,7 +437,7 @@ class IGMSurvey(object):
             json_fil = tmpdir+'/'+igm_abs.name+'.json'
             jfiles.append(json_fil)
             with io.open(json_fil, 'w', encoding='utf-8') as f:
-                f.write(unicode(json.dumps(idict, sort_keys=True, indent=4,
+                f.write(unic(json.dumps(idict, sort_keys=True, indent=4,
                                            separators=(',', ': '))))
         # Tar
         subprocess.call(['tar', '-czf', outfile, tmpdir])
