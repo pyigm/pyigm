@@ -50,6 +50,9 @@ def test_dla_fitted():
     lz = dlas.fitted_lz(1.)
     assert isinstance(lz, float)
     assert np.isclose(lz, 0.054821907396422453)
+    # Error
+    lz, sig_lz = dlas.fitted_lz(1., boot_error=True)
+    assert sig_lz.shape == (1,2)
     # nenH
     nenH = dlas.fitted_nenH(21.)
     assert isinstance(nenH, float)

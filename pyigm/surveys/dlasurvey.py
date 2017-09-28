@@ -29,6 +29,8 @@ from pyigm import utils as pyigmu
 
 pyigm_path = imp.find_module('pyigm')[1]
 
+lz_boot_file = resource_filename('pyigm', 'data/DLA/dla_lz_boot.fits.gz')
+
 # Class for DLA Survey
 class DLASurvey(IGMSurvey):
     """An DLA Survey class
@@ -697,16 +699,21 @@ class DLASurvey(IGMSurvey):
         else:
             return fn, fn - fn_lo, fn_hi - fn
 
-    def fitted_lz(self, z, form='atan'):
-        """
+    def fitted_lz(self, z, form='atan', boot_error=False):
+        """ Return l(z) as evaluated from a fit
+          'atan' -- arctan parameterization of Prochaska & Neeleman 2017
+
         Parameters
         ----------
         z : float or ndarray
         form : str, optional
+        boot_error : bool, False
 
         Returns
         -------
         loz : float or ndarray  (depends on input z)
+        siz_lz : ndarray, optional
+          (if boot_error=True)
 
         """
         if isinstance(z, float):
@@ -717,11 +724,27 @@ class DLASurvey(IGMSurvey):
         if form == 'atan':
             param = self.dla_fits['lz'][form]
             lz = param['A'] + param['B'] * np.arctan(z-param['C'])
+            # Error?
+            if boot_error:
+                lz_boot = load_boot_lz()
+                sig_lz = np.zeros((len(z),2))
+                for kk,iz in enumerate(z):
+                    lzs = lz_boot['A'] + lz_boot['B'] * np.arctan(z-lz_boot['C'])
+                    perc = np.percentile(lzs, [16., 84.])
+                    # Save
+                    sig_lz[kk,:] = perc-lz[kk]
+        else:
+            raise IOError("Bad form input to fitted_lz: {:s}".format(form))
         # Finish
         if flg_float:
-            return lz[0]
+            rlz = lz[0]
         else:
-            return lz
+            rlz = lz
+        # Return
+        if boot_error:
+            return rlz, sig_lz
+        else:
+            return rlz
 
     def fitted_fN(self, lgNHI, form='dpow'):
         """ Evaluate f(N) for a double power-law
@@ -1036,7 +1059,26 @@ def load_dla_surveys():
     return surveys
 
 
+def load_boot_lz():
+    """ Load bootstrap output from l(z) fits
+    Follows Prochaska & Neeleman 2017
+    Returns
+    -------
+    boot : Table
+    """
+    boot = Table.read(lz_boot_file)
+    return boot
+
 def load_dla_fits(fit_file=None):
+    """ Load fit file(s)
+    Parameters
+    ----------
+    fit_file : str
+
+    Returns
+    -------
+
+    """
     if fit_file is None:
         fit_file = resource_filename('pyigm', 'data/DLA/dla_fits.json')
     if os.path.exists(fit_file):

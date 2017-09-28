@@ -10,10 +10,11 @@ def parser(options=None):
     # Parse
     parser = argparse.ArgumentParser(
         description='Create one or more files for IGM Surveys.')
-    parser.add_argument("--dla_lz", help="Fit lz with atan model and create dla_lz_boot file", action="store_true")
-    parser.add_argument("--dla_dpow", help="Fit f(N) of DLA with double power law", action="store_true")
-    parser.add_argument("--dla_nenH", help="Add ne/nH into the fit file", action="store_true")
-    parser.add_argument("--all", help="Create dla_lz_boot file", action="store_true")
+    parser.add_argument("--dla_lz", default=False, help="Fit lz with atan model and create dla_lz_boot file", action="store_true")
+    parser.add_argument("--dla_lz_boot", default=False, help="Generate bootstrap file too?", action="store_true")
+    parser.add_argument("--dla_dpow", default=False, help="Fit f(N) of DLA with double power law", action="store_true")
+    parser.add_argument("--dla_nenH", default=False, help="Add ne/nH into the fit file", action="store_true")
+    parser.add_argument("--all", default=False, help="Create dla_lz_boot file", action="store_true")
     parser.add_argument("--nproc", type=int, default=4, help="Number of processors")
 
     if options is None:
@@ -24,24 +25,32 @@ def parser(options=None):
 
 def main(args=None):
 
-
-    from pkg_resources import resource_filename
+    import pdb
+    import numpy as np
 
     from linetools import utils as ltu
 
     from pyigm.surveys.analysis import fit_atan_dla_lz, fit_fN_dblpow
     from pyigm.surveys.dlasurvey import load_dla_surveys, update_dla_fits
     from pyigm.surveys.dlasurvey import DLASurvey
+    from pyigm.surveys import dlasurvey
 
 
     pargs = parser()
 
-    # DLA l(z) analysis [Prochaska & Neeleman 2017]
+    # DLA l(z) analysis
     if pargs.dla_lz or pargs.all:
+        # arctan from Prochaska & Neeleman 2017
         surveys = load_dla_surveys()
-        boot_file = resource_filename('pyigm', 'data/DLA/dla_lz_boot.fits.gz')
-        dfits, _ = fit_atan_dla_lz(surveys, nstep=100, bootstrap=True, nboot=50000, nproc=pargs.nproc,
-                        boot_out=boot_file)
+        dfits, _ = fit_atan_dla_lz(surveys, nstep=100, bootstrap=pargs.dla_lz_boot, nboot=50000, nproc=pargs.nproc,
+                        boot_out=dlasurvey.lz_boot_file)
+        # Calculate error
+        lz_boot = dlasurvey.load_boot_lz()
+        for key in ['A','B','C']:
+            boot = lz_boot[key].data
+            # 68%
+            perc = np.percentile(boot, [16., 84.])
+            dfits['lz']['atan']['sig_{:s}'.format(key)] = perc - dfits['lz']['atan'][key]
         # Write
         dfits['lz']['atan']['Ref'] = 'Prochaska & Neeleman 2017'
         update_dla_fits(dfits)
@@ -59,7 +68,7 @@ def main(args=None):
     if pargs.dla_nenH or pargs.all:
         dfits = {}
         dfits['nenH'] = {}
-        dfits['nenH']['loglog'] = dict(bp=-2.592, m=-0.64)
+        dfits['nenH']['loglog'] = dict(bp=-2.881, m=-0.352, bp_sig=(+0.253,-0.256), m_sig=(+0.321, -0.317))   # Values with all 50 measurements
         dfits['nenH']['loglog']['Ref'] = 'Neeleman+15; PN17'
         # Update
         update_dla_fits(dfits)
