@@ -270,7 +270,7 @@ class DLASurvey(IGMSurvey):
         import warnings
 
         # LLS File
-        dla_fil = pyigm_path+'/data/DLA/SDSS_DR5/dr5_alldla.fits.gz'
+        dla_fil = resource_filename('pyigm','/data/DLA/SDSS_DR5/dr5_alldla.fits.gz')
         print('SDSS-DR5: Loading DLA file {:s}'.format(dla_fil))
         dlas = QTable.read(dla_fil)
 
@@ -290,11 +290,12 @@ class DLASurvey(IGMSurvey):
         dla_survey.ref = 'SDSS-DR5 (PW09)'
 
         # g(z) file
-        qsos_fil = pyigm_path+'/data/DLA/SDSS_DR5/dr5_dlagz_s2n4.fits'
+        qsos_fil = resource_filename('pyigm','/data/DLA/SDSS_DR5/dr5_dlagz_s2n4.fits')
         print('SDSS-DR5: Loading QSOs file {:s}'.format(qsos_fil))
         qsos = QTable.read(qsos_fil)
         qsos.rename_column('Z1', 'Z_START')
         qsos.rename_column('Z2', 'Z_END')
+        qsos.remove_column('DX')
         # Reformat
         new_cols = []
         for key in qsos.keys():
@@ -563,7 +564,7 @@ class DLASurvey(IGMSurvey):
         -------
         lz, sig_lz_lower, sig_lz_upper : ndarray
         """
-        return self.calculate_lox(zbins, NHI_mnx=NHI_mnx, use_Dz=True)
+        return self.binned_lox(zbins, NHI_mnx=NHI_mnx, use_Dz=True)
 
     def binned_lox(self, zbins, NHI_mnx=(20.3, 23.00), use_Dz=False):
         """ Calculate l(X) in zbins for an interval in NHI
