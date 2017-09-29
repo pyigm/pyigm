@@ -29,6 +29,7 @@ from pyigm import utils as pyigmu
 
 pyigm_path = imp.find_module('pyigm')[1]
 
+lz_boot_file = resource_filename('pyigm', 'data/DLA/dla_lz_boot.fits.gz')
 
 # Class for DLA Survey
 class DLASurvey(IGMSurvey):
@@ -121,7 +122,7 @@ class DLASurvey(IGMSurvey):
         return dla_survey
 
     @classmethod
-    def load_H100(cls, grab_spectra=False, load_sys=True, isys_path=None):  #skip_trans=True):
+    def load_H100(cls, grab_spectra=False, load_sys=True, isys_path=None):
         """ Sample of unbiased HIRES DLAs compiled and analyzed by Neeleman+13
 
         Neeleman, M. et al. 2013, ApJ, 769, 54
@@ -155,8 +156,8 @@ class DLASurvey(IGMSurvey):
         # System files
         sys_files = resource_filename('pyigm', "/data/DLA/H100/H100_DLA_sys.tar.gz")
 
-        if load_sys:  # This approach takes ~120s
-            print('H100: Loading systems.  This takes ~120s')
+        if load_sys:  # This approach takes ~90s
+            print('H100: Loading systems.  This takes ~90s')
             if isys_path is not None:
                 dla_survey = pyisu.load_sys_files(isys_path, 'DLA', sys_path=True, use_coord=True)
             else:
@@ -271,7 +272,7 @@ class DLASurvey(IGMSurvey):
         import warnings
 
         # LLS File
-        dla_fil = pyigm_path+'/data/DLA/SDSS_DR5/dr5_alldla.fits.gz'
+        dla_fil = resource_filename('pyigm','/data/DLA/SDSS_DR5/dr5_alldla.fits.gz')
         print('SDSS-DR5: Loading DLA file {:s}'.format(dla_fil))
         dlas = QTable.read(dla_fil)
 
@@ -291,11 +292,12 @@ class DLASurvey(IGMSurvey):
         dla_survey.ref = 'SDSS-DR5 (PW09)'
 
         # g(z) file
-        qsos_fil = pyigm_path+'/data/DLA/SDSS_DR5/dr5_dlagz_s2n4.fits'
+        qsos_fil = resource_filename('pyigm','/data/DLA/SDSS_DR5/dr5_dlagz_s2n4.fits')
         print('SDSS-DR5: Loading QSOs file {:s}'.format(qsos_fil))
         qsos = QTable.read(qsos_fil)
         qsos.rename_column('Z1', 'Z_START')
         qsos.rename_column('Z2', 'Z_END')
+        qsos.remove_column('DX')
         # Reformat
         new_cols = []
         for key in qsos.keys():
@@ -496,6 +498,7 @@ class DLASurvey(IGMSurvey):
         """ Load the DLA from XQ-100
 
         (Sanchez-Ramirez et al. 2016, MNRAS, 456, 4488)
+        http://adsabs.harvard.edu/abs/2016MNRAS.456.4488S
 
         Parameters
         ----------
@@ -544,9 +547,11 @@ class DLASurvey(IGMSurvey):
             _ = self.cosmo
         except ValueError:
             self.cosmo = acc.FlatLambdaCDM(70., 0.3)
+        # Load fits
+        self.load_fitted()
 
-    def calculate_loz(self, zbins, NHI_mnx=(20.3, 23.00)):
-        """ Calculate l(z) in zbins for an interval in NHI
+    def binned_loz(self, zbins, NHI_mnx=(20.3, 23.00)):
+        """ Calculate l(z) empirically in zbins for an interval in NHI
         Wrapper on lox
 
         Parameters
@@ -561,9 +566,9 @@ class DLASurvey(IGMSurvey):
         -------
         lz, sig_lz_lower, sig_lz_upper : ndarray
         """
-        return self.calculate_lox(zbins, NHI_mnx=NHI_mnx, use_Dz=True)
+        return self.binned_lox(zbins, NHI_mnx=NHI_mnx, use_Dz=True)
 
-    def calculate_lox(self, zbins, NHI_mnx=(20.3, 23.00), use_Dz=False):
+    def binned_lox(self, zbins, NHI_mnx=(20.3, 23.00), use_Dz=False):
         """ Calculate l(X) in zbins for an interval in NHI
         Parameters
         ----------
@@ -600,7 +605,7 @@ class DLASurvey(IGMSurvey):
 
         return lX, lX - lX_lo, lX_hi - lX
 
-    def calculate_rhoHI(self, zbins, nhbins=(20.3, 23.), nboot=1000):
+    def binned_rhoHI(self, zbins, nhbins=(20.3, 23.), nboot=1000):
         """ Calculate the mass density in HI
 
         Parameters
@@ -651,8 +656,8 @@ class DLASurvey(IGMSurvey):
 
         return rhoHI, rhoHI_lo, rhoHI_hi
 
-    def calculate_fn(self, nhbins, zbins, log=False):
-        """ Calculate f(N,X)
+    def binned_fn(self, nhbins, zbins, log=False):
+        """ Calculate f(N,X) empirically in bins of NHI and z
 
         Parameters
         ----------
@@ -693,6 +698,122 @@ class DLASurvey(IGMSurvey):
             return np.log10(fn), np.log10(fn) - np.log10(fn_lo), np.log10(fn_hi) - np.log10(fn)
         else:
             return fn, fn - fn_lo, fn_hi - fn
+
+    def fitted_lz(self, z, form='atan', boot_error=False):
+        """ Return l(z) as evaluated from a fit
+          'atan' -- arctan parameterization of Prochaska & Neeleman 2017
+
+        Parameters
+        ----------
+        z : float or ndarray
+        form : str, optional
+        boot_error : bool, False
+
+        Returns
+        -------
+        loz : float or ndarray  (depends on input z)
+        siz_lz : ndarray, optional
+          (if boot_error=True)
+
+        """
+        if isinstance(z, float):
+            flg_float = True
+            z = np.array([z])
+        else:
+            flg_float = False
+        if form == 'atan':
+            param = self.dla_fits['lz'][form]
+            lz = param['A'] + param['B'] * np.arctan(z-param['C'])
+            # Error?
+            if boot_error:
+                lz_boot = load_boot_lz()
+                sig_lz = np.zeros((len(z),2))
+                for kk,iz in enumerate(z):
+                    lzs = lz_boot['A'] + lz_boot['B'] * np.arctan(z-lz_boot['C'])
+                    perc = np.percentile(lzs, [16., 84.])
+                    # Save
+                    sig_lz[kk,:] = perc-lz[kk]
+        else:
+            raise IOError("Bad form input to fitted_lz: {:s}".format(form))
+        # Finish
+        if flg_float:
+            rlz = lz[0]
+        else:
+            rlz = lz
+        # Return
+        if boot_error:
+            return rlz, sig_lz
+        else:
+            return rlz
+
+    def fitted_fN(self, lgNHI, form='dpow'):
+        """ Evaluate f(N) for a double power-law
+        Without normalization
+
+        Parameters
+        ----------
+        lgNHI : float or ndarray
+          log10 NHI
+        form : str, optional
+
+        Returns
+        -------
+        fNHI : float or ndarray
+          f(NHI) without normalization
+        """
+        if isinstance(lgNHI, float):
+            flg_float = True
+            lgNHI = np.array([lgNHI])
+        else:
+            flg_float = False
+        # Model -- consider using pyigm.fN.FNmodel
+        if form == 'dpow':
+            param = self.dla_fits['fN'][form]
+            # Evaluate
+            high = lgNHI > param['Nd']
+            fNHI = np.zeros_like(lgNHI)
+            fNHI[high] = (10**(lgNHI[high]-param['Nd']))**param['a4']
+            fNHI[~high] = (10**(lgNHI[~high]-param['Nd']))**param['a3']
+        # Finish
+        if flg_float:
+            return fNHI[0]
+        else:
+            return fNHI
+
+    def fitted_nenH(self, lgNHI, form='loglog'):
+        """
+        Parameters
+        ----------
+        logNHI : float or ndarray
+        form : str, optional
+
+        Returns
+        -------
+
+        """
+        if isinstance(lgNHI, float):
+            flg_float = True
+            lgNHI = np.array([lgNHI])
+        else:
+            flg_float = False
+        # Calculate
+        nenH_param = self.dla_fits['nenH'][form]
+        log_nenH = nenH_param['bp'] + nenH_param['m'] * (lgNHI-20.3)
+        # Return
+        if flg_float:
+            return log_nenH[0]
+        else:
+            return log_nenH
+
+    def load_fitted(self):
+        """ Load the fit info
+        Returns
+        -------
+        dla_fits : dict
+
+        """
+        self.dla_fits, _ = load_dla_fits()
+
 
     def __generate_fncomp__(self, nhbins, zbins):
         """  Generate binned evaluation of f(NHI,X)
@@ -911,3 +1032,83 @@ def dla_stat(DLAs, qsos, vprox=None, buff=3000.*u.km/u.s,
                         msk_smpl[qq] = True
     # Return
     return msk_smpl
+
+
+def load_dla_surveys():
+    """ Load up a select set of the DLA surveys
+    for statistical analysis
+
+    Returns
+    -------
+    surveys : list of DLASurvey objects
+
+    """
+    # Load surveys
+    print("Loading DLA surveys...")
+    print('Loading HST')
+    hst = DLASurvey.load_HST16()
+    print('Loading SDSS-DR5')
+    sdss = DLASurvey.load_SDSS_DR5()
+    print('Loading XQ100')
+    xq100 = DLASurvey.load_XQ100()
+    print('Loading GGG')
+    ggg = DLASurvey.load_GGG()
+
+    # Return
+    surveys = (hst, sdss, xq100, ggg)
+    return surveys
+
+
+def load_boot_lz():
+    """ Load bootstrap output from l(z) fits
+    Follows Prochaska & Neeleman 2017
+    Returns
+    -------
+    boot : Table
+    """
+    boot = Table.read(lz_boot_file)
+    return boot
+
+def load_dla_fits(fit_file=None):
+    """ Load fit file(s)
+    Parameters
+    ----------
+    fit_file : str
+
+    Returns
+    -------
+
+    """
+    if fit_file is None:
+        fit_file = resource_filename('pyigm', 'data/DLA/dla_fits.json')
+    if os.path.exists(fit_file):
+        dla_fits = ltu.loadjson(fit_file)
+    else:
+        dla_fits = {}
+    # Return
+    return dla_fits, fit_file
+
+
+def update_dla_fits(new_fits):
+    import datetime
+    import getpass
+    # Load existing
+    dla_fits, fit_file = load_dla_fits()
+
+    # Write fit
+    date = str(datetime.date.today().strftime('%Y-%b-%d'))
+    user = getpass.getuser()
+    #
+    for key in new_fits:
+        # Add
+        if key not in dla_fits.keys():
+            dla_fits[key] = {}
+        for subkey in new_fits[key]:
+            dla_fits[key][subkey] = new_fits[key][subkey]
+            dla_fits[key][subkey]['CreationDate'] = date
+            dla_fits[key][subkey]['User'] = user
+    # Write
+    pdb.set_trace()
+    jdfits = ltu.jsonify(dla_fits)
+    ltu.savejson(fit_file, jdfits, easy_to_read=True, overwrite=True)
+    print("Wrote: {:s}".format(fit_file))

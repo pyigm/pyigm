@@ -92,7 +92,7 @@ class LLSSystem(IGMSystem):
             if key in idict.keys():
                 kwargs[key] = idict[key]
         # Instantiate
-        slf = cls(SkyCoord(ra=idict['RA']*u.deg, dec=idict['DEC']*u.deg),
+        slf = cls(SkyCoord(ra=idict['RA'], dec=idict['DEC'], unit='deg'),
                   idict['zabs'], idict['vlim']*u.km/u.s, **kwargs)
         #
         add_other_from_dict(slf, idict)

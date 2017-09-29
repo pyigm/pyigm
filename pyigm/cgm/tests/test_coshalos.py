@@ -8,7 +8,7 @@ import os, pdb
 import pytest
 remote_data = pytest.mark.remote_data
 
-from ..cos_halos import COSHalos#, COSDwarfs
+from pyigm.cgm.cos_halos import COSHalos#, COSDwarfs
 
 def data_path(filename):
     data_dir = os.path.join(os.path.dirname(__file__), 'files')

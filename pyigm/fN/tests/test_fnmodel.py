@@ -41,7 +41,7 @@ def test_mfp():
     mfp = fN_default.mfp(z)
     # Test
     assert mfp.unit == u.Mpc
-    np.testing.assert_allclose(mfp.value, 257.10258545808983)
+    np.testing.assert_allclose(mfp.value, 257.10258545808983, rtol=1e-3)
 
 
 def test_rhoHI():
@@ -50,7 +50,7 @@ def test_rhoHI():
     rho_HI = fN_default.calculate_rhoHI(z, (20.3, 22.))
     # Test
     assert rho_HI.unit == u.solMass/u.Mpc**3
-    np.testing.assert_allclose(rho_HI.value, 83553755.13025708)
+    np.testing.assert_allclose(rho_HI.value, 83553755.13025708, rtol=1e-3)
 
 
 
