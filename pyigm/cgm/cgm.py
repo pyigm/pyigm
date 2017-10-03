@@ -120,13 +120,17 @@ class CGMAbsSys(object):
         """
         Parameters
         ----------
-        galaxy
-        igm_sys
-        cosmo
-        name
-        rho
-        PA
-        ang_sep
+        galaxy : Galaxy
+        igm_sys : IGMSystem
+        cosmo : astropy.cosmology, optional
+          Defaults to Planck15
+        name : str, optional
+        rho : Quantity, optional
+          Impact parameter; calculated if not input
+        PA : Quantity
+          Position angle
+        ang_sep : Quantity
+          Angular separation between galaxy and sightline
         correct_lowz : bool, optional
           If galaxy z < 0.05, correct for peculiar velocies in impact parameter
           calculation
@@ -135,7 +139,7 @@ class CGMAbsSys(object):
         -------
 
         """
-        from .utils import calc_rho
+        from pyigm.cgm.utils import calc_rho
         # Checks
         if not isinstance(galaxy, Galaxy):
             raise IOError('CGMAbsSys instantiated with a Galaxy')
