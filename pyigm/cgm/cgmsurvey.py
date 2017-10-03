@@ -10,6 +10,7 @@ import json, io
 
 from astropy.table import Table, Column
 from astropy.coordinates import SkyCoord
+from astropy import  units as u
 
 from pyigm.utils import lst_to_array
 from pyigm.surveys.igmsurvey import GenericIGMSurvey
@@ -68,6 +69,26 @@ class CGMAbsSurvey(object):
         tar.close()
         # Return
         return slf
+
+    @classmethod
+    def from_cgmabssys(cls, cgmlist, **kwargs):
+        """ Instantiate new survey from list of CgmAbsSys objects
+
+        Parameters
+        ----------
+        cgmlist : list CgmAbsSys
+
+
+        """
+        if not isinstance(cgmlist,list):
+            raise IOError("Input must be list of CGMAbsSys")
+        elif not isinstance(cgmlist[0],CGMAbsSys):
+            raise IOError("Input must be list of CGMAbsSys")
+
+        slf = cls(**kwargs)
+        slf.cgm_abs.extend(cgmlist)
+        return slf
+
 
     def __init__(self, survey='', ref='', **kwargs):
         """
@@ -152,6 +173,7 @@ class CGMAbsSurvey(object):
         # Generate dummy IGMSurvey
         dumb = GenericIGMSurvey()
         names = []
+        rhos = []
         for cgmabs in self.cgm_abs:
             if fill_ion:
                 cgmabs.igm_sys.fill_ionN()
@@ -159,10 +181,14 @@ class CGMAbsSurvey(object):
                 dumb._abs_sys.append(cgmabs.igm_sys)
                 # Names
                 names.append(cgmabs.name)
+                # Impact parameters
+                rhos.append(cgmabs.rho.to(u.kpc).value)
         # Run ions
         tbl = dumb.ions(Zion)
         # Add CGM name
         tbl.add_column(Column(names, name='cgm_name'))
+        # Add impact parameter
+        tbl.add_column(Column(rhos*u.kpc, name='rho_impact'))
         # Return
         return tbl
 
