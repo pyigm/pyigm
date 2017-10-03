@@ -12,7 +12,7 @@ from astropy.coordinates import SkyCoord
 from pyigm.field.galaxy import Galaxy
 
 def calc_rho(coords1, coords2, z1, cosmo, ang_sep=None, correct_lowz=True,
-             z_low=0.05):
+             z_low=0.05, comoving=False):
     """ Calculate the impact parameter between coordinates at a redshift (or redshifts)
 
     Parameters
@@ -31,6 +31,8 @@ def calc_rho(coords1, coords2, z1, cosmo, ang_sep=None, correct_lowz=True,
     ang_sep : Angle or Quantity
       Input angular separation
       May speed up calculation
+    comoving : bool, optional
+      If True then comoving, else physical
 
     Returns
     -------
@@ -69,8 +71,11 @@ def calc_rho(coords1, coords2, z1, cosmo, ang_sep=None, correct_lowz=True,
         if coords1.size == 1:
             rho = rho[0]
     else:
-        kpc_amin = cosmo.kpc_comoving_per_arcmin(z1)  # kpc per arcmin
-        rho = ang_sep.to('arcmin') * kpc_amin / (1+z1)
+        if comoving:
+            kpc_amin = cosmo.kpc_comoving_per_arcmin(z1)  # kpc per arcmin
+        else:
+            kpc_amin = cosmo.kpc_proper_per_arcmin(z1)
+        rho = ang_sep.to('arcmin') * kpc_amin
     # Return
     return rho, ang_sep
 

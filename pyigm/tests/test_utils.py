@@ -27,6 +27,9 @@ def test_calcrho():
     assert np.isclose(rho.value, 12.2587523534)
     assert rho.unit == astropy.units.kpc
     assert isinstance(angle, astropy.coordinates.Angle)
+    # Comoving
+    rho, angle = calc_rho(coord1, coord2, z1, cosmo, comoving=True)
+    assert np.isclose(rho.value, 14.71050271)
 
     # One and many
     coords2 = SkyCoord(ra=[100., 100.], dec=[50.001,49.998], unit='deg')

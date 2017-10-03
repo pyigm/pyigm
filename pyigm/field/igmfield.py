@@ -14,6 +14,7 @@ from astropy import constants as const
 from astropy.cosmology import Planck15
 
 import pyigm.field.utils as pfu
+from pyigm.utils import calc_rho
 
 #from xastropy.xutils import xdebug as xdb
 
@@ -66,8 +67,8 @@ class IgmGalaxyField(object):
 
         Parameters
         ----------
-        obj : Table
-          (can be anything that takes 'Z', and 'RA','DEC' in degrees)
+        obj : Table or dict
+          Anything that takes 'Z', and 'RA','DEC' in degrees
           Sources for calculation
         comoving : bool, optional
            If True then comoving, else physical
@@ -83,23 +84,19 @@ class IgmGalaxyField(object):
         if los_coord is None:
             los_coord = self.coord
         # Coord
-        if ((isinstance(obj['RA'], Quantity)) |
-                (isinstance(obj['RA'],astropy.table.column.MaskedColumn)) |
-                (isinstance(obj['RA'], astropy.table.column.Column))):
-            ora = obj['RA']
-            odec = obj['DEC']
-        else:
-            ora = obj['RA']*u.deg
-            odec = obj['DEC']*u.deg
-
-        o_coord = SkyCoord(ra=ora, dec=odec)
-        ang_sep = o_coord.separation(los_coord).to('arcmin')
-        # Cosmology (kpc per arcmin)
-        if comoving:
-            kpc_amin = self.cosmo.kpc_comoving_per_arcmin(obj['Z'])
-        else:
-            kpc_amin = self.cosmo.kpc_proper_per_arcmin(obj['Z'])
-        rho = ang_sep * kpc_amin
+        ora = obj['RA']
+        odec = obj['DEC']
+        #if ((isinstance(obj['RA'], Quantity)) |
+        #        (isinstance(obj['RA'],astropy.table.column.MaskedColumn)) |
+        #        (isinstance(obj['RA'], astropy.table.column.Column))):
+        #    ora = obj['RA']
+        #    odec = obj['DEC']
+        #else:
+        #    ora = obj['RA']*u.deg
+        #    odec = obj['DEC']*u.deg
+        o_coord = SkyCoord(ra=ora, dec=odec, unit='deg')
+        # Calculate
+        rho, ang_sep = calc_rho(o_coord, los_coord, obj['Z'], self.cosmo, comoving=comoving)
         # Return
         return rho
 
