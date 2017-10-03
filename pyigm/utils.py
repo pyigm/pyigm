@@ -11,9 +11,9 @@ from astropy.coordinates import SkyCoord
 
 from pyigm.field.galaxy import Galaxy
 
-def calc_rho(coords1, coords2, z1, cosmo=None, ang_sep=None, correct_lowz=True,
+def calc_rho(coords1, coords2, z1, cosmo, ang_sep=None, correct_lowz=True,
              z_low=0.05):
-    """ Calculate the impact parameter between the galaxy and IGM sightline
+    """ Calculate the impact parameter between coordinates at a redshift (or redshifts)
 
     Parameters
     ----------
@@ -21,7 +21,7 @@ def calc_rho(coords1, coords2, z1, cosmo=None, ang_sep=None, correct_lowz=True,
     coords2 : SkyCoord (one or more)
     z1 : float or ndarray
       Redshifts of sources at coords1
-    cosmo : astropy.cosmology, optional
+    cosmo : astropy.cosmology
     z_low : float, optional
       Redshift below which corrections for the local universe would be applied
     correct_lowz : bool, optional

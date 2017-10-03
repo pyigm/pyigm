@@ -15,20 +15,37 @@ from astropy import constants
 from linetools import utils as ltu
 
 from pyigm.field.galaxy import Galaxy
+from pyigm.abssys.igmsys import IGMSystem
 
 
-def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True,
-             Galactic=False, d_Sun=8.0*u.kpc):
+def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True):
+    """ Calculate the impact parameter between the galaxy and IGM sightline
+    Mainly a wrapper to pyigm.utils.calc_rho
+
+    Parameters
+    ----------
+    galaxy : Galaxy
+    igm_sys : IGMSystem or list
+    cosmo : astropy.cosmology
+    ang_sep : Quantity, optional
+    correct_lowz : bool, optional
+
+    Returns
+    -------
+    rho : Quantity
+      impact parameter(s) in physical kpc
+    ang_sep : Angle
+      separation in arcsec
+
+    """
+    from pyigm.utils import calc_rho
     # Loop?
     if isinstance(igm_sys, list):
-        rhos = []
-        angs = []
-        for iigm in igm_sys:
-            irho, iang = calc_rho(galaxy, iigm, cosmo)
-            rhos.append(irho.value)
-            angs.append(iang)
-        return np.array(rhos)*u.kpc, angs
-
+        coords = SkyCoord([iigm.coord for iigm in igm_sys])
+        return calc_rho(galaxy.coord, coords, galaxy.z, cosmo, correct_lowz=correct_lowz)
+    elif isinstance(igm_sys, IGMSystem):
+        return calc_rho(galaxy.coord, igm_sys.coord, galaxy.z, cosmo,
+                        ang_sep=ang_sep, correct_lowz=correct_lowz)
 
 def cgm_from_galaxy_igmsystems(galaxy, igmsystems, R_max=300*u.kpc, dv_max=400*u.km/u.s,
                                cosmo=None, **kwargs):
