@@ -47,23 +47,27 @@ def calc_rho(coords1, coords2, z1, cosmo=None, ang_sep=None, correct_lowz=True,
     if ang_sep is None:
         ang_sep = coords1.separation(coords2).to('arcsec')
     # Init rho
-    rho = np.zeros_like(z1) * u.kpc
     # Handle cases where object's distance needs correction from peculiar velocities
     # This is especially important at very low redshifts
     lowz = z1 < 0.05
     if correct_lowz and np.any(lowz):
         # Ugly for loop for now
+        rho = np.zeros_like(z1) * u.kpc
         for idx in np.where(lowz)[0]:
             # Deal with scalar vs. array
             if coords1.size == 1:
                 icoord = coords1
+                iang_sep = ang_sep
             else:
                 icoord = coords1[idx]
+                iang_sep = ang_sep[idx]
             # Call Mould correction
-            pdb.set_trace()
             velcorrdict = velcorr_mould(Galaxy(icoord, z=z1[idx]), cosmo=cosmo)
             kpc_amin = velcorrdict['scale'].to(u.kpc/u.arcmin)
-            rho[idx] = ang_sep[idx].to('arcmin') * kpc_amin
+            rho[idx] = iang_sep.to('arcmin') * kpc_amin
+        # Recast rho as need be
+        if coords1.size == 1:
+            rho = rho[0]
     else:
         kpc_amin = cosmo.kpc_comoving_per_arcmin(z1)  # kpc per arcmin
         rho = ang_sep.to('arcmin') * kpc_amin / (1+z1)
@@ -87,7 +91,7 @@ def calc_Galactic_rho(coords, d_Sun=8.0*u.kpc):
       separation in deg
     """
     # Transform to Galactic
-    gcoords = coords.to('galactic')
+    gcoords = coords.transform_to('galactic')
     # Calculate
     cosl_cosb = (np.cos(gcoords.l)*
                  np.cos(gcoords.b))

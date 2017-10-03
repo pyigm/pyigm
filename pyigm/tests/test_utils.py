@@ -41,6 +41,7 @@ def test_calcrho():
     assert np.isclose(angles3[0].value,angles3[1].value, rtol=1e-6)
     assert rhos3[1] > rhos3[0]
 
+
 def test_calcrho_lowz():
     """ Also tickles velcorr_mould
     """
@@ -50,17 +51,16 @@ def test_calcrho_lowz():
     coord2 = SkyCoord(ra=100., dec=50.001, unit='deg')
     # Calc
     rho, angle = calc_rho(coord1, coord2, z1, cosmo)
-    pytest.set_trace()
-'''
+    np.isclose(rho.value, 1.5391395565522688)
+
+
 def test_calc_Galactic_rho():
     # Galactic
-    milkyway = Galaxy((0., 0.), 0.)
-    igmsys.coord = SkyCoord(l=0.*u.deg, b=0.*u.deg, frame='galactic')
-    rho2, angle2 = calc_rho(galaxy, igmsys, None, Galactic=True)
+    coord = SkyCoord(l=0.*u.deg, b=0.*u.deg, frame='galactic')
+    rho2, angle2 = calc_Galactic_rho(coord)
     assert np.isclose(rho2.value, 0.)
     assert np.isclose(angle2.value, 0.)
-    igmsys.coord = SkyCoord(l=45.*u.deg, b=45.*u.deg, frame='galactic')
-    rho3, angle3 = calc_rho(galaxy, igmsys, None, Galactic=True)
+    coord = SkyCoord(l=45.*u.deg, b=45.*u.deg, frame='galactic')
+    rho3, angle3 = calc_Galactic_rho(coord)
     assert np.isclose(rho3.value, 6.928203230275509)
-'''
 
