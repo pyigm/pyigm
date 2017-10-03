@@ -11,16 +11,17 @@ from astropy.coordinates import SkyCoord
 
 from pyigm.field.galaxy import Galaxy
 
-def calc_rho(coords1, coords2, z1, cosmo, ang_sep=None, correct_lowz=True,
+def calc_rho(coords1, coords2, z2, cosmo, ang_sep=None, correct_lowz=True,
              z_low=0.05, comoving=False):
     """ Calculate the impact parameter between coordinates at a redshift (or redshifts)
 
     Parameters
     ----------
     coords1 : SkyCoord (one or more)
+      If more than one, size must match coords2
     coords2 : SkyCoord (one or more)
-    z1 : float or ndarray
-      Redshifts of sources at coords1
+    z2 : float or ndarray
+      Redshifts of sources at coords2
     cosmo : astropy.cosmology
     z_low : float, optional
       Redshift below which corrections for the local universe would be applied
@@ -42,40 +43,43 @@ def calc_rho(coords1, coords2, z1, cosmo, ang_sep=None, correct_lowz=True,
       separation in arcsec
     """
     # Handle inputs
-    if isinstance(z1,float):
-        z1 = np.array([z1])
-    if not (coords1.size == z1.size):
-        raise IOError("Length of z1 must match coords1")
+    if isinstance(z2,float):  # recast as arrays
+        z2 = np.array([z2])
+        coords2 = SkyCoord([coords2])
+    if not (coords2.size == z2.size):
+        raise IOError("Length of z2 must match coords2")
+    if coords1.size > 1:
+        if coords2.size != coords1.size:
+            raise IOError("Length of coords1 must match coords2")
+    # ang_sep
     if ang_sep is None:
         ang_sep = coords1.separation(coords2).to('arcsec')
     # Init rho
+    rho = np.zeros_like(z2) * u.kpc
     # Handle cases where object's distance needs correction from peculiar velocities
     # This is especially important at very low redshifts
-    lowz = z1 < 0.05
+    lowz = z2 < 0.05
     if correct_lowz and np.any(lowz):
         # Ugly for loop for now
-        rho = np.zeros_like(z1) * u.kpc
         for idx in np.where(lowz)[0]:
-            # Deal with scalar vs. array
-            if coords1.size == 1:
-                icoord = coords1
-                iang_sep = ang_sep
-            else:
-                icoord = coords1[idx]
-                iang_sep = ang_sep[idx]
             # Call Mould correction
-            velcorrdict = velcorr_mould(Galaxy(icoord, z=z1[idx]), cosmo=cosmo)
+            velcorrdict = velcorr_mould(Galaxy(coords2[idx], z=z2[idx]), cosmo=cosmo)
             kpc_amin = velcorrdict['scale'].to(u.kpc/u.arcmin)
-            rho[idx] = iang_sep.to('arcmin') * kpc_amin
-        # Recast rho as need be
-        if coords1.size == 1:
-            rho = rho[0]
+            rho[idx] = ang_sep.to('arcmin')[idx] * kpc_amin
+        # Higher z
+        highz = ~lowz
     else:
+        highz = np.array([True]*len(z2))
+    if np.any(highz):
         if comoving:
-            kpc_amin = cosmo.kpc_comoving_per_arcmin(z1)  # kpc per arcmin
+            kpc_amin = cosmo.kpc_comoving_per_arcmin(z2[highz])  # kpc per arcmin
         else:
-            kpc_amin = cosmo.kpc_proper_per_arcmin(z1)
-        rho = ang_sep.to('arcmin') * kpc_amin
+            kpc_amin = cosmo.kpc_proper_per_arcmin(z2[highz])
+        rho[highz] = ang_sep.to('arcmin')[highz] * kpc_amin
+    # Recast as float?
+    if coords2.size == 1:
+        rho = rho[0]
+        ang_sep = ang_sep[0]
     # Return
     return rho, ang_sep
 
