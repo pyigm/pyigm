@@ -12,7 +12,7 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 import astropy
 
-from pyigm.cgm.utils import calc_rho
+from pyigm.cgm.utils import calc_cgm_rho
 from pyigm.field.galaxy import Galaxy
 from pyigm.abssys.igmsys import IGMSystem
 
@@ -22,7 +22,7 @@ def test_calcrho():
     galaxy = Galaxy((100.,50.), 0.2)
     igmsys = IGMSystem((100.,50.001), 1.2, None)
     # Calc
-    rho, angle = calc_rho(galaxy, igmsys, cosmo)
+    rho, angle = calc_cgm_rho(galaxy, igmsys, cosmo)
     # Test
     assert np.isclose(rho.value, 12.2587523534)
     assert rho.unit == astropy.units.kpc
