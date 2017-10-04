@@ -51,6 +51,23 @@ def test_init_cgmabssurvey():
     # Test
     assert cgmsurvey.survey == 'cos-halos'
 
+def test_init_cgmabssurvey_from_abssys():
+    # Instantiate abssys and survey
+    cgmabs = simple_cgmabssys()
+    cgmsurvey = CGMAbsSurvey.from_cgmabssys([cgmabs,cgmabs])
+    # Test
+    assert len(cgmsurvey.cgm_abs) == 2
+
+def test_get_cgmsys():
+    # Instantiate abssys and survey
+    cgmabs1 = simple_cgmabssys()
+    cgmabs2 = simple_cgmabssys()
+    cgmabs1.name = 'System1'
+    cgmabs2.name = 'System2'
+    cgmsurvey = CGMAbsSurvey.from_cgmabssys([cgmabs1, cgmabs2])
+    retsys = cgmsurvey.get_cgmsys('System2')
+    assert isinstance(retsys,CGMAbsSys)
+
 def test_to_dict():
     # Instantiate
     cgmabs = simple_cgmabssys()

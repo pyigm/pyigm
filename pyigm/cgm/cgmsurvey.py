@@ -267,6 +267,10 @@ class CGMAbsSurvey(object):
         """
         names = np.array([str(system.name) for system in self.cgm_abs])
         index = np.where(names==cgmname)[0]
+        if len(index) == 0:
+            raise IOError("No CGMAbsSys with a matching name!")
+        else:
+            index=index[0]
         if return_index is True:
             return self.cgm_abs[index],index
         else:

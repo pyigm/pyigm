@@ -86,7 +86,7 @@ def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True,
 
 def get_close_galaxies(field,rholim=300.*u.kpc,minz=0.001,maxz=None):
     '''
-    Generate table of galaxies close to sightlines for one more IgmGalaxyField
+    Generate table of galaxies close to sightlines for an IgmGalaxyField
 
     Parameters
     ----------
@@ -95,7 +95,9 @@ def get_close_galaxies(field,rholim=300.*u.kpc,minz=0.001,maxz=None):
     rholim : quantity, optional
       Maximum impact parameter limit of galaxies
     minz : float, optional
-      Minimum redshift of galaxies
+      Minimum redshift of galaxies returned in query
+    maxz : float, optional
+      Maximum redshift of galaxies returned in query
 
     Returns
     -------
@@ -105,9 +107,9 @@ def get_close_galaxies(field,rholim=300.*u.kpc,minz=0.001,maxz=None):
     if maxz is None:
         maxz = np.inf
     field.galaxies['rho'] = field.calc_rhoimpact(field.galaxies,comoving=False)
-    idxs=np.where((field.galaxies['rho'].quantity<rholim)&
-                  (field.galaxies['Z']>minz)&(field.galaxies['Z']<maxz))[0]
-    closegaltab=field.galaxies[idxs]
+    closecrit = field.galaxies['rho'].quantity<rholim
+    zcrit = (field.galaxies['Z']>minz)&(field.galaxies['Z']<maxz)
+    closegaltab=field.galaxies[closecrit&zcrit]
     if len(closegaltab) == 0:
         print('No galaxies found meeting these selection criteria.')
     return closegaltab
@@ -173,7 +175,7 @@ def cgmsurvey_from_sightlines_fields(fields,sightlines,name=None,**kwargs):
     if name is not None:
         cgmsurvey=CGMAbsSurvey.from_cgmabssys(cgmsys,survey=name)
     else:
-        cgmsurvey = CGMAbsSurvey(cgmsys)
+        cgmsurvey = CGMAbsSurvey.from_cgmabssys(cgmsys)
     return cgmsurvey
 
 
@@ -212,7 +214,7 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, R_max=300*u.kpc, dv_max=400*u
     # Rules
     match = np.where((rho<R_max) & (np.abs(dv) < dv_max))[0]
     if len(match) == 0:
-        print("No CGM objects match your rules")
+        print("No IGMSystem paired to this galaxy. CGM object not created.")
         return []
     else:
         # Loop to generate
