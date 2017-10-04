@@ -248,6 +248,23 @@ class CGMAbsSurvey(object):
             t.add_row( row )
         return t
 
+    def get_cgmsys(self, cgmname):
+        """Convenience method to return CGMAbsSys by name
+
+        Parameters
+        ----------
+        cgmname : str
+            Name of CGMAbsSys to return
+
+
+        Returns
+        -------
+        cgmsys : CGMAbsSys
+            CGMAbsSys with name matching 'cgmname'
+        """
+        names = [str(system.name) for system in self.cgm_abs]
+        return self.cgm_abs[names==cgmname]
+
     def __getattr__(self, k):
         # Try Self first
         try:
