@@ -262,8 +262,8 @@ class CGMAbsSurvey(object):
         cgmsys : CGMAbsSys
             CGMAbsSys with name matching 'cgmname'
         """
-        names = [str(system.name) for system in self.cgm_abs]
-        return self.cgm_abs[names==cgmname]
+        names = np.array([str(system.name) for system in self.cgm_abs])
+        return self.cgm_abs[np.where(names==cgmname)[0]]
 
     def __getattr__(self, k):
         # Try Self first
