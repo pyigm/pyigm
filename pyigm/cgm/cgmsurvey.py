@@ -248,22 +248,29 @@ class CGMAbsSurvey(object):
             t.add_row( row )
         return t
 
-    def get_cgmsys(self, cgmname):
+    def get_cgmsys(self, cgmname, return_index=False):
         """Convenience method to return CGMAbsSys by name
 
         Parameters
         ----------
         cgmname : str
             Name of CGMAbsSys to return
-
+        return_index : bool
+            If True, return index into self.cgm_abs of match
 
         Returns
         -------
         cgmsys : CGMAbsSys
             CGMAbsSys with name matching 'cgmname'
+        index : int, optional
+            Index into self.cgm_abs of match
         """
         names = np.array([str(system.name) for system in self.cgm_abs])
-        return self.cgm_abs[np.where(names==cgmname)[0]]
+        index = np.where(names==cgmname)[0]
+        if return_index is True:
+            return self.cgm_abs[index],index
+        else:
+            return self.cgm_abs[index]
 
     def __getattr__(self, k):
         # Try Self first
