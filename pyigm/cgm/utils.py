@@ -18,7 +18,7 @@ from pyigm.field.galaxy import Galaxy
 from pyigm.abssys.igmsys import IGMSystem
 
 
-def calc_cgm_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True):
+def calc_cgm_rho(galaxy, igm_sys, cosmo, **kwargs):
     """ Calculate the impact parameter between the galaxy and IGM sightline
     Mainly a wrapper to pyigm.utils.calc_rho
 
@@ -27,8 +27,8 @@ def calc_cgm_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True):
     galaxy : Galaxy
     igm_sys : IGMSystem or list
     cosmo : astropy.cosmology
-    ang_sep : Quantity, optional
-    correct_lowz : bool, optional
+    **kwargs :
+      Passed to pyigm.utils.calc_rho
 
     Returns
     -------
@@ -42,10 +42,9 @@ def calc_cgm_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True):
     # Loop?
     if isinstance(igm_sys, list):
         coords = SkyCoord([iigm.coord for iigm in igm_sys])
-        return calc_rho(galaxy.coord, coords, np.array([galaxy.z]*len(coords)), cosmo, correct_lowz=correct_lowz)
+        return calc_rho(galaxy.coord, coords, np.array([galaxy.z]*len(coords)), cosmo, **kwargs)
     elif isinstance(igm_sys, IGMSystem):
-        return calc_rho(igm_sys.coord, galaxy.coord, galaxy.z, cosmo,
-                        ang_sep=ang_sep, correct_lowz=correct_lowz)
+        return calc_rho(igm_sys.coord, galaxy.coord, galaxy.z, cosmo, **kwargs)
     else:
         raise IOError("Bad input..  Must be list or IGMSystem")
 
