@@ -56,7 +56,7 @@ def test_dla_fitted():
     # nenH
     nenH = dlas.fitted_nenH(21.)
     assert isinstance(nenH, float)
-    assert np.isclose(nenH, -3.0399999999999996)
+    assert np.isclose(nenH, -3.12739999999999999)
 
 
 def test_fit_atan_lz():
