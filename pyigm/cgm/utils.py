@@ -69,7 +69,7 @@ def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True,
                        np.cos(igm_sys.coord.transform_to('galactic').b))
         zcomp = d_Sun*(cosl_cosb*np.sin(igm_sys.coord.transform_to('galactic').b))
         # Distance
-        d = np.sqrt(xcomp**2 + ycomp**2 + zcomp**2)
+        d = np.sqrt(xcomp**2 + ycomp**2 + zcomp**2)niti
         # Angle
         ang_sep = np.arccos(cosl_cosb)
         return d, ang_sep.to('deg')
