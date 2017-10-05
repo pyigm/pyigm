@@ -20,7 +20,6 @@ from linetools.spectralline import AbsLine
 from pyigm.field.galaxy import Galaxy
 from pyigm.abssys.igmsys import IGMSystem
 
-ismlist = LineList('ISM')
 
 def calc_cgm_rho(galaxy, igm_sys, cosmo, **kwargs):
     """ Calculate the impact parameter between the galaxy and IGM sightline
@@ -115,6 +114,8 @@ def cgmabssys_from_sightline_field(field,sightline,rho_max=300.*u.kpc,minz=0.001
     """
     if dummyspec is None:
         dummyspec = sightline._abssystems[0]._components[0]._abslines[0].analy['spec']
+        from linetools.spectralline import AbsLine
+        ismlist = LineList('ISM')
 
     closegals = get_close_galaxies(field,rho_max,minz,maxz)
     cgmabslist = []
@@ -123,7 +124,7 @@ def cgmabssys_from_sightline_field(field,sightline,rho_max=300.*u.kpc,minz=0.001
         cgmobj = cgm_from_galaxy_igmsystems(galobj,sightline._abssystems,
                                             dv_max=dv_max, dummysys=dummysys,
                                             dummyspec=dummyspec, rho_max=rho_max,
-                                            **kwargs)
+                                            linelist=ismlist,**kwargs)
         cgmabslist.extend(cgmobj)
     return cgmabslist
 
@@ -197,7 +198,6 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
         if dummyspec is None:
             dummyspec = igmsystems[0]._components[0]._abslines[0].analy['spec']
         dummycoords = igmsystems[0].coord
-        llist = ismlist
 
     # R
     rho, angles = calc_cgm_rho(galaxy, igmsystems, cosmo)
@@ -216,7 +216,7 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
             print("No IGMSystem match found. Attaching dummy IGMSystem.")
             dummysystem = IGMSystem(dummycoords,galaxy.z,vlim=None)
             dummycomp = AbsComponent(dummycoords,(1,1),galaxy.z,[-100.,100.]*u.km/u.s)
-            dummyline = AbsLine('HI 1215',linelist = llist)  # Need an actual transition for comp check
+            dummyline = AbsLine('HI 1215',**kwargs)  # Need an actual transition for comp check
             dummyline.analy['spec'] = dummyspec
             dummyline.attrib['coord'] = dummycoords
             dummycomp.add_absline(dummyline,chk_vel=False,chk_sep=False)
