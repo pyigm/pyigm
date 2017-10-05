@@ -34,6 +34,7 @@ def test_calcrho():
     assert rho.unit == astropy.units.kpc
     assert isinstance(angle, astropy.coordinates.Angle)
 
+
 def test_cgmsurvey_from_fields_sightlines():
     # Instantiate fields and add galaxies
     field1 = ('PG1407+265', 212.349634 * u.deg, 26.3058650 * u.deg)
