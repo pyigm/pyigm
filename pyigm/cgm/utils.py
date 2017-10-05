@@ -37,7 +37,7 @@ def calc_cgm_rho(galaxy, igm_sys, cosmo, **kwargs):
     Returns
     -------
     rho : Quantity
-      impact parameter(s) in physical kpc
+      impact parameter(s) in comoving or physical kpc
     ang_sep : Angle
       separation in arcsec
 
