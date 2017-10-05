@@ -23,7 +23,7 @@ from pyigm.abssys.igmsys import IGMSystem
 ismlist = LineList('ISM')
 
 def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True,
-             Galactic=False, d_Sun=8.0*u.kpc):
+             Galactic=False, d_Sun=8.0*u.kpc, **kwargs):
     """ Calculate the impact parameter between the galaxy and IGM sightline
 
     Parameters
@@ -387,4 +387,5 @@ def velcorr_mould(galaxy,cosmo=None):
                   distmod=distmod, flag=flag, scale=scale.to(u.kpc/u.arcsec))
 
     return velcorrdict
+
 
