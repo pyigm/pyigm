@@ -5,22 +5,22 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 
 import numpy as np
 import pdb
-import warnings
+
+from pkg_resources import resource_filename
 
 from astropy import units as u
 from astropy import constants as const
 from astropy.table import Table, Column
 from astropy.coordinates import SkyCoord
 
-
 from linetools.spectralline import AbsLine
 from linetools.isgm.abscomponent import AbsComponent
 
 from pyigm.abssys.igmsys import IGMSystem
 from pyigm.field.galaxy import Galaxy
-from .cgm import CGM, CGMAbsSys
-from .cgmsurvey import CGMAbsSurvey
-import pyigm
+from pyigm.cgm.cgm import CGM, CGMAbsSys
+from pyigm.cgm.cgmsurvey import CGMAbsSurvey
+from pyigm.utils import calc_Galactic_rho
 
 c_kms = const.c.to('km/s').value
 
@@ -35,6 +35,7 @@ class GalaxyCGM(CGM):
     def __init__(self, load=True, **kwargs):
         # Generate the Milky Way
         milkyway = Galaxy((0.,0.), z=0.)
+        self.galaxy = milkyway
         CGM.__init__(self, milkyway)
         self.refs = ''
         # Absorption
@@ -54,7 +55,8 @@ class GalaxyCGM(CGM):
         ovii = AbsLine('OVII 21', linelist=llist)
 
         # Fang+15  Table 1  [OVII]
-        self.fang15 = Table.read(pyigm.__path__[0]+'/data/CGM/Galaxy/fang15_table1.dat', format='cds')
+        fang15_file = resource_filename('pyigm','/data/CGM/Galaxy/fang15_table1.dat')
+        self.fang15 = Table.read(fang15_file, format='cds')
         print('Loading Fang+15 for OVII')
         # Reference
         if len(self.refs) > 0:
@@ -100,14 +102,16 @@ class GalaxyCGM(CGM):
             abssys = IGMSystem(gc, z, vlim, name=row['Name']+'_z0', zem=row['z'])
             abssys.add_component(comp, chk_sep=False)
             # CGM Abs
-            cgmabs = CGMAbsSys(self.galaxy, abssys, Galactic=True)
+            rho, ang_sep = calc_Galactic_rho(abssys.coord)
+            cgmabs = CGMAbsSys(self.galaxy, abssys, rho=rho, ang_sep=ang_sep)
             # Add to cgm_abs
             self.abs.cgm_abs.append(cgmabs)
 
         scoord = self.abs.scoord  # Sightline coordiantes
         # Savage+03  Table 2  [OVI] -- Thick disk/halo only??
         print('Loading Savage+03 for OVI')
-        self.savage03 = Table.read(pyigm.__path__[0] + '/data/CGM/Galaxy/savage03_table2.fits')
+        savage03_file = resource_filename('pyigm', '/data/CGM/Galaxy/savage03_table2.fits')
+        self.savage03 = Table.read(savage03_file)
         # Reference
         if len(self.refs) > 0:
             self.refs += ','
@@ -148,7 +152,8 @@ class GalaxyCGM(CGM):
                 abssys = IGMSystem(gc, comp.zcomp, vlim, name=row['Name']+'_z0', zem=zem)
                 abssys.add_component(comp, chk_sep=False, debug=True)
                 # CGM Abs
-                cgmabs = CGMAbsSys(self.galaxy, abssys, Galactic=True)
+                rho, ang_sep = calc_Galactic_rho(abssys.coord)
+                cgmabs = CGMAbsSys(self.galaxy, abssys, rho=rho, ang_sep=ang_sep, Galactic=True)
                 # Add to cgm_abs
                 self.abs.cgm_abs.append(cgmabs)
 
