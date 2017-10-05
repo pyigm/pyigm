@@ -13,12 +13,17 @@ from astropy.coordinates import SkyCoord
 from astropy import constants
 
 from linetools import utils as ltu
+from linetools.lists.linelist import LineList
+from linetools.isgm.abscomponent import AbsComponent
+from linetools.spectralline import AbsLine
 
 from pyigm.field.galaxy import Galaxy
+from pyigm.abssys.igmsys import IGMSystem
 
+ismlist = LineList('ISM')
 
 def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True,
-             Galactic=False, d_Sun=8.0*u.kpc):
+             Galactic=False, d_Sun=8.0*u.kpc, **kwargs):
     """ Calculate the impact parameter between the galaxy and IGM sightline
 
     Parameters
@@ -84,7 +89,7 @@ def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True,
     return rho, ang_sep
 
 
-def get_close_galaxies(field,rholim=300.*u.kpc,minz=0.001,maxz=None):
+def get_close_galaxies(field,rho_max=300.*u.kpc,minz=0.001,maxz=None):
     '''
     Generate table of galaxies close to sightlines for an IgmGalaxyField
 
@@ -92,7 +97,7 @@ def get_close_galaxies(field,rholim=300.*u.kpc,minz=0.001,maxz=None):
     ----------
     fields : IgmGalaxyField or list of IgmGalaxyField
       Fields to be included
-    rholim : quantity, optional
+    rho_max : quantity, optional
       Maximum impact parameter limit of galaxies
     minz : float, optional
       Minimum redshift of galaxies returned in query
@@ -107,7 +112,7 @@ def get_close_galaxies(field,rholim=300.*u.kpc,minz=0.001,maxz=None):
     if maxz is None:
         maxz = np.inf
     field.galaxies['rho'] = field.calc_rhoimpact(field.galaxies,comoving=False)
-    closecrit = field.galaxies['rho'].quantity<rholim
+    closecrit = field.galaxies['rho'].quantity<rho_max
     zcrit = (field.galaxies['Z']>minz)&(field.galaxies['Z']<maxz)
     closegaltab=field.galaxies[closecrit&zcrit]
     if len(closegaltab) == 0:
@@ -115,15 +120,16 @@ def get_close_galaxies(field,rholim=300.*u.kpc,minz=0.001,maxz=None):
     return closegaltab
 
 
-def cgmabssys_from_sightline_field(field,sightline,rholim=300.*u.kpc,
-                                    minz=0.001,maxz=None,dv_max=400.*u.km/u.s):
+def cgmabssys_from_sightline_field(field,sightline,rho_max=300.*u.kpc,minz=0.001,
+                                   maxz=None,dv_max=400.*u.km/u.s,dummysys=True,
+                                   dummyspec=None,**kwargs):
     """Instantiate list of CgmAbsSys objects from IgmgGalaxyField and IGMSightline.
 
     Parameters
     ----------
     field : IgmGalaxyField
     sightline : IGMSightline
-    rholim : Quantity, optional
+    rho_max : Quantity, optional
         Maximum impact parameter for associated galaxies
     minz : float, optional
         Minimum redshift for galaxy/absorber search
@@ -131,24 +137,35 @@ def cgmabssys_from_sightline_field(field,sightline,rholim=300.*u.kpc,
         Maximum redshift for galaxy/absorber search
     dv_max : Quantity, optional
         Maximum galaxy-absorber velocity separation
+    dummysys : bool, optional
+        Passed on to 'cgm_from_galaxy_igmsystems()'.  If True, create CGMAbsSyS
+        even if no matching IGMSystem is found in any sightline for some galaxy.
+    dummyspec : XSpectrum1D, optional
+        Spectrum object to attach to dummy AbsLine/AbsComponent objects when
+        adding IGMSystems if dummysys is True
 
     Returns
     -------
     cgmabslist : list
         List of CgmAbsSys objects
     """
+    if dummyspec is None:
+        dummyspec = sightline._abssystems[0]._components[0]._abslines[0].analy['spec']
 
-    closegals = get_close_galaxies(field,rholim,minz,maxz)
+    closegals = get_close_galaxies(field,rho_max,minz,maxz)
     cgmabslist = []
     for i,gal in enumerate(closegals):
         galobj = Galaxy((gal['RA'],gal['DEC']),z=gal['Z'])
         cgmobj = cgm_from_galaxy_igmsystems(galobj,sightline._abssystems,
-                                                dv_max=dv_max)
+                                            dv_max=dv_max, dummysys=dummysys,
+                                            dummyspec=dummyspec, rho_max=rho_max,
+                                            **kwargs)
         cgmabslist.extend(cgmobj)
     return cgmabslist
 
 
-def cgmsurvey_from_sightlines_fields(fields,sightlines,name=None,**kwargs):
+def cgmsurvey_from_sightlines_fields(fields, sightlines, rho_max=300*u.kpc,
+                                     name=None, dummysys=True,  **kwargs):
     """Instantiate CGMAbsSurvey object from lists fo IgmGalaxyFields and IGMSightlines
 
     Parameters
@@ -157,12 +174,14 @@ def cgmsurvey_from_sightlines_fields(fields,sightlines,name=None,**kwargs):
     sightlines : list of IGMSightlines
     name : str, optional
         Name for the survey
+    dummysys : bool, optional
+        Passed on to 'cgm_from_galaxy_igmsystems()'.  If True, create CGMAbsSyS
+        even if no matching IGMSystem is found in any sightline for some galaxy
 
-    Returns
+     Returns
     -------
     cgmsurvey: CGMAbsSurvey
     """
-
     if ((not isinstance(fields,list))|(not isinstance(sightlines,list))|
         (len(fields) != len(sightlines))):
         raise IOError("Inputs fields and sightlines must lists of the same length")
@@ -170,7 +189,8 @@ def cgmsurvey_from_sightlines_fields(fields,sightlines,name=None,**kwargs):
     from pyigm.cgm.cgmsurvey import CGMAbsSurvey
     cgmsys = []
     for i,ff in enumerate(fields):
-        thiscgmlist = cgmabssys_from_sightline_field(ff,sightlines[i],**kwargs)
+        thiscgmlist = cgmabssys_from_sightline_field(ff,sightlines[i],rho_max=rho_max,
+                                                     dummysys=dummysys, **kwargs)
         cgmsys.extend(thiscgmlist)
     if name is not None:
         cgmsurvey=CGMAbsSurvey.from_cgmabssys(cgmsys,survey=name)
@@ -179,8 +199,8 @@ def cgmsurvey_from_sightlines_fields(fields,sightlines,name=None,**kwargs):
     return cgmsurvey
 
 
-def cgm_from_galaxy_igmsystems(galaxy, igmsystems, R_max=300*u.kpc, dv_max=400*u.km/u.s,
-                               cosmo=None, **kwargs):
+def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400*u.km/u.s,
+                               cosmo=None, dummysys=False, dummyspec=None, **kwargs):
     """ Generate a list of CGMAbsSys objects given an input galaxy and a list of IGMSystems
 
     Parameters
@@ -188,10 +208,15 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, R_max=300*u.kpc, dv_max=400*u
     galaxy : Galaxy
     igmsystems : list
       list of IGMSystems
-    R_max : Quantity
+    rho_max : Quantity
       Maximum projected separation from sightline to galaxy
     dv_max
       Maximum velocity offset between system and galaxy
+    dummysys: bool, optional
+        If True, instantiate CGMAbsSys even if no match is found in igmsystems
+    dummyspec : XSpectrum1D, optional
+        Spectrum object to attach to dummy AbsLine/AbsComponent objects when
+        adding IGMSystems if dummysys is True.
 
     Returns
     -------
@@ -204,6 +229,12 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, R_max=300*u.kpc, dv_max=400*u
     if cosmo is None:
         cosmo = cosmology.Planck15
 
+    if dummysys is True:
+        if dummyspec is None:
+            dummyspec = igmsystems[0]._components[0]._abslines[0].analy['spec']
+        dummycoords = igmsystems[0].coord
+        llist = ismlist
+
     # R
     rho, angles = calc_rho(galaxy, igmsystems, cosmo)
 
@@ -212,10 +243,22 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, R_max=300*u.kpc, dv_max=400*u
     dv = ltu.dv_from_z(igm_z, galaxy.z)
 
     # Rules
-    match = np.where((rho<R_max) & (np.abs(dv) < dv_max))[0]
+    match = np.where((rho<rho_max) & (np.abs(dv) < dv_max))[0]
     if len(match) == 0:
-        print("No IGMSystem paired to this galaxy. CGM object not created.")
-        return []
+        if dummysys is False:
+            print("No IGMSystem paired to this galaxy. CGM object not created.")
+            return []
+        else:
+            print("No IGMSystem match found. Attaching dummy IGMSystem.")
+            dummysystem = IGMSystem(dummycoords,galaxy.z,vlim=None)
+            dummycomp = AbsComponent(dummycoords,(1,1),galaxy.z,[-100.,100.]*u.km/u.s)
+            dummyline = AbsLine('HI 1215',linelist = llist)  # Need an actual transition for comp check
+            dummyline.analy['spec'] = dummyspec
+            dummyline.attrib['coord'] = dummycoords
+            dummycomp.add_absline(dummyline,chk_vel=False,chk_sep=False)
+            dummysystem.add_component(dummycomp,chk_vel=False)
+            cgm = CGMAbsSys(galaxy, dummysystem, cosmo=cosmo, **kwargs)
+            cgm_list = [cgm]
     else:
         # Loop to generate
         cgm_list = []
@@ -344,4 +387,5 @@ def velcorr_mould(galaxy,cosmo=None):
                   distmod=distmod, flag=flag, scale=scale.to(u.kpc/u.arcsec))
 
     return velcorrdict
+
 
