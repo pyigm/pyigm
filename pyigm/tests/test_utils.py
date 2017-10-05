@@ -19,28 +19,29 @@ from pyigm.utils import calc_Galactic_rho
 def test_calcrho():
     # Single
     coord1 = SkyCoord(ra=100., dec=50., unit='deg')
-    z1=0.2
+    z2=0.2
     coord2 = SkyCoord(ra=100., dec=50.001, unit='deg')
     # Calc
-    rho, angle = calc_rho(coord1, coord2, z1, cosmo)
+    rho, angle = calc_rho(coord1, coord2, z2, cosmo)
     # Test
     assert np.isclose(rho.value, 12.2587523534)
     assert rho.unit == astropy.units.kpc
     assert isinstance(angle, astropy.coordinates.Angle)
     # Comoving
-    rho, angle = calc_rho(coord1, coord2, z1, cosmo, comoving=True)
+    rho, angle = calc_rho(coord1, coord2, z2, cosmo, comoving=True)
     assert np.isclose(rho.value, 14.71050271)
 
     # One and many
     coords2 = SkyCoord(ra=[100., 100.], dec=[50.001,49.998], unit='deg')
-    rhos, angles = calc_rho(coord1, coords2, z1, cosmo)
+    z2 = np.array([0.2,0.2])
+    rhos, angles = calc_rho(coord1, coords2, z2, cosmo)
     assert rhos.size == 2
     np.isclose(2 * rhos[0].value, rhos[1].value, rtol=1e-4)
 
     # Many and many
     coords1 = SkyCoord(ra=[100., 100.], dec=[50.00,49.999], unit='deg')
-    z1 = np.array([0.2,0.3])
-    rhos3, angles3 = calc_rho(coords1, coords2, z1, cosmo)
+    z2 = np.array([0.2,0.3])
+    rhos3, angles3 = calc_rho(coords1, coords2, z2, cosmo)
     assert np.isclose(angles3[0].value,angles3[1].value, rtol=1e-6)
     assert rhos3[1] > rhos3[0]
 
@@ -50,10 +51,10 @@ def test_calcrho_lowz():
     """
     # Single
     coord1 = SkyCoord(ra=100., dec=50., unit='deg')
-    z1=0.02
+    z2=0.02
     coord2 = SkyCoord(ra=100., dec=50.001, unit='deg')
     # Calc
-    rho, angle = calc_rho(coord1, coord2, z1, cosmo)
+    rho, angle = calc_rho(coord1, coord2, z2, cosmo)
     np.isclose(rho.value, 1.5391395565522688)
 
 

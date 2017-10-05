@@ -18,7 +18,7 @@ from pyigm.field.galaxy import Galaxy
 from pyigm.abssys.igmsys import IGMSystem
 
 
-def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True):
+def calc_cgm_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True):
     """ Calculate the impact parameter between the galaxy and IGM sightline
     Mainly a wrapper to pyigm.utils.calc_rho
 
@@ -42,10 +42,12 @@ def calc_rho(galaxy, igm_sys, cosmo, ang_sep=None, correct_lowz=True):
     # Loop?
     if isinstance(igm_sys, list):
         coords = SkyCoord([iigm.coord for iigm in igm_sys])
-        return calc_rho(galaxy.coord, coords, galaxy.z, cosmo, correct_lowz=correct_lowz)
+        return calc_rho(galaxy.coord, coords, np.array([galaxy.z]*len(coords)), cosmo, correct_lowz=correct_lowz)
     elif isinstance(igm_sys, IGMSystem):
-        return calc_rho(galaxy.coord, igm_sys.coord, galaxy.z, cosmo,
+        return calc_rho(igm_sys.coord, galaxy.coord, galaxy.z, cosmo,
                         ang_sep=ang_sep, correct_lowz=correct_lowz)
+    else:
+        raise IOError("Bad input..  Must be list or IGMSystem")
 
 def get_close_galaxies(field,rholim=300.*u.kpc,minz=0.001,maxz=None):
     '''
@@ -263,7 +265,7 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, R_max=300*u.kpc, dv_max=400*u
         cosmo = cosmology.Planck15
 
     # R
-    rho, angles = calc_rho(galaxy, igmsystems, cosmo)
+    rho, angles = calc_cgm_rho(galaxy, igmsystems, cosmo)
 
     # dv
     igm_z = np.array([igmsystem.zabs for igmsystem in igmsystems])

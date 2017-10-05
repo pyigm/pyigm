@@ -116,7 +116,7 @@ class CGMAbsSys(object):
         return slf
 
     def __init__(self, galaxy, igm_sys, cosmo=None, name=None, rho=None, PA=None,
-                 ang_sep=None, correct_lowz=True, **kwargs):
+                 ang_sep=None, correct_lowz=True, debug=False, **kwargs):
         """
         Parameters
         ----------
@@ -139,7 +139,7 @@ class CGMAbsSys(object):
         -------
 
         """
-        from pyigm.cgm.utils import calc_rho
+        from pyigm.cgm.utils import calc_cgm_rho
         # Checks
         if not isinstance(galaxy, Galaxy):
             raise IOError('CGMAbsSys instantiated with a Galaxy')
@@ -159,8 +159,10 @@ class CGMAbsSys(object):
 
         # Impact parameter and PA
         if rho is None:
-            rho, iang = calc_rho(galaxy, igm_sys, self.cosmo, ang_sep=ang_sep,
+            rho, iang = calc_cgm_rho(galaxy, igm_sys, self.cosmo, ang_sep=ang_sep,
                                  correct_lowz=correct_lowz, **kwargs)
+            if debug:
+                pdb.set_trace()
             if ang_sep is None:
                 ang_sep = iang
         self.rho = rho

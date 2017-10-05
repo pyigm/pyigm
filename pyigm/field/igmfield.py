@@ -96,7 +96,7 @@ class IgmGalaxyField(object):
         #    odec = obj['DEC']*u.deg
         o_coord = SkyCoord(ra=ora, dec=odec, unit='deg')
         # Calculate
-        rho, ang_sep = calc_rho(o_coord, los_coord, obj['Z'], self.cosmo, comoving=comoving)
+        rho, ang_sep = calc_rho(los_coord, o_coord, obj['Z'], self.cosmo, comoving=comoving)
         # Return
         return rho
 
