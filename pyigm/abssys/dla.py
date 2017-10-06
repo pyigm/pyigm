@@ -85,9 +85,8 @@ class DLASystem(IGMSystem):
 
         return slf
 
-    '''
     @classmethod
-    def from_dict(cls, idict):
+    def from_dict(cls, idict, **kwargs):
         """ Generate a DLASystem from a dict
 
         Parameters
@@ -95,19 +94,20 @@ class DLASystem(IGMSystem):
         idict : dict
           Usually read from the hard-drive
         """
-        kwargs = dict(zem=idict['zem'], sig_NHI=idict['sig_NHI'],
-                      name=idict['Name'])
+        from astropy.coordinates import SkyCoord
+        kwargs['zem']=idict['zem']
+        kwargs['sig_NHI']=idict['sig_NHI']
+        kwargs['name']=idict['Name']
         slf = cls(SkyCoord(idict['RA'], idict['DEC'], unit='deg'),
                   idict['zabs'], idict['vlim']*u.km/u.s, idict['NHI'],
                   **kwargs)
         # Components
-        components = ltiu.build_components_from_dict(idict)
+        components = ltiu.build_components_from_dict(idict, **kwargs)
         for component in components:
             # This is to insure the components follow the rules
             slf.add_component(component)
         # Return
         return slf
-    '''
 
     def __init__(self, radec, zabs, vlim, NHI, **kwargs):
         """Standard init

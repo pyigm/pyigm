@@ -21,7 +21,7 @@ def data_path(filename):
 
 def test_mkigmsys():
     outfile = 'tmp.json'
-    pargs = pyigm_mkigmsys.parser(['dla','3.0','20.5',outfile,'--zem=4.','--vlim=-232,300'])
+    pargs = pyigm_mkigmsys.parser(['dla','3.0',outfile,'--NHI=20.5', '--zem=4.','--vlim=-232,300'])
     pyigm_mkigmsys.main(args=pargs)
     # Read as JSON
     with open(outfile,'r') as f:

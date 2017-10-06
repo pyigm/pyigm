@@ -5,6 +5,7 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import numpy as np
 import os, imp
 from scipy import interpolate as scii
+import warnings
 import pdb
 
 from astropy.io import fits
@@ -58,6 +59,12 @@ class FNModel(object):
         cosmo : astropy.cosmology, optional
           Cosmology for some calculations
         """
+        # Cosmology
+        if cosmo is None:
+            cosmo = cosmology.FlatLambdaCDM(H0=70, Om0=0.3) # Adopted in P14
+        else:
+            warnings.warn("Be careful here.  This fN model was derived with a specific cosmology.")
+
         if use_mcmc:
             from pyigm.fN import mcmc
             #raise ValueError("DEPRECATED")
@@ -69,7 +76,7 @@ class FNModel(object):
             # Build a model
             NHI_pivots = [12., 15., 17.0, 18.0, 20.0, 21., 21.5, 22.]
             fN_model = cls('Hspline', zmnx=(0.5,3.0),
-                            pivots=NHI_pivots,
+                            pivots=NHI_pivots, cosmo=cosmo,
                            param=dict(sply=np.array(outp['best_p'].flatten()))) # fN_data['FN']).flatten()))
                            #param=outp['best_p'])
         else:

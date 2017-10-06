@@ -16,8 +16,10 @@ Notebooks
    LLS <LLSSurvey_examples>
    DLA <DLASurvey_examples>
 
-Overview
-========
+.. _igmsurvey:
+
+IGMSurvey
+=========
 
 This Class is designed to organize and analyze a survey of
 absorption systems (defined as AbsSystem objects).
@@ -111,6 +113,10 @@ them within pyigm/data/LLS/HD-LLS.
 DLAs
 ++++
 
+Subclass for :ref:`dlasurvey`.  Presently handles the .dat and .lst files used
+by JXP.   See :doc:`DLASurvey_examples` for more.
+
+
 .. _DLASurvey_examples: https://github.com/pyigm/pyigm/blob/master/docs/examples/DLASurvey_examples.ipynb
 .. _PW09: http://adsabs.harvard.edu/abs/2009ApJ...696.1543P
 .. _Neeleman+13: http://adsabs.harvard.edu/abs/2013ApJ...769...54N
@@ -120,7 +126,6 @@ DLAs
 .. _GGG: http://adsabs.harvard.edu/abs/2015MNRAS.452..217C
 .. _XQ100: http://adsabs.harvard.edu/abs/2016MNRAS.456.4488S
 
-Subclass for DLA surveys.
 Here is a Table describing the various DLA surveys that may
 be loaded and manipulated.
 

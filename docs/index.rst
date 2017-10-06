@@ -47,6 +47,14 @@ Contents:
 ..
    To be added:
 
+**IGM/CGM Surveys**
+
+.. toctree::
+   :maxdepth: 1
+   COS-Halos <https://github.com/pyigm/pyigm/blob/master/docs/datasets/COS_Halos_Examples.ipynb>
+   DLA <https://github.com/pyigm/pyigm/blob/master/docs/datasets/DLASurvey_examples.ipynb>
+   LLS <https://github.com/pyigm/pyigm/blob/master/docs/datasets/LLSSurvey_examples.ipynb>
+
 **GUIs**
 
 .. toctree::

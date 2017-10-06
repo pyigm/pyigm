@@ -10,7 +10,7 @@
 #;   14-Aug-2015 by JXP
 #;-
 #;- NT: New version using linetools' AbsComponent
-#;-
+#;- NT: New version with enhancements
 #;------------------------------------------------------------------------------
 """
 from __future__ import print_function, absolute_import, division, unicode_literals
@@ -19,6 +19,7 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import numpy as np
 import warnings
 import copy
+import datetime
 import pdb
 
 #from PyQt4 import QtGui
@@ -49,11 +50,19 @@ from linetools.guis import line_widgets as ltgl
 from linetools.guis import simple_widgets as ltgsm
 from linetools.guis import spec_widgets as ltspw
 from linetools import utils as ltu
+from linetools.spectra.io import readspec
 
 try:
     ustr = unicode
 except NameError:  # For Python 3
     ustr = str
+
+try:
+    input = raw_input  # For Python 2.
+except NameError:
+    pass
+
+
 
 # Global variables; defined as globals mainly to increase speed and convenience
 c_kms = const.c.to('km/s').value
@@ -77,7 +86,7 @@ class IGMGuessesGui(QMainWindow):
     def __init__(self, ispec, parent=None, previous_file=None, 
         srch_id=True, outfil=None, fwhm=None, screen_scale=1.,
         plot_residuals=True,n_max_tuple=None, min_strength=None,
-                 min_ew=None, vlim_disp=None, external_model=None):
+                 min_ew=None, vlim_disp=None, external_model=None, redsh=None): #added redsh=None
         QMainWindow.__init__(self, parent)
         """
         ispec : str
@@ -186,6 +195,7 @@ E         : toggle displaying/hiding the external absorption model
             self.fwhm = 3.
         else:
             self.fwhm = fwhm
+
         self.plot_residuals = plot_residuals
         self.n_max_tuple = n_max_tuple
         self.min_strength = min_strength
@@ -194,10 +204,13 @@ E         : toggle displaying/hiding the external absorption model
             vlim_disp = [-500.,500.] * u.km/u.s
         self.vlim_disp = vlim_disp
 
+
+
         # Load spectrum
-        spec, spec_fil = ltgu.read_spec(ispec)
-        # Should do coordinates properly eventually
-        self.coord = zero_coord
+        # spec, spec_fil = ltgu.read_spec(ispec, masking='edges')
+        spec = readspec(ispec, masking='edges')
+
+
         # Normalize
         if spec.co_is_set:
             spec.normalize(co=spec.co)
@@ -207,7 +220,7 @@ E         : toggle displaying/hiding the external absorption model
 
         # Load external model spectrum
         if external_model is not None:
-            self.external_model, _ = ltgu.read_spec(external_model)
+            self.external_model = readspec(external_model)
         else:
             self.external_model = None
 
@@ -222,7 +235,7 @@ E         : toggle displaying/hiding the external absorption model
 
         # Full spectrum model
         self.model = XSpectrum1D.from_tuple(
-            (spec.wavelength, np.ones(len(spec.wavelength))))
+            (spec.wavelength, np.ones(len(spec.wavelength))), masking='edges')
 
         # LineList (Grab ISM, Strong and HI as defaults)
         print('Loading built in LineList: ISM, HI and Strong.')
@@ -251,6 +264,10 @@ E         : toggle displaying/hiding the external absorption model
         # Define initial redshift
         z = 0.0
         self.llist['z'] = z
+        if redsh is not None:
+            z=redsh
+            self.llist['z'] = z
+            print("Redshift set to",z,redsh)
         
         # Grab the pieces and tie together
         self.slines_widg = ltgl.SelectedLinesWidget(
@@ -265,7 +282,12 @@ E         : toggle displaying/hiding the external absorption model
 
         # Load prevoius file
         if self.previous_file is not None:
-            self.read_previous()
+            self.read_previous()  # (self.meta and self.coord are defined here)
+        else:
+            self.meta = init_meta()
+            self.meta = fill_meta(self.meta)
+            self.coord = SkyCoord(self.meta['RA'], self.meta['DEC'], unit='deg')
+
         # Connections (buttons are above)
         #self.spec_widg.canvas.mpl_connect('key_press_event', self.on_key)
         #self.abssys_widg.abslist_widget.itemSelectionChanged.connect(
@@ -319,8 +341,13 @@ E         : toggle displaying/hiding the external absorption model
         wvmax = self.velplot_widg.spec.wvmax
         wvlims = (wvmin / (1. + z), wvmax / (1. + z))
 
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
+
         transitions = linelist.available_transitions(
             wvlims, n_max_tuple=self.n_max_tuple, min_strength=self.min_strength)
+
 
         if transitions is None:
             print('  There are no transitions available!')
@@ -331,8 +358,7 @@ E         : toggle displaying/hiding the external absorption model
         else: # transitions should be a QTable
             names = list(np.array(transitions['name']))
         if len(names) > 0:
-            self.llist['available'] = linelist.subset_lines(subset=names, reset_data=True, verbose=True,
-                                                            sort_by='as_given')
+            self.llist['available'] = linelist.subset_lines(subset=names, verbose=True, sort_by='as_given')
             self.llist['List'] = 'available'
         print('Done.')
 
@@ -392,6 +418,17 @@ E         : toggle displaying/hiding the external absorption model
         # Read the JSON file
         with open(self.previous_file) as data_file:    
             igmg_dict = json.load(data_file)
+
+        # load metadata
+        try:
+            self.meta = igmg_dict['meta']
+        except KeyError:  # for backwards compatibility
+            self.meta = init_meta()
+        # fill and reformat (e.g. from str to float)
+        self.meta = fill_meta(self.meta)
+        # update coord
+        self.coord = SkyCoord(self.meta['RA'], self.meta['DEC'], unit='deg')
+
         # Check FWHM
         if igmg_dict['fwhm'] != self.fwhm:
             raise ValueError('Input FWHMs do not match. Please fix it!')
@@ -476,9 +513,9 @@ E         : toggle displaying/hiding the external absorption model
         """ Write to a JSON file"""
         import json, io
         # Create dict of the components
-        out_dict = dict(cmps={},
-                        spec_file=self.velplot_widg.spec.filename,
-                        fwhm=self.fwhm, bad_pixels=[])
+        out_dict = dict(meta=self.meta, spec_file=self.velplot_widg.spec.filename,
+                        fwhm=self.fwhm, cmps={}, bad_pixels=[])
+
 
         # Write components out
         # We need a deep copy here because ._abslines will be modified before writting
@@ -522,7 +559,7 @@ E         : toggle displaying/hiding the external absorption model
         with io.open(self.outfil, 'w', encoding='utf-8') as f:
             f.write(ustr(json.dumps(gd_dict, sort_keys=True, indent=4,
                                        separators=(',', ': '))))
-        print('Wrote: {:s}'.format(self.outfil))
+        print('IGMGuesses: wrote {:s} on date {}'.format(self.outfil, self.meta['Date']))
 
     # Write + Quit
     @pyqtSlot()
@@ -555,13 +592,17 @@ class IGGVelPlotWidget(QWidget):
         # init help message
         self.help_message = parent.help_message
 
+        # QtCore.pyqtRemoveInputHook()
+        # pdb.set_trace()
+        # QtCore.pyqtRestoreInputHook()
+
         # Initialize
         self.parent = parent
-        spec, spec_fil = ltgu.read_spec(ispec)
+        self.spec = ispec
+        self.spec_fil = self.spec.filename
 
         self.scale = screen_scale
-        self.spec = spec
-        self.spec_fil = spec_fil
+
         self.fwhm = fwhm
         self.z = z
         self.vmnx = vmnx
@@ -577,7 +618,7 @@ class IGGVelPlotWidget(QWidget):
         self.wrest = 0.
         self.avmnx = np.array([0.,0.])*u.km/u.s
         self.model = XSpectrum1D.from_tuple(
-            (spec.wavelength, np.ones(len(spec.wavelength))))
+            (self.spec.wavelength, np.ones(len(self.spec.wavelength))))
 
         # define external model
         self.external_model = external_model
@@ -727,7 +768,13 @@ class IGGVelPlotWidget(QWidget):
             try:
                 cond = new_comp._abslines[0].analy['wvlim'] == [0,0]*u.AA
             except:
-                cond = new_comp._abslines[0].limits.wvlim == [0,0]*u.AA
+                try:
+                    cond = new_comp._abslines[0].limits.wvlim == [0,0]*u.AA
+                except:
+                    print('IGMGuesses: Please contact N.Tejos (ntejos@gmail.com) for solving this problem.')
+                    QtCore.pyqtRemoveInputHook()
+                    pdb.set_trace()
+                    QtCore.pyqtRestoreInputHook()
 
             if np.sum(cond)>0:
                 #sync wvlims
@@ -1020,8 +1067,12 @@ class IGGVelPlotWidget(QWidget):
 
             quant = line.split('::')[1].lstrip()
             spltw = quant.split(' ')
-            wrest = Quantity(float(spltw[0]), unit=spltw[1])
+            wrest = Quantity(float(spltw[0]), unit='AA')
             #
+            # QtCore.pyqtRemoveInputHook()
+            # pdb.set_trace()
+            # QtCore.pyqtRestoreInputHook()
+
             self.z = (wvobs/wrest - 1.).value
             #self.statusBar().showMessage('z = {:f}'.format(z))
             self.init_lines()
@@ -1051,7 +1102,6 @@ class IGGVelPlotWidget(QWidget):
             s = "current parent LineList set to 'H2'."
             print(s)
             self.parent.statusBar().showMessage('IGMGuessesGUI: '+ s)
-
 
 
         if event.key == 'F':  # Load Full ISM
@@ -1150,13 +1200,13 @@ class IGGVelPlotWidget(QWidget):
 
         # print component info
         if event.key == '@':  #  for develop; this will be deleted in future.
-            print('Computing blends between components, it may take a while...\n')
             # Write joebvp files; for developing.
-            blending_info(self.parent.comps_widg.all_comp, self.spec_fil)  # this one writes them internally. Should be cleaned.
+            blending_info(self.parent.comps_widg.all_comp, self.spec_fil, ask_user=True)  # this one writes them internally. Should be cleaned.
+            print('IGMGuesses: wrote a bunch of .joebvp files.')
 
-            joebvp_output = self.parent.outfil.replace('.json', '.joebvp')
-            from_igmguesses_to_joebvp(self.parent.outfil, joebvp_output)
-            print('Wrote: {:s}'.format(joebvp_output))
+            # joebvp_output = self.parent.outfil.replace('.json', '.joebvp')
+            # from_igmguesses_to_joebvp(self.parent.outfil, joebvp_output)
+            # print('Wrote: {:s}'.format(joebvp_output))
 
         """
         # AODM plot
@@ -1829,7 +1879,7 @@ def set_fontsize(ax,fsz):
 
 
 # Some info about the blending between components
-def blending_info(components, specfile, min_vlim=100*u.km/u.s):
+def blending_info(components, specfile, min_vlim=100*u.km/u.s, min_ew=0.005*u.AA, ask_user=True):
     """Computes blending info, and store the components in files that group them together
     depending on overlapping in wobs space. Very useful for speeding up automatic Voigt
     profile fitting
@@ -1843,15 +1893,39 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s):
     min_vlim : Quantity
         Minimum velocity limit for components for overlap considerations;
         should be equal or larger than the LSF core
+    min_ew : Quantity
+        The minimum equivalent width for the AbsLines to keep
+        (assuming optically thin regime).
+    ask_user : bool
+        Whether to ask the user for `min_vlim` and `min_ew`.
 
     Returns
     -------
-        Writes output files.
+        Writes .joebvp output files.
 
     """
+    if ask_user:
+        gui = ltgsm.AnsBox("Please provide the minimum rest-frame\n equivalent width for the AbsLines (in AA):", float)
+        gui.exec_()
+        min_ew = gui.value * u.AA
+        gui = ltgsm.AnsBox("Please provide the minimum rest-frame\n velocity limit for the AbsLines (in km/s):", float)
+        gui.exec_()
+        min_vlim = gui.value * u.km/u.s
+    print('IGMGuesses: computing blends between components, it may take a while...\n')
 
     # create a copy of component list that has a minimum vlim incorporated
-    comps_copy = copy.copy(components)
+    comps_copy = copy.deepcopy(components)
+
+    # first keep only lines with ew >= min_ew
+    for comp in comps_copy:
+        good_abslines = []
+        for line in comp._abslines:
+            if line.get_Wr_from_N(line.attrib['N']) >= min_ew:
+                good_abslines += [line]
+        # replace abslines within the component
+        comp._abslines = good_abslines
+
+    # increase the vlims if necessary
     for comp in comps_copy:
         for line in comp._abslines:
             # add minimum velocity limit consideration for blends; should be larger than the LSF core
@@ -1862,11 +1936,7 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s):
                 vlim[1] = min_vlim
             line.limits.set(vlim)
 
-    # QtCore.pyqtRemoveInputHook()
-    # pdb.set_trace()
-    # QtCore.pyqtRestoreInputHook()
-
-    grouped_comps = ltiu.group_coincident_compoments(comps_copy, output_type='list')
+    grouped_comps = ltiu.group_coincident_components(comps_copy, output_type='list')
     isolated = []
     grouped = []
     for group in grouped_comps:
@@ -1926,7 +1996,81 @@ def from_igmguesses_to_joebvp(infile, outfile):
 
     ltiu.joebvp_from_components(comp_list, igmg_dict['spec_file'], outfile)
 
+def init_meta():
+    """Creates a general meta dictionary
 
+    Returns
+    -------
+    meta : dict
+
+    """
+    meta = dict()
+    meta['JNAME'] = 'unknown'
+    meta['ALTNAME'] = 'unknown'
+    meta['RA'] = 0.
+    meta['DEC'] = 0.
+    meta['zem'] = 0.
+    meta['Instrument'] = 'unknown'
+    meta['Creator'] = 'unknown'
+    meta['Date'] = 'unknown'
+    return meta
+
+def fill_meta(meta):
+    """If a meta[key] value is equal to the default, ask the user
+    for input to fill it in.
+
+    Parameter
+    ---------
+    meta : dict
+        The original meta dict
+
+    Returns
+    -------
+    meta_updated : dict
+        A new meta dictionary with values given by user
+        from prompt
+
+    """
+    meta_ref = init_meta()
+    if (meta["RA"] == meta_ref["RA"]) and (meta["DEC"] == meta_ref["DEC"]):
+        radec = input("Please provide (RA,DEC) J2000 in degrees (e.g. 123.45678,-87.6543): ")
+        if radec == "":
+            meta["RA"] = meta_ref["RA"]
+            meta["DEC"] = meta_ref["DEC"]
+        else:
+            radec = radec.split(",")
+            meta["RA"] = radec[0]
+            meta["DEC"] = radec[1]
+    # JNAME (will also check whether coordinates are sensible)
+    coord = SkyCoord(meta['RA'], meta['DEC'], unit='deg')
+    jname = ltu.name_from_coord(coord, precision=(2, 1))
+    meta['JNAME'] = jname
+
+    for key in ['ALTNAME', 'zem', 'Instrument', 'Creator']:
+        if meta[key] == meta_ref[key]:
+            if key == 'ALTNAME':
+                eg_str = "(e.g. PG0953+414)"
+            elif key == 'zem':
+                eg_str = "(e.g. 0.239)"
+            elif key == 'Instrument':
+                eg_str = "(e.g. HST/COS/G130M)"
+            elif key == 'Creator':
+                eg_str = "(e.g. John Smith)"
+            var = input("Please provide value for {} {}: ".format(key, eg_str))
+            if var != "":
+                meta[key] = var
+            else:
+                meta[key] = meta_ref[key]
+    # reformat
+    for key in ['zem', 'RA', 'DEC']:
+        meta[key] = float(meta[key])
+
+    # add date
+    date = str(datetime.date.today().strftime('%Y-%b-%d'))
+    meta['Date'] = date
+
+    #return
+    return meta
 
 class UpdateWidget(QWidget):
     def __init__(self, parent=None):

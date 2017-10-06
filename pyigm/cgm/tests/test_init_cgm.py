@@ -23,6 +23,15 @@ import pyigm
 
 import pdb
 
+def simple_cgmabssys():
+    radec = (125.0*u.deg, 45.2*u.deg)
+    gal = Galaxy(radec,z=0.3)
+    radec_qso = (125.0*u.deg, 45.203*u.deg)
+    igmsys = IGMSystem(radec_qso, gal.z, [-500,500]*u.km/u.s, abs_type='CGM')
+    # Instantiate
+    cgmabs = CGMAbsSys(gal, igmsys, cosmo=cosmo)
+    return cgmabs
+
 def test_init_cgm():
     # Simple properties
     radec = SkyCoord(ra=123.1143*u.deg, dec=-12.4321*u.deg)
@@ -31,14 +40,9 @@ def test_init_cgm():
     # Test
     np.testing.assert_allclose(cgm.galaxy.z, 0.3)
 
-
 def test_init_cgmabssys():
-    radec = (125*u.deg, 45.2*u.deg)
-    gal = Galaxy(radec,z=0.3)
-    radec_qso = (125*u.deg, 45.203*u.deg)
-    igmsys = IGMSystem(radec_qso, gal.z, [-500,500]*u.km/u.s, abs_type='CGM')
     # Instantiate
-    cgmabs = CGMAbsSys(gal, igmsys, cosmo=cosmo)
+    cgmabs = simple_cgmabssys()
     # Test
     np.testing.assert_allclose(cgmabs.rho.value, 49.6141071, rtol=1e-5)
 
@@ -47,17 +51,39 @@ def test_init_cgmabssurvey():
     # Test
     assert cgmsurvey.survey == 'cos-halos'
 
+def test_init_cgmabssurvey_from_abssys():
+    # Instantiate abssys and survey
+    cgmabs = simple_cgmabssys()
+    cgmsurvey = CGMAbsSurvey.from_cgmabssys([cgmabs,cgmabs])
+    # Test
+    assert len(cgmsurvey.cgm_abs) == 2
+
+def test_get_cgmsys():
+    # Instantiate abssys and survey
+    cgmabs1 = simple_cgmabssys()
+    cgmabs2 = simple_cgmabssys()
+    cgmabs1.name = 'System1'
+    cgmabs2.name = 'System2'
+    cgmsurvey = CGMAbsSurvey.from_cgmabssys([cgmabs1, cgmabs2])
+    retsys = cgmsurvey.get_cgmsys('System2')
+    assert isinstance(retsys,CGMAbsSys)
+
 def test_to_dict():
-    from linetools import utils as ltu
-    radec = (125*u.deg, 45.2*u.deg)
-    gal = Galaxy(radec,z=0.3)
-    radec_qso = (125*u.deg, 45.203*u.deg)
-    igmsys = IGMSystem(radec_qso, gal.z, [-500,500]*u.km/u.s, abs_type='CGM')
     # Instantiate
-    cgmabs = CGMAbsSys(gal, igmsys)
+    cgmabs = simple_cgmabssys()
     # Test
     cdict = cgmabs.to_dict()
-    ltu.savejson('tmp.json', cdict, overwrite=True)
+    assert isinstance(cdict,dict)
+    for key in ['Name', 'z', 'rho', 'cosmo', 'galaxy', 'igm_sys']:
+        assert key in cdict.keys()
+
+def test_read_write_json():
+    cgmabs = simple_cgmabssys()
+    # Write
+    cgmabs.write_json('tmp.json')
+    # Read
+    cgmabs2 = CGMAbsSys.from_json('tmp.json')
+    np.testing.assert_allclose(cgmabs2.rho.value, 49.6141071, rtol=1e-5)
 
 def test_cgm_from_igmsystems():
     # Load sightlines
