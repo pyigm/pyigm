@@ -86,7 +86,7 @@ class IGMGuessesGui(QMainWindow):
     def __init__(self, ispec, parent=None, previous_file=None, 
         srch_id=True, outfil=None, fwhm=None, screen_scale=1.,
         plot_residuals=True,n_max_tuple=None, min_strength=None,
-                 min_ew=None, vlim_disp=None, external_model=None):
+                 min_ew=None, vlim_disp=None, external_model=None, redsh=None): #added redsh=None
         QMainWindow.__init__(self, parent)
         """
         ispec : str
@@ -264,6 +264,10 @@ E         : toggle displaying/hiding the external absorption model
         # Define initial redshift
         z = 0.0
         self.llist['z'] = z
+        if redsh is not None:
+            z=redsh
+            self.llist['z'] = z
+            print("Redshift set to",z,redsh)
         
         # Grab the pieces and tie together
         self.slines_widg = ltgl.SelectedLinesWidget(
@@ -337,8 +341,13 @@ E         : toggle displaying/hiding the external absorption model
         wvmax = self.velplot_widg.spec.wvmax
         wvlims = (wvmin / (1. + z), wvmax / (1. + z))
 
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
+
         transitions = linelist.available_transitions(
             wvlims, n_max_tuple=self.n_max_tuple, min_strength=self.min_strength)
+
 
         if transitions is None:
             print('  There are no transitions available!')
@@ -349,8 +358,7 @@ E         : toggle displaying/hiding the external absorption model
         else: # transitions should be a QTable
             names = list(np.array(transitions['name']))
         if len(names) > 0:
-            self.llist['available'] = linelist.subset_lines(subset=names, reset_data=True, verbose=True,
-                                                            sort_by='as_given')
+            self.llist['available'] = linelist.subset_lines(subset=names, verbose=True, sort_by='as_given')
             self.llist['List'] = 'available'
         print('Done.')
 

@@ -10,6 +10,7 @@ import json, io
 
 from astropy.table import Table, Column
 from astropy.coordinates import SkyCoord
+from astropy import  units as u
 
 from pyigm.utils import lst_to_array
 from pyigm.surveys.igmsurvey import GenericIGMSurvey
@@ -68,6 +69,26 @@ class CGMAbsSurvey(object):
         tar.close()
         # Return
         return slf
+
+    @classmethod
+    def from_cgmabssys(cls, cgmlist, **kwargs):
+        """ Instantiate new survey from list of CgmAbsSys objects
+
+        Parameters
+        ----------
+        cgmlist : list CgmAbsSys
+
+
+        """
+        if not isinstance(cgmlist,list):
+            raise IOError("Input must be list of CGMAbsSys")
+        elif not isinstance(cgmlist[0],CGMAbsSys):
+            raise IOError("Input must be list of CGMAbsSys")
+
+        slf = cls(**kwargs)
+        slf.cgm_abs.extend(cgmlist)
+        return slf
+
 
     def __init__(self, survey='', ref='', **kwargs):
         """
@@ -152,6 +173,7 @@ class CGMAbsSurvey(object):
         # Generate dummy IGMSurvey
         dumb = GenericIGMSurvey()
         names = []
+        rhos = []
         for cgmabs in self.cgm_abs:
             if fill_ion:
                 cgmabs.igm_sys.fill_ionN()
@@ -159,10 +181,14 @@ class CGMAbsSurvey(object):
                 dumb._abs_sys.append(cgmabs.igm_sys)
                 # Names
                 names.append(cgmabs.name)
+                # Impact parameters
+                rhos.append(cgmabs.rho.to(u.kpc).value)
         # Run ions
         tbl = dumb.ions(Zion)
         # Add CGM name
         tbl.add_column(Column(names, name='cgm_name'))
+        # Add impact parameter
+        tbl.add_column(Column(rhos*u.kpc, name='rho_impact'))
         # Return
         return tbl
 
@@ -221,6 +247,34 @@ class CGMAbsSurvey(object):
             row = [kdict[key] for key in keys]
             t.add_row( row )
         return t
+
+    def get_cgmsys(self, cgmname, return_index=False):
+        """Convenience method to return CGMAbsSys by name
+
+        Parameters
+        ----------
+        cgmname : str
+            Name of CGMAbsSys to return
+        return_index : bool
+            If True, return index into self.cgm_abs of match
+
+        Returns
+        -------
+        cgmsys : CGMAbsSys
+            CGMAbsSys with name matching 'cgmname'
+        index : int, optional
+            Index into self.cgm_abs of match
+        """
+        names = np.array([str(system.name) for system in self.cgm_abs])
+        index = np.where(names==cgmname)[0]
+        if len(index) == 0:
+            raise IOError("No CGMAbsSys with a matching name!")
+        else:
+            index=index[0]
+        if return_index is True:
+            return self.cgm_abs[index],index
+        else:
+            return self.cgm_abs[index]
 
     def __getattr__(self, k):
         # Try Self first
