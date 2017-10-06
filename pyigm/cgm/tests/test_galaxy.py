@@ -7,7 +7,7 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import pytest
 import numpy as np
 
-from ..galaxy import GalaxyCGM
+from pyigm.cgm.galaxy import GalaxyCGM
 
 
 def test_init():

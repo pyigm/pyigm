@@ -38,6 +38,7 @@ def parser(options=None):
     parser.add_argument("--vlim", type=float, help="Velocity limit (in km/s) for the display. This limit will apply to both sides")
     parser.add_argument("--external_model", type=str, help="An external model spectrum (.fits)")
     parser.add_argument("--scale", type=float, help="Scaling of screen [default=1.]")
+    parser.add_argument("-redsh","--redsh",type=float,help="Redshift") # added line
 
     if options is None:
         args = parser.parse_args()
@@ -73,7 +74,8 @@ def main(args=None):
                         min_ew=pargs.min_ew,
                         screen_scale=scale,
                         vlim_disp=vlim_disp,
-                        external_model=pargs.external_model)
+                        external_model=pargs.external_model,
+                        redsh=pargs.redsh)
     gui.show()
     app.exec_()
 

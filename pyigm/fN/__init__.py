@@ -7,4 +7,4 @@ except ImportError:
     print('WARNING: Not loading mcmc in pyigm.fN   \n Install pymc if you want it')
     print('-----------------------------------------------------------')
 else:
-    import mcmc
+    from pyigm.fN import mcmc

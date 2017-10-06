@@ -54,8 +54,8 @@ class CGM(object):
 
     def __repr__(self):
         return ('<CGM: {:s} {:s}, z={:g}>'.format(
-                self.galaxy.coord.fk5.ra.to_string(unit=u.hour, sep=':', pad=True),
-                self.galaxy.coord.fk5.dec.to_string(sep=':', pad=True, alwayssign=True),
+                self.galaxy.coord.icrs.ra.to_string(unit=u.hour, sep=':', pad=True),
+                self.galaxy.coord.icrs.dec.to_string(sep=':', pad=True, alwayssign=True),
                 self.galaxy.z))
 
 
@@ -104,18 +104,33 @@ class CGMAbsSys(object):
         # Return
         return slf
 
-    def __init__(self, galaxy, igm_sys, cosmo=None, name=None, rho=None, PA=None,
-                 ang_sep=None, correct_lowz=True, **kwargs):
+    @classmethod
+    def from_json(cls, jfile, **kwargs):
         """
         Parameters
         ----------
-        galaxy
-        igm_sys
-        cosmo
-        name
-        rho
-        PA
-        ang_sep
+        jfile : str
+        """
+        idict = ltu.loadjson(jfile)
+        slf = cls.from_dict(idict, **kwargs)
+        return slf
+
+    def __init__(self, galaxy, igm_sys, cosmo=None, name=None, rho=None, PA=None,
+                 ang_sep=None, correct_lowz=True, debug=False, **kwargs):
+        """
+        Parameters
+        ----------
+        galaxy : Galaxy
+        igm_sys : IGMSystem
+        cosmo : astropy.cosmology, optional
+          Defaults to Planck15
+        name : str, optional
+        rho : Quantity, optional
+          Impact parameter; calculated if not input
+        PA : Quantity
+          Position angle
+        ang_sep : Quantity
+          Angular separation between galaxy and sightline
         correct_lowz : bool, optional
           If galaxy z < 0.05, correct for peculiar velocies in impact parameter
           calculation
@@ -124,7 +139,7 @@ class CGMAbsSys(object):
         -------
 
         """
-        from .utils import calc_rho
+        from pyigm.cgm.utils import calc_cgm_rho
         # Checks
         if not isinstance(galaxy, Galaxy):
             raise IOError('CGMAbsSys instantiated with a Galaxy')
@@ -144,8 +159,10 @@ class CGMAbsSys(object):
 
         # Impact parameter and PA
         if rho is None:
-            rho, iang = calc_rho(galaxy, igm_sys, self.cosmo, ang_sep=ang_sep,
+            rho, iang = calc_cgm_rho(galaxy, igm_sys, self.cosmo, ang_sep=ang_sep,
                                  correct_lowz=correct_lowz, **kwargs)
+            if debug:
+                pdb.set_trace()
             if ang_sep is None:
                 ang_sep = iang
         self.rho = rho
@@ -155,8 +172,8 @@ class CGMAbsSys(object):
         # Standard name
         if name is None:
             self.name = 'J{:s}{:s}_{:d}_{:d}'.format(
-                    self.igm_sys.coord.fk5.ra.to_string(unit=u.hour,sep='',pad=True)[0:4],
-                    self.igm_sys.coord.fk5.dec.to_string(sep='',pad=True,alwayssign=True)[0:5],
+                    self.igm_sys.coord.icrs.ra.to_string(unit=u.hour,sep='',pad=True)[0:4],
+                    self.igm_sys.coord.icrs.dec.to_string(sep='',pad=True,alwayssign=True)[0:5],
                     int(np.round(self.PA.to('deg').value)),
                     int(np.round(self.ang_sep.to('arcsec').value)))
         else:
@@ -177,8 +194,8 @@ class CGMAbsSys(object):
         outdict = dict(Name=self.name, z=self.galaxy.z, rho=self.rho.value,
                        ang_sep=self.ang_sep.value,
                        PA=self.PA.value,
-                       RA=self.galaxy.coord.fk5.ra.value,
-                       DEC=self.galaxy.coord.fk5.dec.value,
+                       RA=self.galaxy.coord.icrs.ra.value,
+                       DEC=self.galaxy.coord.icrs.dec.value,
                        cosmo = self.cosmo.name,
                        CreationDate=date,
                        user=user
@@ -218,6 +235,28 @@ class CGMAbsSys(object):
         return ('<{:s}: {:s} Galaxy RA/DEC={:s}{:s}, zgal={:g}, rho={:g}>'.format(
                 self.__class__.__name__,
                 self.name,
-                 self.galaxy.coord.fk5.ra.to_string(unit=u.hour,sep=':',pad=True),
-                 self.galaxy.coord.fk5.dec.to_string(sep=':',pad=True,alwayssign=True),
+                 self.galaxy.coord.icrs.ra.to_string(unit=u.hour,sep=':',pad=True),
+                 self.galaxy.coord.icrs.dec.to_string(sep=':',pad=True,alwayssign=True),
                  self.galaxy.z, self.rho))
+
+    def write_json(self, outfil=None):
+        """ Generate a JSON file from a CGMAbsSys object 
+
+        Parameters
+        ----------
+        outfil : str
+          output file
+
+        Returns
+        -------
+
+        """
+        # Generate the dict
+        odict = self.to_dict()
+        # Write
+        if outfil is None:
+            outfil = self.name+'.json'
+        ltu.savejson(outfil, odict, overwrite=True, easy_to_read=True)
+        # Finish
+        print("Wrote {:s} system to {:s} file".format(self.name, outfil))
+
