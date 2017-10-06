@@ -21,6 +21,8 @@ from pyigm.abssys.igmsys import IGMSystem
 from pyigm.igm.igmsightline import IGMSightline
 
 from linetools.isgm.abscomponent import AbsComponent
+from linetools.spectralline import AbsLine
+from linetools.spectra.io import readspec
 
 
 def test_calcrho():
@@ -58,12 +60,28 @@ def test_cgmsurvey_from_fields_sightlines():
     sl2coord = SkyCoord(field2[1], field2[2],unit = 'deg')
     comp11 = AbsComponent(sl1coord,(8,6),0.9743,[-200,200]*u.km/u.s)
     comp12 = AbsComponent(sl1coord, (1, 1), 0.9743, [-200, 200] * u.km / u.s)
+    al11 = AbsLine('OVI 1031')
+    al11.attrib['coord'] = sl1coord
+    al11.analy['spec'] = 'files/J0042-1037.358_9.fits.gz'
+    al12 = AbsLine('HI 1215')
+    al12.attrib['coord'] = sl1coord
+    al12.analy['spec'] = 'files/J0042-1037.358_9.fits.gz'
+    comp11.add_absline(al11,chk_sep=False,chk_vel=False)
+    comp12.add_absline(al12, chk_sep=False, chk_vel=False)
     sys1 = IGMSystem.from_components([comp11,comp12])
     sl1 = IGMSightline.from_systems([sys1])
     comp21 = AbsComponent(sl2coord, (6, 4), 0.0037, [-200, 200] * u.km / u.s)
     comp22 = AbsComponent(sl2coord, (1,1), 0.0037, [-200, 200] * u.km / u.s)
-    sys1 = IGMSystem.from_components([comp21,comp22])
-    sl2 = IGMSightline.from_systems([sys1])
+    al21 = AbsLine('CIV 1548')
+    al21.attrib['coord'] = sl1coord
+    al21.analy['spec'] = 'files/J0042-1037.358_9.fits.gz'
+    al22 = AbsLine('HI 1215')
+    al22.attrib['coord'] = sl1coord
+    al22.analy['spec'] = 'files/J0042-1037.358_9.fits.gz'
+    comp21.add_absline(al21, chk_sep=False, chk_vel=False)
+    comp22.add_absline(al22, chk_sep=False, chk_vel=False)
+    sys2 = IGMSystem.from_components([comp21,comp22])
+    sl2 = IGMSightline.from_systems([sys2])
     sightlines = [sl1,sl2]
 
     # Run function
@@ -73,7 +91,7 @@ def test_cgmsurvey_from_fields_sightlines():
 
 
 
-
+"""
 def test_cgmsurvey_from_fields_sightlines():
     # Instantiate fields and add galaxies
     field1 = ('PG1407+265', 212.349634 * u.deg, 26.3058650 * u.deg)
@@ -108,7 +126,7 @@ def test_cgmsurvey_from_fields_sightlines():
     # Run function
     csurvey = cgmsurvey_from_sightlines_fields(fields,sightlines)
     assert isinstance(csurvey,CGMAbsSurvey)
-
+"""
 
 
 

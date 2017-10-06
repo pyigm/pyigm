@@ -49,7 +49,7 @@ def calc_cgm_rho(galaxy, igm_sys, cosmo, **kwargs):
     elif isinstance(igm_sys, IGMSystem):
         return calc_rho(igm_sys.coord, galaxy.coord, galaxy.z, cosmo, **kwargs)
     else:
-        raise IOError("Bad input..  Must be list or IGMSystem")
+        raise IOError("Bad input.  Must be list or IGMSystem")
 
 
 def get_close_galaxies(field,rho_max=300.*u.kpc,minz=0.001,maxz=None):
@@ -85,7 +85,7 @@ def get_close_galaxies(field,rho_max=300.*u.kpc,minz=0.001,maxz=None):
 
 def cgmabssys_from_sightline_field(field,sightline,rho_max=300.*u.kpc,minz=0.001,
                                    maxz=None,dv_max=400.*u.km/u.s,dummysys=True,
-                                   dummyspec=None,**kwargs):
+                                   dummyspec=None,linelist=None,**kwargs):
     """Instantiate list of CgmAbsSys objects from IgmgGalaxyField and IGMSightline.
 
     Parameters
@@ -106,6 +106,8 @@ def cgmabssys_from_sightline_field(field,sightline,rho_max=300.*u.kpc,minz=0.001
     dummyspec : XSpectrum1D, optional
         Spectrum object to attach to dummy AbsLine/AbsComponent objects when
         adding IGMSystems if dummysys is True
+    linelist : LineList, optional
+        ListList from which to add dummy line in case of no IGMSystem match
 
     Returns
     -------
@@ -114,17 +116,20 @@ def cgmabssys_from_sightline_field(field,sightline,rho_max=300.*u.kpc,minz=0.001
     """
     if dummyspec is None:
         dummyspec = sightline._abssystems[0]._components[0]._abslines[0].analy['spec']
+
+    if linelist is None:
         from linetools.spectralline import AbsLine
-        ismlist = LineList('ISM')
+        linelist = LineList('ISM')
 
     closegals = get_close_galaxies(field,rho_max,minz,maxz)
     cgmabslist = []
     for i,gal in enumerate(closegals):
+
         galobj = Galaxy((gal['RA'],gal['DEC']),z=gal['Z'])
         cgmobj = cgm_from_galaxy_igmsystems(galobj,sightline._abssystems,
                                             dv_max=dv_max, dummysys=dummysys,
                                             dummyspec=dummyspec, rho_max=rho_max,
-                                            linelist=ismlist,**kwargs)
+                                            linelist=linelist,**kwargs)
         cgmabslist.extend(cgmobj)
     return cgmabslist
 
@@ -151,11 +156,17 @@ def cgmsurvey_from_sightlines_fields(fields, sightlines, rho_max=300*u.kpc,
         (len(fields) != len(sightlines))):
         raise IOError("Inputs fields and sightlines must lists of the same length")
 
+    if dummysys is True:
+        from linetools.spectralline import AbsLine
+        ismlist = LineList('ISM')
+
     from pyigm.cgm.cgmsurvey import CGMAbsSurvey
     cgmsys = []
     for i,ff in enumerate(fields):
+        print(ff.name)
         thiscgmlist = cgmabssys_from_sightline_field(ff,sightlines[i],rho_max=rho_max,
-                                                     dummysys=dummysys, **kwargs)
+                                                     dummysys=dummysys,linelist=ismlist,
+                                                     **kwargs)
         cgmsys.extend(thiscgmlist)
     if name is not None:
         cgmsurvey=CGMAbsSurvey.from_cgmabssys(cgmsys,survey=name)
@@ -220,7 +231,7 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
             dummyline.analy['spec'] = dummyspec
             dummyline.attrib['coord'] = dummycoords
             dummycomp.add_absline(dummyline,chk_vel=False,chk_sep=False)
-            dummysystem.add_component(dummycomp,chk_vel=False)
+            dummysystem.add_component(dummycomp,chk_vel=False,chk_sep=False)
             cgm = CGMAbsSys(galaxy, dummysystem, cosmo=cosmo, **kwargs)
             cgm_list = [cgm]
     else:
