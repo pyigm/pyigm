@@ -12,7 +12,7 @@ from astropy.coordinates import SkyCoord
 from pyigm.field.galaxy import Galaxy
 
 def calc_rho(coords1, coords2, z2, cosmo, ang_sep=None, correct_lowz=True,
-             z_low=0.05, comoving=False):
+             z_low=0.05, comoving=False,**kwargs):
     """ Calculate the impact parameter between coordinates at a redshift (or redshifts)
 
     Parameters
@@ -58,7 +58,7 @@ def calc_rho(coords1, coords2, z2, cosmo, ang_sep=None, correct_lowz=True,
     rho = np.zeros_like(z2) * u.kpc
     # Handle cases where object's distance needs correction from peculiar velocities
     # This is especially important at very low redshifts
-    lowz = z2 < 0.05
+    lowz = z2 < z_low
     if correct_lowz and np.any(lowz):
         # Ugly for loop for now
         for idx in np.where(lowz)[0]:
