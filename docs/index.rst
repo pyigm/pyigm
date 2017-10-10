@@ -23,6 +23,14 @@ Contents:
    misc
    api
 
+**IGM/CGM Datasets**
+
+.. toctree::
+   :maxdepth: 1
+
+   CGM (e.g. LCO, COS-Halos, COS-Dwarfs) <cgm>
+   IGMSurvey (DLA, LLS) <igmsurvey>
+
 **Core classes**
 
 .. toctree::

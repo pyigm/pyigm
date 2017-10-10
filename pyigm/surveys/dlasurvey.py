@@ -41,6 +41,7 @@ class DLASurvey(IGMSurvey):
     @classmethod
     def load_HST16(cls, sample='stat'):
         """ HST Survey by Neeleman+16
+        Neeleman, M. et al. 2016, ApJ, 818, 113
 
         Parameters
         ----------
