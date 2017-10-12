@@ -49,7 +49,7 @@ source "${pyvenv_loc}"/bin/activate
 pyigm_mtlmcmc_loc=()
 while IFS='' read -r -u"$FD" -d $'\0' file; do
     pyigm_mtlmcmc_loc+=("$file")
-done {FD}< <(find "${pyvenv_loc}" -name "pyigm_mtlmcmc.py" -print0)
+done {FD}< <(find -L "${pyvenv_loc}" -name "pyigm_mtlmcmc.py" -print0)
 
 
 ##Use a job array to loop over the row number
