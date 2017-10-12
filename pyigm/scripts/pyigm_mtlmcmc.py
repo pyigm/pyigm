@@ -139,13 +139,17 @@ def run_mcmc_wotta(args):
     args.fileinput=input_file_dir+"/mcmc."+sightline+".in"        
 
     ##Grid file
-    ##Test whether to include the carbalpha parameter
+    ##Test whether to include the carbalpha parameter, and use the correct UVB
+    ##...But set a default first
+    if not args.grid:
+        args.grid = 'grid_minimal'
+    
     if str(carbalpha_use).lower() == 'false':
         ##Do NOT use the carbalpha parameter
-        args.grid = os.getcwd()+'/../Cloudy_grids_'+args.UVB+'/grid_minimal.pkl'
+        args.grid = os.getcwd()+'/../Cloudy_grids_'+args.UVB+'/'+args.grid+'.pkl'
     else:
         ##Use the carbalpha parameter
-        args.grid = os.getcwd()+'/../Cloudy_grids_'+args.UVB+'/grid_minimal_carbalpha.pkl'
+        args.grid = os.getcwd()+'/../Cloudy_grids_'+args.UVB+'/'+args.grid+'_carbalpha.pkl'
 
 
 
@@ -261,7 +265,7 @@ def main(args=None):
     parser.add_argument('-sightline', type=str, help='Name of the System to analyze')
     parser.add_argument('-fileinput')
     parser.add_argument('-outsave')
-    parser.add_argument('-grid')
+    parser.add_argument('-grid', type=str, help='Which Cloudy grid to use. If using with -carbalpha (i.e., --wotta), only give the stub (grid_minimal) not (grid_minimal_carbalpha).')
     parser.add_argument('-logUconstraint', type=str, help='Should we use logU constraint on density')
     parser.add_argument('-logUmean', type=str, help='If we use logUconstraint, what is the mean for the Gaussian?')
     parser.add_argument('-logUsigma', type=str, help='If we use logUconstraint, what is the sigma for the Gaussian?')
