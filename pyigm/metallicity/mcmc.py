@@ -300,14 +300,13 @@ class Emceebones(object):
         try:
             ##Python3
             fil=open(model,'br')
-            modl=pickle.load(fil)
-            fil.close()
         except:
             ##Python2
             fil=open(model,'r')
-            modl=pickle.load(fil)
-            fil.close()
-    
+
+        modl=pickle.load(fil)
+        fil.close()
+
         #unpack axis tag, axis value, grid column, grid ions
         self.mod_axistag=modl[0]
         self.mod_axisval=[]
