@@ -851,7 +851,7 @@ class IGGVelPlotWidget(QWidget):
         Nguess = np.log10(fit_line.attrib['N'].to('cm**-2').value)
         # Voigt model
         fitvoigt = lav.single_voigt_model(logN=Nguess,b=bguess.value,
-                                z=zguess, wrest=component.init_wrest.value,
+                                z=zguess.value, wrest=component.init_wrest.value,
                                 gamma=fit_line.data['gamma'].value, 
                                 f=fit_line.data['f'], fwhm=self.fwhm)
         # Restrict parameter space
@@ -862,8 +862,10 @@ class IGGVelPlotWidget(QWidget):
 
         # Fit
         fitter = fitting.LevMarLSQFitter()
-        parm = fitter(fitvoigt,self.spec.wavelength[fit_line.analy['pix']],
-            self.spec.flux[fit_line.analy['pix']].value)
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
+        parm = fitter(fitvoigt,self.spec.wavelength[fit_line.analy['pix']].value, self.spec.flux[fit_line.analy['pix']].value)
 
         # Save and sync
         component.attrib['logN'] = parm.logN.value
