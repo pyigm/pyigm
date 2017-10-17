@@ -28,13 +28,15 @@ class IgmGalaxyField(object):
         (RA,DEC) in deg or astropy.coordinate
     name : str; optional
         Default is set from sexagesimal coordinates
+    zem : float; optional
+        Redshift of background source (e.g., QSO)
     cosmo : Cosmology; optional
-        Default is astropy.cosmology.Plack15
+        Default is astropy.cosmology.Planck15
 
     """
 
     # Initialize
-    def __init__(self, radec, name=None, cosmo=None, verbose=False):
+    def __init__(self, radec, name=None, zem=None, cosmo=None, verbose=False):
         # coord
         if isinstance(radec, (tuple)):
             self.coord = SkyCoord(ra=radec[0], dec=radec[1])
@@ -56,6 +58,7 @@ class IgmGalaxyField(object):
         self.cosmo = cosmo
 
         # Init
+        self.zem = zem
         self.igm = None
         self.targets = None
         self.galaxies = None
