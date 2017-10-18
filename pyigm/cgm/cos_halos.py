@@ -803,4 +803,5 @@ class COSDwarfs(COSHalos):
             self.kin_init_file = self.cdir+'/Kin/cosdwarfs_kin_driver.dat'
         else:
             self.kin_init_file = kin_init_file
-
+        # Load
+        self.load_sys()
