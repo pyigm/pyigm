@@ -297,10 +297,16 @@ class Emceebones(object):
         """
         
         #load the model in a format that can be handled later on
-        fil=open(model,'br')
+        try:
+            ##Python3
+            fil=open(model,'br')
+        except:
+            ##Python2
+            fil=open(model,'r')
+
         modl=pickle.load(fil)
         fil.close()
-    
+
         #unpack axis tag, axis value, grid column, grid ions
         self.mod_axistag=modl[0]
         self.mod_axisval=[]
