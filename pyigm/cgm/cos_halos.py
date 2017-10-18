@@ -805,3 +805,54 @@ class COSDwarfs(COSHalos):
             self.kin_init_file = kin_init_file
         # Load
         self.load_sys()
+
+    def load_sys(self, tfile=None, empty=True, debug=False, **kwargs):
+        """ Load the COS-Halos survey from JSON files
+
+        Empties the list
+
+        Parameters
+        ----------
+        tfile : str, optional
+        empty : bool, optional
+          Empty the list
+        debug : bool, optional
+          Only load the first 5
+
+        Returns
+        -------
+
+        """
+        import tarfile
+        import json
+        from linetools.lists.linelist import LineList
+        llist = LineList('ISM')
+
+        # Tar file
+        if tfile is None:
+            tarfiles = glob.glob(self.cdir + 'cos-dwarfs_systems.v*.tar.gz')
+            tarfiles.sort()
+            tfile = tarfiles[-1]
+        print("Be patient, using {:s} to load".format(tfile))
+        # Empty
+        if empty:
+            self.cgm_abs = []
+        # Load
+        tar = tarfile.open(tfile)
+        for kk, member in enumerate(tar.getmembers()):
+            if '.' not in member.name:
+                print('Skipping a likely folder: {:s}'.format(member.name))
+                continue
+            # Debug
+            if debug and (kk == 5):
+                break
+            # Extract
+            f = tar.extractfile(member)
+            tdict = json.load(f)
+            # Generate
+            cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, chk_data=False,
+                                         use_coord=True, use_angrho=True,
+                                         linelist=llist, **kwargs)
+            self.cgm_abs.append(cgmsys)
+        tar.close()
+
