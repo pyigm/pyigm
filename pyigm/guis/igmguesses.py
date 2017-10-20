@@ -1269,8 +1269,10 @@ class IGGVelPlotWidget(QWidget):
         if replot is True:
             if fig_clear:
                 self.fig.clf()
-            # Title by redshift
-            self.fig.suptitle('{}\nz={:.5f}'.format(self.spec.filename,self.z), fontsize='medium', ha='center')
+            # Title by filename + zem + redshift
+            zem = self.parent.meta['zem']
+            self.fig.suptitle('{} (zem={:.3f})\nz={:.5f}'.format(self.spec.filename, zem, self.z), fontsize='medium',
+                              ha='center')
 
             # Components
             components = self.parent.comps_widg.all_comp 
