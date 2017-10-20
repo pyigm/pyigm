@@ -1,4 +1,4 @@
-""" Module for Soneira Peebles algorithm
+""" Module for Soneira-Peebles algorithm
 """
 from __future__ import print_function, absolute_import, division, unicode_literals
 
