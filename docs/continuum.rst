@@ -1,8 +1,8 @@
 .. highlight:: rest
 
-*********
-Continuum
-*********
+********
+Continua
+********
 
 .. index:: contniuum
 

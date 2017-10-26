@@ -6,6 +6,7 @@ import numpy as np
 import warnings
 import pdb
 
+import astropy
 from astropy import units as u
 from astropy.units import Quantity
 from astropy.coordinates import SkyCoord
@@ -13,11 +14,12 @@ from astropy import constants as const
 from astropy.cosmology import Planck15
 
 import pyigm.field.utils as pfu
+from pyigm.utils import calc_rho
 
 #from xastropy.xutils import xdebug as xdb
 
 
-class IgmGalaxyField(object):
+class IgmGalaxyField(object): 
     """ Class for a field associating galaxies to the IGM/CGM
 
     Parameters
@@ -26,13 +28,15 @@ class IgmGalaxyField(object):
         (RA,DEC) in deg or astropy.coordinate
     name : str; optional
         Default is set from sexagesimal coordinates
+    zem : float; optional
+        Redshift of background source (e.g., QSO)
     cosmo : Cosmology; optional
-        Default is astropy.cosmology.Plack15
+        Default is astropy.cosmology.Planck15
 
     """
 
     # Initialize
-    def __init__(self, radec, name=None, cosmo=None, verbose=False):
+    def __init__(self, radec, name=None, zem=None, cosmo=None, verbose=False):
         # coord
         if isinstance(radec, (tuple)):
             self.coord = SkyCoord(ra=radec[0], dec=radec[1])
@@ -54,6 +58,7 @@ class IgmGalaxyField(object):
         self.cosmo = cosmo
 
         # Init
+        self.zem = zem
         self.igm = None
         self.targets = None
         self.galaxies = None
@@ -65,8 +70,8 @@ class IgmGalaxyField(object):
 
         Parameters
         ----------
-        obj : Table
-          (can be anything that takes 'Z', and 'RA','DEC' in degrees)
+        obj : Table or dict
+          Anything that takes 'Z', and 'RA','DEC' in degrees
           Sources for calculation
         comoving : bool, optional
            If True then comoving, else physical
@@ -82,21 +87,19 @@ class IgmGalaxyField(object):
         if los_coord is None:
             los_coord = self.coord
         # Coord
-        if isinstance(obj['RA'], Quantity):
-            ora = obj['RA']
-            odec = obj['DEC']
-        else:
-            ora = obj['RA']*u.deg
-            odec = obj['DEC']*u.deg
-
-        o_coord = SkyCoord(ra=ora, dec=odec)
-        ang_sep = o_coord.separation(los_coord).to('arcmin')
-        # Cosmology (kpc per arcmin)
-        if comoving:
-            kpc_amin = self.cosmo.kpc_comoving_per_arcmin(obj['Z'])
-        else:
-            kpc_amin = self.cosmo.kpc_proper_per_arcmin(obj['Z'])
-        rho = ang_sep * kpc_amin
+        ora = obj['RA']
+        odec = obj['DEC']
+        #if ((isinstance(obj['RA'], Quantity)) |
+        #        (isinstance(obj['RA'],astropy.table.column.MaskedColumn)) |
+        #        (isinstance(obj['RA'], astropy.table.column.Column))):
+        #    ora = obj['RA']
+        #    odec = obj['DEC']
+        #else:
+        #    ora = obj['RA']*u.deg
+        #    odec = obj['DEC']*u.deg
+        o_coord = SkyCoord(ra=ora, dec=odec, unit='deg')
+        # Calculate
+        rho, ang_sep = calc_rho(los_coord, o_coord, obj['Z'], self.cosmo, comoving=comoving)
         # Return
         return rho
 

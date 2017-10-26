@@ -25,7 +25,7 @@ pyigm_path = imp.find_module('pyigm')[1]
 
 
 def get_telfer_spec(zqso=0., igm=False, fN_gamma=None,
-                    LL_flatten=True, nproc=6):
+                    LL_flatten=True, nproc=6, nskip=10):
     """Generate a Telfer QSO composite spectrum
 
     Parameters
@@ -40,6 +40,8 @@ def get_telfer_spec(zqso=0., igm=False, fN_gamma=None,
       Set Telfer to a constant below the LL?
     nproc : int, optional
       For multi-processing with IGM
+    nskip : int, optional
+      Evaluate IGM every nskip
 
     Returns
     -------
@@ -69,14 +71,17 @@ def get_telfer_spec(zqso=0., igm=False, fN_gamma=None,
         #with open(EW_FIL, 'r') as infile:
         #    EW_spline = yaml.load(infile)  # dict from mk_ew_lyman_spline
         HI = LineList('HI')
-        twrest = HI._data['wrest']
+        twrest = u.Quantity(HI._data['wrest'])
         # Parallel
         if LL_flatten:
             igm_wv = np.where((telfer['wrest'] > 900.) & (telfer['wrest'] < 1220.))[0]
         else:
             igm_wv = np.where(telfer['wrest'] < 1220.)[0]
         adict = []
-        for wrest in telfer_spec.wavelength[igm_wv].value:
+        sub_wv = igm_wv[0::nskip]
+        if (len(igm_wv) % nskip) != 0:  # Make sure the last element is present
+            sub_wv = np.concatenate([sub_wv, np.array([igm_wv[-1]])])
+        for wrest in telfer_spec.wavelength[sub_wv].value:
             tdict = dict(ilambda=wrest, zem=zqso, fN_model=fN_model,
                          wrest=twrest.copy())
             adict.append(tdict)
@@ -86,9 +91,12 @@ def get_telfer_spec(zqso=0., igm=False, fN_gamma=None,
             ateff = pool.map(pyift.map_lymanew, adict)
         else:
             ateff = map(pyift.map_lymanew, adict)
+        # Interpolate
+        all_val = interp1d(telfer_spec.wavelength[sub_wv].value, np.array(ateff))(
+            telfer_spec.wavelength[igm_wv])
         # Apply
         new_flux = telfer_spec.flux.value
-        new_flux[igm_wv] *= np.exp(-1.*np.array(ateff))
+        new_flux[igm_wv] *= np.exp(-1.*np.array(all_val))
         # Flatten?
         if LL_flatten:
             wv_LL = np.where(np.abs(telfer_spec.wavelength/(1+zqso)-914.*u.AA)<3.*u.AA)[0]

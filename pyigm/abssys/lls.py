@@ -87,7 +87,12 @@ class LLSSystem(IGMSystem):
         from linetools.isgm.abssystem import add_comps_from_dict, add_other_from_dict
         kwargs = dict(zem=idict['zem'], NHI=idict['NHI'],
                       sig_NHI=idict['sig_NHI'], name=idict['Name'])
-        slf = cls(SkyCoord(ra=idict['RA']*u.deg, dec=idict['DEC']*u.deg),
+        # Optional
+        for key in ['flag_NHI']:
+            if key in idict.keys():
+                kwargs[key] = idict[key]
+        # Instantiate
+        slf = cls(SkyCoord(ra=idict['RA'], dec=idict['DEC'], unit='deg'),
                   idict['zabs'], idict['vlim']*u.km/u.s, **kwargs)
         #
         add_other_from_dict(slf, idict)
@@ -200,7 +205,10 @@ class LLSSystem(IGMSystem):
                         if val.__class__ == np.ndarray:
                             self.subsys[lbls[i]]._datdict[att[ii]] = np.array(map(float,tmpc.split()))
                         else:  # Single value
-                            self.subsys[lbls[i]]._datdict[att[ii]] = (map(type(val),[tmpc]))[0]
+                            try:
+                                self.subsys[lbls[i]]._datdict[att[ii]] = (map(type(val),[tmpc]))[0]
+                            except ValueError:
+                                pdb.set_trace()
                 # Set a few special ones as attributes
                 self.subsys[lbls[i]].NHI = self.subsys[lbls[i]]._datdict['NHI']
                 self.subsys[lbls[i]].sig_NHI = self.subsys[lbls[i]]._datdict['NHIsig']
@@ -291,13 +299,13 @@ class LLSSystem(IGMSystem):
 
         self.lls_lines = []
         Nval = 10**self.NHI / u.cm**2
-        for lline in HIlines._data:
-            aline = AbsLine(lline['wrest'], linelist=HIlines)
+        for wrest in u.Quantity(HIlines._data['wrest']):
+            aline = AbsLine(wrest, linelist=HIlines)
             # Attributes
             aline.attrib['N'] = Nval
             aline.attrib['b'] = bval
-            aline.attrib['z'] = self.zabs
-            aline.analy['vlim'] = self.vlim
+            aline.setz(self.zabs)
+            aline.limits.set(self.vlim)
             aline.analy['do_analysis'] = do_analysis
             aline.attrib['coord'] = self.coord
             self.lls_lines.append(aline)

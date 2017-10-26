@@ -10,6 +10,8 @@ import warnings
 import h5py
 import json, yaml
 
+from pkg_resources import resource_filename
+
 from astropy.io import fits, ascii
 from astropy import units as u 
 from astropy.table import Table, Column
@@ -26,6 +28,11 @@ from pyigm.field.galaxy import Galaxy
 from .cgm import CGMAbsSys
 from pyigm.abssys.igmsys import IGMSystem
 import pyigm
+
+try:
+    basestring
+except NameError:  # For Python 3
+    basestring = str
 
 class COSHalos(CGMAbsSurvey):
     """Inherits CGM Abs Survey
@@ -48,6 +55,8 @@ class COSHalos(CGMAbsSurvey):
             self.cdir = pyigm.__path__[0]+'/data/CGM/COS_Halos/'
         else:
             self.cdir = cdir
+        # Spectra dir
+        self.data_dir = os.getenv('COSHALOS_DATA')
         # Summary Tables
         if fits_path is None:
             self.fits_path = self.cdir+'/Summary/'
@@ -356,7 +365,7 @@ class COSHalos(CGMAbsSurvey):
         if ('Halos' in self.fits_path) and (self.werk14_cldy is not None):
                 self.load_werk14()
 
-    def load_mtl_pdfs(self, ZH_fil, keep_all=False):
+    def load_mtl_pdfs(self, ZH_fil=None, keep_all=False):
         """ Load the metallicity PDFs from an input file (usually hdf5)
 
         Parameters
@@ -366,14 +375,22 @@ class COSHalos(CGMAbsSurvey):
           Save the full metallicity data?
 
         """
+        # File
+        if ZH_fil is None:
+            ZH_fil = resource_filename('pyigm', 'data/CGM/COS_Halos/COS_Halos_MTL_final.hdf5')
+        # Load
         fh5=h5py.File(ZH_fil, 'r')
-        mkeys = fh5['met'].keys()
+        mkeys = list(fh5['met'].keys())
         mkeys.remove('left_edge_bins')
         mkeys.remove('right_edge_bins')
         mkeys = np.array(mkeys)
 
         # Loop
         for cgm_abs in self.cgm_abs:
+            if '0943+0531_227_19' in cgm_abs.name:
+                print('Not including 0943+0531_227_19'.format(cgm_abs.name))
+                print('See Prochaska+17 for details')
+                continue
             # Match?
             mt = np.where(mkeys == cgm_abs.name)[0]
             if len(mt) == 0:
@@ -507,7 +524,7 @@ class COSHalos(CGMAbsSurvey):
         # Init
         cgm_abs = self[inp]
         # Directories
-        galdir = self.cdir+'/Galaxies/'
+        galdir = self.data_dir+'/Galaxies/'
         #fielddir = 'fields/'+cgm_abs.field+'/'
         #sysdir = cgm_abs.gal_id+'/spec1d/'
         sysname = cgm_abs.galaxy.field+'_'+cgm_abs.galaxy.gal_id
@@ -548,7 +565,7 @@ class COSHalos(CGMAbsSurvey):
         sysname = cgm_abs.galaxy.field+'_'+sysdir
 
         # Transition
-        templ_fil = self.cdir+'/Targets/system_template.lst'
+        templ_fil = self.data_dir+'/Targets/system_template.lst'
         tab = ascii.read(templ_fil)
         mt = np.argmin(np.abs(tab['col1']-wrest.value))
         if np.abs(tab['col1'][mt]-wrest.value) > 1e-2:
@@ -556,7 +573,7 @@ class COSHalos(CGMAbsSurvey):
         trans = tab['col2'][mt]+tab['col3'][mt]
 
         # Read
-        slicedir = self.cdir+'/Targets/fitting/'
+        slicedir = self.data_dir+'/Targets/fitting/'
         slicename = sysname+'_'+trans+'_slice.fits'
         try:
             spec = lsio.readspec(slicedir+slicename,
@@ -786,4 +803,56 @@ class COSDwarfs(COSHalos):
             self.kin_init_file = self.cdir+'/Kin/cosdwarfs_kin_driver.dat'
         else:
             self.kin_init_file = kin_init_file
+        # Load
+        self.load_sys()
+
+    def load_sys(self, tfile=None, empty=True, debug=False, **kwargs):
+        """ Load the COS-Halos survey from JSON files
+
+        Empties the list
+
+        Parameters
+        ----------
+        tfile : str, optional
+        empty : bool, optional
+          Empty the list
+        debug : bool, optional
+          Only load the first 5
+
+        Returns
+        -------
+
+        """
+        import tarfile
+        import json
+        from linetools.lists.linelist import LineList
+        llist = LineList('ISM')
+
+        # Tar file
+        if tfile is None:
+            tarfiles = glob.glob(self.cdir + 'cos-dwarfs_systems.v*.tar.gz')
+            tarfiles.sort()
+            tfile = tarfiles[-1]
+        print("Be patient, using {:s} to load".format(tfile))
+        # Empty
+        if empty:
+            self.cgm_abs = []
+        # Load
+        tar = tarfile.open(tfile)
+        for kk, member in enumerate(tar.getmembers()):
+            if '.' not in member.name:
+                print('Skipping a likely folder: {:s}'.format(member.name))
+                continue
+            # Debug
+            if debug and (kk == 5):
+                break
+            # Extract
+            f = tar.extractfile(member)
+            tdict = json.load(f)
+            # Generate
+            cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, chk_data=False,
+                                         use_coord=True, use_angrho=True,
+                                         linelist=llist, **kwargs)
+            self.cgm_abs.append(cgmsys)
+        tar.close()
 

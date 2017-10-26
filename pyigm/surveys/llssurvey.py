@@ -5,9 +5,12 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import numpy as np
 import imp, glob
 import pdb
-import urllib2
 import h5py
 import json
+try:
+    from urllib2 import urlopen # Python 2.7
+except ImportError:
+    from urllib.request import urlopen
 
 
 from astropy.table import QTable, Column, Table
@@ -128,7 +131,7 @@ class LLSSurvey(IGMSurvey):
                 print('HD-LLS: Downloading a 155Mb file.  Be patient..')
                 url = 'http://www.ucolick.org/~xavier/HD-LLS/DR1/HD-LLS_spectra.tar.gz'
                 spectra_fil = pyigm_path+'/data/LLS/HD-LLS/HD-LLS_spectra.tar.gz'
-                f = urllib2.urlopen(url)
+                f = urlopen(url)
                 with open(spectra_fil, "wb") as code:
                     code.write(f.read())
                 # Unpack
@@ -224,7 +227,7 @@ class LLSSurvey(IGMSurvey):
         ras = []
         decs = []
         zval = []
-        mkeys = fh5['met'].keys()
+        mkeys = list(fh5['met'].keys())  # Python 3
         mkeys.remove('left_edge_bins')
         for key in mkeys:
             radec, z = key.split('z')
@@ -248,6 +251,8 @@ class LLSSurvey(IGMSurvey):
                 raise ValueError("Bad match")
             elif len(mt) > 1:  # Take closest
                 mt = np.argmin(sep)
+            else:
+                mt = mt[0]
             # Save
             lls.metallicity = MetallicityPDF(fh5['met']['left_edge_bins']+
                                              fh5['met']['left_edge_bins'].attrs['BINSIZE']/2.,
@@ -261,7 +266,7 @@ class LLSSurvey(IGMSurvey):
                 print('HD-LLS: Downloading a 155Mb file.  Be patient..')
                 url = 'http://www.ucolick.org/~xavier/HD-LLS/DR1/HD-LLS_spectra.tar.gz'
                 spectra_fil = pyigm_path+'/data/LLS/HD-LLS/HD-LLS_spectra.tar.gz'
-                f = urllib2.urlopen(url)
+                f = urlopen(url)
                 with open(spectra_fil, "wb") as code:
                     code.write(f.read())
                 # Unpack

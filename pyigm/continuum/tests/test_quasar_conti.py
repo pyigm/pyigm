@@ -27,7 +27,7 @@ def test_telfer_and_igm():
     telfer = pyicq.get_telfer_spec(zqso=3., igm=True, nproc=4)
     # Test in forest
     imin = np.argmin(np.abs(telfer.wavelength - 4800*u.AA))
-    np.testing.assert_allclose(telfer.flux[imin].value, 1.7800761461257935)
+    np.testing.assert_allclose(telfer.flux[imin].value, 1.7800761461257935, atol=1e-3)
 
 
 def test_wfc3_conti():

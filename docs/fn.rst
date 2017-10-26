@@ -133,3 +133,19 @@ and the mock spectrum is generated::
 
 
 
+Measured teff
+=============
+
+The estimated teff values from observational studies
+are encoded in the lyman_alpha_obs() method.  These
+draw upon the Kirkman+07, Kirkman+05 and Becker+13
+studies.  Here is an example call::
+
+   from pyigm.fN import tau_eff as pyteff
+   teff = pyteff.lyman_alpha_obs(1.)
+   # Array
+   teff = pyteff.lyman_alpha_obs(np.linspace(1.,4.,100))
+
+A float or ndarray is returned depending on the type of input.
+The code raises an error if the input redshift exceeds zmax
+which is currently set to 4.9.

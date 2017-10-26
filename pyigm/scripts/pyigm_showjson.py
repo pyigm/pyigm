@@ -37,6 +37,16 @@ def main(args=None):
     if jdict['class'] == 'IGMSightline':
         from pyigm.igm.igmsightline import IGMSightline
         obj = IGMSightline.from_dict(jdict)
+        flg_tbl = True
+    elif jdict['class'] == 'DLASystem':
+        from pyigm.abssys.dla import DLASystem
+        obj = DLASystem.from_dict(jdict)
+        flg_tbl = False
+    elif jdict['class'] == 'LLSSystem':
+        from pyigm.abssys.lls import LLSSystem
+        obj = LLSSystem.from_dict(jdict)
+        obj.fill_ionN()
+        flg_tbl = True  # Column density table
     else:
         raise IOError("Not prepared for this class: {:s}".format(jdict['class']))
 
@@ -51,9 +61,21 @@ def main(args=None):
     print("Name of object: {:s}".format(name))
 
     # Generate table
-    tbl = obj.build_table()
-    if len(tbl) > 0:
-        tbl.pprint(max_width=120)
-    else:
-        print("Table was empty..")
+    if flg_tbl:
+        if jdict['class'] == 'IGMSightline':
+            tbl = obj.build_table()
+        elif jdict['class'] == 'LLSSystem':
+            tbl = obj._ionN
+            tbl['logN'].format = '5.2f'
+            tbl['sig_logN'].format = '5.2f'
+            tbl['vmin'].format = '8.1f'
+            tbl['vmax'].format = '8.1f'
+        else:
+            tbl = None
+        # Print
+        if len(tbl) > 0:
+            tbl.pprint(99999, max_width=120)
+        else:
+            print("Table was empty..")
+
 

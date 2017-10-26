@@ -32,8 +32,6 @@ class CGM(object):
     cgm_abs : list
       List of CGMAbsSys classes
 
-    TODO:
-      Need to check cosmologies
     """
     # Initialize with a .dat file
     def __init__(self, galaxy):
@@ -56,8 +54,8 @@ class CGM(object):
 
     def __repr__(self):
         return ('<CGM: {:s} {:s}, z={:g}>'.format(
-                self.galaxy.coord.ra.to_string(unit=u.hour, sep=':', pad=True),
-                self.galaxy.coord.dec.to_string(sep=':', pad=True, alwayssign=True),
+                self.galaxy.coord.icrs.ra.to_string(unit=u.hour, sep=':', pad=True),
+                self.galaxy.coord.icrs.dec.to_string(sep=':', pad=True, alwayssign=True),
                 self.galaxy.z))
 
 
@@ -72,7 +70,7 @@ class CGMAbsSys(object):
       Must include redshift
     igm_sys : IGMSystem
     cosmo : astropy.cosmology, optional
-      Defaults to WMAP9
+      Defaults to Planck15
 
     Attributes
     ----------
@@ -106,25 +104,42 @@ class CGMAbsSys(object):
         # Return
         return slf
 
-    def __init__(self, galaxy, igm_sys, cosmo=None, name=None, rho=None, PA=None,
-                 ang_sep=None, chk_lowz=True, **kwargs):
+    @classmethod
+    def from_json(cls, jfile, **kwargs):
         """
         Parameters
         ----------
-        galaxy
-        igm_sys
-        cosmo
-        name
-        rho
-        PA
-        ang_sep
-        chk_lowz : bool, optional
-          Demand that z>0.05  [for impact parameter calculation]
+        jfile : str
+        """
+        idict = ltu.loadjson(jfile)
+        slf = cls.from_dict(idict, **kwargs)
+        return slf
+
+    def __init__(self, galaxy, igm_sys, cosmo=None, name=None, rho=None, PA=None,
+                 ang_sep=None, correct_lowz=True, debug=False, **kwargs):
+        """
+        Parameters
+        ----------
+        galaxy : Galaxy
+        igm_sys : IGMSystem
+        cosmo : astropy.cosmology, optional
+          Defaults to Planck15
+        name : str, optional
+        rho : Quantity, optional
+          Impact parameter; calculated if not input
+        PA : Quantity
+          Position angle
+        ang_sep : Quantity
+          Angular separation between galaxy and sightline
+        correct_lowz : bool, optional
+          If galaxy z < 0.05, correct for peculiar velocies in impact parameter
+          calculation
 
         Returns
         -------
 
         """
+        from pyigm.cgm.utils import calc_cgm_rho
         # Checks
         if not isinstance(galaxy, Galaxy):
             raise IOError('CGMAbsSys instantiated with a Galaxy')
@@ -135,23 +150,21 @@ class CGMAbsSys(object):
             raise IOError('CGMAbsSys instantiated with an IGMSystem')
         self.igm_sys = igm_sys
 
-        # Raise error for redshifts not in the Hubble flow
-        if (galaxy.z < 0.05) and chk_lowz:
-            raise NotImplementedError("Not prepared for such low redshift.  Need to implement corrections.")
-
         # Calculate rho
         if cosmo is None:
-            warnings.warn('cgm.CGMAbsSys: Using WMAP9 cosmology')
-            self.cosmo = cosmology.WMAP9
+            warnings.warn('cgm.CGMAbsSys: Using Planck15 cosmology')
+            self.cosmo = cosmology.Planck15
         else:
             self.cosmo = cosmo
 
         # Impact parameter and PA
-        if ang_sep is None:
-            ang_sep = self.igm_sys.coord.separation(self.galaxy.coord).to('arcsec')
         if rho is None:
-            kpc_amin = self.cosmo.kpc_comoving_per_arcmin(self.galaxy.z)  # kpc per arcmin
-            rho = ang_sep.to('arcmin') * kpc_amin / (1+self.galaxy.z)  # Physical
+            rho, iang = calc_cgm_rho(galaxy, igm_sys, self.cosmo, ang_sep=ang_sep,
+                                 correct_lowz=correct_lowz, **kwargs)
+            if debug:
+                pdb.set_trace()
+            if ang_sep is None:
+                ang_sep = iang
         self.rho = rho
         self.ang_sep = ang_sep
         self.PA = self.igm_sys.coord.position_angle(self.galaxy.coord)
@@ -159,8 +172,8 @@ class CGMAbsSys(object):
         # Standard name
         if name is None:
             self.name = 'J{:s}{:s}_{:d}_{:d}'.format(
-                    self.igm_sys.coord.ra.to_string(unit=u.hour,sep='',pad=True)[0:4],
-                    self.igm_sys.coord.dec.to_string(sep='',pad=True,alwayssign=True)[0:5],
+                    self.igm_sys.coord.icrs.ra.to_string(unit=u.hour,sep='',pad=True)[0:4],
+                    self.igm_sys.coord.icrs.dec.to_string(sep='',pad=True,alwayssign=True)[0:5],
                     int(np.round(self.PA.to('deg').value)),
                     int(np.round(self.ang_sep.to('arcsec').value)))
         else:
@@ -181,8 +194,8 @@ class CGMAbsSys(object):
         outdict = dict(Name=self.name, z=self.galaxy.z, rho=self.rho.value,
                        ang_sep=self.ang_sep.value,
                        PA=self.PA.value,
-                       RA=self.galaxy.coord.ra.value,
-                       DEC=self.galaxy.coord.dec.value,
+                       RA=self.galaxy.coord.icrs.ra.value,
+                       DEC=self.galaxy.coord.icrs.dec.value,
                        cosmo = self.cosmo.name,
                        CreationDate=date,
                        user=user
@@ -222,6 +235,28 @@ class CGMAbsSys(object):
         return ('<{:s}: {:s} Galaxy RA/DEC={:s}{:s}, zgal={:g}, rho={:g}>'.format(
                 self.__class__.__name__,
                 self.name,
-                 self.galaxy.coord.ra.to_string(unit=u.hour,sep=':',pad=True),
-                 self.galaxy.coord.dec.to_string(sep=':',pad=True,alwayssign=True),
+                 self.galaxy.coord.icrs.ra.to_string(unit=u.hour,sep=':',pad=True),
+                 self.galaxy.coord.icrs.dec.to_string(sep=':',pad=True,alwayssign=True),
                  self.galaxy.z, self.rho))
+
+    def write_json(self, outfil=None):
+        """ Generate a JSON file from a CGMAbsSys object 
+
+        Parameters
+        ----------
+        outfil : str
+          output file
+
+        Returns
+        -------
+
+        """
+        # Generate the dict
+        odict = self.to_dict()
+        # Write
+        if outfil is None:
+            outfil = self.name+'.json'
+        ltu.savejson(outfil, odict, overwrite=True, easy_to_read=True)
+        # Finish
+        print("Wrote {:s} system to {:s} file".format(self.name, outfil))
+

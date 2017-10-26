@@ -102,13 +102,143 @@ import scipy.optimize as op
 
 from linetools import utils as ltu
 
+##For logUconstraint
+import pyigm.euvb.cloudyiongrid as cld
+from astropy import constants as const
+from scipy import integrate 
+from scipy.interpolate import interp1d
+
+def logU_to_dens(logU, redshift, UVB="HM05logU"):
+    """
+    Convert logU to n_H (total H number density) using the given UVB.
+    The only two UVBs for this are HM05 and HM12 because that's all I have packaged up.
+    
+    Parameters
+    ----------
+    logU : float
+        The single value of logU that you wish to convert to density (n_H)
+    redshift : float
+        The redshift at which you'd like to convert logU --> density (n_H)
+    UVB : str
+        Which UVB to use. Currently, "HM05" and "HM12" are supported
+    
+    Returns
+    ----------
+    dens : float
+        The single value of density (n_H) that corresponds to
+        the input logU and redshift, using the input UVB
+    """
+    ##This was taken almost directly from "getionisation.py" from Michele Fumagalli
+    
+    #init UVB at given redshift
+    if UVB == 'HM05' or UVB == 'HM05logU':
+        uvb=cld.Cldyion(uvb='HM05logU')
+        ##This should be taken care of when calling cld.Cldyion(uvb='HM05logU')
+        ##  but I'm going to do this again, just in case.
+        uvb.uvbtype='HM05logU'
+    else:
+        uvb=cld.Cldyion(uvb='HM12')
+        ##This should be taken care of when calling cld.Cldyion(uvb='HM12')
+        ##  but I'm going to do this again, just in case.
+        uvb.uvbtype='HM12'
+
+    uvb.redshift=redshift
+  
+    #Get the freqeunce Log of Hz and UVB Log of erg/s/cm2/Hz
+    uvb.inituvb()
+        
+    #now integrate 4pi Jnu / h  in d log nu
+    sort=np.argsort(uvb.source['lgnu'])
+    uvb.source['lgnu']=uvb.source['lgnu'][sort]
+    uvb.source['lgfpiJ']=uvb.source['lgfpiJ'][sort]
+   
+    #define integral quantity (integrate in d log nu)
+    lognu=np.log(10**uvb.source['lgnu'])
+    hplanck = 6.6260755e-27 # erg/s
+    integrand=10**uvb.source['lgfpiJ']/hplanck
+    
+    #Define min-max in log_natural Hz
+    maxnu=np.max(lognu)
+    ionnu=np.log((const.c.to('cm/s')/(912*1e-8)).value)
+    
+    #integrate [checked against cloudy output]
+    fint = interp1d(lognu,integrand)
+    phi,err = integrate.quad(fint,ionnu,maxnu)
+    
+    #now compute the ionization parameter
+    # den=result['tags'].index('dens')
+    # Uparam=np.log10(phi)-result['pdfs'][:,den]-np.log10(const.c.to('cm/s').value)
+    dens=np.log10(phi)-np.log10(const.c.to('cm/s').value)-logU
+    
+    return dens
+    
+
+
+def dens_to_logU(dens, redshift, UVB='HM05logU'):
+    
+    """
+    This converts density (n_H) to logU.
+    It does a binary search looking for the best
+      (logU --> density) that matches that desired density.
+    This one is not used directly in the MCMC,
+      but is a useful conversion utility.
+    
+    Parameters
+    ----------
+    dens : float
+        The single value of density (n_H) that you wish to convert to logU
+    redshift : float
+        The redshift at which you'd like to convert density (n_H) --> logU
+    UVB : str
+        Which UVB to use. Currently, "HM05" and "HM12" are supported
+    
+    Returns
+    ----------
+    logU : float
+        The single value of logU that corresponds to
+        the input density (n_H) and redshift, using the input UVB
+    
+    """
+    
+    
+    tolerance_dens=0.0001
+    step_logU = tolerance_dens/2.
+    logUarray = np.arange(-6.0,+1.0,step_logU)
+    
+    
+    i=0
+    low_i=0
+    high_i=len(logUarray)-1
+    testDens = -999
+    while abs(testDens - dens) > tolerance_dens:
+        logU = logUarray[i]
+        testDens = logU_to_dens(logU, redshift, UVB=UVB)
+        ##If it gets to this point, the tolerance has NOT been met
+        
+        ##If it's greater (i.e., positive), then
+        ##  we're too HIGH in density (too LOW in logU)
+        if testDens > dens:
+            low_i = i
+        else:
+            high_i = i
+        
+        ##Go halfway between the highest "low" and
+        ##  the lowest "high" i's
+        i = int(math.floor((high_i - low_i)/2. + low_i))
+    
+    
+    return logU
+
+
+
+
 class Emceebones(object):
     """
-    This is a class that does all the fun stuff like bookeeping, plots, driver for emcee etc..
+    This is a class that does all the fun stuff like bookkeeping, plots, driver for emcee etc..
     """
 
-    def __init__(self,data,infodata,model,nwalkers,nsamp,threads,outsave,optim,effnhi):
-        """ First, do some bookeeping like finding ions and preparing the grid
+    def __init__(self,data,infodata,model,nwalkers,nsamp,threads,outsave,optim,effnhi,logUconstraint=False,logUmean=-2.968,logUsigma=0.481,UVB='HM05'):
+        """ First, do some bookkeeping like finding ions and preparing the grid
         Parameters
         ----------
         data : list of tuples
@@ -141,6 +271,10 @@ class Emceebones(object):
         self.final=0
         self.optim=optim      #flag to switch type of optimisation
         self.effnhi=effnhi    #flag to use effective NHI
+        self.logUconstraint=str(logUconstraint)
+        self.logUmean=logUmean
+        self.logUsigma=logUsigma
+        self.UVB=UVB
 
         #load the grid of models to memory
         self.loadmodel(data,model)
@@ -161,10 +295,15 @@ class Emceebones(object):
         -------
 
         """
-
-
+        
         #load the model in a format that can be handled later on
-        fil=open(model)
+        try:
+            ##Python3
+            fil=open(model,'br')
+        except:
+            ##Python2
+            fil=open(model,'r')
+
         modl=pickle.load(fil)
         fil.close()
 
@@ -180,7 +319,7 @@ class Emceebones(object):
             #append axis value in a list
             self.mod_axisval.append(modl[1][tt])
 
-        print("The problem as dimension {}".format(self.ndim))
+        print("The problem has dimension {}".format(self.ndim))
         print("There are {} models".format(self.nmodels))
 
 
@@ -192,14 +331,12 @@ class Emceebones(object):
 
         #loop over all the ions observed
         for obs in data:
-
             # Check for zero error (causes unexepcted failure)
             if obs[2] <= 0.:
                 raise ValueError("Cannot have 0 error on the column density, even in a limit.  Fix {}".format(obs[0]))
 
             #check obs one by one for corresponding entries in model
-            if modl[2].has_key(obs[0]):
-
+            if (obs[0] in modl[2]):
                 #stack the observable
                 #[list of tuples for observations with (ion,column,error)]
                 self.data.append(obs)
@@ -235,14 +372,42 @@ class Emceebones(object):
         """
         print('Writing outputs...')
 
+        ##CBW do both!!
+        # #pickle the results to disk
+        # if use_pkl:
+        #     wout=open(self.outsave+'/'+self.info['name']+'_emcee.pkl','w')
+        #     pickle.dump(self.final,wout)
+        #     wout.close()
+        # else:  # hd5
+        #     import h5py
+        #     import json
+        #     with h5py.File(self.outsave+'/'+self.info['name']+'_emcee.hd5', 'w') as f:
+        #         # Input
+        #         in_group = f.create_group('inputs')
+        #         for in_key in ['data', 'ions', 'guess']:
+        #             in_group[in_key] = self.final[in_key]
+        #         for key in self.final['info']:
+        #             in_group.attrs[key] = self.final['info'][key]
+        #         # Output
+        #         out_group = f.create_group('outputs')
+        #         mcmc_dict = dict(nwalkers=self.nwalkers, nsamp=self.nsamp,
+        #                          nburn=self.burn, nthread=self.threads)
+        #         out_group.attrs['mcmc'] = unicode(json.dumps(mcmc_dict))
+        #         for out_key in ['tags', 'results', 'pdfs', 'best_fit',
+        #                         'effNHI', 'acceptance']:
+        #             out_group[out_key] = self.final[out_key]
+
+        ##CBW do both!!
         #pickle the results to disk
-        if use_pkl:
-            wout=open(self.outsave+'/'+self.info['name']+'_emcee.pkl','w')
-            pickle.dump(self.final,wout)
-            wout.close()
-        else:  # hd5
-            import h5py
-            import json
+        wout=open(self.outsave+'/'+self.info['name']+'_emcee.pkl','wb')
+        pickle.dump(self.final,wout)
+        wout.close()
+        import h5py
+        import json
+
+        #this bit appears prone to crash with python3 due to some ascii encoding issue with hdf5 in python 3
+        #giving a chance to the code to run anyway if hdf5 
+        try:
             with h5py.File(self.outsave+'/'+self.info['name']+'_emcee.hd5', 'w') as f:
                 # Input
                 in_group = f.create_group('inputs')
@@ -255,10 +420,11 @@ class Emceebones(object):
                 mcmc_dict = dict(nwalkers=self.nwalkers, nsamp=self.nsamp,
                                  nburn=self.burn, nthread=self.threads)
                 out_group.attrs['mcmc'] = unicode(json.dumps(mcmc_dict))
-                for out_key in ['tags', 'results', 'pdfs', 'best_fit',
-                                'effNHI', 'acceptance']:
+                for out_key in ['tags', 'results', 'pdfs', 'best_fit','effNHI', 'acceptance']:
                     out_group[out_key] = self.final[out_key]
-
+        except:
+            pass
+                    
         #Start by plotting the chains with initial guess and final values
         fig=plt.figure()
         xaxis=np.arange(0,self.nsamp,1)
@@ -270,7 +436,7 @@ class Emceebones(object):
             thischain=sampler.chain[:,:,ii]
             ax = fig.add_subplot(self.ndim, 1, ii+1)
             for jj in range(self.nwalkers):
-                ax.plot(xaxis,thischain[jj,:],color='grey')
+                ax.plot(xaxis,thischain[jj,:],color='grey',alpha=0.5)
             ax.set_ylabel(self.mod_axistag[ii])
 
             #overplot burnt in cut
@@ -282,16 +448,20 @@ class Emceebones(object):
 
         #Last plot
         ax.set_xlabel('Steps')
+        # fig.text(0.1,0.93,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='left',fontsize=10)
+        plt.title(self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),fontsize=10)
         fig.savefig(self.outsave+'/'+self.info['name']+'_chains.pdf')
 
         #now do a corner plot
         samples = sampler.chain[:,self.burn:, :].reshape((-1,self.ndim))
         cfig = corner.corner(samples, labels=self.mod_axistag, quantiles=[0.05,0.5,0.95],verbose=False)
+        cfig.text(0.33,0.90,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='left',fontsize=10)
         cfig.savefig(self.outsave+'/'+self.info['name']+'_corner.pdf')
-
+        plt.close(fig)
+        
         #now plot the residuals
         rfig=plt.figure()
-
+        
         #plot values
         xaxis=np.arange(0,self.nions,1)
         axlab=[]
@@ -314,7 +484,10 @@ class Emceebones(object):
 
         plt.xticks(xaxis,axlab,rotation='vertical')
         plt.ylabel('Log Column')
+        plt.title(self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),fontsize=10)
+        # fig.text(0.1,0.93,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='left',fontsize=12)
         rfig.savefig(self.outsave+'/'+self.info['name']+'_residual.pdf')
+        plt.close(rfig)
 
         print('All done with system {}!'.format(self.info['name']))
 
@@ -340,6 +513,22 @@ class Emceebones(object):
         emc.mod_axistag=self.mod_axistag
         emc.mod_axisval=self.mod_axisval
         emc.effnhi=self.effnhi
+        ##CBW begin for logU constraint
+        ##We do this here so we only have to do it ONCE for each sightline
+        ##  rather than every time lnprior() is called
+        emc.logUconstraint=str(self.logUconstraint)
+        
+        # logUGaussx = np.arange(-6.0,0.0+buff,0.10)
+        # logUGauss  = np.array(1/(np.sqrt(2*np.pi*logUsigma**2))*np.exp(-(logUGaussx-logUmean)**2/(2*logUsigma**2)))
+
+        ##calculate the density Gaussian based on the logU Gaussian
+        ##NOTE: here we assume that it is symmetric
+        emc.densGaussMean=logU_to_dens(self.logUmean, self.info['z'], self.UVB)
+        # densGaussSigPos=logU_to_dens(logUmean+logUsigma, self.info['z'], self.UVB) - densGaussMean
+        # densGaussSigNeg=densGaussMean - logU_to_dens(logUmean-logUsigma, self.info['z'], self.UVB)
+        # densGaussSig=max([densGaussSigPos,densGaussSigNeg])
+        emc.densGaussSig=self.logUsigma
+        ##CBW end
         #
         if(emc.effnhi):
             emc.nhigrid=self.nhigrid
@@ -411,6 +600,8 @@ class Emceebones(object):
                         initguess.append(self.info['met'])
                     elif tag == 'dens':
                         initguess.append(self.info['dens'])
+                    elif tag == 'carbalpha':
+                        initguess.append(self.info['carbalpha'])
                     else:
                         raise ValueError("Not ready for this one")
                 else:
@@ -508,8 +699,24 @@ class Emceebones(object):
                     #now assign value to starting balls
                     for i in range(self.nwalkers):
                         pos[i][pp]=ballst[i]
+        
+        if self.logUconstraint.lower() == 'true':
+            print('Using constraint on logU (and therefore on dens), assuming a '+self.UVB+' UVB')
+        
+        else:
+            print('Not using constraint on logU (and therefore on dens)')
 
         print('Running {} chains for {} steps on {} processors'.format(self.nwalkers,self.nsamp,self.threads))
+
+
+        ##Check burn-in time before the sample runs
+        # self.burn = 45 ##CBW: This is the original value
+        self.burn = 150 ##CBW
+        if self.burn >= self.nsamp:
+            # raise ValueError("Burn out exceeds number of samples!")
+            self.burn = self.nsamp//2
+            print("Burn-in exceeds number of samples... Changing burn-in to {}".format(self.burn))
+
 
         #init the sampler and run
         sampler = emcee.EnsembleSampler(self.nwalkers, self.ndim, emc, threads=self.threads)
@@ -521,9 +728,6 @@ class Emceebones(object):
         print("[good range 0.25-0.5. Low is bad!]")
 
         #remove burnt in to generate "clean" PDFs
-        self.burn = 45
-        if self.burn >= self.nsamp:
-            raise ValueError("Burn out exceeds number of samples!")
 
         #get nsamples * ndim pdfs
         samples = sampler.chain[:, self.burn:, :].reshape((-1,self.ndim))
@@ -587,6 +791,10 @@ class Emceeutils():
         self.hiinterp=0
         self.effnhi=False
         self.nhigrid=0
+        ##CBW
+        self.logUconstraint=str(False)
+        self.densGaussMean=0
+        self.densGaussSig=0
 
         return
 
@@ -644,8 +852,21 @@ class Emceeutils():
                 #gaussian priors
                 pri_nhi=-1*np.log(np.sqrt(2*np.pi)*self.info['eNHI'])-(self.info['NHI']-currentnhi)**2/(2*self.info['eNHI']**2)
 
+            ##CBW
+            #now compute prior with density (based on logU)
+            if self.logUconstraint.lower() == 'true':
+                # print("Using logU constraint")
+                densindex=self.mod_axistag.index('dens')
+                ##compute the prior
+                pri_dens=-1*np.log(np.sqrt(2*np.pi)*self.densGaussSig)-\
+                    (self.densGaussMean-param[densindex])**2/(2*self.densGaussSig**2)
+            else:
+                pri_dens=0
+
+
+            ##CBW
             #add together [log product]
-            prior=pri_red+pri_nhi
+            prior=pri_red+pri_nhi+pri_dens
 
         else:
             #if outside return -inf
@@ -705,7 +926,8 @@ class Emceeutils():
 
 
     def init_interpolators(self):
-        """ This seeds the linear interpolator. For each parameter in the model,
+        """
+        This seeds the linear interpolator. For each parameter in the model,
         perform linear interpolation along each dimension of the column for one ion
         to return the column density value at an input position
 
@@ -889,8 +1111,8 @@ class Emceeutils():
             return lh + lp
 
 
-def mcmc_ions(data,infodata,model,nwalkers=500,nsamp=250,threads=12,
-              outsave='emceeout', optim=False, effnhi=True, testing=False):
+def mcmc_ions(data,infodata,model,logUconstraint=False, logUmean=-2.968, logUsigma=0.481, UVB='HM05', nwalkers=400,nsamp=400,threads=12,
+              outsave='emceeout', optim=False, effnhi=True, testing=False, nwalkers_min=400, nsamp_min=400):
     """ This is the main, which does not do much
 
     Parameters
@@ -917,15 +1139,16 @@ def mcmc_ions(data,infodata,model,nwalkers=500,nsamp=250,threads=12,
 
     print('Getting started...')
 
-    # Do not run with less than 100 samples or 400 walkers
+    # Do not run with less than nsamp_min samples or nwalkers_min walkers
     if not testing:
-        nsamp=np.max([nsamp,100])
-        nwalkers=np.max([nwalkers,400])
+        nsamp=np.max([nsamp, nsamp_min])
+        nwalkers=np.max([nwalkers, nwalkers_min])
 
     # initialise the mcmc for this problem
     # load the observations and the model
     mcmc=Emceebones(data,infodata,model,nwalkers,
-                    nsamp,threads,outsave,optim,effnhi)
+                    nsamp,threads,outsave,optim,effnhi,
+                    logUconstraint=logUconstraint,logUmean=logUmean,logUsigma=logUsigma,UVB=UVB)
 
     # make space for output if needed
     if not os.path.isdir(outsave):

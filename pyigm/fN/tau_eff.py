@@ -151,8 +151,8 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
          -- Recorded only if cumul is not None
     EW_spline : spline, optional
       Speeds up execution if input
-    HI : LineList, optional
-      HI line list.  Speeds up execution
+    wrest : Quantity array, optional
+      rest wavelengths to apply
 
     Returns
     -------
@@ -164,7 +164,10 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
     """
     # Cosmology
     if cosmo is None:
-        cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
+        if fN_model.cosmo is not None:
+            cosmo = fN_model.cosmo
+        else:
+            cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
     # Lambda
     if not isinstance(ilambda, float):
         raise ValueError('tau_eff: ilambda must be a float for now')
@@ -184,7 +187,7 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
     # Lines
     if wrest is None:
         HI = LineList('HI')
-        wrest = HI._data['wrest']
+        wrest = u.Quantity(HI._data['wrest'])
 
     # Find the lines
     gd_Lyman = wrest[(Lambda/(1+zem)) < wrest]
@@ -219,7 +222,7 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
         idx = np.where(EW_spline['wrest']*u.AA == line)[0]
         if len(idx) != 1:
             raise ValueError('tau_eff: Line %g not included or over included?!' % line)
-        restEW = interpolate.splev(lgNval, EW_spline['tck'][idx], der=0)
+        restEW = interpolate.splev(lgNval, EW_spline['tck'][idx[0]], der=0)
 
         # dz
         dz = ((restEW*u.AA) * (1+zeval) / line).value
@@ -248,6 +251,7 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
     # Return
     return np.sum(teff_lyman)
 
+
 def map_lymanew(dict_inp):
     """ Simple routine to enable parallel processing
 
@@ -262,7 +266,7 @@ def map_lymanew(dict_inp):
     return teff
 
 
-def lyman_alpha_obs(z):
+def lyman_alpha_obs(z, verbose=False, zmax=4.9):
     """Report an 'observed' teff value from one of these studies
 
       0 < z < 1.6:  Kirkman+07
@@ -271,41 +275,64 @@ def lyman_alpha_obs(z):
 
     Parameters
     ----------
-    z : float
+    z : float or ndarray
       Redshift
+    zmax : float
+      Maximum redshift for evaluation
+      Currently default to 4.9 from Becker but one can extrapolate to
+      higher values by increasing this parameter
 
     Returns
     -------
-    teff : float
+    teff : float or ndarray
       Observed teff from HI Lya
     """
+    if isinstance(z, float):
+        flg_float = True
+        z = np.array([z])
+    else:
+        flg_float = False
+    teff = np.zeros_like(z)
+
     # Low-z
-    if z < 1.6:
+    lowz = z < 1.6
+    if np.sum(lowz) > 0:
         # D_A from Kirkman+07
-        print('Calculating tau_eff from Kirkman+07')
+        if verbose:
+            print('Calculating tau_eff from Kirkman+07')
         #  No LLS, no metals [masked]
         #  Unclear in the paper, but I think the range is log NHI = 12-16
-        DA = 0.016 * (1+z)**1.01
-        teff = -1. * np.log(1.-DA)
-    elif (z >= 1.6) & (z < 2.3):
+        DA = 0.016 * (1+z[lowz])**1.01
+        teff[np.where(lowz)] = -1. * np.log(1.-DA)
+    # Intermediate
+    midz = (z >= 1.6) & (z < 2.3)
+    if np.sum(midz) > 0:
         # D_A from Kirkman+05
-        print('Calculating tau_eff from Kirkman+05')
+        if verbose:
+            print('Calculating tau_eff from Kirkman+05')
         #  No LLS, no metals [masked]
-        DA = 0.0062 * (1+z)**2.75
-        teff = -1. * np.log(1.-DA)
-    elif (z >= 2.3) & (z < 4.9):
+        DA = 0.0062 * (1+z[midz])**2.75
+        teff[np.where(midz)] = -1. * np.log(1.-DA)
+    # High z
+    highz = (z >= 2.3) & (z < zmax)
+    if np.sum(highz):
         # Becker+13
-        print('Calculating tau_eff from Becker+13')
+        if verbose:
+            print('Calculating tau_eff from Becker+13')
         tau0 = 0.751
         beta = 2.90
         C = -0.132
         z0 = 3.5
-        teff = tau0 * ((1+z)/(1+z0))**beta + C
-    else:
-        raise ValueError('teff_obs: Not ready for z={:g}'.format(z))
+        teff[np.where(highz)] = tau0 * ((1+z[highz])/(1+z0))**beta + C
+    badz = z>zmax
+    if np.sum(badz) > 0:
+        raise ValueError('teff_obs: Not ready for z>{:f}'.format(zmax))
 
     # Return
-    return teff
+    if flg_float:
+        return teff[0]
+    else:
+        return teff
 
 if __name__ == '__main__':
     import profile, pstats

@@ -11,6 +11,7 @@ from linetools.isgm.abssystem import AbsSystem
 from linetools import utils as ltu
 from linetools.isgm import utils as ltiu
 
+
 class IGMSystem(AbsSystem):
     """
     Class for an IGM absorption system
@@ -39,38 +40,19 @@ class IGMSystem(AbsSystem):
         # Init
         self.ZH = ZH
 
-    def update_vlim(self, sub_system=None):
-        """ Update vlim in the main or subsystems
-
-        Parameters
-        ----------
-        sub_system : str, optional
-          If provided, apply to given sub-system.  Only used in LLS
-        """
-        def get_vmnx(components):
-            vmin,vmax = 9999., -9999.
-            for component in components:
-                vmin = min(vmin, component.vlim[0].value)
-                vmax = max(vmax, component.vlim[1].value)
-            return vmin,vmax
-
-        # Sub-system?
-        if sub_system is not None:
-            components = self.subsys[sub_system]._components
-            vmin, vmax = get_vmnx(components)
-            self.subsys[sub_system].vlim = [vmin, vmax]*u.km/u.s
-        else:
-            components = self._components
-            vmin, vmax = get_vmnx(components)
-            self.vlim = [vmin, vmax]*u.km/u.s
-
     # Output
     def __repr__(self):
-        return ('<{:s}: {:s} {:s} {:s}, {:g}, NHI={:g}, Z/H={:g}>'.format(
+        txt = '<{:s}: {:s} {:s} {:s}, zabs={:g}, Z/H={:g}'.format(
                 self.__class__.__name__, self.abs_type,
-                 self.coord.ra.to_string(unit=u.hour, sep=':', pad=True),
-                 self.coord.dec.to_string(sep=':', pad=True),
-                 self.zabs, self.NHI, self.ZH))
+                 self.coord.fk5.ra.to_string(unit=u.hour, sep=':', pad=True),
+                 self.coord.fk5.dec.to_string(sep=':', pad=True),
+                 self.zabs, self.ZH)
+        # NHI
+        if self.NHI is not None:
+            txt = txt + ', NHI={:g}'.format(self.NHI)
+        # Finish
+        txt = txt + '>'
+        return (txt)
 
 
 class HISystem(IGMSystem):
@@ -91,6 +73,14 @@ class HISystem(IGMSystem):
     def print_abs_type(self):
         """"Return a string representing the type of vehicle this is."""
         return 'HI'
+
+
+class MgIISystem(IGMSystem):
+    """Class for MgII System
+    """
+    def __init__(self, radec, zabs, vlim, **kwargs):
+        IGMSystem.__init__(self, radec, zabs, vlim, abs_type='MgII', **kwargs)
+
 
 class AbsSubSystem(object):
     """
@@ -181,8 +171,8 @@ class AbsSubSystem(object):
         txt = '[{:s}: name={:s}{:s} type={:s}, {:s} {:s}, z={:g}, vlim={:g},{:g}'.format(
             self.__class__.__name__, self.parent.name, self.lbl,
             self.parent.abs_type,
-            self.parent.coord.ra.to_string(unit=u.hour,sep=':',pad=True),
-            self.parent.coord.dec.to_string(sep=':',pad=True,alwayssign=True),
+            self.parent.coord.fk5.ra.to_string(unit=u.hour,sep=':',pad=True),
+            self.parent.coord.fk5.dec.to_string(sep=':',pad=True,alwayssign=True),
             self.zabs, self.vlim[0],self.vlim[1])
         # Finish
         txt = txt + ']'

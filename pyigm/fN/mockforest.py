@@ -183,7 +183,7 @@ def generate_tau(iwave, HIlines, HI_comps, kludge=True):
             pix_kludge = np.where((wv_rest > 911.5*u.AA) & (wv_rest < 912.8*u.AA))[0]
             itau_LL[pix_kludge] = itau_LL[pix_LL]
         # Sum
-        tau_LL += itau_LL
+        tau_LL += itau_LL.decompose().value
     # Total
     return wave, tau_LL + tau_Lyman
 

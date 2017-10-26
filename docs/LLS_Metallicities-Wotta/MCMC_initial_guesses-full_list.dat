@@ -1,0 +1,5 @@
+##Run_now?  Sightline                 met_guess    dens_guess   carbalpha_guess   carbalpha   logUconstraint   UVB    Notes
+Y           QSO1234+5678_z0.123456    -1.0         -2.3         0.0               True        False            HM05   --
+N           QSO4567+8901_z0.456789    -1.0         -2.3         0.0               False       False            HM05   --
+Y           QSO3456+7890_z0.789012    -1.0         -2.3         0.0               True        True             HM05   --
+N           QSO7890+1234_z0.901234    -1.0         -2.3         0.0               False       True             HM05   --
