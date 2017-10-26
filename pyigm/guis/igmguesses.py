@@ -45,6 +45,7 @@ from linetools.spectra.xspectrum1d import XSpectrum1D
 from linetools.spectralline import AbsLine
 from linetools.isgm.abscomponent import AbsComponent
 from linetools.isgm import utils as ltiu
+from linetools.isgm import io as ltiio
 from linetools.guis import utils as ltgu
 from linetools.guis import line_widgets as ltgl
 from linetools.guis import simple_widgets as ltgsm
@@ -1949,9 +1950,9 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s, min_ew=0.005*u.AA
         else:
             grouped += [group]
     # write to .joenvp output
-    ltiu.joebvp_from_components(isolated, specfile, 'isolated.joebvp')
+    ltiio.write_joebvp_from_components(isolated, specfile, 'isolated.joebvp')
     for ii, group in enumerate(grouped):
-        ltiu.joebvp_from_components(group, specfile, 'group_{}.joebvp'.format(ii+1))
+        ltiio.write_joebvp_from_components(group, specfile, 'group_{}.joebvp'.format(ii+1))
 
     grouped = [isolated] + grouped
     for ii, group in enumerate(grouped):
@@ -1998,7 +1999,7 @@ def from_igmguesses_to_joebvp(infile, outfile):
         comp = AbsComponent.from_dict(igmg_dict['cmps'][key], chk_sep=False, chk_data=False, chk_vel=False)
         comp_list += [comp]
 
-    ltiu.joebvp_from_components(comp_list, igmg_dict['spec_file'], outfile)
+    ltiio.joebvp_from_components(comp_list, igmg_dict['spec_file'], outfile)
 
 def init_meta():
     """Creates a general meta dictionary
