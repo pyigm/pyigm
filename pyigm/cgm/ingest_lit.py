@@ -123,7 +123,7 @@ def p11():
 
 
 def ingest_burchett16():
-    """ Ingest Burchett
+    """ Ingest Burchett+16
     """
     # Virial matching
     b16_vir_file = resource_filename('pyigm', 'data/CGM/z0/Burchett16_HI_virselect_sfr.fits')
