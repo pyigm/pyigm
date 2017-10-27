@@ -142,8 +142,8 @@ class CGMAbsSurvey(object):
             jfiles.append(json_fil)
             with io.open(json_fil, 'w', encoding='utf-8') as f:
                 #try:
-                f.write(unicode(json.dumps(cdict, sort_keys=True, indent=4,
-                                           separators=(',', ': '))))
+                f.write(json.dumps(cdict, sort_keys=True, indent=4,
+                                           separators=(',', ': ')))
         # Tar
         warnings.warn("Modify to write directly to tar file")
         subprocess.call(['tar', '-czf', outfil, tmpdir])
