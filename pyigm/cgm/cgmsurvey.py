@@ -8,6 +8,8 @@ import warnings
 import pdb
 import json, io
 
+from pkg_resources import resource_filename
+
 from astropy.table import Table, Column
 from astropy.coordinates import SkyCoord
 from astropy import  units as u
@@ -89,6 +91,21 @@ class CGMAbsSurvey(object):
         slf.cgm_abs.extend(cgmlist)
         return slf
 
+    @classmethod
+    def load_B16(cls):
+        """ Load the Burchett+16 sample
+        """
+        b16_tarfile = resource_filename('pyigm', '/data/CGM/z0/B16_sys.tar')
+        b16 = CGMAbsSurvey.from_tarball(b16_tarfile, chk_lowz=False, chk_z=False)
+        return b16
+
+    @classmethod
+    def load_J15(cls):
+        """ Load the Johnson+15 sample
+        """
+        j15_tarfile = resource_filename('pyigm', '/data/CGM/z0/J15_sys.tar')
+        j15 = CGMAbsSurvey.from_tarball(j15_tarfile, chk_lowz=False, chk_z=False)
+        return j15
 
     def __init__(self, survey='', ref='', **kwargs):
         """

@@ -15,6 +15,7 @@ from astropy.coordinates import SkyCoord
 from linetools.spectralline import AbsLine
 from linetools.isgm.abscomponent import AbsComponent
 from linetools.lists.linelist import LineList
+from linetools import utils as ltu
 
 import pyigm
 from pyigm.field.galaxy import Galaxy
@@ -183,12 +184,101 @@ def ingest_burchett16():
     b16.to_json_tarball(out_file)
 
 
+def ingest_johnson15():
+    """ Ingest Johnson+15
+    """
+    # Dict for QSO coords
+    qsos = {}
+    qsos['1ES1028+511'] = ltu.radec_to_coord('J103118.52517+505335.8193')
+    qsos['FBQS1010+3003'] = ltu.radec_to_coord((152.5029167,30.056111))
+    qsos['HE0226-4110'] = ltu.radec_to_coord('J022815.252-405714.62')
+    qsos['HS1102+3441'] = ltu.radec_to_coord('J110539.8189+342534.672')
+    qsos['LBQS1435-0134'] = ltu.radec_to_coord((219.451183,-1.786328))
+    qsos['PG0832+251'] = ltu.radec_to_coord('J083535.8048+245940.146')
+    qsos['PG1522+101'] = ltu.radec_to_coord((231.1023075, 9.9749372))
+    qsos['PKS0405-123'] = ltu.radec_to_coord('J040748.4376-121136.662')
+    qsos['SBS1108+560'] = ltu.radec_to_coord((167.8841667,55.790556))
+    qsos['SBS1122+594'] = ltu.radec_to_coord((171.4741250,59.172667))
+    qsos['Ton236'] = ltu.radec_to_coord((232.1691746,28.424928))
+
+    # Virial matching
+    j15_file = resource_filename('pyigm', 'data/CGM/z0/johnson2015_table1.fits')
+    j15_tbl = Table.read(j15_file)
+
+    # Clip COS-Halos
+    keep = j15_tbl['Survey'] != 'COS-Halos'
+    j15_tbl = j15_tbl[keep]
+
+    # CGM Survey
+    j15 = CGMAbsSurvey(survey='J15', ref='Johnson+15')
+
+    # Linelist
+    llist = LineList('ISM')
+
+    for row in j15_tbl:
+        # RA, DEC
+        # Galaxy
+        gal = Galaxy((row['RAJ2000'], row['DEJ2000']), z=float(row['zgal']))
+        gal.Class = row['Class']
+        gal.Mstar = row['logM_']
+        gal.field = row['Name']
+        gal.Env = row['Env']
+        gal.d_Rh = row['d_Rh']
+        #
+        igmsys = IGMSystem(qsos[row['Name']], float(row['zgal']), (-400., 400.) * u.km / u.s)
+        # HI
+        if np.isnan(row['logNHI']):
+            pass
+        else:
+            # HI component
+            if row['l_logNHI'] == '<':
+                flagN = 3
+                sigNHI = 99.
+            elif np.isnan(row['e_logNHI']):
+                flagN = 2
+                sigNHI = 99.
+            else:
+                flagN = 1
+                sigNHI = row['e_logNHI']
+            HIcomp = AbsComponent(qsos[row['Name']], (1, 1), float(row['zgal']),
+                                      (-400, 400)*u.km/u.s, Ntup=(flagN, row['logNHI'], sigNHI))
+            igmsys._components.append(HIcomp)
+            # NHI
+            igmsys.NHI = HIcomp.logN
+            igmsys.flag_NHI = HIcomp.flag_N
+            igmsys.sig_NHI = HIcomp.sig_N
+        # OVI
+        if np.isnan(row['logNHOVI']):
+            pass
+        else:
+            # OVI component
+            if row['l_logNHOVI'] == '<':
+                flagN = 3
+                sigNHOVI = 99.
+            elif np.isnan(row['e_logNHOVI']):
+                flagN = 2
+                sigNHOVI = 99.
+            else:
+                flagN = 1
+                sigNHOVI = row['e_logNHOVI']
+            OVIcomp = AbsComponent(qsos[row['Name']], (8, 6), float(row['zgal']),
+                                      (-400, 400)*u.km/u.s, Ntup=(flagN, row['logNHOVI'], sigNHOVI))
+            igmsys._components.append(OVIcomp)
+        # CGM
+        cgmabs = CGMAbsSys(gal, igmsys, chk_lowz=False)
+        j15.cgm_abs.append(cgmabs)
+    # Write tarball
+    out_file = resource_filename('pyigm', '/data/CGM/z0/J15_sys.tar')
+    j15.to_json_tarball(out_file)
+
 def main(flg):
 
     if (flg % 2**1) >= 2**0:
         p11()  # Prochaska et al. 2011
     if flg & 2**1:
         ingest_burchett16()
+    if flg & 2**2:
+        ingest_johnson15()
 
 # Command line execution
 if __name__ == '__main__':
@@ -197,7 +287,8 @@ if __name__ == '__main__':
     if len(sys.argv) == 1:
         flg = 0
         #flg += 2**0   # P11
-        flg += 2**1   # Burchett+16
+        #flg += 2**1   # Burchett+16
+        flg += 2**2   # Johnson+15
     else:
         flg = sys.argv[1]
 
