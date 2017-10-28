@@ -495,6 +495,7 @@ class FNModel(object):
         -------
         mfp : Quantity
           Mean free path from zem (physical Mpc)
+          
         """
         # Imports
         from pyigm.fN import tau_eff as pyteff
