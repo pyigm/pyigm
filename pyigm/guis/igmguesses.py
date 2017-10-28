@@ -45,6 +45,7 @@ from linetools.spectra.xspectrum1d import XSpectrum1D
 from linetools.spectralline import AbsLine
 from linetools.isgm.abscomponent import AbsComponent
 from linetools.isgm import utils as ltiu
+from linetools.isgm import io as ltiio
 from linetools.guis import utils as ltgu
 from linetools.guis import line_widgets as ltgl
 from linetools.guis import simple_widgets as ltgsm
@@ -86,7 +87,7 @@ class IGMGuessesGui(QMainWindow):
     def __init__(self, ispec, parent=None, previous_file=None, 
         srch_id=True, outfil=None, fwhm=None, screen_scale=1.,
         plot_residuals=True,n_max_tuple=None, min_strength=None,
-                 min_ew=None, vlim_disp=None, external_model=None):
+                 min_ew=None, vlim_disp=None, external_model=None, redsh=None): #added redsh=None
         QMainWindow.__init__(self, parent)
         """
         ispec : str
@@ -264,6 +265,10 @@ E         : toggle displaying/hiding the external absorption model
         # Define initial redshift
         z = 0.0
         self.llist['z'] = z
+        if redsh is not None:
+            z=redsh
+            self.llist['z'] = z
+            print("Redshift set to",z,redsh)
         
         # Grab the pieces and tie together
         self.slines_widg = ltgl.SelectedLinesWidget(
@@ -337,8 +342,13 @@ E         : toggle displaying/hiding the external absorption model
         wvmax = self.velplot_widg.spec.wvmax
         wvlims = (wvmin / (1. + z), wvmax / (1. + z))
 
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
+
         transitions = linelist.available_transitions(
             wvlims, n_max_tuple=self.n_max_tuple, min_strength=self.min_strength)
+
 
         if transitions is None:
             print('  There are no transitions available!')
@@ -349,8 +359,7 @@ E         : toggle displaying/hiding the external absorption model
         else: # transitions should be a QTable
             names = list(np.array(transitions['name']))
         if len(names) > 0:
-            self.llist['available'] = linelist.subset_lines(subset=names, reset_data=True, verbose=True,
-                                                            sort_by='as_given')
+            self.llist['available'] = linelist.subset_lines(subset=names, verbose=True, sort_by='as_given')
             self.llist['List'] = 'available'
         print('Done.')
 
@@ -843,7 +852,7 @@ class IGGVelPlotWidget(QWidget):
         Nguess = np.log10(fit_line.attrib['N'].to('cm**-2').value)
         # Voigt model
         fitvoigt = lav.single_voigt_model(logN=Nguess,b=bguess.value,
-                                z=zguess, wrest=component.init_wrest.value,
+                                z=zguess.value, wrest=component.init_wrest.value,
                                 gamma=fit_line.data['gamma'].value, 
                                 f=fit_line.data['f'], fwhm=self.fwhm)
         # Restrict parameter space
@@ -854,8 +863,10 @@ class IGGVelPlotWidget(QWidget):
 
         # Fit
         fitter = fitting.LevMarLSQFitter()
-        parm = fitter(fitvoigt,self.spec.wavelength[fit_line.analy['pix']],
-            self.spec.flux[fit_line.analy['pix']].value)
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
+        parm = fitter(fitvoigt,self.spec.wavelength[fit_line.analy['pix']].value, self.spec.flux[fit_line.analy['pix']].value)
 
         # Save and sync
         component.attrib['logN'] = parm.logN.value
@@ -1259,8 +1270,10 @@ class IGGVelPlotWidget(QWidget):
         if replot is True:
             if fig_clear:
                 self.fig.clf()
-            # Title by redshift
-            self.fig.suptitle('{}\nz={:.5f}'.format(self.spec.filename,self.z), fontsize='medium', ha='center')
+            # Title by filename + zem + redshift
+            zem = self.parent.meta['zem']
+            self.fig.suptitle('{} (zem={:.3f})\nz={:.5f}'.format(self.spec.filename, zem, self.z), fontsize='medium',
+                              ha='center')
 
             # Components
             components = self.parent.comps_widg.all_comp 
@@ -1937,9 +1950,9 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s, min_ew=0.005*u.AA
         else:
             grouped += [group]
     # write to .joenvp output
-    ltiu.joebvp_from_components(isolated, specfile, 'isolated.joebvp')
+    ltiio.write_joebvp_from_components(isolated, specfile, 'isolated.joebvp')
     for ii, group in enumerate(grouped):
-        ltiu.joebvp_from_components(group, specfile, 'group_{}.joebvp'.format(ii+1))
+        ltiio.write_joebvp_from_components(group, specfile, 'group_{}.joebvp'.format(ii+1))
 
     grouped = [isolated] + grouped
     for ii, group in enumerate(grouped):
@@ -1986,7 +1999,7 @@ def from_igmguesses_to_joebvp(infile, outfile):
         comp = AbsComponent.from_dict(igmg_dict['cmps'][key], chk_sep=False, chk_data=False, chk_vel=False)
         comp_list += [comp]
 
-    ltiu.joebvp_from_components(comp_list, igmg_dict['spec_file'], outfile)
+    ltiio.joebvp_from_components(comp_list, igmg_dict['spec_file'], outfile)
 
 def init_meta():
     """Creates a general meta dictionary

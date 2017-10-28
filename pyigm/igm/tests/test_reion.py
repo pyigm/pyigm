@@ -23,6 +23,6 @@ def test_damping():
     # Array
     wave = np.linspace(7000.,10000,1000)*u.AA
     tau = reion.igm_damping(wave, 5.9, 6.3)
-    np.testing.assert_allclose(tau[-1], 0.0024535867434168235)
+    np.testing.assert_allclose(tau[-1], 0.00245349, rtol=1e-5)  # scipy 0.19
 
 

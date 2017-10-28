@@ -1,6 +1,6 @@
 .. highlight:: rest
 
-*********
+********
 Continua
 ********
 

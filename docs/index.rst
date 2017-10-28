@@ -23,6 +23,14 @@ Contents:
    misc
    api
 
+**IGM/CGM Datasets**
+
+.. toctree::
+   :maxdepth: 1
+
+   CGM (e.g. LCO, COS-Halos, COS-Dwarfs) <cgm>
+   IGMSurvey (DLA, LLS) <igmsurvey>
+
 **Core classes**
 
 .. toctree::
@@ -38,6 +46,14 @@ Contents:
 
 ..
    To be added:
+
+**IGM/CGM Surveys**
+
+.. toctree::
+   :maxdepth: 1
+   COS-Halos <https://github.com/pyigm/pyigm/blob/master/docs/datasets/COS_Halos_Examples.ipynb>
+   DLA <https://github.com/pyigm/pyigm/blob/master/docs/datasets/DLASurvey_examples.ipynb>
+   LLS <https://github.com/pyigm/pyigm/blob/master/docs/datasets/LLSSurvey_examples.ipynb>
 
 **GUIs**
 

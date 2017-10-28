@@ -10,6 +10,8 @@ import warnings
 import h5py
 import json, yaml
 
+from pkg_resources import resource_filename
+
 from astropy.io import fits, ascii
 from astropy import units as u 
 from astropy.table import Table, Column
@@ -363,7 +365,7 @@ class COSHalos(CGMAbsSurvey):
         if ('Halos' in self.fits_path) and (self.werk14_cldy is not None):
                 self.load_werk14()
 
-    def load_mtl_pdfs(self, ZH_fil, keep_all=False):
+    def load_mtl_pdfs(self, ZH_fil=None, keep_all=False):
         """ Load the metallicity PDFs from an input file (usually hdf5)
 
         Parameters
@@ -373,6 +375,10 @@ class COSHalos(CGMAbsSurvey):
           Save the full metallicity data?
 
         """
+        # File
+        if ZH_fil is None:
+            ZH_fil = resource_filename('pyigm', 'data/CGM/COS_Halos/COS_Halos_MTL_final.hdf5')
+        # Load
         fh5=h5py.File(ZH_fil, 'r')
         mkeys = list(fh5['met'].keys())
         mkeys.remove('left_edge_bins')
@@ -381,6 +387,10 @@ class COSHalos(CGMAbsSurvey):
 
         # Loop
         for cgm_abs in self.cgm_abs:
+            if '0943+0531_227_19' in cgm_abs.name:
+                print('Not including 0943+0531_227_19'.format(cgm_abs.name))
+                print('See Prochaska+17 for details')
+                continue
             # Match?
             mt = np.where(mkeys == cgm_abs.name)[0]
             if len(mt) == 0:
@@ -793,4 +803,56 @@ class COSDwarfs(COSHalos):
             self.kin_init_file = self.cdir+'/Kin/cosdwarfs_kin_driver.dat'
         else:
             self.kin_init_file = kin_init_file
+        # Load
+        self.load_sys()
+
+    def load_sys(self, tfile=None, empty=True, debug=False, **kwargs):
+        """ Load the COS-Halos survey from JSON files
+
+        Empties the list
+
+        Parameters
+        ----------
+        tfile : str, optional
+        empty : bool, optional
+          Empty the list
+        debug : bool, optional
+          Only load the first 5
+
+        Returns
+        -------
+
+        """
+        import tarfile
+        import json
+        from linetools.lists.linelist import LineList
+        llist = LineList('ISM')
+
+        # Tar file
+        if tfile is None:
+            tarfiles = glob.glob(self.cdir + 'cos-dwarfs_systems.v*.tar.gz')
+            tarfiles.sort()
+            tfile = tarfiles[-1]
+        print("Be patient, using {:s} to load".format(tfile))
+        # Empty
+        if empty:
+            self.cgm_abs = []
+        # Load
+        tar = tarfile.open(tfile)
+        for kk, member in enumerate(tar.getmembers()):
+            if '.' not in member.name:
+                print('Skipping a likely folder: {:s}'.format(member.name))
+                continue
+            # Debug
+            if debug and (kk == 5):
+                break
+            # Extract
+            f = tar.extractfile(member)
+            tdict = json.load(f)
+            # Generate
+            cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, chk_data=False,
+                                         use_coord=True, use_angrho=True,
+                                         linelist=llist, **kwargs)
+            self.cgm_abs.append(cgmsys)
+        tar.close()
 

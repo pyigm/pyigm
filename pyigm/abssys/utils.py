@@ -177,8 +177,9 @@ def hi_model(abssys, spec, lya_only=False, add_lls=False, ret_tau=False,
             tau_LL = (10.**abssys.NHI / u.cm**2) * photo_cross(1,1,energy)
             # Kludge
             pix_LL = np.argmin(np.fabs(wv_rest- 911.3*u.AA))
-            pix_kludge = np.where((wv_rest > 911.5*u.AA) & (wv_rest < 912.8*u.AA))[0]
+            pix_kludge = np.where((wv_rest > 911.3*u.AA) & (wv_rest < 913.0*u.AA))[0]
             tau_LL[pix_kludge] = tau_LL[pix_LL]
+            tau_Lyman[pix_kludge] = 0.
             # Generate the spectrum
         else:
             tau_LL = 0.

@@ -1,0 +1,6 @@
+name                                            zabs      ezabs         ion     logn    elogn  flag              sample
+QSO3456+7890_z0.789012                      0.789012   0.000001          HI    16.70     0.05     0      my_cool_sample
+QSO3456+7890_z0.789012                      0.789012   0.000001         CII    12.93     0.05    -1      my_cool_sample
+# QSO3456+7890_z0.789012                    0.789012   0.000001         OVI    13.70     0.14     0      my_cool_sample
+QSO3456+7890_z0.789012                      0.789012   0.000001        SiII    14.10     0.04     0      my_cool_sample
+QSO3456+7890_z0.789012                      0.789012   0.000001       SiIII    14.00     0.01     0      my_cool_sample
