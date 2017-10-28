@@ -144,7 +144,7 @@ def ingest_burchett16():
         gal.sig_SFR = row['SFR_err']
         gal.Mstar = row['mstars']
         gal.field = row['field']
-        gal.Rvir = row['rrvir'] * u.kpc
+        gal.RRvir = row['rrvir']
         gal.NSAidx = row['NSAidx']
         #
         igmsys = IGMSystem((row['ra_qso'], row['dec_qso']), row['zgal'], (-400., 400.) * u.km / u.s)
