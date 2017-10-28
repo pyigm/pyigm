@@ -25,8 +25,6 @@ def test_init():
     dlas = DLASurvey(ref='null')
     assert dlas.abs_type == 'DLA'
 
-<<<<<<< .merge_file_x0gBpL
-=======
     coord = SkyCoord(ra=123.1143, dec=-12.4321, unit='deg')
     dlasys = DLASystem(coord, 1.244, [-300,300.]*u.km/u.s, 20.4)
     dlasys.name = 'Sys1'
@@ -71,7 +69,39 @@ def test_fit_atan_lz():
 def test_read_h100_nosys():
     h100 = DLASurvey.load_H100(load_sys=False)
     assert h100.nsys == 100
->>>>>>> .merge_file_r6ljqL
+
+
+def test_dla_fitted():
+    dlas = DLASurvey(ref='null')
+    # f(N) double power law
+    fN = dlas.fitted_fN(21.)
+    assert isinstance(fN, float)
+    assert np.isclose(fN, 12.661299335610309)
+    fN = dlas.fitted_fN(np.arange(20.3, 21.3, 0.1))
+    assert isinstance(fN, np.ndarray)
+    # l(z)
+    lz = dlas.fitted_lz(1.)
+    assert isinstance(lz, float)
+    assert np.isclose(lz, 0.054821907396422453)
+    # Error
+    lz, sig_lz = dlas.fitted_lz(1., boot_error=True)
+    assert sig_lz.shape == (1,2)
+    # nenH
+    nenH = dlas.fitted_nenH(21.)
+    assert isinstance(nenH, float)
+    assert np.isclose(nenH, -3.12739999999999999)
+
+
+def test_fit_atan_lz():
+    surveys = load_dla_surveys()
+    difts, boot_tbl = fit_atan_dla_lz(surveys, nproc=1)
+    for key in ['A','B','C']:
+        assert key in boot_tbl.keys()
+
+
+def test_read_h100_nosys():
+    h100 = DLASurvey.load_H100(load_sys=False)
+    assert h100.nsys == 100
 
 def test_sdss():
     # All

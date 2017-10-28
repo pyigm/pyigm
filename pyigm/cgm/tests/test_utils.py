@@ -89,9 +89,6 @@ def test_cgmsurvey_from_fields_sightlines():
     assert isinstance(csurvey,CGMAbsSurvey)
 
 
-
-
-"""
 def test_cgmsurvey_from_fields_sightlines():
     # Instantiate fields and add galaxies
     field1 = ('PG1407+265', 212.349634 * u.deg, 26.3058650 * u.deg)
@@ -126,7 +123,4 @@ def test_cgmsurvey_from_fields_sightlines():
     # Run function
     csurvey = cgmsurvey_from_sightlines_fields(fields,sightlines)
     assert isinstance(csurvey,CGMAbsSurvey)
-"""
-
-
 

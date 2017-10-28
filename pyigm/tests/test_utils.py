@@ -15,6 +15,10 @@ import astropy
 from pyigm.utils import calc_rho
 from pyigm.utils import calc_Galactic_rho
 
+import astropy.units as u
+from astropy.cosmology import FlatLambdaCDM, LambdaCDM
+
+from pyigm.utils import cosm_xz
 
 def test_calcrho():
     # Single
@@ -67,24 +71,6 @@ def test_calc_Galactic_rho():
     coord = SkyCoord(l=45.*u.deg, b=45.*u.deg, frame='galactic')
     rho3, angle3 = calc_Galactic_rho(coord)
     assert np.isclose(rho3.value, 6.928203230275509)
-# Module to run tests on initializing AbslineSystem
-
-# TEST_UNICODE_LITERALS
-
-import numpy as np
-import copy
-import pytest
-
-import astropy.units as u
-from astropy.cosmology import FlatLambdaCDM, LambdaCDM
-
-from pyigm.utils import cosm_xz
-
-'''
-def data_path(filename):
-    data_dir = os.path.join(os.path.dirname(__file__), 'files')
-    return os.path.join(data_dir, filename)
-'''
 
 def test_dxdz():
     # Default cosmology (Vanilla)
@@ -96,4 +82,3 @@ def test_dxdz():
     copen = LambdaCDM(H0=70., Om0=0.3, Ode0=0.)
     dxdz = cosm_xz(3., cosmo=copen, flg_return=1)
     np.isclose(dxdz, 2.90092902756)
-

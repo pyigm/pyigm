@@ -306,7 +306,7 @@ class Emceebones(object):
 
         modl=pickle.load(fil)
         fil.close()
-
+    
         #unpack axis tag, axis value, grid column, grid ions
         self.mod_axistag=modl[0]
         self.mod_axisval=[]
