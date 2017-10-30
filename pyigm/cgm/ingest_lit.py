@@ -139,7 +139,7 @@ def ingest_burchett16():
     for row in b16_vir:
         # RA, DEC
         # Galaxy
-        gal = Galaxy((row['ra'], row['dec']), z=row['zgal'])
+        gal = Galaxy((row['ra_gal'], row['dec_gal']), z=row['zgal'])
         gal.SFR = row['SFR']
         gal.sig_SFR = row['SFR_err']
         gal.Mstar = row['mstars']
