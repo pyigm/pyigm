@@ -127,7 +127,7 @@ def ingest_burchett16():
     """ Ingest Burchett+16
     """
     # Virial matching
-    b16_vir_file = resource_filename('pyigm', 'data/CGM/z0/Burchett16_HI_virselect_sfr.fits')
+    b16_vir_file = resource_filename('pyigm', 'data/CGM/z0/Burchett2016_CIV_HI_virselect.fits')
     b16_vir = Table.read(b16_vir_file)
 
     # CGM Survey
@@ -139,7 +139,7 @@ def ingest_burchett16():
     for row in b16_vir:
         # RA, DEC
         # Galaxy
-        gal = Galaxy((row['ra_gal'], row['dec_gal']), z=row['zgal'])
+        gal = Galaxy((row['ra'], row['dec']), z=row['zgal'])
         gal.SFR = row['SFR']
         gal.sig_SFR = row['SFR_err']
         gal.Mstar = row['mstars']
@@ -149,33 +149,36 @@ def ingest_burchett16():
         #
         igmsys = IGMSystem((row['ra_qso'], row['dec_qso']), row['zgal'], (-400., 400.) * u.km / u.s)
         # HI
-        # Lya
-        lya = AbsLine(1215.67 * u.AA, z=row['zgal'], linelist=llist)
-        lya.attrib['EW'] = row['EW'] / 1e3 * u.AA
-        if row['h1colsig'] <= 0.:
-            lya.attrib['flag_EW'] = 3
-        else:
-            lya.attrib['flag_EW'] = 1
-        lya.attrib['sig_EW'] = row['sigEW']
-        # Ref
-        lya.attrib['Ref'] = 'Burchett+16'
-        # HI component
-        if row['h1colsig'] >= 99.:
-            flagN = 2
-        elif row['h1colsig'] <= 0.:
-            flagN = 3
-        else:
-            flagN = 1
-        HIcomp = AbsComponent((row['ra_qso'], row['dec_qso']),
-                              (1, 1), row['zgal'],
-                              (-400, 400) * u.km / u.s,
-                              Ntup=(flagN, row['h1col'], row['h1colsig']))
-        HIcomp._abslines.append(lya)
-        igmsys._components.append(HIcomp)
-        # NHI
-        igmsys.NHI = HIcomp.logN
-        igmsys.flag_NHI = HIcomp.flag_N
-        igmsys.sig_NHI = HIcomp.sig_N
+        if row['flag_h1'] > 0:
+            # Lya
+            lya = AbsLine(1215.67 * u.AA, z=row['zgal'], linelist=llist)
+            lya.attrib['EW'] = row['EW_h1'] / 1e3 * u.AA
+            if row['colsig_h1'] <= 0.:
+                lya.attrib['flag_EW'] = 3
+            else:
+                lya.attrib['flag_EW'] = 1
+            lya.attrib['sig_EW'] = row['EWsig_h1']
+            # Ref
+            lya.attrib['Ref'] = 'Burchett+16'
+            # HI component
+            if row['colsig_h1'] >= 99.:
+                flagN = 2
+            elif row['colsig_h1'] <= 0.:
+                flagN = 3
+            else:
+                flagN = 1
+            HIcomp = AbsComponent((row['ra_qso'], row['dec_qso']),
+                                  (1, 1), row['zgal'],
+                                  (-400, 400) * u.km / u.s,
+                                  Ntup=(flagN, row['col_h1'], row['colsig_h1']))
+            HIcomp._abslines.append(lya)
+            igmsys._components.append(HIcomp)
+            # NHI
+            igmsys.NHI = HIcomp.logN
+            igmsys.flag_NHI = HIcomp.flag_N
+            igmsys.sig_NHI = HIcomp.sig_N
+        # CIV
+        #if row['flag_c4'] > 0:
         # CGM
         cgmabs = CGMAbsSys(gal, igmsys, chk_lowz=False)
         b16.cgm_abs.append(cgmabs)
@@ -287,8 +290,8 @@ if __name__ == '__main__':
     if len(sys.argv) == 1:
         flg = 0
         #flg += 2**0   # P11
-        #flg += 2**1   # Burchett+16
-        flg += 2**2   # Johnson+15
+        flg += 2**1   # Burchett+16
+        #flg += 2**2   # Johnson+15
     else:
         flg = sys.argv[1]
 
