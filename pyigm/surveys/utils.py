@@ -32,6 +32,8 @@ def load_sys_files(inp, type, ref=None, sys_path=False, **kwargs):
     sys_path : str, optional
       indicates that inp is a path to a set of JSON SYS files
       otherwise, inp should be the filename of a tarball of JSON files
+    **kwargs :
+      Passed to system
 
     Returns
     -------
