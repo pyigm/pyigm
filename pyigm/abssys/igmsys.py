@@ -102,7 +102,7 @@ class AbsSubSystem(object):
     """
 
     @classmethod
-    def from_dict(cls, parent, idict, lbl):
+    def from_dict(cls, parent, idict, lbl, **kwargs):
         """ Generate a sub-system from a dict
 
         Parameters
@@ -112,10 +112,11 @@ class AbsSubSystem(object):
         idict : dict
           Contains the sub-system parameters
         lbl : str
+        **kwargs : Passed to build_componetns_from_dict
         """
         slf = cls(parent, idict['zabs'], idict['vlim']*u.km/u.s, lbl)
         # Components
-        components = ltiu.build_components_from_dict(idict)
+        components = ltiu.build_components_from_dict(idict, **kwargs)
         slf._components = components
         # Ion table
         slf._ionN = ltiu.iontable_from_components(components)

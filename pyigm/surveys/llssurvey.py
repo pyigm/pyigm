@@ -171,6 +171,8 @@ class LLSSurvey(IGMSurvey):
         ------
         lls_survey
         """
+        from imp import reload
+        reload(pyisu)
 
         # Pull from Internet (as necessary)
         summ_fil = pyigm_path+"/data/LLS/HD-LLS/HD-LLS_DR1.fits"
