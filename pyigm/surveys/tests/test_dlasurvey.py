@@ -70,6 +70,39 @@ def test_read_h100_nosys():
     h100 = DLASurvey.load_H100(load_sys=False)
     assert h100.nsys == 100
 
+
+def test_dla_fitted():
+    dlas = DLASurvey(ref='null')
+    # f(N) double power law
+    fN = dlas.fitted_fN(21.)
+    assert isinstance(fN, float)
+    assert np.isclose(fN, 12.661299335610309)
+    fN = dlas.fitted_fN(np.arange(20.3, 21.3, 0.1))
+    assert isinstance(fN, np.ndarray)
+    # l(z)
+    lz = dlas.fitted_lz(1.)
+    assert isinstance(lz, float)
+    assert np.isclose(lz, 0.054821907396422453)
+    # Error
+    lz, sig_lz = dlas.fitted_lz(1., boot_error=True)
+    assert sig_lz.shape == (1,2)
+    # nenH
+    nenH = dlas.fitted_nenH(21.)
+    assert isinstance(nenH, float)
+    assert np.isclose(nenH, -3.12739999999999999)
+
+
+def test_fit_atan_lz():
+    surveys = load_dla_surveys()
+    difts, boot_tbl = fit_atan_dla_lz(surveys, nproc=1)
+    for key in ['A','B','C']:
+        assert key in boot_tbl.keys()
+
+
+def test_read_h100_nosys():
+    h100 = DLASurvey.load_H100(load_sys=False)
+    assert h100.nsys == 100
+
 def test_sdss():
     # All
     sdss = DLASurvey.load_SDSS_DR5(sample='all')
@@ -85,6 +118,9 @@ def test_sdss():
     assert fN.size == 4
     assert np.isclose(fN_lo[0], 0.0682087, atol=1e-4)
 
+def test_read_h100_nosys():
+    h100 = DLASurvey.load_H100(load_sys=False)
+    assert h100.nsys == 100
 
 @remote_data
 def test_read_h100():
@@ -97,16 +133,21 @@ def test_read_h100():
     gdSiII = np.where(SiII_clms['flag_N'] > 0)[0]
     assert len(gdSiII) == 98
 
-def test_read_HST():
-    """ Neeleman+16
-    """
+
+def test_read_hst16():
+    # Statistical
     hst16 = DLASurvey.load_HST16()
     assert hst16.nsys == 4
+    # All
+    hst16_all = DLASurvey.load_HST16(sample='all')
+    assert hst16_all.nsys == 48
+
 
 def test_read_xq100():
     """ XQ-100 """
     xq100 = DLASurvey.load_XQ100(sample='stat')
     assert xq100.nsys == 36
+
 
 def test_read_p03_g09():
     """ XQ-100 """

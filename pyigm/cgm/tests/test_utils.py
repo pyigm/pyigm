@@ -127,6 +127,3 @@ def test_cgmsurvey_from_fields_sightlines():
     csurvey = cgmsurvey_from_sightlines_fields(fields,sightlines)
     assert isinstance(csurvey,CGMAbsSurvey)
 """
-
-
-

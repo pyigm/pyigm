@@ -7,6 +7,8 @@ import glob
 import json
 import pdb
 
+from astropy.coordinates import SkyCoord
+
 from linetools import utils as ltu
 from linetools.lists.linelist import LineList
 
@@ -66,6 +68,9 @@ def load_sys_files(inp, type, ref=None, sys_path=False, **kwargs):
             abssys = system.from_dict(tdict, chk_sep=False, linelist=llist, **kwargs)   # Consider use_coord=True as default
             survey._abs_sys.append(abssys)
         tar.close()
+    # Set coordinates
+    icoords = [isys.coord for isys in survey._abs_sys]
+    survey.coords = SkyCoord(icoords)
     # Return
     return survey
 

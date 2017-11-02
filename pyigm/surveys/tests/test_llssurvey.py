@@ -20,6 +20,7 @@ def data_path(filename):
 '''
 
 def test_read_hdlls_dr1_simple():
+    #hdlls = LLSSurvey.load_HDLLS()
     hdlls = LLSSurvey.load_HDLLS(load_sys=False)
     assert hdlls.nsys == 157
 

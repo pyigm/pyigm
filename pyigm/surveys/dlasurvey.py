@@ -20,6 +20,7 @@ from astropy import units as u
 from astropy.stats import poisson_conf_interval as aspci
 from astropy import constants as const
 from astropy.cosmology import core as acc
+from astropy.coordinates import SkyCoord
 
 from linetools import utils as ltu
 
@@ -64,7 +65,7 @@ class DLASurvey(IGMSurvey):
         survey = Table.read(srvy_file, format='ascii')
 
         # Add info to DLA table
-        ras, decs, zems = [], [], []
+        ras, decs, zems, scoords = [], [], [], []
         for dla in dlas:
             mt = np.where(survey['QSO'] == dla['NAME'])[0]
             if len(mt) == 0:
@@ -74,19 +75,20 @@ class DLASurvey(IGMSurvey):
                 mt = mt[0]
             # Generate RA/DEC
             row = survey[mt]
-            coord = ltu.radec_to_coord('J{:02d}{:02d}{:f}{:s}{:02d}{:02d}{:f}'.format(
+            scoords.append('{:02d}:{:02d}:{:f} {:s}{:02d}:{:02d}:{:f}'.format(
                 row['RAh'], row['RAm'], row['RAs'], row['DE-'], row['DEd'], row['DEm'],
                 row['DEs']))
-            ras.append(coord.ra.value)
-            decs.append(coord.dec.value)
+            #ras.append(coord.ra.value)
+            #decs.append(coord.dec.value)
             # zem
             zems.append(row['ZEM'])
-        dlas['RA'] = ras
-        dlas['DEC'] = decs
+        #dlas['RA'] = ras
+        #dlas['DEC'] = decs
         dlas['QSO_ZEM'] = zems
 
         # Instantiate
-        dla_survey = cls.from_sfits(dlas)
+        coords = SkyCoord(scoords, unit=(u.hourangle, u.deg))
+        dla_survey = cls.from_sfits(dlas, coords)
         dla_survey.ref = 'Neeleman+16'
 
         # Fiddle a bit
@@ -281,13 +283,17 @@ class DLASurvey(IGMSurvey):
         dlas.rename_column('QSO_RA', 'RA')
         dlas.rename_column('QSO_DEC', 'DEC')
 
+        # Generate coords
+        scoords = [dlas['RA'][ii]+' '+dlas['DEC'][ii] for ii in range(len(dlas))]
+        coords = SkyCoord(scoords, unit=(u.hourangle, u.deg))
+
         # Cut on NHI
         if sample != 'all_sys':
             gd_dla = dlas['NHI'] >= 20.3
-            dla_survey = cls.from_sfits(dlas[gd_dla])
+            dla_survey = cls.from_sfits(dlas[gd_dla], coords=coords[gd_dla])
         else:
             warnings.warn("Loading an LLSSurvey not a DLASurvey")
-            dla_survey = LLSSurvey.from_sfits(dlas)
+            dla_survey = LLSSurvey.from_sfits(dlas, coords=coords)
 
         # Read
         dla_survey.ref = 'SDSS-DR5 (PW09)'
@@ -314,7 +320,6 @@ class DLASurvey(IGMSurvey):
         # All?
         if sample in ['all', 'all_sys']:
             return dla_survey
-
 
         # Stat
         # Generate mask

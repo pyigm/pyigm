@@ -85,8 +85,8 @@ class LLSSystem(IGMSystem):
           Usually read from the hard-drive
         """
         from linetools.isgm.abssystem import add_comps_from_dict, add_other_from_dict
-        kwargs = dict(zem=idict['zem'], NHI=idict['NHI'],
-                      sig_NHI=idict['sig_NHI'], name=idict['Name'])
+        akwargs = dict(zem=idict['zem'], NHI=idict['NHI'], sig_NHI=idict['sig_NHI'], name=idict['Name'])
+        kwargs = dict(kwargs, **akwargs)
         # Optional
         for key in ['flag_NHI']:
             if key in idict.keys():
@@ -104,7 +104,7 @@ class LLSSystem(IGMSystem):
             for lbl in lbls:
                 if lbl in idict.keys():
                     # Generate
-                    subsys = AbsSubSystem.from_dict(slf, idict[lbl], lbl)
+                    subsys = AbsSubSystem.from_dict(slf, idict[lbl], lbl, **kwargs)
                     slf.subsys[lbl] = subsys
                 else:
                     pass

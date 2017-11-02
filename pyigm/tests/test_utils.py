@@ -15,6 +15,10 @@ import astropy
 from pyigm.utils import calc_rho
 from pyigm.utils import calc_Galactic_rho
 
+import astropy.units as u
+from astropy.cosmology import FlatLambdaCDM, LambdaCDM
+
+from pyigm.utils import cosm_xz
 
 def test_calcrho():
     # Single
@@ -97,3 +101,13 @@ def test_dxdz():
     dxdz = cosm_xz(3., cosmo=copen, flg_return=1)
     np.isclose(dxdz, 2.90092902756)
 
+def test_dxdz():
+    # Default cosmology (Vanilla)
+    Xz = cosm_xz(3.)
+    np.isclose(Xz, 7.68841320742732)
+    dxdz = cosm_xz(3., flg_return=1)
+    np.isclose(dxdz, 3.5847294011983)
+    # Open
+    copen = LambdaCDM(H0=70., Om0=0.3, Ode0=0.)
+    dxdz = cosm_xz(3., cosmo=copen, flg_return=1)
+    np.isclose(dxdz, 2.90092902756)

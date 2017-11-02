@@ -207,7 +207,6 @@ def run_mcmc(args):
     args : see all of the arguments detailed in main()
 
     """
-
     #load the file
     sightline = args.sightline.strip()
     data = Table.read(args.fileinput, format='ascii', comment='#')
