@@ -52,7 +52,7 @@ class CGMAbsSurvey(object):
         # Load
         tar = tarfile.open(tfile)
         for kk, member in enumerate(tar.getmembers()):
-            if '.' not in member.name:
+            if '.json' not in member.name:
                 print('Skipping a likely folder: {:s}'.format(member.name))
                 continue
             # Debug
@@ -60,7 +60,11 @@ class CGMAbsSurvey(object):
                 break
             # Extract
             f = tar.extractfile(member)
-            tdict = json.load(f)
+            try:
+                tdict = json.load(f)
+            except:
+                print('Unable to load {}'.format(member))
+                continue
             # Generate
             cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, chk_data=False,
                                          use_coord=True, use_angrho=True,
