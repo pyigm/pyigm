@@ -54,7 +54,7 @@ class CGMAbsSurvey(object):
         # Load
         tar = tarfile.open(tfile)
         for kk, member in enumerate(tar.getmembers()):
-            if '.' not in member.name:
+            if '.json' not in member.name:
                 print('Skipping a likely folder: {:s}'.format(member.name))
                 continue
             # Debug
