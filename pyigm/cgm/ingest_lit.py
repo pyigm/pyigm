@@ -131,7 +131,7 @@ def ingest_burchett16():
     b16_vir = Table.read(b16_vir_file)
 
     # CGM Survey
-    b16 = CGMAbsSurvey(survey='B16', ref='Burchett+16')
+    b16vir = CGMAbsSurvey(survey='B16', ref='Burchett+16')
 
     # Linelist
     llist = LineList('ISM')
@@ -181,10 +181,70 @@ def ingest_burchett16():
         #if row['flag_c4'] > 0:
         # CGM
         cgmabs = CGMAbsSys(gal, igmsys, chk_lowz=False)
-        b16.cgm_abs.append(cgmabs)
+        b16vir.cgm_abs.append(cgmabs)
     # Write tarball
-    out_file = resource_filename('pyigm', '/data/CGM/z0/B16_sys.tar')
-    b16.to_json_tarball(out_file)
+    out_file = resource_filename('pyigm', '/data/CGM/z0/B16_vir_sys.tar')
+    b16vir.to_json_tarball(out_file)
+
+    # Proper distance impact parameter matching
+    b16_kpc_file = resource_filename('pyigm', 'data/CGM/z0/Burchett2016_CIV_HI_kpcselect.fits')
+    b16_kpc = Table.read(b16_kpc_file)
+
+    # CGM Survey
+    b16kpc = CGMAbsSurvey(survey='B16', ref='Burchett+16')
+
+    # Linelist
+    llist = LineList('ISM')
+
+    for row in b16_kpc:
+        # RA, DEC
+        # Galaxy
+        gal = Galaxy((row['ra_gal'], row['dec_gal']), z=row['zgal'])
+        gal.SFR = row['SFR']
+        gal.sig_SFR = row['SFR_err']
+        gal.Mstar = row['mstars']
+        gal.field = row['field']
+        gal.RRvir = row['rrvir']
+        gal.NSAidx = row['NSAidx']
+        #
+        igmsys = IGMSystem((row['ra_qso'], row['dec_qso']), row['zgal'], (-400., 400.) * u.km / u.s)
+        # HI
+        if row['flag_h1'] > 0:
+            # Lya
+            lya = AbsLine(1215.67 * u.AA, z=row['zgal'], linelist=llist)
+            lya.attrib['EW'] = row['EW_h1'] / 1e3 * u.AA
+            if row['colsig_h1'] <= 0.:
+                lya.attrib['flag_EW'] = 3
+            else:
+                lya.attrib['flag_EW'] = 1
+            lya.attrib['sig_EW'] = row['EWsig_h1']
+            # Ref
+            lya.attrib['Ref'] = 'Burchett+16'
+            # HI component
+            if row['colsig_h1'] >= 99.:
+                flagN = 2
+            elif row['colsig_h1'] <= 0.:
+                flagN = 3
+            else:
+                flagN = 1
+            HIcomp = AbsComponent((row['ra_qso'], row['dec_qso']),
+                                  (1, 1), row['zgal'],
+                                  (-400, 400) * u.km / u.s,
+                                  Ntup=(flagN, row['col_h1'], row['colsig_h1']))
+            HIcomp._abslines.append(lya)
+            igmsys._components.append(HIcomp)
+            # NHI
+            igmsys.NHI = HIcomp.logN
+            igmsys.flag_NHI = HIcomp.flag_N
+            igmsys.sig_NHI = HIcomp.sig_N
+        # CIV
+        #if row['flag_c4'] > 0:
+        # CGM
+        cgmabs = CGMAbsSys(gal, igmsys, chk_lowz=False)
+        b16kpc.cgm_abs.append(cgmabs)
+    # Write tarball
+    out_file = resource_filename('pyigm', '/data/CGM/z0/B16_kpc_sys.tar')
+    b16kpc.to_json_tarball(out_file)
 
 
 def ingest_johnson15():

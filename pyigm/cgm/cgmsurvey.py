@@ -92,11 +92,22 @@ class CGMAbsSurvey(object):
         return slf
 
     @classmethod
-    def load_B16(cls):
-        """ Load the Burchett+16 sample
+    def load_B16(cls,select_method='rvir'):
+        """ Load the Burchett+16 z<0.015 samples
+
+        Parameters
+        ----------
+        select_method : str, optional
+            Selection scheme to associate galaxies with absorbers.  By default,
+            the sample of galaxies with smallest impact parameters relative
+            to their Rvir is loaded.  Otherwise, the closest in proper distance.
+
         """
-        b16_tarfile = resource_filename('pyigm', '/data/CGM/z0/B16_sys.tar')
-        b16 = CGMAbsSurvey.from_tarball(b16_tarfile, chk_lowz=False, chk_z=False)
+        if select_method=='rvir':
+            b16_tarfile = resource_filename('pyigm', '/data/CGM/z0/B16_vir_sys.tar')
+        else:
+            b16_tarfile = resource_filename('pyigm', '/data/CGM/z0/B16_kpc_sys.tar')
+        b16 = CGMAbsSurvey.from_tarball(b16_tarfile, chk_lowz=True, chk_z=False)
         return b16
 
     @classmethod
