@@ -111,6 +111,8 @@ class CGMAbsSurvey(object):
             b16_tarfile = resource_filename('pyigm', '/data/CGM/z0/B16_vir_sys.tar')
         else:
             b16_tarfile = resource_filename('pyigm', '/data/CGM/z0/B16_kpc_sys.tar')
+        print('Loading Burchett+16 using {:s} selection method'.format(select_method))
+        # Load
         b16 = CGMAbsSurvey.from_tarball(b16_tarfile, chk_lowz=True, chk_z=False)
         return b16
 
