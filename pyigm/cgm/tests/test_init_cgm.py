@@ -22,6 +22,7 @@ from pyigm.igm.igmsightline import IGMSightline
 import pyigm
 
 import pdb
+from pkg_resources import resource_filename
 
 def simple_cgmabssys():
     radec = (125.0*u.deg, 45.2*u.deg)
@@ -50,6 +51,13 @@ def test_init_cgmabssurvey():
     cgmsurvey = CGMAbsSurvey(survey='cos-halos', ref='Tumlinson+13, Werk+13')
     # Test
     assert cgmsurvey.survey == 'cos-halos'
+
+
+def test_p11_survey():
+    p11_tarfile = resource_filename('pyigm', '/data/CGM/P11/P11_sys.tar')
+    p11 = CGMAbsSurvey.from_tarball(p11_tarfile, chk_lowz=False, chk_z=False)
+    assert len(p11.cgm_abs[2].igm_sys._components) == 2
+
 
 def test_init_cgmabssurvey_from_abssys():
     # Instantiate abssys and survey
