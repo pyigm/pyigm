@@ -155,12 +155,22 @@ def ingest_burchett16(smthd='vir'):
         if row['flag_h1'] > 0:
             # Lya
             lya = AbsLine(1215.67 * u.AA, z=row['zgal'], linelist=llist)
-            lya.attrib['EW'] = row['EW_h1'] / 1e3 * u.AA
-            if row['colsig_h1'] <= 0.:
+            lya.attrib['EW'] = row['EW_h1'] * u.AA
+            lya.attrib['logN'] = row['col_h1']
+            lya.attrib['N'] = 10**row['col_h1'] * u.cm**-2
+            if row['flag_h1'] == 3:
                 lya.attrib['flag_EW'] = 3
+                lya.attrib['flag_N'] = 3
+                lya.attrib['sig_N'] = (10 ** (row['col_h1']))/3. * u.cm ** -2
+            elif row['flag_h1'] == 2:
+                lya.attrib['flag_EW'] = 1
+                lya.attrib['flag_N'] = 2
             else:
                 lya.attrib['flag_EW'] = 1
-            lya.attrib['sig_EW'] = row['EWsig_h1']
+                lya.attrib['flag_N'] = 1
+                lya.attrib['sig_N'] = (10 ** (row['col_h1'] + row['colsig_h1']) -
+                                       10 ** row['col_h1']) * u.cm ** -2
+            lya.attrib['sig_EW'] = row['EWsig_h1'] * u.AA
             # Ref
             lya.attrib['Ref'] = 'Burchett+16'
             # HI component
@@ -184,15 +194,25 @@ def ingest_burchett16(smthd='vir'):
         if row['flag_c4'] > 0:
             # CIV 1548
             civ1548 = AbsLine(1548.195*u.AA, z=row['zgal'], linelist=llist)
-            civ1548.attrib['EW'] = row['EW_h1'] / 1e3 * u.AA
-            if row['colsig_c4'] <= 0.:
+            civ1548.attrib['EW'] = row['EW_c4'] * u.AA
+            civ1548.attrib['logN'] = row['col_c4']
+            civ1548.attrib['N'] = 10 ** row['col_c4'] * u.cm ** -2
+            if row['flag_c4'] == 3:
                 civ1548.attrib['flag_EW'] = 3
+                civ1548.attrib['flag_N'] = 3
+                civ1548.attrib['sig_N'] = (10 ** (row['col_c4']))/3. * u.cm ** -2
+            elif row['flag_c4'] == 2:
+                civ1548.attrib['flag_EW'] = 1
+                civ1548.attrib['flag_N'] = 2
             else:
                 civ1548.attrib['flag_EW'] = 1
-            civ1548.attrib['sig_EW'] = row['EWsig_c4']
+                civ1548.attrib['flag_N'] = 1
+                civ1548.attrib['sig_N'] = (10 ** (row['col_c4'] + row['colsig_c4']) -
+                                           10 ** row['col_c4']) * u.cm ** -2
+            civ1548.attrib['sig_EW'] = row['EWsig_c4'] * u.AA
             # Ref
             civ1548.attrib['Ref'] = 'Burchett+16'
-            # HI component
+            # CIV component
             if row['colsig_c4'] >= 99.:
                 flagN = 2
             elif row['colsig_c4'] <= 0.:
@@ -206,7 +226,7 @@ def ingest_burchett16(smthd='vir'):
             CIVcomp._abslines.append(civ1548)
             igmsys._components.append(CIVcomp)
         # CGM
-        cgmabs = CGMAbsSys(gal, igmsys, chk_lowz=False)
+        cgmabs = CGMAbsSys(gal, igmsys, correct_lowz=False)
         b16.cgm_abs.append(cgmabs)
     # Write tarball
     if smthd == 'vir':
