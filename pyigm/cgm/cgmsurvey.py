@@ -8,6 +8,8 @@ import warnings
 import pdb
 import json, io
 
+from pkg_resources import resource_filename
+
 from astropy.table import Table, Column
 from astropy.coordinates import SkyCoord
 from astropy import  units as u
@@ -52,7 +54,7 @@ class CGMAbsSurvey(object):
         # Load
         tar = tarfile.open(tfile)
         for kk, member in enumerate(tar.getmembers()):
-            if '.' not in member.name:
+            if '.json' not in member.name:
                 print('Skipping a likely folder: {:s}'.format(member.name))
                 continue
             # Debug
@@ -60,7 +62,11 @@ class CGMAbsSurvey(object):
                 break
             # Extract
             f = tar.extractfile(member)
-            tdict = json.load(f)
+            try:
+                tdict = json.load(f)
+            except:
+                print('Unable to load {}'.format(member))
+                continue
             # Generate
             cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, chk_data=False,
                                          use_coord=True, use_angrho=True,
@@ -89,6 +95,34 @@ class CGMAbsSurvey(object):
         slf.cgm_abs.extend(cgmlist)
         return slf
 
+    @classmethod
+    def load_B16(cls,select_method='rvir'):
+        """ Load the Burchett+16 z<0.015 samples
+
+        Parameters
+        ----------
+        select_method : str, optional
+            Selection scheme to associate galaxies with absorbers.  By default,
+            the sample of galaxies with smallest impact parameters relative
+            to their Rvir is loaded.  Otherwise, the closest in proper distance.
+
+        """
+        if select_method=='rvir':
+            b16_tarfile = resource_filename('pyigm', '/data/CGM/z0/B16_vir_sys.tar')
+        else:
+            b16_tarfile = resource_filename('pyigm', '/data/CGM/z0/B16_kpc_sys.tar')
+        print('Loading Burchett+16 using {:s} selection method'.format(select_method))
+        # Load
+        b16 = CGMAbsSurvey.from_tarball(b16_tarfile, chk_lowz=True, chk_z=False)
+        return b16
+
+    @classmethod
+    def load_J15(cls):
+        """ Load the Johnson+15 sample
+        """
+        j15_tarfile = resource_filename('pyigm', '/data/CGM/z0/J15_sys.tar')
+        j15 = CGMAbsSurvey.from_tarball(j15_tarfile, chk_lowz=False, chk_z=False)
+        return j15
 
     def __init__(self, survey='', ref='', **kwargs):
         """
@@ -142,8 +176,8 @@ class CGMAbsSurvey(object):
             jfiles.append(json_fil)
             with io.open(json_fil, 'w', encoding='utf-8') as f:
                 #try:
-                f.write(unicode(json.dumps(cdict, sort_keys=True, indent=4,
-                                           separators=(',', ': '))))
+                f.write(json.dumps(cdict, sort_keys=True, indent=4,
+                                           separators=(',', ': ')))
         # Tar
         warnings.warn("Modify to write directly to tar file")
         subprocess.call(['tar', '-czf', outfil, tmpdir])
