@@ -6,11 +6,13 @@
 
 ## Read in the file
 Python2
+
     file = open(filename)
     mcmcout = pickle.load(file)
     file.close()
     
 Python3
+
     file = open(filename,'rb')
     mcmcout = pickle.load(file,encoding='latin1')
     file.close()
