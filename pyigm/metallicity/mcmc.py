@@ -300,11 +300,12 @@ class Emceebones(object):
         try:
             ##Python3
             fil=open(model,'br')
+            modl=pickle.load(fil,encoding='latin1')
         except:
             ##Python2
             fil=open(model,'r')
+            modl=pickle.load(fil)
 
-        modl=pickle.load(fil)
         fil.close()
 
         #unpack axis tag, axis value, grid column, grid ions
