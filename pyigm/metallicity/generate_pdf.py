@@ -61,7 +61,10 @@ def work_generate_pdf(modelsdir, quantity, data_fil, outh5):
         precomp=True
         filein=modelsdir+'/'+modelsdir+'_ionisation.pkl'
         if(os.path.isfile(filein)):
-            pdfcom=pickle.load(open(filein))
+            try:
+                pdfcom=pickle.load(open(filein))
+            except:
+                pdfcom=pickle.load(open(filein,'rb'),encoding='latin1')
         else:
             print('Need to compute {} first'.format(filein))
             exit()
@@ -75,7 +78,10 @@ def work_generate_pdf(modelsdir, quantity, data_fil, outh5):
         precomp=True
         filein=modelsdir+'/'+modelsdir+'_ionisation.pkl'
         if(os.path.isfile(filein)):
-            pdfcom=pickle.load(open(filein))
+            try:
+                pdfcom=pickle.load(open(filein))
+            except:
+                pdfcom=pickle.load(open(filein,'rb'),encoding='latin1')
         else:
             print('Need to compute {} first'.format(filein))
             exit()
@@ -89,7 +95,10 @@ def work_generate_pdf(modelsdir, quantity, data_fil, outh5):
         precomp=True
         filein=modelsdir+'/'+modelsdir+'_ionisation.pkl'
         if(os.path.isfile(filein)):
-            pdfcom=pickle.load(open(filein))
+            try:
+                pdfcom=pickle.load(open(filein))
+            except:
+                pdfcom=pickle.load(open(filein,'rb'),encoding='latin1')
         else:
             print('Need to compute {} first'.format(filein))
             exit()
