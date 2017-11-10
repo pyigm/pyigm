@@ -69,7 +69,7 @@ def read_guesses_file(guesses_file, row_index_to_run):
         if line and not line.startswith("#"):
             linespl = line.strip().split()
             ##
-            for ls in xrange(len(linespl)):
+            for ls in range(len(linespl)):
                 if fmts[ls] == 'float':
                     input_dict[keys[ls]].append(float(linespl[ls]))
                 else:
