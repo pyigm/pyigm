@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 ############
 ##Import CBW's module/class that gets MCMC output data
 ############
-from MCMC_output import MCMC_output
+from pyigm.metallicity.MCMC_output import MCMC_output
 
 
 
