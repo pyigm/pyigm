@@ -84,8 +84,9 @@ def get_close_galaxies(field,rho_max=300.*u.kpc,minz=0.001,maxz=None):
 
 
 def cgmabssys_from_sightline_field(field,sightline,rho_max=300.*u.kpc,minz=0.001,
-                                   maxz=None,dv_max=400.*u.km/u.s,dummysys=True,
-                                   dummyspec=None,linelist=None,**kwargs):
+                                   maxz=None,dv_max=400.*u.km/u.s,embuffer=None,
+                                   dummysys=True,dummyspec=None,linelist=None,
+                                   **kwargs):
     """Instantiate list of CgmAbsSys objects from IgmgGalaxyField and IGMSightline.
 
     Parameters
@@ -100,6 +101,8 @@ def cgmabssys_from_sightline_field(field,sightline,rho_max=300.*u.kpc,minz=0.001
         Maximum redshift for galaxy/absorber search
     dv_max : Quantity, optional
         Maximum galaxy-absorber velocity separation
+    embuffer : Quantity, optional
+        Velocity buffer between background source (e.g., QSO) and CGMAbsSys
     dummysys : bool, optional
         Passed on to 'cgm_from_galaxy_igmsystems()'.  If True, create CGMAbsSyS
         even if no matching IGMSystem is found in any sightline for some galaxy.
@@ -121,7 +124,20 @@ def cgmabssys_from_sightline_field(field,sightline,rho_max=300.*u.kpc,minz=0.001
         from linetools.spectralline import AbsLine
         linelist = LineList('ISM')
 
-    closegals = get_close_galaxies(field,rho_max,minz,maxz)
+    if embuffer is not None:
+        try:
+            bufmax = ltu.z_from_dv(-embuffer,field.zem)
+            if maxz is not None:
+                zmax = np.max(bufmax,maxz)
+            else:
+                zmax = bufmax
+        except:
+            zmax = maxz
+    else:
+        zmax = maxz
+
+
+    closegals = get_close_galaxies(field,rho_max,minz,zmax)
     cgmabslist = []
     for i,gal in enumerate(closegals):
 
@@ -135,7 +151,8 @@ def cgmabssys_from_sightline_field(field,sightline,rho_max=300.*u.kpc,minz=0.001
 
 
 def cgmsurvey_from_sightlines_fields(fields, sightlines, rho_max=300*u.kpc,
-                                     name=None, dummysys=True,  **kwargs):
+                                     name=None, dummysys=True, embuffer=None,
+                                     **kwargs):
     """Instantiate CGMAbsSurvey object from lists fo IgmGalaxyFields and IGMSightlines
 
     Parameters
@@ -145,8 +162,10 @@ def cgmsurvey_from_sightlines_fields(fields, sightlines, rho_max=300*u.kpc,
     name : str, optional
         Name for the survey
     dummysys : bool, optional
-        Passed on to 'cgm_from_galaxy_igmsystems()'.  If True, create CGMAbsSyS
+        Passed on to 'cgm_from_galaxy_igmsystems()'.  If True, create CGMAbsSys
         even if no matching IGMSystem is found in any sightline for some galaxy
+    embuffer : Quantity, optional
+        Velocity buffer between background source (e.g., QSO) and CGMAbsSys
 
      Returns
     -------
@@ -166,7 +185,7 @@ def cgmsurvey_from_sightlines_fields(fields, sightlines, rho_max=300*u.kpc,
         print(ff.name)
         thiscgmlist = cgmabssys_from_sightline_field(ff,sightlines[i],rho_max=rho_max,
                                                      dummysys=dummysys,linelist=ismlist,
-                                                     **kwargs)
+                                                     embuffer=embuffer,**kwargs)
         cgmsys.extend(thiscgmlist)
     if name is not None:
         cgmsurvey=CGMAbsSurvey.from_cgmabssys(cgmsys,survey=name)
