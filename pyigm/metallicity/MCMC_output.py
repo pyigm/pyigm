@@ -2,7 +2,8 @@
 The MCMC_output() class designed for easily getting the walkers, medians
 (for the met, col, dens, etc.), and PDFs/CDFs (for the met, col, dens, etc.).
 You send a list of *.pkl/*.hd5 files and run the various functions, as desired.
-See also pyigm/docs/MCMC_output-how_to_use.ipynb for how to use, with examples.
+See also pyigm/docs/LLS_Metallicities-Wotta/MCMC_output-how_to_use.ipynb for
+how to use the class, with examples.
 """
 
 import numpy as np
