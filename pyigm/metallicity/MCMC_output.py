@@ -1,19 +1,23 @@
+"""
+The MCMC_output() class designed for easily getting the walkers, medians
+(for the met, col, dens, etc.), and PDFs/CDFs (for the met, col, dens, etc.).
+You send a list of *.pkl/*.hd5 files and run the various functions, as desired.
+See also pyigm/docs/MCMC_output-how_to_use.ipynb for how to use, with examples.
+"""
+
 import numpy as np
 import random
 
 from six import string_types
 
-##See also "README_python_get_pdf_cdf.py" for a longer example!!
-##Note there are two methods: one where you send an individual file
-##  and one where you send a LIST of files
-
-##Example:
+##Brief example:
 # import sys
 # sys.path.append('../../../IDL/')
 # from MCMC_output import MCMC_output
 # mcmc = MCMC_output()
 # mcmc.infiles = 'J0910+1014_242_34_z0.26412_emcee.pkl'
 # mcmc.NHIlow = 15.0
+# mcmc.NHIhigh = 19.0
 # mcmc.quantity = 'met'
 # walkers, nsys, limit_code = mcmc.get_walkers()
 # print("{} {} {}".format(len(walkers), nsys, limit_code))
@@ -24,6 +28,15 @@ from six import string_types
 ################################################
 ################################################
 
+
+"""
+This defines a dictionary of various NHI ranges and their names. It
+is for, e.g., plotting pLLS, LLS, etc. with different colors. It is
+also used within the MCMC_output() class if you wish to use the input
+mcmc.NHItype rather than setting mcmc.NHIlow and mcmc.NHIhigh. That is,
+you send MCMC_output() a list of all MCMC output files, give it and an
+NHI range, and it will return/include only those within the desired range.
+"""
 
 ##You can call this function independently
 ##  (e.g., for use in plotting scripts) like:
