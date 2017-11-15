@@ -300,11 +300,12 @@ class Emceebones(object):
         try:
             ##Python3
             fil=open(model,'br')
+            modl=pickle.load(fil,encoding='latin1')
         except:
             ##Python2
             fil=open(model,'r')
+            modl=pickle.load(fil)
 
-        modl=pickle.load(fil)
         fil.close()
 
         #unpack axis tag, axis value, grid column, grid ions
@@ -426,8 +427,10 @@ class Emceebones(object):
             pass
                     
         #Start by plotting the chains with initial guess and final values
+        xaxislabels = None
         fig=plt.figure()
         xaxis=np.arange(0,self.nsamp,1)
+        fig.subplots_adjust(hspace=0.10)
 
         #Loop over each parameter and plot chain
         for ii in range(self.ndim):
@@ -438,6 +441,12 @@ class Emceebones(object):
             for jj in range(self.nwalkers):
                 ax.plot(xaxis,thischain[jj,:],color='grey',alpha=0.5)
             ax.set_ylabel(self.mod_axistag[ii])
+            ##Remove x-axis labels, and put ticks inside
+            if xaxislabels is None:
+                xaxislabels = plt.xticks()[0]
+            
+            ax.set_xticklabels("")
+            ax.tick_params(axis='both', direction='in', top=True)
 
             #overplot burnt in cut
             ax.axvline(x=self.burn,color='red',linewidth=3)
@@ -447,9 +456,10 @@ class Emceebones(object):
             ax.axhline(y=self.paramguess[ii],color='black',linewidth=3)
 
         #Last plot
+        ax.set_xticklabels(xaxislabels)
+        ax.tick_params(axis='both', direction='in', top=True)
         ax.set_xlabel('Steps')
-        # fig.text(0.1,0.93,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='left',fontsize=10)
-        plt.title(self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),fontsize=10)
+        fig.text(0.50,0.93,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='center',fontsize=8)
         fig.savefig(self.outsave+'/'+self.info['name']+'_chains.pdf')
 
         #now do a corner plot
@@ -484,8 +494,7 @@ class Emceebones(object):
 
         plt.xticks(xaxis,axlab,rotation='vertical')
         plt.ylabel('Log Column')
-        plt.title(self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),fontsize=10)
-        # fig.text(0.1,0.93,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='left',fontsize=12)
+        rfig.text(0.50,0.93,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='center',fontsize=8)
         rfig.savefig(self.outsave+'/'+self.info['name']+'_residual.pdf')
         plt.close(rfig)
 
