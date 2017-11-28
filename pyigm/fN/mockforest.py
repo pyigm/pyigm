@@ -53,30 +53,32 @@ def dopp_val(x,bsig=24*u.km/u.s,bmnx=(15.,80)*u.km/u.s):
 
 
 def monte_HIcomp(zmnx, fN_model, NHI_mn=None, bfix=None, dz=0.001, cosmo=None,
-                 rstate=None, seed=None):
+    rstate=None, seed=None):
     """ Generate a Monte Carlo draw of HI components (z,N,b)
         
-        Parameters
-        ----------
-        zmnx : tuple (float,float)
+    Parameters
+     ----------
+    zmnx : tuple (float,float)
         Redshift range for analysis.
         Should correspond to Lya
-        fN_model : fN_Model class
-        NHI_mnx : tuple, optional (float,float)
+    fN_model : fN_Model class
+    NHI_mnx : tuple, optional (float,float)
         Range of logNHI for linelist
-        dz : float, optional
+    bfix : float, optional
+        None for using random b, float for a fixed b
+    dz : float, optional
         Step size for z discretization
-        cosmo : astropy Cosmology, optional
-        rstate : RandomState, optional
+    cosmo : astropy Cosmology, optional
+    rstate : RandomState, optional
         For random number generation
-        seed : int, optional
+    seed : int, optional
         Seed for random numbers
         
-        Returns:
-        -----------
-        HI_comps : list
+    Returns:
+    -----------
+    HI_comps : list
         List of HI components drawn for the given sightline
-        """
+    """
     # Init
     # NHI range
     if NHI_mn is None:
@@ -259,24 +261,28 @@ def mock_HIlines(HI_comps, wvmnx, tau0_min=5e-3):
 def mk_mock(wave, zem, fN_model, out_spec=None, add_conti=True,
             out_tbl=None, s2n=15., fwhm=3., bfix=None, NHI_mn=None, seed=None):
     """ Generate a mock
-        Parameters
-        ----------
-        wave : Quantity array
-        zem : float
-        fN_model
-        out_spec : str, optional
-        out_tbl : str, optional
-        s2n : float, optional
-        fwhm : float, optional
-        seed : int, optional
+    Parameters
+    ----------
+    wave : Quantity array
+    zem : float
+    fN_model
+    out_spec : str, optional
+    out_tbl : str, optional
+    s2n : float, optional
+    fwhm : float, optional
+    NHI_mnx : tuple, optional (float,float)
+        Range of logNHI for linelist
+    bfix : float, optional
+        None for using random b, float for a fixed b
+    seed : int, optional
         
-        Returns
-        -------
-        full_mock : XSpectrum1D of the mock
-        HI_comps : Table of the components
-        misc : tuple
-        Other bits and pieces [may deprecate]
-        """
+    Returns
+    -------
+    full_mock : XSpectrum1D of the mock
+    HI_comps : Table of the components
+    misc : tuple
+    Other bits and pieces [may deprecate]
+    """
     # Init
     rstate=np.random.RandomState(seed)
     
