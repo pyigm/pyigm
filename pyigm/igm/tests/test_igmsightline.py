@@ -4,17 +4,17 @@
 
 import pytest
 import numpy as np
+import os
 
 from linetools import utils as ltu
 
 from pyigm.igm.igmsightline import IGMSightline
 import pyigm
 
-'''
+
 def data_path(filename):
     data_dir = os.path.join(os.path.dirname(__file__), 'files')
     return os.path.join(data_dir, filename)
-'''
 
 def test_make_igmsystems():
     # Load a sightline
@@ -25,3 +25,9 @@ def test_make_igmsystems():
     igm_sys = igmsl.make_igmsystems()
     assert len(igm_sys) == 2
 
+def test_from_igmguesses():
+    radec = ('10:22:55.55', '+01:32:33.33')
+    zem = 1.0
+    igms = IGMSightline.from_igmguesses(radec, zem, data_path('SDSSJ080908_model.json'))
+    # Test
+    assert len(igms._components) == 2

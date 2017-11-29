@@ -14,10 +14,12 @@ Notebooks
 
    Simple Examples <IGMSurvey_examples>
    LLS <LLSSurvey_examples>
-   DLA <DLASystem_examples>
+   DLA <DLASurvey_examples>
 
-Overview
-========
+.. _igmsurvey:
+
+IGMSurvey
+=========
 
 This Class is designed to organize and analyze a survey of
 absorption systems (defined as AbsSystem objects).
@@ -108,24 +110,39 @@ This will grab 154Mb of data from the internet, and place
 them within pyigm/data/LLS/HD-LLS.
 
 
-DLA
-+++
+DLAs
+++++
 
-Subclass for DLA survey.  Presently handles the .dat and .lst files used
+Subclass for :ref:`dlasurvey`.  Presently handles the .dat and .lst files used
 by JXP.   See :doc:`DLASurvey_examples` for more.
 
-Here is a Table describing the various samples that may
-be accessed.
 
+.. _DLASurvey_examples: https://github.com/pyigm/pyigm/blob/master/docs/examples/DLASurvey_examples.ipynb
 .. _PW09: http://adsabs.harvard.edu/abs/2009ApJ...696.1543P
 .. _Neeleman+13: http://adsabs.harvard.edu/abs/2013ApJ...769...54N
+.. _Neeleman+16: http://adsabs.harvard.edu/abs/2016ApJ...818..113N
+.. _P03: http://adsabs.harvard.edu/abs/2003MNRAS.346.1103P
+.. _G09: http://adsabs.harvard.edu/abs/2009A%26A...508..133G
+.. _GGG: http://adsabs.harvard.edu/abs/2015MNRAS.452..217C
+.. _XQ100: http://adsabs.harvard.edu/abs/2016MNRAS.456.4488S
+
+Here is a Table describing the various DLA surveys that may
+be loaded and manipulated.
+
 
 ========== =============================  =================== ================================
 Survey     Call                           Reference(s)              Description
 ========== =============================  =================== ================================
-SDSS_DR5   DLASurvey.load_SDSS_DR5()      `PW09`_             DR5
+HST16      DLASurvey.load_HST16()         `Neeleman+16`_      Blind survey of HST UV spectra
 H100       DLASurvey.load_H100()          `Neeleman+13`_      100 unbiased HIRES spectra
+SDSS_DR5   DLASurvey.load_SDSS_DR5()      `PW09`_             DR5
+P03        DLASurvey.load_P03()           `P03`_              Compilation by Peroux et al.
+G09        DLASurvey.load_G09()           `G09`_              Compilation by Guimaraes et al.
+GGG        DLASurvey.load_GGG()           `GGG`_              Giant Gemini GMOS survey
+XQ100      DLASurvey.load_XQ100()         `XQ100`_            Survey of XQ-100 spectra
 ========== =============================  =================== ================================
+
+See `DLASurvey_examples`_ for usage example.
 
 Plots
 =====
@@ -146,6 +163,40 @@ selection function :math:`g(z)` curve::
    # DLA
    sdss = DLASurvey.load_SDSS_DR5()
    zeval, gz = sdss.calculate_gz()
+
+
+f(N,X)
+++++++
+
+Calculate the NHI frequency distribituion in bins of NHI and z.  e.g., ::
+
+    fN, fN_lo, fN_hi = sdss_stat.calculate_fn([20.3, 20.5, 21., 21.5, 22.], [2, 2.5], log=True)
+
+Setting log=True returns log10 values for f(N) and its error.
+
+l(X)
+++++
+
+Calculate the incidence per unit dX in binned redshift
+intervals.  Default is over all NHI values.  Here is an
+example::
+
+    lX, lX_lo, lX_hi = sdss_stat.calculate_lox([2., 2.5, 3])
+
+This calculates lX and its error in the intervals z=[2,2.5]
+and z=[2.5,3.].
+
+rhoHI
++++++
+
+Similar to the last two methods but now for the HI mass density.
+Here is an example::
+
+    zbins = [2., 2.5, 3.]
+    NHImnx = (20.3, 23.)
+    rho, rho_lo, rho_hi = sdss_stat.calculate_rhoHI(zbins, NHImnx)
+
+rho will have units of Solar mass per Mpc^3.
 
 Output
 ======

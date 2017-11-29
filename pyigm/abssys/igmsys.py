@@ -11,6 +11,7 @@ from linetools.isgm.abssystem import AbsSystem
 from linetools import utils as ltu
 from linetools.isgm import utils as ltiu
 
+
 class IGMSystem(AbsSystem):
     """
     Class for an IGM absorption system
@@ -41,11 +42,17 @@ class IGMSystem(AbsSystem):
 
     # Output
     def __repr__(self):
-        return ('<{:s}: {:s} {:s} {:s}, {:g}, NHI={:g}, Z/H={:g}>'.format(
+        txt = '<{:s}: {:s} {:s} {:s}, zabs={:g}, Z/H={:g}'.format(
                 self.__class__.__name__, self.abs_type,
-                 self.coord.ra.to_string(unit=u.hour, sep=':', pad=True),
-                 self.coord.dec.to_string(sep=':', pad=True),
-                 self.zabs, self.NHI, self.ZH))
+                 self.coord.fk5.ra.to_string(unit=u.hour, sep=':', pad=True),
+                 self.coord.fk5.dec.to_string(sep=':', pad=True),
+                 self.zabs, self.ZH)
+        # NHI
+        if self.NHI is not None:
+            txt = txt + ', NHI={:g}'.format(self.NHI)
+        # Finish
+        txt = txt + '>'
+        return (txt)
 
 
 class HISystem(IGMSystem):
@@ -67,6 +74,14 @@ class HISystem(IGMSystem):
         """"Return a string representing the type of vehicle this is."""
         return 'HI'
 
+
+class MgIISystem(IGMSystem):
+    """Class for MgII System
+    """
+    def __init__(self, radec, zabs, vlim, **kwargs):
+        IGMSystem.__init__(self, radec, zabs, vlim, abs_type='MgII', **kwargs)
+
+
 class AbsSubSystem(object):
     """
     Sub system.  Most frequently used in LLS
@@ -87,7 +102,7 @@ class AbsSubSystem(object):
     """
 
     @classmethod
-    def from_dict(cls, parent, idict, lbl):
+    def from_dict(cls, parent, idict, lbl, **kwargs):
         """ Generate a sub-system from a dict
 
         Parameters
@@ -97,10 +112,11 @@ class AbsSubSystem(object):
         idict : dict
           Contains the sub-system parameters
         lbl : str
+        **kwargs : Passed to build_componetns_from_dict
         """
         slf = cls(parent, idict['zabs'], idict['vlim']*u.km/u.s, lbl)
         # Components
-        components = ltiu.build_components_from_dict(idict)
+        components = ltiu.build_components_from_dict(idict, **kwargs)
         slf._components = components
         # Ion table
         slf._ionN = ltiu.iontable_from_components(components)
@@ -156,8 +172,8 @@ class AbsSubSystem(object):
         txt = '[{:s}: name={:s}{:s} type={:s}, {:s} {:s}, z={:g}, vlim={:g},{:g}'.format(
             self.__class__.__name__, self.parent.name, self.lbl,
             self.parent.abs_type,
-            self.parent.coord.ra.to_string(unit=u.hour,sep=':',pad=True),
-            self.parent.coord.dec.to_string(sep=':',pad=True,alwayssign=True),
+            self.parent.coord.fk5.ra.to_string(unit=u.hour,sep=':',pad=True),
+            self.parent.coord.fk5.dec.to_string(sep=':',pad=True,alwayssign=True),
             self.zabs, self.vlim[0],self.vlim[1])
         # Finish
         txt = txt + ']'

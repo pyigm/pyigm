@@ -10,7 +10,7 @@
 #;   14-Aug-2015 by JXP
 #;-
 #;- NT: New version using linetools' AbsComponent
-#;-
+#;- NT: New version with enhancements
 #;------------------------------------------------------------------------------
 """
 from __future__ import print_function, absolute_import, division, unicode_literals
@@ -19,12 +19,18 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import numpy as np
 import warnings
 import copy
+import datetime
 import pdb
 
-from PyQt4 import QtGui
-from PyQt4 import QtCore
+#from PyQt4 import QtGui
+#from PyQt4 import QtCore
+from PyQt5 import QtGui, QtCore
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import QWidget, QLabel, QPushButton, QMainWindow
+from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QComboBox
+from PyQt5.QtWidgets import QListWidget
 
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 # Matplotlib Figure object
 from matplotlib.figure import Figure
 
@@ -39,11 +45,25 @@ from linetools.spectra.xspectrum1d import XSpectrum1D
 from linetools.spectralline import AbsLine
 from linetools.isgm.abscomponent import AbsComponent
 from linetools.isgm import utils as ltiu
+from linetools.isgm import io as ltiio
 from linetools.guis import utils as ltgu
 from linetools.guis import line_widgets as ltgl
 from linetools.guis import simple_widgets as ltgsm
 from linetools.guis import spec_widgets as ltspw
 from linetools import utils as ltu
+from linetools.spectra.io import readspec
+
+try:
+    ustr = unicode
+except NameError:  # For Python 3
+    ustr = str
+
+try:
+    input = raw_input  # For Python 2.
+except NameError:
+    pass
+
+
 
 # Global variables; defined as globals mainly to increase speed and convenience
 c_kms = const.c.to('km/s').value
@@ -56,7 +76,7 @@ COLORS = ['#0066FF','#339933','#CC3300','#660066','#FF9900','#B20047']
 zero_coord = SkyCoord(ra=0.*u.deg, dec=0.*u.deg)  # Coords
 
 # GUI for fitting LLS in a spectrum
-class IGMGuessesGui(QtGui.QMainWindow):
+class IGMGuessesGui(QMainWindow):
     """ GUI to identify absorption features and provide reasonable
         first guesses of (z, logN, b) for subsequent Voigt profile
         fitting.
@@ -65,10 +85,10 @@ class IGMGuessesGui(QtGui.QMainWindow):
         30-Jul-2015 by JXP
     """
     def __init__(self, ispec, parent=None, previous_file=None, 
-        srch_id=True, outfil=None, fwhm=None,
+        srch_id=True, outfil=None, fwhm=None, screen_scale=1.,
         plot_residuals=True,n_max_tuple=None, min_strength=None,
-                 min_ew=None, vlim_disp=None, external_model=None):
-        QtGui.QMainWindow.__init__(self, parent)
+                 min_ew=None, vlim_disp=None, external_model=None, redsh=None): #added redsh=None
+        QMainWindow.__init__(self, parent)
         """
         ispec : str
             Name of the spectrum file to load
@@ -138,6 +158,7 @@ N,n       : slightly increase/decrease column density in initial guess
 V,v       : slightly increase/decrease b-value in initial guess
 <,>       : slightly increase/decrease redshift in initial guess
 R         : refit
+z         : Sort the component list by redshift
 X,x       : add/remove `bad pixels` (for avoiding using them in subsequent
             VP fitting; works as `A` command, i.e. need to define two limits)
 L         : toggle displaying/hiding labels of currently identified lines
@@ -152,12 +173,14 @@ E         : toggle displaying/hiding the external absorption model
 """
 
         # Build a widget combining several others
-        self.main_widget = QtGui.QWidget()
+        self.main_widget = QWidget()
 
         # Status bar
         self.create_status_bar()
 
         # Initialize
+        self.scale = screen_scale
+        self.update = True
         self.previous_file = previous_file
         if outfil is None:
             self.outfil = 'IGM_model.json'
@@ -173,6 +196,7 @@ E         : toggle displaying/hiding the external absorption model
             self.fwhm = 3.
         else:
             self.fwhm = fwhm
+
         self.plot_residuals = plot_residuals
         self.n_max_tuple = n_max_tuple
         self.min_strength = min_strength
@@ -181,10 +205,13 @@ E         : toggle displaying/hiding the external absorption model
             vlim_disp = [-500.,500.] * u.km/u.s
         self.vlim_disp = vlim_disp
 
+
+
         # Load spectrum
-        spec, spec_fil = ltgu.read_spec(ispec)
-        # Should do coordinates properly eventually
-        self.coord = zero_coord
+        # spec, spec_fil = ltgu.read_spec(ispec, masking='edges')
+        spec = readspec(ispec, masking='edges')
+
+
         # Normalize
         if spec.co_is_set:
             spec.normalize(co=spec.co)
@@ -194,7 +221,7 @@ E         : toggle displaying/hiding the external absorption model
 
         # Load external model spectrum
         if external_model is not None:
-            self.external_model, _ = ltgu.read_spec(external_model)
+            self.external_model = readspec(external_model)
         else:
             self.external_model = None
 
@@ -209,7 +236,7 @@ E         : toggle displaying/hiding the external absorption model
 
         # Full spectrum model
         self.model = XSpectrum1D.from_tuple(
-            (spec.wavelength, np.ones(len(spec.wavelength))))
+            (spec.wavelength, np.ones(len(spec.wavelength))), masking='edges')
 
         # LineList (Grab ISM, Strong and HI as defaults)
         print('Loading built in LineList: ISM, HI and Strong.')
@@ -230,7 +257,7 @@ E         : toggle displaying/hiding the external absorption model
         self.llist['Lists'].append('HI')
         self.llist['Lists'].append('Strong')
         self.llist['Lists'].append('available')
-        if 0: # for H2 testing
+        if 1: # for H2 testing
             self.llist['H2'] = LineList('H2')
             self.llist['H2'].sortdata(['rel_strength'], reverse=True)
             self.llist['Lists'].append('H2')
@@ -238,13 +265,17 @@ E         : toggle displaying/hiding the external absorption model
         # Define initial redshift
         z = 0.0
         self.llist['z'] = z
+        if redsh is not None:
+            z=redsh
+            self.llist['z'] = z
+            print("Redshift set to",z,redsh)
         
         # Grab the pieces and tie together
         self.slines_widg = ltgl.SelectedLinesWidget(
             self.llist[self.llist['List']], parent=self, init_select='All')
         self.fiddle_widg = FiddleComponentWidget(parent=self)
         self.comps_widg = ComponentListWidget([], parent=self)
-        self.velplot_widg = IGGVelPlotWidget(spec, z, 
+        self.velplot_widg = IGGVelPlotWidget(spec, z, screen_scale=self.scale,
             parent=self, llist=self.llist, fwhm=self.fwhm, plot_residuals=self.plot_residuals,
             vmnx=self.vlim_disp, external_model=self.external_model)
         self.wq_widg = ltgsm.WriteQuitWidget(parent=self)
@@ -252,25 +283,30 @@ E         : toggle displaying/hiding the external absorption model
 
         # Load prevoius file
         if self.previous_file is not None:
-            self.read_previous()
+            self.read_previous()  # (self.meta and self.coord are defined here)
+        else:
+            self.meta = init_meta()
+            self.meta = fill_meta(self.meta)
+            self.coord = SkyCoord(self.meta['RA'], self.meta['DEC'], unit='deg')
+
         # Connections (buttons are above)
         #self.spec_widg.canvas.mpl_connect('key_press_event', self.on_key)
         #self.abssys_widg.abslist_widget.itemSelectionChanged.connect(
         #    self.on_list_change)
 
         # Layout
-        anly_widg = QtGui.QWidget()
-        anly_widg.setMaximumWidth(500)
-        anly_widg.setMinimumWidth(250)
+        anly_widg = QWidget()
+        anly_widg.setMaximumWidth(int(500*self.scale))
+        anly_widg.setMinimumWidth(int(250*self.scale))
 
-        vbox = QtGui.QVBoxLayout()
+        vbox = QVBoxLayout()
         vbox.addWidget(self.fiddle_widg)
         vbox.addWidget(self.comps_widg)
         vbox.addWidget(self.slines_widg)
         vbox.addWidget(self.wq_widg)
         anly_widg.setLayout(vbox)
 
-        hbox = QtGui.QHBoxLayout()
+        hbox = QHBoxLayout()
         hbox.addWidget(self.velplot_widg)
         hbox.addWidget(anly_widg)
 
@@ -306,8 +342,13 @@ E         : toggle displaying/hiding the external absorption model
         wvmax = self.velplot_widg.spec.wvmax
         wvlims = (wvmin / (1. + z), wvmax / (1. + z))
 
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
+
         transitions = linelist.available_transitions(
             wvlims, n_max_tuple=self.n_max_tuple, min_strength=self.min_strength)
+
 
         if transitions is None:
             print('  There are no transitions available!')
@@ -318,8 +359,7 @@ E         : toggle displaying/hiding the external absorption model
         else: # transitions should be a QTable
             names = list(np.array(transitions['name']))
         if len(names) > 0:
-            self.llist['available'] = linelist.subset_lines(subset=names, reset_data=True, verbose=True,
-                                                            sort_by='as_given')
+            self.llist['available'] = linelist.subset_lines(subset=names, verbose=True, sort_by='as_given')
             self.llist['List'] = 'available'
         print('Done.')
 
@@ -327,7 +367,7 @@ E         : toggle displaying/hiding the external absorption model
         self.update_boxes()
 
     def create_status_bar(self):
-        self.status_text = QtGui.QLabel("IGMGuessesGUI: Please press '?' to display help message in terminal.")
+        self.status_text = QLabel("IGMGuessesGUI: Please press '?' to display help message in terminal.")
         self.statusBar().addWidget(self.status_text, 1)
 
     def delete_component(self, component):
@@ -379,6 +419,17 @@ E         : toggle displaying/hiding the external absorption model
         # Read the JSON file
         with open(self.previous_file) as data_file:    
             igmg_dict = json.load(data_file)
+
+        # load metadata
+        try:
+            self.meta = igmg_dict['meta']
+        except KeyError:  # for backwards compatibility
+            self.meta = init_meta()
+        # fill and reformat (e.g. from str to float)
+        self.meta = fill_meta(self.meta)
+        # update coord
+        self.coord = SkyCoord(self.meta['RA'], self.meta['DEC'], unit='deg')
+
         # Check FWHM
         if igmg_dict['fwhm'] != self.fwhm:
             raise ValueError('Input FWHMs do not match. Please fix it!')
@@ -405,8 +456,13 @@ E         : toggle displaying/hiding the external absorption model
         for ii, key in enumerate(igmg_dict['cmps'].keys()):
 
             if 'lines' in igmg_dict['cmps'][key].keys():
-                comp = AbsComponent.from_dict(igmg_dict['cmps'][key], linelist=self.llist['ISM'], coord=self.coord,
-                                              chk_sep=False, chk_data=False, chk_vel=False)
+                try:
+                    comp = AbsComponent.from_dict(igmg_dict['cmps'][key], linelist=self.llist['ISM'], coord=self.coord,
+                                                  chk_sep=False, chk_data=False, chk_vel=False)
+                except ValueError: # H2 lines
+                    comp = AbsComponent.from_dict(igmg_dict['cmps'][key], linelist=self.llist['H2'], coord=self.coord,
+                                                  chk_sep=False, chk_data=False, chk_vel=False)
+
                 # QtCore.pyqtRemoveInputHook()
                 # pdb.set_trace()
                 # QtCore.pyqtRestoreInputHook()
@@ -434,9 +490,9 @@ E         : toggle displaying/hiding the external absorption model
             self.velplot_widg.current_comp.attrib['b'] = igmg_dict['cmps'][key]['bfit']*u.km/u.s
             self.velplot_widg.current_comp.attrib['logN'] = igmg_dict['cmps'][key]['Nfit']
             try: # This should me removed in the future
-                self.velplot_widg.current_comp.attrib['Reliability'] = igmg_dict['cmps'][key]['Reliability']
+                self.velplot_widg.current_comp.reliability = igmg_dict['cmps'][key]['Reliability']
             except:
-                self.velplot_widg.current_comp.attrib['Reliability'] = igmg_dict['cmps'][key]['Quality']  # old version compatibility
+                self.velplot_widg.current_comp.reliability = igmg_dict['cmps'][key]['Quality']  # old version compatibility
             self.velplot_widg.current_comp.comment = igmg_dict['cmps'][key]['Comment']
             # Sync
             sync_comp_lines(self.velplot_widg.current_comp)
@@ -453,13 +509,14 @@ E         : toggle displaying/hiding the external absorption model
         self.fiddle_widg.init_component(self.velplot_widg.current_comp)
 
 
+    @pyqtSlot()
     def write_out(self):
         """ Write to a JSON file"""
         import json, io
         # Create dict of the components
-        out_dict = dict(cmps={},
-                        spec_file=self.velplot_widg.spec.filename,
-                        fwhm=self.fwhm, bad_pixels=[])
+        out_dict = dict(meta=self.meta, spec_file=self.velplot_widg.spec.filename,
+                        fwhm=self.fwhm, cmps={}, bad_pixels=[])
+
 
         # Write components out
         # We need a deep copy here because ._abslines will be modified before writting
@@ -485,8 +542,8 @@ E         : toggle displaying/hiding the external absorption model
             out_dict['cmps'][key]['bfit'] = comp.attrib['b'].value
             out_dict['cmps'][key]['wrest'] = comp.init_wrest.value
             out_dict['cmps'][key]['vlim'] = list(comp.vlim.value)
-            out_dict['cmps'][key]['Reliability'] = str(comp.attrib['Reliability'])
-            out_dict['cmps'][key]['Comment'] = str(comp.comment)
+            out_dict['cmps'][key]['Reliability'] = comp.reliability
+            out_dict['cmps'][key]['Comment'] = comp.comment
             out_dict['cmps'][key]['mask_abslines'] = comp.mask_abslines
         # Write bad/good pixels out
         # good_pixels = np.where(self.velplot_widg.spec.good_pixels == 1)[0]
@@ -501,27 +558,29 @@ E         : toggle displaying/hiding the external absorption model
 
         # Write file
         with io.open(self.outfil, 'w', encoding='utf-8') as f:
-            f.write(unicode(json.dumps(gd_dict, sort_keys=True, indent=4,
+            f.write(ustr(json.dumps(gd_dict, sort_keys=True, indent=4,
                                        separators=(',', ': '))))
-        print('Wrote: {:s}'.format(self.outfil))
+        print('IGMGuesses: wrote {:s} on date {}'.format(self.outfil, self.meta['Date']))
 
     # Write + Quit
+    @pyqtSlot()
     def write_quit(self):
         self.write_out()
         self.quit()
 
     # Quit
+    @pyqtSlot()
     def quit(self):
         self.close()
 
- ######################
-class IGGVelPlotWidget(QtGui.QWidget):
+######################
+class IGGVelPlotWidget(QWidget):
     """ Widget for a velocity plot with interaction.
           Adapted from VelPlotWidget in spec_guis
         14-Aug-2015 by JXP
     """
-    def __init__(self, ispec, z, parent=None, llist=None, norm=True,
-                 vmnx=[-500., 500.]*u.km/u.s, fwhm=0., plot_residuals=True, external_model=None):
+    def __init__(self, ispec, z, parent=None, llist=None, norm=True, screen_scale=1.,
+    vmnx=[-500., 500.]*u.km/u.s, fwhm=0., plot_residuals=True, external_model=None):
         '''
         spec = Spectrum1D
         Norm: Bool (False)
@@ -534,12 +593,17 @@ class IGGVelPlotWidget(QtGui.QWidget):
         # init help message
         self.help_message = parent.help_message
 
+        # QtCore.pyqtRemoveInputHook()
+        # pdb.set_trace()
+        # QtCore.pyqtRestoreInputHook()
+
         # Initialize
         self.parent = parent
-        spec, spec_fil = ltgu.read_spec(ispec)
-        
-        self.spec = spec
-        self.spec_fil = spec_fil
+        self.spec = ispec
+        self.spec_fil = self.spec.filename
+
+        self.scale = screen_scale
+
         self.fwhm = fwhm
         self.z = z
         self.vmnx = vmnx
@@ -555,7 +619,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         self.wrest = 0.
         self.avmnx = np.array([0.,0.])*u.km/u.s
         self.model = XSpectrum1D.from_tuple(
-            (spec.wavelength, np.ones(len(spec.wavelength))))
+            (self.spec.wavelength, np.ones(len(self.spec.wavelength))))
 
         # define external model
         self.external_model = external_model
@@ -570,8 +634,9 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 self.ext_res = (self.spec.flux - self.external_model.flux) * self.residual_normalization_factor
 
         self.psdict = {} # Dict for spectra plotting
-        self.psdict['x_minmax'] = self.vmnx.value # Too much pain to use units with this
+        self.psdict['x_minmax'] = list(self.vmnx.value) # Too much pain to use units with this
         self.psdict['y_minmax'] = [-0.1, 1.1]
+        self.psdict['sv_xy_minmax'] = self.psdict['x_minmax'] + self.psdict['y_minmax']
         self.psdict['nav'] = ltgu.navigate(0,0,init=True)
 
 
@@ -596,7 +661,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         
         # Create the mpl Figure and FigCanvas objects. 
         #
-        self.dpi = 150
+        self.dpi = int(150*self.scale)
         self.fig = Figure((8.0, 4.0), dpi=self.dpi)
         self.canvas = FigureCanvas(self.fig)
         self.canvas.setParent(self)
@@ -613,7 +678,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         self.fig.subplots_adjust(hspace=0.0, wspace=0.1, left=0.04,
                                  right=0.975, top=0.9, bottom=0.07)
         
-        vbox = QtGui.QVBoxLayout()
+        vbox = QVBoxLayout()
         vbox.addWidget(self.canvas)
         
         self.setLayout(vbox)
@@ -704,7 +769,13 @@ class IGGVelPlotWidget(QtGui.QWidget):
             try:
                 cond = new_comp._abslines[0].analy['wvlim'] == [0,0]*u.AA
             except:
-                cond = new_comp._abslines[0].limits.wvlim == [0,0]*u.AA
+                try:
+                    cond = new_comp._abslines[0].limits.wvlim == [0,0]*u.AA
+                except:
+                    print('IGMGuesses: Please contact N.Tejos (ntejos@gmail.com) for solving this problem.')
+                    QtCore.pyqtRemoveInputHook()
+                    pdb.set_trace()
+                    QtCore.pyqtRestoreInputHook()
 
             if np.sum(cond)>0:
                 #sync wvlims
@@ -781,7 +852,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         Nguess = np.log10(fit_line.attrib['N'].to('cm**-2').value)
         # Voigt model
         fitvoigt = lav.single_voigt_model(logN=Nguess,b=bguess.value,
-                                z=zguess, wrest=component.init_wrest.value,
+                                z=zguess.value, wrest=component.init_wrest.value,
                                 gamma=fit_line.data['gamma'].value, 
                                 f=fit_line.data['f'], fwhm=self.fwhm)
         # Restrict parameter space
@@ -792,8 +863,10 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
         # Fit
         fitter = fitting.LevMarLSQFitter()
-        parm = fitter(fitvoigt,self.spec.wavelength[fit_line.analy['pix']],
-            self.spec.flux[fit_line.analy['pix']].value)
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
+        parm = fitter(fitvoigt,self.spec.wavelength[fit_line.analy['pix']].value, self.spec.flux[fit_line.analy['pix']].value)
 
         # Save and sync
         component.attrib['logN'] = parm.logN.value
@@ -913,9 +986,6 @@ class IGGVelPlotWidget(QtGui.QWidget):
             mtc = np.where(wrest == iwrest)[0]
             if len(mtc) == 0:
                 return
-            # QtCore.pyqtRemoveInputHook()
-            # pdb.set_trace()
-            # QtCore.pyqtRestoreInputHook()
             dvz = np.array([c_kms * (self.z - components[mt].zcomp) / (1+self.z) for mt in mtc])
             # Find minimum
             mindvz = np.argmin(np.abs(dvz+event.xdata))
@@ -926,6 +996,37 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 self.parent.comps_widg.complist_widget.setCurrentRow(idx+1) # +1 because None counts
             elif event.key == 'D': # Delete nearest component to cursor
                 self.parent.delete_component(components[mtc[mindvz]])
+
+        ## Sort component list
+        if event.key == 'z':
+            # Find the order
+            components = self.parent.comps_widg.all_comp
+            ncomp = len(components)
+            if ncomp <= 1:
+                return
+            zcomp = np.array([comp.zcomp for comp in components])
+            isrt = np.argsort(zcomp)
+            # Reset the list
+            new_list = []
+            new_names = []
+            for ii in range(ncomp):
+                # Add
+                new_list.append(components[isrt[ii]])
+                new_names.append(self.parent.comps_widg.all_items[isrt[ii]])
+                # Remove
+                tmp = self.parent.comps_widg.complist_widget.takeItem(ncomp-ii)  # +1 because of None counts in widget list but no in component list
+            # Regenerate the list
+            self.parent.comps_widg.all_comp = new_list
+            self.parent.comps_widg.all_items = new_names
+            for comp_name in new_names:
+                self.parent.comps_widg.complist_widget.addItem(comp_name)
+
+            # Choose None item to avoid confusion
+            self.parent.comps_widg.complist_widget.item(0).setSelected(True)
+
+            #QtCore.pyqtRemoveInputHook()
+            #pdb.set_trace()
+            #QtCore.pyqtRestoreInputHook()
 
         ## Reset z
         if event.key == ' ': # space to move redshift
@@ -959,7 +1060,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         if event.key == '%':
             # GUI
             aux_table = self.llist[self.llist['List']]._data  # is a table of lines
-            z_aux = wvobs/aux_table['wrest'] - 1.
+            z_aux = wvobs/Quantity(aux_table['wrest']) - 1.
             aux_table['redshift'] = z_aux.value  # adding aux_z to the aux_table
             self.select_line_widg = ltgl.SelectLineWidget(aux_table)
             self.select_line_widg.exec_()
@@ -969,8 +1070,12 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
             quant = line.split('::')[1].lstrip()
             spltw = quant.split(' ')
-            wrest = Quantity(float(spltw[0]), unit=spltw[1])
+            wrest = Quantity(float(spltw[0]), unit='AA')
             #
+            # QtCore.pyqtRemoveInputHook()
+            # pdb.set_trace()
+            # QtCore.pyqtRestoreInputHook()
+
             self.z = (wvobs/wrest - 1.).value
             #self.statusBar().showMessage('z = {:f}'.format(z))
             self.init_lines()
@@ -1000,7 +1105,6 @@ class IGGVelPlotWidget(QtGui.QWidget):
             s = "current parent LineList set to 'H2'."
             print(s)
             self.parent.statusBar().showMessage('IGMGuessesGUI: '+ s)
-
 
 
         if event.key == 'F':  # Load Full ISM
@@ -1099,13 +1203,13 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
         # print component info
         if event.key == '@':  #  for develop; this will be deleted in future.
-            print('Computing blends between components, it may take a while...\n')
             # Write joebvp files; for developing.
-            blending_info(self.parent.comps_widg.all_comp, self.spec_fil)  # this one writes them internally. Should be cleaned.
+            blending_info(self.parent.comps_widg.all_comp, self.spec_fil, ask_user=True)  # this one writes them internally. Should be cleaned.
+            print('IGMGuesses: wrote a bunch of .joebvp files.')
 
-            joebvp_output = self.parent.outfil.replace('.json', '.joebvp')
-            from_igmguesses_to_joebvp(self.parent.outfil, joebvp_output)
-            print('Wrote: {:s}'.format(joebvp_output))
+            # joebvp_output = self.parent.outfil.replace('.json', '.joebvp')
+            # from_igmguesses_to_joebvp(self.parent.outfil, joebvp_output)
+            # print('Wrote: {:s}'.format(joebvp_output))
 
         """
         # AODM plot
@@ -1146,7 +1250,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         try:
             print('button={:d}, x={:f}, y={:f}, xdata={:f}, ydata={:f}'.format(
                 event.button, event.x, event.y, event.xdata, event.ydata))
-        except ValueError:
+        except (ValueError, TypeError):
             return
         if event.button == 1: # Draw line
             # remove this ugly green line
@@ -1166,8 +1270,10 @@ class IGGVelPlotWidget(QtGui.QWidget):
         if replot is True:
             if fig_clear:
                 self.fig.clf()
-            # Title by redshift
-            self.fig.suptitle('{}\nz={:.5f}'.format(self.spec.filename,self.z), fontsize='medium', ha='center')
+            # Title by filename + zem + redshift
+            zem = self.parent.meta['zem']
+            self.fig.suptitle('{} (zem={:.3f})\nz={:.5f}'.format(self.spec.filename, zem, self.z), fontsize='medium',
+                              ha='center')
 
             # Components
             components = self.parent.comps_widg.all_comp 
@@ -1186,10 +1292,10 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 line_color = []
                 line_wvobs_lims = []
                 for comp in components:
-                    if comp.attrib['Reliability'] == 'None':
+                    if comp.reliability == 'none':
                         la = ''
                     else:
-                        la = comp.attrib['Reliability']
+                        la = comp.reliability
                     for ii, line in enumerate(comp._abslines):
                         if comp.mask_abslines[ii] == 0:  # do not plot these masked out lines
                             continue
@@ -1295,8 +1401,14 @@ class IGGVelPlotWidget(QtGui.QWidget):
                 else:
                     self.ax.get_xaxis().set_ticks([])
                 lbl = self.llist[self.llist['List']].name[idx]
+                if self.scale > 1.:
+                    fsize = 'large'
+                    fsize2 = 'small'
+                else:
+                    fsize = 'x-small'
+                    fsize2 ='xx-small'
                 self.ax.text(0.01, 0.15, lbl, color=color, transform=self.ax.transAxes,
-                             size='x-small', ha='left', va='center', backgroundcolor='w',
+                             size=fsize, ha='left', va='center', backgroundcolor='w',
                              bbox={'pad':0, 'edgecolor':'none', 'facecolor':'w'})
 
                 # labels for individual components
@@ -1313,7 +1425,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
 
                         if self.flag_idlbl:
                             self.ax.text(v.value, 0.5, line_lbl[imt], color=color_label, backgroundcolor='w',
-                                bbox={'pad':0,'edgecolor':'none', 'facecolor':'w'}, size='xx-small',
+                                bbox={'pad':0,'edgecolor':'none', 'facecolor':'w'}, size=fsize2,
                                     rotation=90.,ha='center',va='center')
 
                         if (self.flag_plotmodel) and (self.flag_colorful):
@@ -1381,7 +1493,7 @@ class IGGVelPlotWidget(QtGui.QWidget):
         # Draw
         self.canvas.draw()
 ############        
-class FiddleComponentWidget(QtGui.QWidget):
+class FiddleComponentWidget(QWidget):
     ''' Widget to fiddle with a given component
     '''
     def __init__(self, component=None, parent=None):
@@ -1392,14 +1504,16 @@ class FiddleComponentWidget(QtGui.QWidget):
         self.parent = parent
         #if not status is None:
         #    self.statusBar = status
-        self.label = QtGui.QLabel('Component:',self)
+        self.label = QLabel('Component:',self)
         self.zwidget = ltgsm.EditBox(-1., 'zc=', '{:0.5f}')
         self.Nwidget = ltgsm.EditBox(-1., 'Nc=', '{:0.2f}')
         self.bwidget = ltgsm.EditBox(-1., 'bc=', '{:0.1f}')
 
-        self.ddlbl = QtGui.QLabel('Reliability')
-        self.ddlist = QtGui.QComboBox(self)
-        self.ddlist.addItem('None')
+        # self.button.move(20,80)
+
+        self.ddlbl = QLabel('Reliability')
+        self.ddlist = QComboBox(self)
+        self.ddlist.addItem('none')
         self.ddlist.addItem('a')
         self.ddlist.addItem('b')
         self.ddlist.addItem('c')
@@ -1413,59 +1527,65 @@ class FiddleComponentWidget(QtGui.QWidget):
 
         # Connect
         self.ddlist.activated[str].connect(self.setReliability)
-        self.connect(self.Nwidget.box, 
-            QtCore.SIGNAL('editingFinished ()'), self.setbzN)
-        self.connect(self.zwidget.box, 
-            QtCore.SIGNAL('editingFinished ()'), self.setbzN)
-        self.connect(self.bwidget.box, 
-            QtCore.SIGNAL('editingFinished ()'), self.setbzN)
-        self.connect(self.Cwidget.box, 
-            QtCore.SIGNAL('editingFinished ()'), self.setbzN)
+        # self.button.move(20,80)
+        #self.show()
+        # self.Nwidget.box.textChanged[str].connect(self.setbzNc)
+        # self.zwidget.box.textChanged[str].connect(self.setbzNc)
+        # self.bwidget.box.textChanged[str].connect(self.setbzNc)
+        # self.Cwidget.box.textChanged[str].connect(self.setbzNc)
 
         # Layout
-        zNbwidg = QtGui.QWidget()
-        hbox2 = QtGui.QHBoxLayout()
+        zNbwidg = QWidget()
+        hbox2 = QHBoxLayout()
         hbox2.addWidget(self.zwidget)
         hbox2.addWidget(self.Nwidget)
         hbox2.addWidget(self.bwidget)
         zNbwidg.setLayout(hbox2)
 
-        ddwidg = QtGui.QWidget()
-        vbox1 = QtGui.QVBoxLayout()
+        ddwidg = QWidget()
+        vbox1 = QVBoxLayout()
         vbox1.addWidget(self.ddlbl)
         vbox1.addWidget(self.ddlist)
         ddwidg.setLayout(vbox1)
 
-        commwidg = QtGui.QWidget()
-        hbox3 = QtGui.QHBoxLayout()
+        commwidg = QWidget()
+        hbox3 = QHBoxLayout()
         hbox3.addWidget(ddwidg)
         hbox3.addWidget(self.Cwidget)
         commwidg.setLayout(hbox3)
 
+        # Button
+        self.ubtn = UpdateWidget(parent=self)
+
         # Layout
-        vbox = QtGui.QVBoxLayout()
+        vbox = QVBoxLayout()
         vbox.addWidget(self.label)
         vbox.addWidget(zNbwidg)
         vbox.addWidget(commwidg)
+        vbox.addWidget(self.ubtn)
+
         self.setLayout(vbox)
+        #self.show()
 
     def init_component(self,component):
         '''Setup Widget for the input component'''
         self.component = component
         # Values
+        self.update = False  # Avoids a bit of an internal loop
         self.Nwidget.set_text(self.component.attrib['logN'])
         self.zwidget.set_text(self.component.attrib['z'])
         self.bwidget.set_text(self.component.attrib['b'].value)
         self.Cwidget.set_text(self.component.comment)
+        self.update = True  # Avoids a bit of an internal loop
         # Reliability
-        idx = self.ddlist.findText(self.component.attrib['Reliability'])
+        idx = self.ddlist.findText(self.component.reliability)
         self.ddlist.setCurrentIndex(idx)
         # Label
         self.set_label()
 
     def setReliability(self, text):
         if self.component is not None:
-            self.component.attrib['Reliability'] = text
+            self.component.reliability = text
 
     def reset(self):
         #
@@ -1481,11 +1601,13 @@ class FiddleComponentWidget(QtGui.QWidget):
         self.set_label()
 
     def update_component(self):
-        '''Values have changed'''
+        """Values have changed"""
+        self.update = False  # Avoids a bit of an internal loop
         self.Nwidget.set_text(self.component.attrib['logN'])
         self.zwidget.set_text(self.component.attrib['z'])
         self.bwidget.set_text(self.component.attrib['b'].value)
         self.Cwidget.set_text(self.component.comment)
+        self.update = True  # Avoids a bit of an internal loop
         if self.parent is not None:
             self.parent.updated_component()
 
@@ -1496,16 +1618,25 @@ class FiddleComponentWidget(QtGui.QWidget):
         else:
             self.label.setText('Component:')
 
-    def setbzN(self):
-        '''Set the component column density or redshift from the boxes'''
+    @pyqtSlot()
+    def setbzNc(self):
+        '''Set the component attributes from the boxes, including comment'''
+
+        if self.update is False:
+            return
         if self.component is None:
             print('Need to generate a component first!')
+            return
         else:
             # Grab values
-            self.component.attrib['logN'] = (float(self.Nwidget.box.text()))
-            self.component.attrib['z'] = (float(self.zwidget.box.text()))
-            self.component.attrib['b'] = (float(self.bwidget.box.text()))*u.km/u.s
-            self.component.comment = str(self.Cwidget.box.text())
+            try:
+                self.component.attrib['logN'] = (float(self.Nwidget.box.text()))
+                self.component.attrib['z'] = (float(self.zwidget.box.text()))
+                self.component.attrib['b'] = (float(self.bwidget.box.text()))*u.km/u.s
+                self.component.comment = str(self.Cwidget.box.text())
+            except ValueError:  # this is when the str cannot be converted to float
+                print("The new value is not valid. Try again.")
+
             #QtCore.pyqtRemoveInputHook()
             #pdb.set_trace()
             #QtCore.pyqtRestoreInputHook()
@@ -1514,8 +1645,8 @@ class FiddleComponentWidget(QtGui.QWidget):
                 self.parent.updated_component()
 
 # #####
-class ComponentListWidget(QtGui.QWidget):
-    ''' Widget to organize components on a sightline
+class ComponentListWidget(QWidget):
+    """ Widget to organize components on a sightline
 
     Parameters:
     -----------
@@ -1523,14 +1654,14 @@ class ComponentListWidget(QtGui.QWidget):
       List of components
 
     16-Dec-2014 by JXP
-    '''
+    """
     def __init__(self, components, parent=None, no_buttons=False):
-        '''
+        """
         only_one: bool, optional
           Restrict to one selection at a time? [False]
         no_buttons: bool, optional
           Eliminate Refine/Reload buttons?
-        '''
+        """
         super(ComponentListWidget, self).__init__(parent)
 
         self.parent = parent
@@ -1539,8 +1670,8 @@ class ComponentListWidget(QtGui.QWidget):
         #    self.statusBar = status
         self.all_comp = components  # Actual components
 
-        list_label = QtGui.QLabel('Components:')
-        self.complist_widget = QtGui.QListWidget(self) 
+        list_label = QLabel('Components:')
+        self.complist_widget = QListWidget(self)
         #self.complist_widget.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
         self.complist_widget.addItem('None')
         #self.abslist_widget.addItem('Test')
@@ -1553,7 +1684,7 @@ class ComponentListWidget(QtGui.QWidget):
         self.complist_widget.itemSelectionChanged.connect(self.on_list_change)
 
         # Layout
-        vbox = QtGui.QVBoxLayout()
+        vbox = QVBoxLayout()
         vbox.addWidget(list_label)
         vbox.addWidget(self.complist_widget)
         self.setLayout(vbox)
@@ -1581,46 +1712,6 @@ class ComponentListWidget(QtGui.QWidget):
             if self.parent is not None:
                 self.parent.updated_compslist(self.all_comp[ii])
 
-        '''
-        items = self.complist_widget.selectedItems()
-        # Empty the list
-        #self.abs_sys = []
-        if len(self.abs_sys) > 0:
-            for ii in range(len(self.abs_sys)-1,-1,-1):
-                self.abs_sys.pop(ii)
-        # Load up abs_sys (as need be)
-        new_items = []
-        for item in items:
-            txt = item.text()
-            # Dummy
-            if txt == 'None':
-                continue
-            print('Including {:s} in the list'.format(txt))
-            # Using LLS for now.  Might change to generic
-            new_items.append(txt)
-            ii = self.all_items.index(txt)
-            self.abs_sys.append(self.all_abssys[ii])
-
-        # Pass back
-        self.items = new_items
-        #QtCore.pyqtRemoveInputHook()
-        #pdb.set_trace()
-        #QtCore.pyqtRestoreInputHook()
-        '''
-    '''
-    def selected_components(self):
-        items = self.complist_widget.selectedItems()
-        selc = []
-        for item in items:
-            txt = item.text()
-            if txt == 'None':
-                continue
-            ii = self.all_items.index(txt)
-            selc.append(self.all_comp[ii])
-        # Return
-        return selc
-    '''
-
     def add_component(self,component):
         self.all_comp.append( component )
         self.add_item(component.name)
@@ -1645,20 +1736,41 @@ class ComponentListWidget(QtGui.QWidget):
 
 def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
                      spec=None):
+    """
+    Parameters
+    ----------
+    z
+    wrest
+    linelist
+    vlim
+    spec
+
+    Returns
+    -------
+
+    """
     # Transitions
     all_trans = linelist.all_transitions(wrest)
     if isinstance(all_trans, dict):
-        all_trans = [all_trans]
+        all_wrest = [all_trans['wrest']]
+    else:
+        if len(all_trans) == 1:
+            all_wrest = [all_trans['wrest']]
+        else:
+            all_wrest = Quantity(all_trans['wrest'])
     abslines = []
     if spec is not None:
         wvmin, wvmax = spec.wvmin, spec.wvmax
     else:
         wvmin, wvmax = 0.*u.AA, 1e9*u.AA
-    for trans in all_trans:
+    for iwrest in all_wrest:
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
         # Restrict to those with spectral coverage!
-        if (trans['wrest'] * (1 + z) < wvmin) or (trans['wrest'] * (1 + z) > wvmax):
+        if (iwrest * (1 + z) < wvmin) or (iwrest * (1 + z) > wvmax):
             continue
-        aline = AbsLine(trans['wrest'],  linelist=linelist, z=z)
+        aline = AbsLine(iwrest, linelist=linelist, z=z)
         aline.limits.set(vlim)
         abslines.append(aline)
     if linelist.list != 'H2':
@@ -1666,10 +1778,20 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
             stars = '*'*(len(abslines[0].name.split('*'))-1)
         else:
             stars = None
-    else:
-        stars = None
-    # AbsComponent
-    comp = AbsComponent.from_abslines(abslines, stars=stars)
+        # AbsComponent
+        comp = AbsComponent.from_abslines(abslines, stars=stars)
+    else:  # H2
+        Zion = (-1, -1)  # code for molecules
+        Ntuple = (17, -1, 1)  # initial guess for Ntuple (needs to be given for adding lines from linelist; see below)
+        comp = AbsComponent(zero_coord, Zion, z, vlim, Ntup=Ntuple)
+        # add handy attrib
+        comp.attrib['init_wrest'] = wrest
+        # add abslines
+        comp.add_abslines_from_linelist(llist='H2', wvlim=(wvmin, wvmax), min_Wr=None)
+        # QtCore.pyqtRemoveInputHook()
+        # pdb.set_trace()
+        # QtCore.pyqtRestoreInputHook()
+
     # Init_wrest
     comp.init_wrest = wrest
     # Attributes
@@ -1698,7 +1820,7 @@ def comp_init_attrib(comp):
                'logN': 0., 'sig_logN': 0.,
                'b': 0.*u.km/u.s, 'bsig': 0.*u.km/u.s,  # Doppler
                'z': comp.zcomp, 'zsig': 0.,
-               'Reliability': 'None'}
+               'Reliability': 'none'}
 
 
 def sync_comp_lines(comp, only_lims=False):
@@ -1762,7 +1884,7 @@ def set_fontsize(ax,fsz):
 
 
 # Some info about the blending between components
-def blending_info(components, specfile, min_vlim=100*u.km/u.s):
+def blending_info(components, specfile, min_vlim=100*u.km/u.s, min_ew=0.005*u.AA, ask_user=True):
     """Computes blending info, and store the components in files that group them together
     depending on overlapping in wobs space. Very useful for speeding up automatic Voigt
     profile fitting
@@ -1776,15 +1898,39 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s):
     min_vlim : Quantity
         Minimum velocity limit for components for overlap considerations;
         should be equal or larger than the LSF core
+    min_ew : Quantity
+        The minimum equivalent width for the AbsLines to keep
+        (assuming optically thin regime).
+    ask_user : bool
+        Whether to ask the user for `min_vlim` and `min_ew`.
 
     Returns
     -------
-        Writes output files.
+        Writes .joebvp output files.
 
     """
+    if ask_user:
+        gui = ltgsm.AnsBox("Please provide the minimum rest-frame\n equivalent width for the AbsLines (in AA):", float)
+        gui.exec_()
+        min_ew = gui.value * u.AA
+        gui = ltgsm.AnsBox("Please provide the minimum rest-frame\n velocity limit for the AbsLines (in km/s):", float)
+        gui.exec_()
+        min_vlim = gui.value * u.km/u.s
+    print('IGMGuesses: computing blends between components, it may take a while...\n')
 
     # create a copy of component list that has a minimum vlim incorporated
-    comps_copy = copy.copy(components)
+    comps_copy = copy.deepcopy(components)
+
+    # first keep only lines with ew >= min_ew
+    for comp in comps_copy:
+        good_abslines = []
+        for line in comp._abslines:
+            if line.get_Wr_from_N(line.attrib['N']) >= min_ew:
+                good_abslines += [line]
+        # replace abslines within the component
+        comp._abslines = good_abslines
+
+    # increase the vlims if necessary
     for comp in comps_copy:
         for line in comp._abslines:
             # add minimum velocity limit consideration for blends; should be larger than the LSF core
@@ -1795,11 +1941,7 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s):
                 vlim[1] = min_vlim
             line.limits.set(vlim)
 
-    # QtCore.pyqtRemoveInputHook()
-    # pdb.set_trace()
-    # QtCore.pyqtRestoreInputHook()
-
-    grouped_comps = ltiu.group_coincident_compoments(comps_copy, output_type='list')
+    grouped_comps = ltiu.group_coincident_components(comps_copy, output_type='list')
     isolated = []
     grouped = []
     for group in grouped_comps:
@@ -1808,9 +1950,9 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s):
         else:
             grouped += [group]
     # write to .joenvp output
-    ltiu.joebvp_from_components(isolated, specfile, 'isolated.joebvp')
+    ltiio.write_joebvp_from_components(isolated, specfile, 'isolated.joebvp')
     for ii, group in enumerate(grouped):
-        ltiu.joebvp_from_components(group, specfile, 'group_{}.joebvp'.format(ii+1))
+        ltiio.write_joebvp_from_components(group, specfile, 'group_{}.joebvp'.format(ii+1))
 
     grouped = [isolated] + grouped
     for ii, group in enumerate(grouped):
@@ -1857,7 +1999,100 @@ def from_igmguesses_to_joebvp(infile, outfile):
         comp = AbsComponent.from_dict(igmg_dict['cmps'][key], chk_sep=False, chk_data=False, chk_vel=False)
         comp_list += [comp]
 
-    ltiu.joebvp_from_components(comp_list, igmg_dict['spec_file'], outfile)
+    ltiio.joebvp_from_components(comp_list, igmg_dict['spec_file'], outfile)
+
+def init_meta():
+    """Creates a general meta dictionary
+
+    Returns
+    -------
+    meta : dict
+
+    """
+    meta = dict()
+    meta['JNAME'] = 'unknown'
+    meta['ALTNAME'] = 'unknown'
+    meta['RA'] = 0.
+    meta['DEC'] = 0.
+    meta['zem'] = 0.
+    meta['Instrument'] = 'unknown'
+    meta['Creator'] = 'unknown'
+    meta['Date'] = 'unknown'
+    return meta
+
+def fill_meta(meta):
+    """If a meta[key] value is equal to the default, ask the user
+    for input to fill it in.
+
+    Parameter
+    ---------
+    meta : dict
+        The original meta dict
+
+    Returns
+    -------
+    meta_updated : dict
+        A new meta dictionary with values given by user
+        from prompt
+
+    """
+    meta_ref = init_meta()
+    if (meta["RA"] == meta_ref["RA"]) and (meta["DEC"] == meta_ref["DEC"]):
+        radec = input("Please provide (RA,DEC) J2000 in degrees (e.g. 123.45678,-87.6543): ")
+        if radec == "":
+            meta["RA"] = meta_ref["RA"]
+            meta["DEC"] = meta_ref["DEC"]
+        else:
+            radec = radec.split(",")
+            meta["RA"] = radec[0]
+            meta["DEC"] = radec[1]
+    # JNAME (will also check whether coordinates are sensible)
+    coord = SkyCoord(meta['RA'], meta['DEC'], unit='deg')
+    jname = ltu.name_from_coord(coord, precision=(2, 1))
+    meta['JNAME'] = jname
+
+    for key in ['ALTNAME', 'zem', 'Instrument', 'Creator']:
+        if meta[key] == meta_ref[key]:
+            if key == 'ALTNAME':
+                eg_str = "(e.g. PG0953+414)"
+            elif key == 'zem':
+                eg_str = "(e.g. 0.239)"
+            elif key == 'Instrument':
+                eg_str = "(e.g. HST/COS/G130M)"
+            elif key == 'Creator':
+                eg_str = "(e.g. John Smith)"
+            var = input("Please provide value for {} {}: ".format(key, eg_str))
+            if var != "":
+                meta[key] = var
+            else:
+                meta[key] = meta_ref[key]
+    # reformat
+    for key in ['zem', 'RA', 'DEC']:
+        meta[key] = float(meta[key])
+
+    # add date
+    date = str(datetime.date.today().strftime('%Y-%b-%d'))
+    meta['Date'] = date
+
+    #return
+    return meta
+
+class UpdateWidget(QWidget):
+    def __init__(self, parent=None):
+        """
+        """
+        super(UpdateWidget, self).__init__(parent)
+        self.parent = parent
+
+        # Generate Buttons
+        wbtn = QPushButton(self)
+        wbtn.setText('Update')
+        wbtn.setAutoDefault(False)
+        wbtn.clicked.connect(self.parent.setbzNc)
 
 
+        # Layout
+        hbox = QHBoxLayout()
+        hbox.addWidget(wbtn)
+        self.setLayout(hbox)
 

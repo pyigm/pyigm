@@ -8,7 +8,7 @@ import os, pdb
 import pytest
 remote_data = pytest.mark.remote_data
 
-from ..cos_halos import COSHalos#, COSDwarfs
+from pyigm.cgm.cos_halos import COSHalos#, COSDwarfs
 
 def data_path(filename):
     data_dir = os.path.join(os.path.dirname(__file__), 'files')
@@ -31,15 +31,14 @@ def test_load_sngl():
 
 def test_write_sngl():
     import io, json
+    from linetools import utils as ltu
     # Class
     cos_halos = COSHalos(fits_path=data_path(''), cdir=data_path(''), load=False)
     # Load
     cos_halos.load_single_fits(('J0950+4831', '177_27'))
     # Write to JSON
     cdict = cos_halos.cgm_abs[0].to_dict()
-    with io.open('tmp.json', 'w', encoding='utf-8') as f:
-        f.write(unicode(json.dumps(cdict, sort_keys=True, indent=4,
-                                   separators=(',', ': '))))
+    ltu.savejson('tmp.json', cdict, overwrite=True)
 
 """
 def test_load_sngl_dwarf():
@@ -49,14 +48,17 @@ def test_load_sngl_dwarf():
     cos_dwarfs.load_single( ('J0042-1037', '358_9'))
 """
 
-@remote_data
+
 def test_load_survey():
     # Class
-    cos_halos = COSHalos(debug=True)
-    assert len(cos_halos.cgm_abs) == 4
-    # Load
-    #cos_halos.load_mega()  # Only reads one file for the test, actually
-    #cos_halos.load_mega(skip_ions=True)
+    cos_halos = COSHalos()#debug=True)
+    assert len(cos_halos.cgm_abs) == 44
+    # Metallicity
+    cos_halos.load_mtl_pdfs()
+    # Confirm  J0943+0531_227_19 is out
+    cgm_j0943 = cos_halos[('J0943+0531','227_19')]
+    assert (not hasattr(cgm_j0943.igm_sys, 'metallicity'))
+
 
 def test_getitem():
     # Class

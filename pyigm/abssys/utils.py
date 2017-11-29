@@ -42,7 +42,7 @@ def dict_to_ions(idict):
     #  Could probably use add_row or dict instantiation
     table = None
     for ion in idict.keys():
-        Zion = ltai.name_ion(ion)
+        Zion = ltai.name_to_ion(ion)
         if table is None:
             tkeys = idict[ion].keys()
             lst = [[idict[ion][tkey]] for tkey in tkeys]
@@ -105,6 +105,7 @@ def hi_model(abssys, spec, lya_only=False, add_lls=False, ret_tau=False,
       List of AbsLine's that contributed to the model
 
     """
+    from astropy.units import Quantity
     from linetools.spectra.xspectrum1d import XSpectrum1D
     from linetools.spectralline import AbsLine
     from linetools.analysis.voigt import voigt_from_abslines
@@ -156,7 +157,7 @@ def hi_model(abssys, spec, lya_only=False, add_lls=False, ret_tau=False,
                 lyman_lines.append(lya_line)
             else:
                 HIlines = LineList('HI')
-                wrest = HIlines._data['wrest']
+                wrest = Quantity(HIlines._data['wrest'])
                 for iwrest in wrest:
                     # On the spectrum?
                     if iwrest >= spec.wvmin/(1+abssys.zabs):
@@ -176,8 +177,9 @@ def hi_model(abssys, spec, lya_only=False, add_lls=False, ret_tau=False,
             tau_LL = (10.**abssys.NHI / u.cm**2) * photo_cross(1,1,energy)
             # Kludge
             pix_LL = np.argmin(np.fabs(wv_rest- 911.3*u.AA))
-            pix_kludge = np.where((wv_rest > 911.5*u.AA) & (wv_rest < 912.8*u.AA))[0]
+            pix_kludge = np.where((wv_rest > 911.3*u.AA) & (wv_rest < 913.0*u.AA))[0]
             tau_LL[pix_kludge] = tau_LL[pix_LL]
+            tau_Lyman[pix_kludge] = 0.
             # Generate the spectrum
         else:
             tau_LL = 0.

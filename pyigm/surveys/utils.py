@@ -7,11 +7,17 @@ import glob
 import json
 import pdb
 
+from astropy.coordinates import SkyCoord
+
 from linetools import utils as ltu
+from linetools.lists.linelist import LineList
 
 from pyigm.abssys import utils as pyasu
 
 from .igmsurvey import IGMSurvey
+
+# Load here to speed up line making
+llist = LineList('ISM')
 
 
 def load_sys_files(inp, type, ref=None, sys_path=False, **kwargs):
@@ -28,6 +34,8 @@ def load_sys_files(inp, type, ref=None, sys_path=False, **kwargs):
     sys_path : str, optional
       indicates that inp is a path to a set of JSON SYS files
       otherwise, inp should be the filename of a tarball of JSON files
+    **kwargs :
+      Passed to system
 
     Returns
     -------
@@ -43,7 +51,7 @@ def load_sys_files(inp, type, ref=None, sys_path=False, **kwargs):
         files.sort()
         for ifile in files:
             tdict = ltu.loadjson(ifile)
-            abssys = system.from_dict(tdict)
+            abssys = system.from_dict(tdict, linelist=llist)
             survey._abs_sys.append(abssys)
     else:  # tarball
         print('Loading systems from {:s}'.format(inp))
@@ -59,9 +67,12 @@ def load_sys_files(inp, type, ref=None, sys_path=False, **kwargs):
             if ('NHI' in tdict.keys()) and ('flag_NHI' not in tdict.keys()):
                 tdict['flag_NHI'] = 1
             # Generate
-            abssys = system.from_dict(tdict, chk_sep=False, **kwargs)   # Consider use_coord=True as default
+            abssys = system.from_dict(tdict, chk_sep=False, linelist=llist, **kwargs)   # Consider use_coord=True as default
             survey._abs_sys.append(abssys)
         tar.close()
+    # Set coordinates
+    icoords = [isys.coord for isys in survey._abs_sys]
+    survey.coords = SkyCoord(icoords)
     # Return
     return survey
 

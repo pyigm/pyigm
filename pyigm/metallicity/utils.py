@@ -50,9 +50,8 @@ def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpo
     # Read the model grid
     if (modl is None) and (NH_interpol is None):
         model_file = os.getenv('DROPBOX_DIR')+'/cosout/grid_minextended.pkl'
-        fil=open(model_file)
-        modl=pickle.load(fil)
-        fil.close()
+        with open(model_file, 'rb') as f:
+            modl=pickle.load(f, encoding='latin1')
 
     # Setup
     if NH_interpol is None:
@@ -81,6 +80,10 @@ def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpo
     fh5 = h5py.File(hdf_file, 'r')
     pdfs = fh5['outputs']['pdfs'].value
     tags = fh5['outputs/tags'].value
+    try:
+        tags = np.array([itag.decode() for itag in tags])
+    except:
+        pass
     fh5.close()
 
     # Deal with NHI off the grid?
@@ -89,7 +92,10 @@ def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpo
         # Checks
         if min_NHI > 16:
             warnings.warn("Approaching the optically thick limit.  Be warned..")
-        assert tags[0] == 'col'
+        try:
+            assert tags[0] == 'col'
+        except AssertionError:
+            pdb.set_trace()
         #
         minNHI_pdf = np.min(pdfs[:,0])  # ASSUME NHI is in 0, aka col
         if minNHI_pdf < min_NHI:

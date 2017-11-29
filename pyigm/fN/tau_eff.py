@@ -151,8 +151,8 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
          -- Recorded only if cumul is not None
     EW_spline : spline, optional
       Speeds up execution if input
-    HI : LineList, optional
-      HI line list.  Speeds up execution
+    wrest : Quantity array, optional
+      rest wavelengths to apply
 
     Returns
     -------
@@ -164,7 +164,10 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
     """
     # Cosmology
     if cosmo is None:
-        cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
+        if fN_model.cosmo is not None:
+            cosmo = fN_model.cosmo
+        else:
+            cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
     # Lambda
     if not isinstance(ilambda, float):
         raise ValueError('tau_eff: ilambda must be a float for now')
@@ -184,7 +187,7 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
     # Lines
     if wrest is None:
         HI = LineList('HI')
-        wrest = HI._data['wrest']
+        wrest = u.Quantity(HI._data['wrest'])
 
     # Find the lines
     gd_Lyman = wrest[(Lambda/(1+zem)) < wrest]

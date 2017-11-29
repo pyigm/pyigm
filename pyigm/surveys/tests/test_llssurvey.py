@@ -20,6 +20,7 @@ def data_path(filename):
 '''
 
 def test_read_hdlls_dr1_simple():
+    #hdlls = LLSSurvey.load_HDLLS()
     hdlls = LLSSurvey.load_HDLLS(load_sys=False)
     assert hdlls.nsys == 157
 
@@ -44,7 +45,7 @@ def test_dat_list():
     lls = LLSSurvey.from_flist('Lists/lls_metals.lst', tree=os.getenv('LLSTREE'))
     # tests
     np.testing.assert_allclose(lls.NHI[0], 19.25)
-    assert lls.nsys == 165
+    assert lls.nsys == 164
 
 
 def test_sdss():

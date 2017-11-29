@@ -22,6 +22,11 @@ from linetools.isgm import utils as ltiu
 from pyigm.abssys.igmsys import IGMSystem
 from pyigm.abssys.utils import class_by_type
 
+try:
+    unic = unicode
+except:
+    unic = str
+
 
 class IGMSurvey(object):
     """ Class for a survey of absorption line systems.
@@ -75,8 +80,8 @@ class IGMSurvey(object):
         return slf
 
     @classmethod
-    def from_sfits(cls, summ_fits, **kwargs):
-        """Generate the Survey from a summary FITS file
+    def from_sfits(cls, summ_fits, coords=None, **kwargs):
+        """Generate the Survey from a summary FITS file or Table
 
         Handles SPEC_FILES too.
 
@@ -84,6 +89,8 @@ class IGMSurvey(object):
         ----------
         summ_fits : str or Table or QTable
           Summary FITS file
+        coords : SkyCoord array
+          Contains all the coords for all the systems
         **kwargs : dict
           passed to __init__
         """
@@ -97,10 +104,10 @@ class IGMSurvey(object):
         nsys = len(systems)
         # Dict
         kdict = dict(NHI=['NHI', 'logNHI'],
-                     sig_NHI=['sig(logNHI)', 'SIGNHI'],
+                     sig_NHI=['sig(logNHI)', 'SIGNHI', 'NHI_ERR'],
                      name=['Name'], vlim=['vlim'],
                      zabs=['Z_LLS', 'ZABS', 'zabs'],
-                     zem=['Z_QSO', 'QSO_ZEM'],
+                     zem=['Z_QSO', 'QSO_ZEM', 'ZEM'],
                      RA=['RA'], Dec=['DEC', 'Dec'])
         # Parse the Table
         inputs = {}
@@ -112,7 +119,14 @@ class IGMSurvey(object):
         if 'vlim' not in inputs.keys():
             default_vlim = [-1000, 1000.]* u.km / u.s
             inputs['vlim'] = [default_vlim]*nsys
-        # Generate
+        # Coords
+        if coords is None:
+            coords = SkyCoord(ra=inputs['RA'], dec=inputs['Dec'], unit='deg')
+        slf.coords = coords
+        ra_names = slf.coords.icrs.ra.to_string(unit=u.hour,sep='',pad=True)
+        dec_names = slf.coords.icrs.dec.to_string(sep='',pad=True,alwayssign=True)
+        # Generate abssys -- Note we give a *dummy* coord to the abssys intentionally
+        dcoord = SkyCoord(ra=0., dec=0., unit='deg')
         for kk in range(nsys):
             # Generate keywords
             kwargs = {}
@@ -123,7 +137,10 @@ class IGMSurvey(object):
                 else:
                     kwargs[key] = inputs[key][kk]
             # Instantiate
-            abssys = class_by_type(slf.abs_type)((args['RA'], args['Dec']), args['zabs'], args['vlim'], **kwargs)
+            #abssys = class_by_type(slf.abs_type)((args['RA'], args['Dec']), args['zabs'], args['vlim'], **kwargs)
+            if 'name' not in kwargs.keys():
+                kwargs['name'] = 'J{:s}{:s}_z{:.3f}'.format(ra_names[kk], dec_names[kk], args['zabs'])  # Much faster than generating internally
+            abssys = class_by_type(slf.abs_type)(dcoord, args['zabs'], args['vlim'], **kwargs)
             # spec_files
             try:
                 abssys.spec_files += systems[kk]['SPEC_FILES'].tolist()
@@ -131,12 +148,12 @@ class IGMSurvey(object):
                 pass
             slf._abs_sys.append(abssys)
         # Mask
+        slf.mask = None
         slf.init_mask()
         # Return
         return slf
 
     def __init__(self, abs_type, ref=''):
-        # Expecting a list of files describing the absorption systems
         """  Initiator
 
         Parameters
@@ -150,8 +167,7 @@ class IGMSurvey(object):
         self.ref = ref
         self._abs_sys = []
         self.sightlines = None
-
-        #
+        self.coords = None  # Intended to be a SkyCoord obj with *all* of the system coordinates
 
         # Mask
         self.mask = None
@@ -174,15 +190,31 @@ class IGMSurvey(object):
         else:
             return len(self._abs_sys)
 
+    def abs_sys(self, inp, fill_coord=True):
+        """ Return an abs_system by index
+        Returns
+        -------
+        inp : int
+
+        """
+        # Mask?
+        if self.mask is not None:
+            idx = np.where(self.mask)[0][inp]
+        else:
+            idx = inp
+        # Pull the system
+        isys = self._abs_sys[idx]
+        # Add coord
+        if fill_coord:
+            isys.coord = self.coords[idx]
+        return isys
+
     def init_mask(self):
         """ Initialize the mask for abs_sys
         """
         if self.nsys > 0:
             self.mask = np.array([True]*self.nsys)
 
-    def abs_sys(self):
-        # Recast as an array
-        return lst_to_array(self._abs_sys, mask=self.mask)
 
     def add_abs_sys(self, abs_sys):
         """ Add an IGMSys to the Survey
@@ -199,13 +231,17 @@ class IGMSurvey(object):
         # Append
         self._abs_sys.append(abs_sys)
 
-    def calculate_gz(self, zstep=1e-4):
+    def calculate_gz(self, zstep=1e-4, zmin=None, zmax=None):
         """ Uses sightlines table to generate a g(z) array
 
         Parameters
         ----------
         zstep : float, optional
           Step size for g(z) array
+        zmin : float, optional
+          Minimum redshift of evaluated array.  Default is minimum in the sightlines
+        zmax : float, optional
+          Maximum redshift of evaluated array.  Default is maximum in the sightlines
 
         Returns
         -------
@@ -217,8 +253,10 @@ class IGMSurvey(object):
         if self.sightlines is None:
             raise IOError("calculate_gz: Need to set sightlines table")
         # zeval
-        zmin = np.min(self.sightlines['Z_START'])
-        zmax = np.max(self.sightlines['Z_END'])
+        if zmin is None:
+            zmin = np.min(self.sightlines['Z_START'])
+        if zmax is None:
+            zmax = np.max(self.sightlines['Z_END'])
         zeval = np.arange(zmin, zmax, step=zstep)
         gz = np.zeros_like(zeval).astype(int)
         # Evaluate
@@ -293,22 +331,22 @@ class IGMSurvey(object):
         -------
         Table of values for the Survey
         """
-        if self.abs_sys()[0]._ionN is None:
+        if self._abs_sys[0]._ionN is None:
             raise IOError("ionN table not set.  Use fill_ionN")
         # Find the first entry with a non-zero length table
         for kk,abs_sys in enumerate(self._abs_sys):
             if len(abs_sys._ionN) > 0:
                 break
         #
-        keys = [u'name', ] + self.abs_sys()[kk]._ionN.keys()
-        t = Table(self.abs_sys()[kk]._ionN[0:1]).copy()   # Avoids mixin trouble
+        keys = [u'name', ] + self._abs_sys[kk]._ionN.keys()
+        t = Table(self._abs_sys[kk]._ionN[0:1]).copy()   # Avoids mixin trouble
         t.add_column(Column(['dum']*len(t), name='name', dtype='<U32'))
         t = t[keys]
         if 'Ej' not in keys:
             warnings.warn("Ej not in your ionN table.  Ignoring. Be careful..")
 
         # Loop on systems (Masked)
-        for abs_sys in self.abs_sys():
+        for abs_sys in self._abs_sys:
             # Grab
             if 'Ej' in keys:
                 mt = ((abs_sys._ionN['Z'] == iZion[0])
@@ -321,7 +359,7 @@ class IGMSurvey(object):
                 irow = abs_sys._ionN[mt]
                 # Cut on flg_clm
                 if irow['flag_N'] > 0:
-                    row = [abs_sys.name] + [irow[key] for key in keys[1:]]
+                    row = [abs_sys.name] + [irow[key][0] for key in keys[1:]]
                     t.add_row(row)   # This could be slow
                 else:
                     if skip_null is False:
@@ -333,6 +371,7 @@ class IGMSurvey(object):
                     t.add_row( row )
                 continue
             else:
+                pdb.set_trace()
                 raise ValueError("Multple entries")
 
         # Return
@@ -357,7 +396,7 @@ class IGMSurvey(object):
         clms = []
         for ii in range(nattrib):
             clms.append([])
-        for abs_sys in self.abs_sys():
+        for abs_sys in self._abs_sys:
             # Name
             clms[0].append(abs_sys.name)
             #
@@ -425,7 +464,7 @@ class IGMSurvey(object):
             json_fil = tmpdir+'/'+igm_abs.name+'.json'
             jfiles.append(json_fil)
             with io.open(json_fil, 'w', encoding='utf-8') as f:
-                f.write(unicode(json.dumps(idict, sort_keys=True, indent=4,
+                f.write(unic(json.dumps(idict, sort_keys=True, indent=4,
                                            separators=(',', ': '))))
         # Tar
         subprocess.call(['tar', '-czf', outfile, tmpdir])
@@ -441,6 +480,7 @@ class IGMSurvey(object):
 
     def __getattr__(self, k):
         """ Generate an array of attribute 'k' from the IGMSystems
+        NOTE: We only get here if the Class doesn't have this attribute set already
 
         Mask is applied
 
@@ -453,15 +493,16 @@ class IGMSurvey(object):
         -------
         numpy array
         """
+        # Catch length 0 list
+        if len(self._abs_sys) == 0:
+            raise ValueError("Attribute does not exist")
         try:
             lst = [getattr(abs_sys, k) for abs_sys in self._abs_sys]
         except ValueError:
             raise ValueError("Attribute does not exist")
         # Special cases
         if k == 'coord':
-            ra = [coord.ra.value for coord in lst]
-            dec = [coord.dec.value for coord in lst]
-            lst = SkyCoord(ra=ra, dec=dec, unit='deg')
+            lst = self.coords
             if self.mask is not None:
                 return lst[self.mask]
             else:

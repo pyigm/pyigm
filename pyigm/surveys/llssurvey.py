@@ -5,9 +5,12 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import numpy as np
 import imp, glob
 import pdb
-import urllib2
 import h5py
 import json
+try:
+    from urllib2 import urlopen # Python 2.7
+except ImportError:
+    from urllib.request import urlopen
 
 
 from astropy.table import QTable, Column, Table
@@ -47,8 +50,12 @@ class LLSSurvey(IGMSurvey):
         lls.rename_column('QSO_RA', 'RA')
         lls.rename_column('QSO_DEC', 'DEC')
 
+        # Generate coords
+        scoords = [lls['RA'][ii]+' '+lls['DEC'][ii] for ii in range(len(lls))]
+        coords = SkyCoord(scoords, unit=(u.hourangle, u.deg))
+
         # Read
-        lls_survey = cls.from_sfits(lls)
+        lls_survey = cls.from_sfits(lls, coords=coords)
         lls_survey.ref = 'HST-ACS'
 
         # QSOs file
@@ -80,6 +87,10 @@ class LLSSurvey(IGMSurvey):
         # Rename some columns?
         lls.rename_column('QSO_RA', 'RA')
         lls.rename_column('QSO_DEC', 'DEC')
+
+        # Generate coords
+        scoords = [lls['RA'][ii]+' '+lls['DEC'][ii] for ii in range(len(lls))]
+        coords = SkyCoord(scoords, unit=(u.hourangle, u.deg))
 
         # Read
         lls_survey = cls.from_sfits(lls)
@@ -128,7 +139,7 @@ class LLSSurvey(IGMSurvey):
                 print('HD-LLS: Downloading a 155Mb file.  Be patient..')
                 url = 'http://www.ucolick.org/~xavier/HD-LLS/DR1/HD-LLS_spectra.tar.gz'
                 spectra_fil = pyigm_path+'/data/LLS/HD-LLS/HD-LLS_spectra.tar.gz'
-                f = urllib2.urlopen(url)
+                f = urlopen(url)
                 with open(spectra_fil, "wb") as code:
                     code.write(f.read())
                 # Unpack
@@ -160,6 +171,8 @@ class LLSSurvey(IGMSurvey):
         ------
         lls_survey
         """
+        from imp import reload
+        reload(pyisu)
 
         # Pull from Internet (as necessary)
         summ_fil = pyigm_path+"/data/LLS/HD-LLS/HD-LLS_DR1.fits"
@@ -184,7 +197,7 @@ class LLSSurvey(IGMSurvey):
             if isys_path is not None:
                 lls_survey = pyisu.load_sys_files(isys_path, 'LLS',sys_path=True, ref='HD-LLS')
             else:
-                lls_survey = pyisu.load_sys_files(sys_files, 'LLS', ref='HD-LLS')
+                lls_survey = pyisu.load_sys_files(sys_files, 'LLS', ref='HD-LLS', use_coord=True)
             lls_survey.fill_ions(use_components=True)
         else:
             # Read
@@ -224,7 +237,7 @@ class LLSSurvey(IGMSurvey):
         ras = []
         decs = []
         zval = []
-        mkeys = fh5['met'].keys()
+        mkeys = list(fh5['met'].keys())  # Python 3
         mkeys.remove('left_edge_bins')
         for key in mkeys:
             radec, z = key.split('z')
@@ -238,7 +251,8 @@ class LLSSurvey(IGMSurvey):
 
         # Set data path and metallicity
         spath = pyigm_path+"/data/LLS/HD-LLS/Spectra/"
-        for lls in lls_survey._abs_sys:
+        for kk in range(lls_survey.nsys):
+            lls = lls_survey.abs_sys(kk)
             lls.spec_path = spath
             # Match
             sep = lls.coord.separation(mcoords)
@@ -263,7 +277,7 @@ class LLSSurvey(IGMSurvey):
                 print('HD-LLS: Downloading a 155Mb file.  Be patient..')
                 url = 'http://www.ucolick.org/~xavier/HD-LLS/DR1/HD-LLS_spectra.tar.gz'
                 spectra_fil = pyigm_path+'/data/LLS/HD-LLS/HD-LLS_spectra.tar.gz'
-                f = urllib2.urlopen(url)
+                f = urlopen(url)
                 with open(spectra_fil, "wb") as code:
                     code.write(f.read())
                 # Unpack
@@ -305,8 +319,10 @@ class LLSSurvey(IGMSurvey):
         lls.rename_column('QSO_RA', 'RA')
         lls.rename_column('QSO_DEC', 'DEC')
 
-        # Read
-        lls_survey = cls.from_sfits(lls)
+        # Instantiate
+        scoords = [lls['RA'][ii]+' '+lls['DEC'][ii] for ii in range(len(lls))]
+        coords = SkyCoord(scoords, unit=(u.hourangle, u.deg))
+        lls_survey = cls.from_sfits(lls, coords=coords)
         lls_survey.ref = 'SDSS-DR7'
 
         # QSOs file
@@ -460,6 +476,8 @@ def lls_stat(LLSs, qsos, vprox=3000.*u.km/u.s, maxdz=99.99,
         zsrch = qsos['ZT1']
     elif flg_zsrch == 2:
         zsrch = qsos['ZT0']
+    # Turn of LLS mask
+    LLSs.mask = None
     # Modify by LLS along QSO sightline as required
     if LLS_CUT is not None:
         pdb.set_trace()
@@ -470,12 +488,13 @@ def lls_stat(LLSs, qsos, vprox=3000.*u.km/u.s, maxdz=99.99,
     zmax = ltu.z_from_dv(vprox*np.ones(len(qsos)), qsos['ZEM'].data)  # vprox must be array-like to be applied to each individual qsos['ZEM']
 
     # Make some lists
-    lls_coord = LLSs.coord
+    lls_coord = LLSs.coords
     lls_zem = LLSs.zem
     lls_zabs = LLSs.zabs
     qsos_coord = SkyCoord(ra=qsos['RA']*u.deg, dec=qsos['DEC']*u.deg)
 
-    for qq, ills in enumerate(LLSs._abs_sys):
+    for qq in range(LLSs.nsys): #enumerate(LLSs._abs_sys):
+        ills = LLSs.abs_sys(qq)
         # Two LLS on one sightline?
         small_sep = ills.coord.separation(lls_coord) < 3.6*u.arcsec
         close_zem = np.abs(ills.zem-lls_zem) < 0.03
