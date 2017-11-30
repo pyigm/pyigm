@@ -277,6 +277,8 @@ class COSHalos(CGMAbsSurvey):
             cos_files = glob.glob(self.fits_path+'/*.fits')
         else:  # COS-Halos
             cos_files = glob.glob(self.fits_path+'/J*.fits.gz')
+        # Sort
+        cos_files.sort()
         # Read
         for fil in cos_files:
             self.load_single_fits(fil, **kwargs)
@@ -696,10 +698,10 @@ def update_cos_halos(v10=False, v11=False, v12=True):
     if v11:
         print("Generate v1.1 of the JSON tarball")
         cos_halos_v10 = COSHalos(load=False)
-        tfile = pyigm.__path__[0]+'/data/CGM/COS_Halos/cos-halos_systems.v1.0.tar.gz'
+        tfile = resource_filename('pyigm','/data/CGM/COS_Halos/cos-halos_systems.v1.0.tar.gz')
         cos_halos_v10.load_sys(tfile=tfile)
         # NHI
-        LLS_file = pyigm.__path__[0]+'/data/CGM/COS_Halos/COS_Halos_LLS.json'
+        LLS_file = resource_filename('pyigm','/data/CGM/COS_Halos/COS_Halos_LLS.json')
         with open(LLS_file) as json_file:
             fdict = json.load(json_file)
         # Loop on systems
@@ -764,7 +766,7 @@ def update_cos_halos(v10=False, v11=False, v12=True):
                 else:
                     raise ValueError("Bad mod_type")
         # Metallicity
-        mtlfil = pyigm.__path__[0]+'/data/CGM/COS_Halos/COS_Halos_MTL_final.hdf5'
+        mtlfil = resource_filename('pyigm','/data/CGM/COS_Halos/COS_Halos_MTL_final.hdf5')
         cos_halos_v10.load_mtl_pdfs(mtlfil)
         #
         for cgm_abs in cos_halos_v10.cgm_abs:
@@ -780,7 +782,7 @@ def update_cos_halos(v10=False, v11=False, v12=True):
         print("Generate v1.2 of the JSON tarball")
         # Load v1.1
         cos_halos_v11 = COSHalos(load=False)
-        tfile = pyigm.__path__[0]+'/data/CGM/COS_Halos/cos-halos_systems.v1.1.tar.gz'
+        tfile = resource_filename('pyigm','/data/CGM/COS_Halos/cos-halos_systems.v1.1.tar.gz')
         cos_halos_v11.load_sys(tfile=tfile)
         # Load mega for abmagr
         print("Loading mega...")
@@ -790,11 +792,14 @@ def update_cos_halos(v10=False, v11=False, v12=True):
         for kk, mega_cgm_abs in enumerate(cos_halos_mega.cgm_abs):
             # Check
             cgm_abs = cos_halos_v11.cgm_abs[kk]
-            assert mega_cgm_abs.name == cgm_abs.name
+            try:
+                assert mega_cgm_abs.name == cgm_abs.name
+            except:
+                pdb.set_trace()
             # Fill
             cgm_abs.galaxy.abmagr = mega_cgm_abs.galaxy.abmagr
         # Write
-        tarfil = pyigm.__path__[0]+'/data/CGM/COS_Halos/cos-halos_systems.v1.2.tar.gz'
+        tarfil = resource_filename('pyigm','/data/CGM/COS_Halos/cos-halos_systems.v1.2.tar.gz')
         cos_halos_v11.write_survey(tarfil)
 
 class COSDwarfs(COSHalos):
