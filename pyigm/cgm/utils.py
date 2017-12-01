@@ -246,6 +246,7 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
             print("No IGMSystem match found. Attaching dummy IGMSystem.")
             dummysystem = IGMSystem(dummycoords,galaxy.z,vlim=None)
             dummycomp = AbsComponent(dummycoords,(1,1),galaxy.z,[-100.,100.]*u.km/u.s)
+            dummycomp.flag_N = 3
             dummyline = AbsLine('HI 1215',**kwargs)  # Need an actual transition for comp check
             dummyline.analy['spec'] = dummyspec
             dummyline.attrib['coord'] = dummycoords
