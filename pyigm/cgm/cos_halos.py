@@ -116,7 +116,17 @@ class COSHalos(CGMAbsSurvey):
         gal.stellar_mass = summ['LOGMFINAL'][0]
         gal.rvir = galx['RVIR'][0]
         gal.MH = galx['ABUN'][0]
-        gal.abmagr = galx['ABMAGR'][0]
+        # AB
+        for filter in ['U','G','R','I','Z']:
+            # Value
+            key = 'ABMAG'+filter
+            attr = 'abmag'+filter.lower()
+            setattr(gal, attr, galx[key][0])
+            # Error
+            key = 'ABMAG'+filter+'ERR'
+            attr = 'abmag'+filter.lower()+'err'
+            setattr(gal, attr, galx[key][0])
+        #
         gal.flag_MH = galx['ABUN_FLAG'][0]
         gal.sdss_phot = [galx[key][0] for key in ['SDSSU','SDSSG','SDSSR','SDSSI','SDSSZ']]
         gal.sdss_phot_sig = [galx[key][0] for key in ['SDSSU_ERR','SDSSG_ERR','SDSSR_ERR','SDSSI_ERR','SDSSZ_ERR']]
@@ -797,10 +807,19 @@ def update_cos_halos(v10=False, v11=False, v12=True):
             except:
                 pdb.set_trace()
             # Fill
-            cgm_abs.galaxy.abmagr = mega_cgm_abs.galaxy.abmagr
+            for filter in ['u', 'g', 'r', 'i', 'z']:
+                # Value
+                attr = 'abmag'+filter
+                setattr(cgm_abs.galaxy, attr, getattr(mega_cgm_abs.galaxy, attr))
+                # Error
+                attr = 'abmag'+filter+'err'
+                setattr(cgm_abs.galaxy, attr, getattr(mega_cgm_abs.galaxy, attr))
+            # EBV (not sure why this wasn't in there already)
+            cgm_abs.ebv = mega_cgm_abs.ebv
         # Write
         tarfil = resource_filename('pyigm','/data/CGM/COS_Halos/cos-halos_systems.v1.2.tar.gz')
         cos_halos_v11.write_survey(tarfil)
+
 
 class COSDwarfs(COSHalos):
     """Inherits COS Halos Class

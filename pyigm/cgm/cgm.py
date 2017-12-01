@@ -101,6 +101,10 @@ class CGMAbsSys(object):
                 kwargs2['rho'] = idict['rho']*u.kpc
         # Instantiate
         slf = cls(galaxy, igm_sys, **kwargs2)
+        # Extras
+        for key in ['ebv']:
+            if key in idict.keys():
+                setattr(slf, key, idict[key])
         # Return
         return slf
 
@@ -197,6 +201,7 @@ class CGMAbsSys(object):
                        RA=self.galaxy.coord.icrs.ra.value,
                        DEC=self.galaxy.coord.icrs.dec.value,
                        cosmo = self.cosmo.name,
+                       ebv = self.ebv,
                        CreationDate=date,
                        user=user
                        )
