@@ -253,7 +253,9 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
             dummycomp.add_absline(dummyline,chk_vel=False,chk_sep=False)
             dummysystem.add_component(dummycomp,chk_vel=False,chk_sep=False)
             cgm = CGMAbsSys(galaxy, dummysystem, cosmo=cosmo, **kwargs)
+            cgm.igm_sys._components=[]
             cgm_list = [cgm]
+
     else:
         # Loop to generate
         cgm_list = []
