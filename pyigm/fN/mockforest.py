@@ -52,7 +52,7 @@ def dopp_val(x,bsig=24*u.km/u.s,bmnx=(15.,80)*u.km/u.s):
     return bx
 
 
-def monte_HIcomp(zmnx, fN_model, NHI_mn=None, bfix=None, dz=0.001, cosmo=None,
+def monte_HIcomp(zmnx, fN_model, NHI_mnx=(12., 22.), bfix=None, dz=0.001, cosmo=None,
     rstate=None, seed=None):
     """ Generate a Monte Carlo draw of HI components (z,N,b)
         
@@ -64,7 +64,7 @@ def monte_HIcomp(zmnx, fN_model, NHI_mn=None, bfix=None, dz=0.001, cosmo=None,
     fN_model : fN_Model class
     NHI_mnx : tuple, optional (float,float)
         Range of logNHI for linelist
-    bfix : float, optional
+    bfix : float, optional (unit: km/s)
         None for using random b, float for a fixed b
     dz : float, optional
         Step size for z discretization
@@ -73,7 +73,7 @@ def monte_HIcomp(zmnx, fN_model, NHI_mn=None, bfix=None, dz=0.001, cosmo=None,
         For random number generation
     seed : int, optional
         Seed for random numbers
-        
+
     Returns:
     -----------
     HI_comps : list
@@ -81,10 +81,7 @@ def monte_HIcomp(zmnx, fN_model, NHI_mn=None, bfix=None, dz=0.001, cosmo=None,
     """
     # Init
     # NHI range
-    if NHI_mn is None:
-        NHI_mnx = (12., 22.)
-    else:
-        NHI_mnx = NHI_mn
+    NHI_mnx = NHI_mnx
     # seed
     if rstate is None:
         if seed is None:
@@ -139,7 +136,6 @@ def monte_HIcomp(zmnx, fN_model, NHI_mn=None, bfix=None, dz=0.001, cosmo=None,
     randb = rstate.random_sample(nlines)
     if bfix is None:
         bval = dopp_val(randb)
-
     else:
         bval = [bfix for i in range(len(randb))] * u.km/u.s
 
@@ -259,7 +255,7 @@ def mock_HIlines(HI_comps, wvmnx, tau0_min=5e-3):
 
 
 def mk_mock(wave, zem, fN_model, out_spec=None, add_conti=True,
-            out_tbl=None, s2n=15., fwhm=3., bfix=None, NHI_mn=None, seed=None):
+            out_tbl=None, s2n=15., fwhm=3., bfix=None, NHI_mnx=(12., 22.), seed=None):
     """ Generate a mock
     Parameters
     ----------
@@ -272,7 +268,7 @@ def mk_mock(wave, zem, fN_model, out_spec=None, add_conti=True,
     fwhm : float, optional
     NHI_mnx : tuple, optional (float,float)
         Range of logNHI for linelist
-    bfix : float, optional
+    bfix : float, optional (unit: km/s)
         None for using random b, float for a fixed b
     seed : int, optional
         
@@ -295,7 +291,7 @@ def mk_mock(wave, zem, fN_model, out_spec=None, add_conti=True,
     zmin = (wvmin/(1215.6700*u.AA))-1.
     
     # Components
-    HI_comps = monte_HIcomp((zmin,zem), fN_model, NHI_mn=NHI_mn, bfix=bfix, rstate=rstate)
+    HI_comps = monte_HIcomp((zmin,zem), fN_model, NHI_mnx=NHI_mnx, bfix=bfix, rstate=rstate)
     
     # Main call
     HIlines = mock_HIlines(HI_comps, (wvmin,wvmax))
