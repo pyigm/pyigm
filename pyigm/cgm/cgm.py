@@ -160,7 +160,7 @@ class CGMAbsSys(object):
         # Impact parameter and PA
         if rho is None:
             rho, iang = calc_cgm_rho(galaxy, igm_sys, self.cosmo, ang_sep=ang_sep,
-                                 correct_lowz=correct_lowz, **kwargs)
+                                     correct_lowz=correct_lowz, **kwargs)
             if debug:
                 pdb.set_trace()
             if ang_sep is None:
@@ -172,10 +172,10 @@ class CGMAbsSys(object):
         # Standard name
         if name is None:
             self.name = 'J{:s}{:s}_{:d}_{:d}'.format(
-                    self.igm_sys.coord.icrs.ra.to_string(unit=u.hour,sep='',pad=True)[0:4],
-                    self.igm_sys.coord.icrs.dec.to_string(sep='',pad=True,alwayssign=True)[0:5],
-                    int(np.round(self.PA.to('deg').value)),
-                    int(np.round(self.ang_sep.to('arcsec').value)))
+                self.igm_sys.coord.icrs.ra.to_string(unit=u.hour,sep='',pad=True)[0:4],
+                self.igm_sys.coord.icrs.dec.to_string(sep='',pad=True,alwayssign=True)[0:5],
+                int(np.round(self.PA.to('deg').value)),
+                int(np.round(self.ang_sep.to('arcsec').value)))
         else:
             self.name = name
 
@@ -233,11 +233,11 @@ class CGMAbsSys(object):
 
     def __repr__(self):
         return ('<{:s}: {:s} Galaxy RA/DEC={:s}{:s}, zgal={:g}, rho={:g}>'.format(
-                self.__class__.__name__,
-                self.name,
-                 self.galaxy.coord.icrs.ra.to_string(unit=u.hour,sep=':',pad=True),
-                 self.galaxy.coord.icrs.dec.to_string(sep=':',pad=True,alwayssign=True),
-                 self.galaxy.z, self.rho))
+            self.__class__.__name__,
+            self.name,
+            self.galaxy.coord.icrs.ra.to_string(unit=u.hour,sep=':',pad=True),
+            self.galaxy.coord.icrs.dec.to_string(sep=':',pad=True,alwayssign=True),
+            self.galaxy.z, self.rho))
 
     def write_json(self, outfil=None):
         """ Generate a JSON file from a CGMAbsSys object 
@@ -259,4 +259,88 @@ class CGMAbsSys(object):
         ltu.savejson(outfil, odict, overwrite=True, easy_to_read=True)
         # Finish
         print("Wrote {:s} system to {:s} file".format(self.name, outfil))
+
+    def stack_plot(self,to_plot,pvlim=None,maxtrans=3,return_fig=True,**kwargs):
+        '''Show a stack plot of the CGM absorption system
+
+        Parameters
+        ----------
+        to_plot : List of AbsLines, AbsComponents, tuples, or strs
+           If AbsLines, pass list on to linetools.analysis.plots.stack_plot()
+           If not Abslines, will plot up to maxtrans of strongest transitions
+           covered by spectra for components of some species.
+             If tuples or strs, should be Zion value or ion name: (8,6) or 'OVI'
+        pvlim : Quantities, optional
+           Override system vlim for plotting
+        maxtrans : int, optional
+           Maximum number of lines per transition to plot
+
+        Returns
+        -------
+        fig : matplotlib Figure, optional
+           Figure instance containing stack plot with subplots, axes, etc.
+        '''
+
+        from linetools.analysis import plots as ltap
+        from linetools.spectralline import AbsLine
+        from linetools.isgm.abscomponent import AbsComponent
+        from linetools.spectra.io import readspec
+        from linetools.lists.linelist import LineList
+        from pyigm import utils as pu
+
+        ilist = LineList('ISM')
+
+        if not isinstance(to_plot[0],AbsLine):
+            lines2plot=[]  # Master list of lines to plot
+            for i, tp in enumerate(to_plot):
+                if isinstance(tp, AbsComponent):
+                    comp = to_plot
+                else: # Pick components in system closest to z_cgm
+                    thesecomps = pu.get_components(self,tp)
+                    # Find component with redshift closest to systemic
+                    compzs = np.array([tc.zcomp for tc in thesecomps])
+                    zdiffs = np.abs(self.zdiffs)
+                    comp = thesecomps[np.argmin(zdiffs)]
+                    ### Get strongest transitions covered
+                    wmins = []
+                    wmaxs = []
+                    for j,al in comp._abslines:
+                        # Load spectrum if not already loaded
+                        if al.analy['spec'] is None:
+                            try:
+                              al.analy['spec'] = readspec(al.analy['spec_file'])
+                            except:
+                              raise LookupError("analy['specfile'] must be "
+                                                "declared for AbsLines")
+                        # Get wavelength limits to know where to look
+                        wmins.append(al.analy['spec'].wvmin.value)
+                        wmaxs.append(al.analy['spec'].wvmax.value)
+                    wlims= (np.min(np.array(wmins)),np.max(np.array(wmaxs)))*u.Angstrom
+                    # ID the strong transitions
+                    strong = ilist.strongest_transitions(tp,wvlims=wlims,
+                                                         n_max=maxtrans)
+                    # Grab the AbsLines from this AbsComponent and their names
+                    complines = comp._abslines
+                    compnames = np.array([ll.name for ll in complines])
+                    ### Add the lines found to the master list
+                    if isinstance(strong,dict):  # Only one line covered
+                        lines2plot.append(complines[compnames == strong['name']])
+                    else:  # Multiple one lines covered
+                        tokeep = [complines[compnames == sl.name] for sl in strong]
+                        lines2plot.extend(tokeep)
+            else:
+                lines2plot = to_plot
+
+            # Deal with velocity limits
+            if pvlim is not None:
+                vlim = pvlim
+            else:
+                vlim = self.vlim
+
+            ### Make the plot!
+            fig = ltap.stack_plot(lines2plot,vlim=vlim,return_fig=return_fig,
+                                  **kwargs)
+            return fig
+            
+
 
