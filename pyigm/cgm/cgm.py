@@ -298,13 +298,14 @@ class CGMAbsSys(object):
                 else: # Pick components in system closest to z_cgm
                     thesecomps = pu.get_components(self,tp)
                     # Find component with redshift closest to systemic
-                    compzs = np.array([tc.zcomp for tc in thesecomps])
-                    zdiffs = np.abs(self.zdiffs)
-                    comp = thesecomps[np.argmin(zdiffs)]
+                    compvels = np.array([np.median(tc.vlim.value) for tc in thesecomps])
+                    comp = thesecomps[np.argmin(np.abs(compvels))]
+
+
                     ### Get strongest transitions covered
                     wmins = []
                     wmaxs = []
-                    for j,al in comp._abslines:
+                    for j,al in enumerate(comp._abslines):
                         # Load spectrum if not already loaded
                         if al.analy['spec'] is None:
                             try:
@@ -317,30 +318,30 @@ class CGMAbsSys(object):
                         wmaxs.append(al.analy['spec'].wvmax.value)
                     wlims= (np.min(np.array(wmins)),np.max(np.array(wmaxs)))*u.Angstrom
                     # ID the strong transitions
-                    strong = ilist.strongest_transitions(tp,wvlims=wlims,
-                                                         n_max=maxtrans)
+                    strong = ilist.strongest_transitions(
+                                tp,wvlims=wlims/(1.+comp.zcomp),n_max=maxtrans)
                     # Grab the AbsLines from this AbsComponent and their names
                     complines = comp._abslines
                     compnames = np.array([ll.name for ll in complines])
                     ### Add the lines found to the master list
                     if isinstance(strong,dict):  # Only one line covered
                         lines2plot.append(complines[compnames == strong['name']])
-                    else:  # Multiple one lines covered
-                        tokeep = [complines[compnames == sl.name] for sl in strong]
+                    else:  # Multiple lines covered
+                        complines = np.array(complines) # For the indexing
+                        tokeep = [complines[compnames == sn][0] for sn in strong['name']]
                         lines2plot.extend(tokeep)
-            else:
-                lines2plot = to_plot
+        else:
+            lines2plot = to_plot
 
-            # Deal with velocity limits
-            if pvlim is not None:
-                vlim = pvlim
-            else:
-                vlim = self.vlim
+        # Deal with velocity limits
+        if pvlim is not None:
+            vlim = pvlim
+        else:
+            vlim = self.vlim
+        ### Make the plot!
+        fig = ltap.stack_plot(lines2plot,vlim=vlim,return_fig=return_fig,
+                              **kwargs)
+        return fig
 
-            ### Make the plot!
-            fig = ltap.stack_plot(lines2plot,vlim=vlim,return_fig=return_fig,
-                                  **kwargs)
-            return fig
-            
 
 
