@@ -297,10 +297,14 @@ class CGMAbsSys(object):
                     comp = to_plot
                 else: # Pick components in system closest to z_cgm
                     thesecomps = pu.get_components(self,tp)
+                    if len(thesecomps)==0:
+                        continue
                     # Find component with redshift closest to systemic
                     compvels = np.array([np.median(tc.vlim.value) for tc in thesecomps])
-                    comp = thesecomps[np.argmin(np.abs(compvels))]
-
+                    try:
+                        comp = thesecomps[np.argmin(np.abs(compvels))]
+                    except:
+                        import pdb; pdb.set_trace()
 
                     ### Get strongest transitions covered
                     wmins = []
@@ -320,6 +324,10 @@ class CGMAbsSys(object):
                     # ID the strong transitions
                     strong = ilist.strongest_transitions(
                                 tp,wvlims=wlims/(1.+comp.zcomp),n_max=maxtrans)
+                    if strong is None: #  No lines covered in the spectra
+                        warnings.warn('No lines for {} are covered by the spectra'
+                                      'provided.'.format(tp))
+                        continue
                     # Grab the AbsLines from this AbsComponent and their names
                     complines = comp._abslines
                     compnames = np.array([ll.name for ll in complines])
