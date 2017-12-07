@@ -52,28 +52,28 @@ def dopp_val(x,bsig=24*u.km/u.s,bmnx=(15.,80)*u.km/u.s):
     return bx
 
 
-def monte_HIcomp(zmnx, fN_model, NHI_mn=None, bfix=None, dz=0.001, cosmo=None,
+def monte_HIcomp(zmnx, fN_model, NHI_mnx=(12., 22.), bfix=None, dz=0.001, cosmo=None,
     rstate=None, seed=None):
     """ Generate a Monte Carlo draw of HI components (z,N,b)
-        
+
     Parameters
-     ----------
+    ----------
     zmnx : tuple (float,float)
-        Redshift range for analysis.
-        Should correspond to Lya
+      Redshift range for analysis.
+      Should correspond to Lya
     fN_model : fN_Model class
     NHI_mnx : tuple, optional (float,float)
-        Range of logNHI for linelist
-    bfix : float, optional
+      Range of logNHI for linelist
+    bfix : float, optional (unit: km/s)
         None for using random b, float for a fixed b
     dz : float, optional
-        Step size for z discretization
+      Step size for z discretization
     cosmo : astropy Cosmology, optional
     rstate : RandomState, optional
-        For random number generation
+      For random number generation
     seed : int, optional
-        Seed for random numbers
-        
+      Seed for random numbers
+
     Returns:
     -----------
     HI_comps : list
@@ -81,31 +81,28 @@ def monte_HIcomp(zmnx, fN_model, NHI_mn=None, bfix=None, dz=0.001, cosmo=None,
     """
     # Init
     # NHI range
-    if NHI_mn is None:
-        NHI_mnx = (12., 22.)
-    else:
-        NHI_mnx = NHI_mn
+    NHI_mnx = NHI_mnx
     # seed
     if rstate is None:
         if seed is None:
             seed = 12345
         rstate = np.random.RandomState(seed)
-    
+
     # Check fN_model type
     if fN_model.fN_mtype != 'Hspline':
         raise ValueError('monte_HIlines: Can only handle Hspline so far.')
-    
+
     # Calculate lX at pivot
     lX, cum_lX, lX_NHI = fN_model.calculate_lox(fN_model.zpivot,
-                                                NHI_mnx[0],NHI_max=NHI_mnx[1], cumul=True)
+        NHI_mnx[0],NHI_max=NHI_mnx[1], cumul=True)
 
     # Interpolator for NHI distribution (assumed independent of redshift)
     #   Uses lowest NHI value for the first bit (kludgy but ok)
     invfN = interpolate.interp1d(cum_lX/lX,lX_NHI,bounds_error=False,fill_value=lX_NHI[0])#, kind='quadratic')
-    
+
     # z evaluation
     zeval = np.arange(zmnx[0], zmnx[1]+dz, dz)
-    
+
     # Cosmology
     if cosmo is None:
         print('Using a Flat LCDM cosmology: h=0.7, Om=0.3')
@@ -116,30 +113,29 @@ def monte_HIcomp(zmnx, fN_model, NHI_mn=None, bfix=None, dz=0.001, cosmo=None,
 
     # Generate loz
     loz = lX * dXdz * ( (1+zeval)/(1+fN_model.zpivot) )**fN_model.gamma
-    
+
     # Calculate average number of lines for analysis
     sum_loz = np.cumsum(loz*dz)
-    
+
     # Interpolator
     #   Uses lowest NHI value for the first bit (kludgy but ok)
     invz = interpolate.interp1d(sum_loz/sum_loz[-1],zeval, bounds_error=False, fill_value=zeval[0])
-    
+
     # Assume Gaussian stats for number of lines
     nlines = int(np.round(sum_loz[-1] + np.sqrt(sum_loz[-1])*rstate.randn(1)))
-    
+
     # NHI values
     randNHI = rstate.random_sample(nlines)
     lgNHI = invfN(randNHI)
-    
+
     # z values
     randz = rstate.random_sample(nlines)
     zval = invz(randz)
-    
+
     # b values
     randb = rstate.random_sample(nlines)
     if bfix is None:
         bval = dopp_val(randb)
-
     else:
         bval = [bfix for i in range(len(randb))] * u.km/u.s
 
@@ -259,7 +255,7 @@ def mock_HIlines(HI_comps, wvmnx, tau0_min=5e-3):
 
 
 def mk_mock(wave, zem, fN_model, out_spec=None, add_conti=True,
-            out_tbl=None, s2n=15., fwhm=3., bfix=None, NHI_mn=None, seed=None):
+            out_tbl=None, s2n=15., fwhm=3., bfix=None, NHI_mnx=(12., 22.), seed=None):
     """ Generate a mock
     Parameters
     ----------
@@ -272,10 +268,10 @@ def mk_mock(wave, zem, fN_model, out_spec=None, add_conti=True,
     fwhm : float, optional
     NHI_mnx : tuple, optional (float,float)
         Range of logNHI for linelist
-    bfix : float, optional
+    bfix : float, optional (unit: km/s)
         None for using random b, float for a fixed b
     seed : int, optional
-        
+
     Returns
     -------
     full_mock : XSpectrum1D of the mock
@@ -285,39 +281,39 @@ def mk_mock(wave, zem, fN_model, out_spec=None, add_conti=True,
     """
     # Init
     rstate=np.random.RandomState(seed)
-    
+
     # Wavelength Range
     wvmin = np.min(wave) #(1+zem)*912.*u.AA - 1000*u.AA
     wvmax = np.max(wave)
     dwv = np.median(wave - np.roll(wave,1))
-    
+
     # zrange for Lya
     zmin = (wvmin/(1215.6700*u.AA))-1.
-    
+
     # Components
-    HI_comps = monte_HIcomp((zmin,zem), fN_model, NHI_mn=NHI_mn, bfix=bfix, rstate=rstate)
-    
+    HI_comps = monte_HIcomp((zmin,zem), fN_model, NHI_mnx=NHI_mnx, bfix=bfix, rstate=rstate)
+
     # Main call
     HIlines = mock_HIlines(HI_comps, (wvmin,wvmax))
-    
+
     # Optical depth
     sub_wave, tot_tau = generate_tau(wave, HIlines, HI_comps)
     dwv_sub = np.median(sub_wave-np.roll(sub_wave,1))
-    
+
     # Normalized mock spectrum (sub-grid of wavelengths)
     sub_flux = np.exp(-1.*tot_tau)
     sub_mock = XSpectrum1D.from_tuple( (sub_wave,sub_flux) )
-    
+
     # Smooth
     smooth_mock = sub_mock.gauss_smooth(fwhm=fwhm*(dwv/dwv_sub))
-    
+
     # Rebin
     mock = smooth_mock.rebin(wave)
-    
+
     # Add noise
     mock.sig = np.ones(len(mock.flux))/s2n
     noisy_mock = mock.add_noise(rstate=rstate)
-    
+
     # Continuum
     if add_conti:
         conti, wfc3_idx = pycq.wfc3_continuum(zqso=zem,wave=wave,rstate=rstate)
@@ -325,7 +321,7 @@ def mk_mock(wave, zem, fN_model, out_spec=None, add_conti=True,
     else:
         cflux = np.ones_like(noisy_mock.flux)
         wfc3_idx = -1
-    
+
     # Full
     full_mock = XSpectrum1D.from_tuple((wave,noisy_mock.flux*cflux,
                                         cflux*np.ones(len(noisy_mock.flux))/s2n))
