@@ -57,22 +57,22 @@ def monte_HIcomp(zmnx, fN_model, NHI_mnx=(12., 22.), bfix=None, dz=0.001, cosmo=
     """ Generate a Monte Carlo draw of HI components (z,N,b)
 
     Parameters
-     ----------
+    ----------
     zmnx : tuple (float,float)
-        Redshift range for analysis.
-        Should correspond to Lya
+      Redshift range for analysis.
+      Should correspond to Lya
     fN_model : fN_Model class
     NHI_mnx : tuple, optional (float,float)
-        Range of logNHI for linelist
+      Range of logNHI for linelist
     bfix : float, optional (unit: km/s)
         None for using random b, float for a fixed b
     dz : float, optional
-        Step size for z discretization
+      Step size for z discretization
     cosmo : astropy Cosmology, optional
     rstate : RandomState, optional
-        For random number generation
+      For random number generation
     seed : int, optional
-        Seed for random numbers
+      Seed for random numbers
 
     Returns:
     -----------
@@ -94,7 +94,7 @@ def monte_HIcomp(zmnx, fN_model, NHI_mnx=(12., 22.), bfix=None, dz=0.001, cosmo=
 
     # Calculate lX at pivot
     lX, cum_lX, lX_NHI = fN_model.calculate_lox(fN_model.zpivot,
-                                                NHI_mnx[0],NHI_max=NHI_mnx[1], cumul=True)
+        NHI_mnx[0],NHI_max=NHI_mnx[1], cumul=True)
 
     # Interpolator for NHI distribution (assumed independent of redshift)
     #   Uses lowest NHI value for the first bit (kludgy but ok)
