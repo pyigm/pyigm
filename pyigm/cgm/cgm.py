@@ -301,10 +301,7 @@ class CGMAbsSys(object):
                         continue
                     # Find component with redshift closest to systemic
                     compvels = np.array([np.median(tc.vlim.value) for tc in thesecomps])
-                    try:
-                        comp = thesecomps[np.argmin(np.abs(compvels))]
-                    except:
-                        import pdb; pdb.set_trace()
+                    comp = thesecomps[np.argmin(np.abs(compvels))]
 
                     ### Get strongest transitions covered
                     wmins = []
@@ -348,7 +345,8 @@ class CGMAbsSys(object):
             vlim = self.vlim
         ### Make the plot!
         fig = ltap.stack_plot(lines2plot,vlim=vlim,return_fig=return_fig,
-                              **kwargs)
+                              zref = self.z,**kwargs)
+        fig.subplots_adjust(bottom=0.,left=0.1,right=0.95,hspace=0.,wspace=0.35)
         return fig
 
 
