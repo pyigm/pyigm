@@ -4,8 +4,9 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 
 import numpy as np
 import os
-import imp
 import pdb
+
+from pkg_resources import resource_filename
 
 from scipy.interpolate import interp1d
 
@@ -21,7 +22,7 @@ from pyigm.fN import tau_eff as pyift
 from pyigm.fN.fnmodel import FNModel
 
 
-pyigm_path = imp.find_module('pyigm')[1]
+pyigm_path = resource_filename('pyigm', './')
 
 
 def get_telfer_spec(zqso=0., igm=False, fN_gamma=None,
