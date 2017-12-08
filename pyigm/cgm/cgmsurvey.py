@@ -226,6 +226,9 @@ class CGMAbsSurvey(object):
         # Return
         return tbl
 
+    def component_tbl(self, Zion, vlim=None):
+        return
+
     def trans_tbl(self, inp, fill_ion=True):
         """ Generate a Table of Data on a given transition, e.g. SiIII 1206
 
