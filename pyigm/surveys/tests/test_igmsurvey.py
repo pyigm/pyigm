@@ -7,7 +7,7 @@ import glob, os, imp, pdb
 import pytest
 
 from pyigm.surveys.llssurvey import LLSSurvey
-from ..igmsurvey import IGMSurvey
+from pyigm.surveys.igmsurvey import IGMSurvey
 
 lt_path = imp.find_module('linetools')[1]
 
