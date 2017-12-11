@@ -384,7 +384,7 @@ def velcorr_mould(galaxy,cosmo=None):
     return velcorrdict
 
 def get_components(obj,ion,zrange=None):
-    '''Return list of components from AbsSystem or IGMSightline for given ion
+    """Return list of components from AbsSystem or IGMSightline for given ion
 
     Parameters
     ----------
@@ -399,7 +399,7 @@ def get_components(obj,ion,zrange=None):
     -------
     complist : list
         List of components with given ion
-    '''
+    """
     if isinstance(ion,str):
         from linetools.abund.ions import name_to_ion
         Zion = name_to_ion(ion)
