@@ -6,9 +6,9 @@ import numpy as np
 import pdb
 import pytest
 
-from ..igmsurvey import IGMSurvey
-from ..llssurvey import LLSSurvey
-from ..dlasurvey import DLASurvey
+from pyigm.surveys.igmsurvey import IGMSurvey
+from pyigm.surveys.llssurvey import LLSSurvey
+from pyigm.surveys.dlasurvey import DLASurvey
 from pyigm.surveys import utils as pyisu
 
 '''

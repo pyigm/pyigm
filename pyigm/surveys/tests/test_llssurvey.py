@@ -7,7 +7,7 @@ import glob, os, imp, pdb
 import pytest
 
 from pyigm.surveys.llssurvey import LLSSurvey
-from ..lls_literature import load_lls_lit
+from pyigm.surveys.lls_literature import load_lls_lit
 
 remote_data = pytest.mark.remote_data
 

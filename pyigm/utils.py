@@ -382,3 +382,32 @@ def velcorr_mould(galaxy,cosmo=None):
                        distmod=distmod, flag=flag, scale=scale.to(u.kpc/u.arcsec))
 
     return velcorrdict
+
+def get_components(obj,ion,zrange=None):
+    """Return list of components from AbsSystem or IGMSightline for given ion
+
+    Parameters
+    ----------
+    obj : AbsSystem or IGMSightline
+        Object that has attribute 'Zion'
+    ion : tuple or str, optional
+        Zion tuple or ion name; e.g., (8,6) for OVI
+    zrange : tuple, optional
+        Range in redshift over which to look for components
+
+    Returns
+    -------
+    complist : list
+        List of components with given ion
+    """
+    if isinstance(ion,str):
+        from linetools.abund.ions import name_to_ion
+        Zion = name_to_ion(ion)
+    else:
+        Zion = ion
+    if zrange is None:
+        complist = [comp for comp in obj._components if comp.Zion==Zion]
+    else:
+        complist = [comp for comp in obj._components if
+                 ((comp.Zion==Zion)&(comp.zcomp>zrange[0])&(comp.zcomp<zrange))]
+    return complist
