@@ -257,11 +257,10 @@ class CGMAbsSurvey(object):
             if len(comptab)==0:
                 continue
             newcomptab = vstack([newcomptab,comptab])
-            import pdb; pdb.set_trace()
             rhos.extend([isys.rho.value] * len(comptab))
             names.extend([isys.name] * len(comptab))
-        comptab.add_column(Column(names, name='cgm_name'))
-        comptab.add_column(Column(rhos*u.kpc, name='rho_impact'))
+        newcomptab.add_column(Column(names, name='cgm_name'))
+        newcomptab.add_column(Column(rhos*u.kpc, name='rho_impact'))
         return newcomptab
 
     def trans_tbl(self, inp, fill_ion=True):
