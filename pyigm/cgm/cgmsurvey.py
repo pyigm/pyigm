@@ -227,7 +227,42 @@ class CGMAbsSurvey(object):
         return tbl
 
     def component_tbl(self, Zion, vlim=None):
-        return
+        """ Generate a Table of line measurements for an input ion broken
+            down by component.
+
+            Parameters
+            ----------
+            Zion : tuple or str
+                E.g., (8,6) or 'OVI'
+            vlim : Quantity, optional
+              Fill each ionN table in the survey (a bit slow)
+
+            Returns
+            -------
+            tbl : astropy.Table
+            """
+        from linetools.abund.ions import name_to_ion
+        from linetools.isgm import utils as ltiu
+        from astropy.table import Table, vstack, Column
+
+        if isinstance(Zion, basestring):
+            Zion = name_to_ion(Zion)
+        newcomptab = Table()
+        rhos = []
+        names = []
+        for i,isys in enumerate(self.cgm_abs):
+            isys.igm_sys.update_component_vel()
+            comptab = ltiu.iontable_from_components(isys.igm_sys._components)
+            comptab = comptab[(comptab['Z']==Zion[0]) & (comptab['ion']==Zion[1])]
+            if len(comptab)==0:
+                continue
+            newcomptab = vstack([newcomptab,comptab])
+            import pdb; pdb.set_trace()
+            rhos.extend([isys.rho.value] * len(comptab))
+            names.extend([isys.name] * len(comptab))
+        comptab.add_column(Column(names, name='cgm_name'))
+        comptab.add_column(Column(rhos*u.kpc, name='rho_impact'))
+        return newcomptab
 
     def trans_tbl(self, inp, fill_ion=True):
         """ Generate a Table of Data on a given transition, e.g. SiIII 1206
