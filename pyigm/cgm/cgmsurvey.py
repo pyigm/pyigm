@@ -252,7 +252,7 @@ class CGMAbsSurvey(object):
         names = []
         for i,isys in enumerate(self.cgm_abs):
             isys.igm_sys.update_component_vel()
-            comptab = ltiu.iontable_from_components(isys.igm_sys._components)
+            comptab = ltiu.table_from_complist(isys.igm_sys._components)
             comptab = comptab[(comptab['Z']==Zion[0]) & (comptab['ion']==Zion[1])]
             if len(comptab)==0:
                 continue
