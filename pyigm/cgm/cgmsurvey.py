@@ -228,19 +228,19 @@ class CGMAbsSurvey(object):
 
     def component_tbl(self, Zion, vlim=None):
         """ Generate a Table of line measurements for an input ion broken
-            down by component.
+        down by component.
 
-            Parameters
-            ----------
-            Zion : tuple or str
-                E.g., (8,6) or 'OVI'
-            vlim : Quantity, optional
-              Fill each ionN table in the survey (a bit slow)
+        Parameters
+        ----------
+        Zion : tuple or str
+            E.g., (8,6) or 'OVI'
+        vlim : Quantity, optional
+          Fill each ionN table in the survey (a bit slow)
 
-            Returns
-            -------
-            tbl : astropy.Table
-            """
+        Returns
+        -------
+        tbl : astropy.Table
+        """
         from linetools.abund.ions import name_to_ion
         from linetools.isgm import utils as ltiu
         from astropy.table import Table, vstack, Column
