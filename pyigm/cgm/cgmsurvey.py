@@ -226,7 +226,7 @@ class CGMAbsSurvey(object):
         # Return
         return tbl
 
-    def component_tbl(self, Zion, vlim=None):
+    def component_tbl(self, Zion):
         """ Generate a Table of line measurements for an input ion broken
         down by component.
 
@@ -234,8 +234,6 @@ class CGMAbsSurvey(object):
         ----------
         Zion : tuple or str
             E.g., (8,6) or 'OVI'
-        vlim : Quantity, optional
-          Fill each ionN table in the survey (a bit slow)
 
         Returns
         -------

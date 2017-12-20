@@ -220,6 +220,7 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
 
     """
     from pyigm.cgm.cgm import CGMAbsSys
+    import copy
     # Cosmology
     if cosmo is None:
         cosmo = cosmology.Planck15
@@ -258,7 +259,13 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
         # Loop to generate
         cgm_list = []
         for imatch in match:
-            cgm = CGMAbsSys(galaxy, igmsystems[imatch], cosmo=cosmo, **kwargs)
+            # Instantiate new IGMSystem
+            # Otherwise, updates to the IGMSystem cross-pollinate other CGMs
+            sysmatch = igmsystems[imatch]
+            newisys = IGMSystem(sysmatch.coord,sysmatch.zabs,
+                                vlim=sysmatch.vlim)
+            newisys._components = copy.deepcopy(sysmatch._components)
+            cgm = CGMAbsSys(galaxy, newisys, cosmo=cosmo, **kwargs)
             cgm_list.append(cgm)
 
     # Return
