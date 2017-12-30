@@ -263,9 +263,6 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
             # Otherwise, updates to the IGMSystem cross-pollinate other CGMs
             sysmatch = igmsystems[imatch]
             newisys = sysmatch.copy()
-            #newisys = IGMSystem(sysmatch.coord,sysmatch.zabs,
-            #                    vlim=sysmatch.vlim)
-            #newisys._components = [comp.copy() for comp in sysmatch._components]
             newisys.zabs = galaxy.z
             newisys.update_component_vel()
             cgm = CGMAbsSys(galaxy, newisys, cosmo=cosmo, **kwargs)
