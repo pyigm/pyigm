@@ -188,7 +188,7 @@ class CGMAbsSurvey(object):
             os.remove(jfile)
         os.rmdir(tmpdir)
 
-    def ion_tbl(self, Zion, fill_ion=True):
+    def ion_tbl(self, Zion, fill_ion=True, vrange=None):
         """ Generate a Table of Ionic column densities for an input ion
 
         Parameters
@@ -196,6 +196,8 @@ class CGMAbsSurvey(object):
         Zion : tuple or str
         fill_ion : bool, optional
           Fill each ionN table in the survey (a bit slow)
+        vrange : Quantity, optional
+          Velocity range of components to sum column densities
 
         Returns
         -------
@@ -210,7 +212,7 @@ class CGMAbsSurvey(object):
         rhos = []
         for cgmabs in self.cgm_abs:
             if fill_ion:
-                cgmabs.igm_sys.fill_ionN()
+                cgmabs.igm_sys.fill_ionN(vrange)
             if cgmabs.igm_sys._ionN is not None:
                 dumb._abs_sys.append(cgmabs.igm_sys)
                 # Names

@@ -151,7 +151,7 @@ class CGMAbsSys(object):
         if self.galaxy.z is None:
             raise IOError('Galaxy redshift *must* be specified')
         if not isinstance(igm_sys, IGMSystem):
-            raise IOError('CGMAbsSys instantiated with an IGMSystem')
+                raise IOError('CGMAbsSys instantiated with an IGMSystem')
         self.igm_sys = igm_sys
 
         # Calculate rho
@@ -338,8 +338,12 @@ class CGMAbsSys(object):
                         lines2plot.append(complines[compnames == strong['name']])
                     else:  # Multiple lines covered
                         complines = np.array(complines) # For the indexing
-                        tokeep = [complines[compnames == sn][0] for sn in strong['name']]
-                        lines2plot.extend(tokeep)
+                        try:
+                            tokeep = [complines[compnames == sn][0] for sn in strong['name']]
+                            lines2plot.extend(tokeep)
+                        except:
+                            warnings.warn('{} covered by spectra but not in'
+                                          'components list'.format(sn))
         else:
             lines2plot = to_plot
 
