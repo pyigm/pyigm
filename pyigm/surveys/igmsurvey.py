@@ -153,7 +153,7 @@ class IGMSurvey(object):
         # Return
         return slf
 
-    def __init__(self, abs_type, ref=''):
+    def __init__(self, abs_type, ref='', verbose=True):
         """  Initiator
 
         Parameters
@@ -166,8 +166,11 @@ class IGMSurvey(object):
         self.abs_type = abs_type
         self.ref = ref
         self._abs_sys = []
+        self._data = Table()
+        self._dict = {}
         self.sightlines = None
         self.coords = None  # Intended to be a SkyCoord obj with *all* of the system coordinates
+        self.verbose=verbose
 
         # Mask
         self.mask = None
@@ -188,10 +191,11 @@ class IGMSurvey(object):
         if self.mask is not None:
             return np.sum(self.mask)
         else:
-            return len(self._abs_sys)
+            return len(self._data)
 
     def abs_sys(self, inp, fill_coord=True):
         """ Return an abs_system by index
+        Instantiate as needed
         Returns
         -------
         inp : int
@@ -215,7 +219,6 @@ class IGMSurvey(object):
         if self.nsys > 0:
             self.mask = np.array([True]*self.nsys)
 
-
     def add_abs_sys(self, abs_sys):
         """ Add an IGMSys to the Survey
 
@@ -230,6 +233,19 @@ class IGMSurvey(object):
 
         # Append
         self._abs_sys.append(abs_sys)
+
+    def build_abs_sys_from_dict(self, name, coord=None):
+        """
+        Parameters
+        ----------
+        name : str
+          Needs to match a key in the dict
+
+        Returns
+        -------
+        abs_sys : AbsSystem
+
+        """
 
     def calculate_gz(self, zstep=1e-4, zmin=None, zmax=None):
         """ Uses sightlines table to generate a g(z) array
@@ -266,7 +282,6 @@ class IGMSurvey(object):
         # Return
         return zeval, gz
 
-
     def chk_abs_sys(self, abs_sys):
         """ Preform checks on input abs_sys
 
@@ -283,9 +298,57 @@ class IGMSurvey(object):
             raise IOError("Must be an IGMSystem object")
         return True
 
-    def fill_ions(self, use_Nfile=False, jfile=None, use_components=False,
+    def components_from_dict(self, linelist=None):
+        """ Build and return a list of AbsComponent objects
+        from the dict
+
+        Returns
+        -------
+        compllist : list of AbsComponent objects
+
+        """
+        # Linelist
+        if linelist is None:
+            if self.verbose:
+                print("No LineList input.  Assuming you want the ISM list")
+            from linetools.lists.linelist import LineList
+            linelist = LineList('ISM')
+        #
+        if self.verbose:
+            print("Building a list of components from the internal dict")
+        all_comps = []
+        for kk, key in enumerate(self._dict.keys()):
+            comps = ltiu.build_components_from_dict(self._dict[key],
+                                                    coord=self.coords[kk], linelist=linelist)
+            # Add
+            all_comps += comps
+        # Return
+        return all_comps
+
+    def data_from_dict(self):
+        """ Generate the data Table from the internal dict
+        """
+        from astropy.table import Column
+        # Table columns
+        key0 = list(self._dict.keys())[0]
+        tab_clms = list(self._dict[key0].keys())
+        # Remove unwanted ones
+        rmv_keys = ['abs_type', 'components', 'kin', 'Refs']
+        for rkey in rmv_keys:
+            if rkey in tab_clms:
+                tab_clms.remove(rkey)
+        # Build it
+        for tclm in tab_clms:
+            values = []
+            for key in self._dict.keys():
+                values.append(self._dict[key][tclm])
+            # Add column
+            clm = Column(values, name=tclm)
+            self._data.add_column(clm)
+
+    def fill_ions(self, use_dict=True, use_Nfile=False, jfile=None, use_components=False,
                   verbose=True):
-        """ Loop on systems to fill in ions
+        """ Loop on systems to fill in _ionN Table
 
         Parameters
         ----------
@@ -303,6 +366,8 @@ class IGMSurvey(object):
             # Loop on systems
             for abs_sys in self._abs_sys:
                 abs_sys.get_ions(idict=ions_dict[abs_sys.name])
+        elif use_dict: # Use internal dict
+            pass
         elif use_Nfile:
             for abs_sys in self._abs_sys:
                 abs_sys.get_ions(use_Nfile=True, verbose=verbose)
@@ -436,13 +501,16 @@ class IGMSurvey(object):
         else:
             raise ValueError('abs_survey: Needs developing!')
 
-    def write_survey(self, outfile='tmp.tar', tmpdir = 'IGM_JSON'):
+    def write_survey(self, outfile='tmp.tar', tmpdir = 'IGM_JSON', chk_dict=True):
         """ Generates a gzipped tarball of JSON files, one per system
 
         Parameters
         ----------
         outfile : str, optional
+          Output filename
         tmpdir : str, optional
+        chk_dict : bool, optional
+          Check that the _dict matches what is in the _abs_sys list
 
         Returns
         -------
