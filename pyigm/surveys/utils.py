@@ -69,21 +69,24 @@ def load_sys_files(inp, type, ref=None, sys_path=False, build_abs_sys=False, **k
             # Add keys (for backwards compatability)
             if ('NHI' in tdict.keys()) and ('flag_NHI' not in tdict.keys()):
                 tdict['flag_NHI'] = 1
-            # Generate AbsSystem?
-            if build_abs_sys:
-                abssys = system.from_dict(tdict, chk_sep=False, linelist=llist, **kwargs)
-                survey._abs_sys.append(abssys)
             # Add to list of dicts
             survey._dict[tdict['Name']] = tdict
         tar.close()
+
     # Set coordinates
     ras = [survey._dict[key]['RA'] for key in survey._dict.keys()]
     decs = [survey._dict[key]['DEC'] for key in survey._dict.keys()]
     survey.coords = SkyCoord(ra=ras, dec=decs, unit='deg')
 
+    # Dummy abs_sys
+    survey.init_abs_sys()
+    if build_abs_sys:
+        survey.build_all_abs_sys()
+
     # Generate the data table
     print("Building the data Table from the internal dict")
     survey.data_from_dict()
+
     # Return
     return survey
 

@@ -164,10 +164,12 @@ class DLASurvey(IGMSurvey):
 
         if load_sys:  # This approach takes ~90s
             print('H100: Loading systems.  This takes ~90s')
-            if isys_path is not None:
-                dla_survey = pyisu.load_sys_files(isys_path, 'DLA', sys_path=True, use_coord=True)
-            else:
-                dla_survey = pyisu.load_sys_files(sys_files, 'DLA', use_coord=True)
+            dla_survey = pyisu.load_sys_files(sys_files, 'DLA', build_abs_sys=True)
+            # Reset flag_NHI (which has been wrong)
+            for key in dla_survey._dict.keys():
+                dla_survey._dict[key]['flag_NHI'] = 1
+            # Fill ion Tables
+            print("Filling the _ionN tables...")
             dla_survey.fill_ions(use_components=True)
         else:
             # Read
@@ -180,7 +182,7 @@ class DLASurvey(IGMSurvey):
         tbl2 = Table.read(tbl2_file, format='cds')
         # Parse for matching
         if load_sys:
-            names = dla_survey.name
+            names = dla_survey._data['Name']
             qsonames = []
             zabs = []
             for name in names:
@@ -229,6 +231,8 @@ class DLASurvey(IGMSurvey):
         # Spectra?
         if grab_spectra:
             warnings.warn("All of these spectra are in igmspec at https://github.com/specdb/specdb")
+            print("Grab them there!")
+            '''
             specfils = glob.glob(spath+'H100_J*.fits')
             if len(specfils) < 100:
                 import tarfile
@@ -250,7 +254,9 @@ class DLASurvey(IGMSurvey):
                 print('H100: All done')
             else:
                 print('H100: Using files in {:s}'.format(spath))
+            '''
 
+        print("All done!!")
         return dla_survey
 
     @classmethod

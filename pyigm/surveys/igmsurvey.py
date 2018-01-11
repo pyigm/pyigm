@@ -9,6 +9,8 @@ from abc import ABCMeta
 import warnings
 import pdb
 
+from collections import OrderedDict
+
 from astropy import coordinates as coords
 from astropy.io import ascii
 from astropy import units as u
@@ -43,6 +45,10 @@ class IGMSurvey(object):
       Defines a subset of the systems (e.g. statistical)
     sightlines : Table, optional
       Table of the sightlines in the survey
+    _data : Table, optional
+      Table of 'key' data
+    _dict : OrderedDict, optional
+      Nested data
     """
 
     __metaclass__ = ABCMeta
@@ -153,7 +159,7 @@ class IGMSurvey(object):
         # Return
         return slf
 
-    def __init__(self, abs_type, ref='', verbose=True):
+    def __init__(self, abs_type, ref='', verbose=False):
         """  Initiator
 
         Parameters
@@ -167,7 +173,7 @@ class IGMSurvey(object):
         self.ref = ref
         self._abs_sys = []
         self._data = Table()
-        self._dict = {}
+        self._dict = OrderedDict()
         self.sightlines = None
         self.coords = None  # Intended to be a SkyCoord obj with *all* of the system coordinates
         self.verbose=verbose
@@ -190,8 +196,21 @@ class IGMSurvey(object):
         """
         if self.mask is not None:
             return np.sum(self.mask)
-        else:
+        elif len(self._data) > 0:
             return len(self._data)
+        else:
+            return len(self._dict)
+
+    def sys_idx(self, abssys_name):
+        """ System index"""
+        # Index
+        try:
+            idx = list(self._dict.keys()).index(abssys_name)
+        except ValueError:
+            raise ValueError("System {:s} is not in the _dict".format(abssys_name))
+        # Return
+        return idx
+
 
     def abs_sys(self, inp, fill_coord=True):
         """ Return an abs_system by index
@@ -212,6 +231,14 @@ class IGMSurvey(object):
         if fill_coord:
             isys.coord = self.coords[idx]
         return isys
+
+    def init_abs_sys(self, clobber=False):
+        """ Initialize the abs_sys list
+        """
+        if (len(self._abs_sys) == 0) or clobber:
+            self._abs_sys = [None]*self.nsys
+        else:
+            warnings.warn("abs_sys list is already initialized.  Use clobber=True to reset")
 
     def init_mask(self):
         """ Initialize the mask for abs_sys
@@ -234,18 +261,57 @@ class IGMSurvey(object):
         # Append
         self._abs_sys.append(abs_sys)
 
-    def build_abs_sys_from_dict(self, name, coord=None):
+    def build_all_abs_sys(self, linelist=None, **kwargs):
         """
+        Build all of the AbsSystem objects from the _dict (maybe _data soon)
+        """
+        # This speeds things up a bunch
+        if linelist is None:
+            linelist = default_linelist(self.verbose)
+        # Loop me
+        print("Starting the AbsSystem build.  Be patient..")
+        for key in self._dict.keys():
+            _ = self.build_abs_sys(key, linelist=linelist, **kwargs)
+        print("Done!")
+
+
+    def build_abs_sys(self, abssys_name, **kwargs):
+        """ Build an AbsSystem from the _dict (and maybe _data
+        soon enough)
+        The item in self._abs_sys is filled and
+        the systems is also returned
+
         Parameters
         ----------
-        name : str
+        abssys_name : str
           Needs to match a key in the dict
+        **kwargs
+          Passed to compoenents_from_dict()
 
         Returns
         -------
         abs_sys : AbsSystem
 
         """
+        # Index
+        idx = self.sys_idx(abssys_name)
+        # Components first
+        comps = self.components_from_dict(abssys_name, coord=self.coords[idx], **kwargs)
+        # Add HI if needed
+        NHI = None
+        if 'flag_NHI' in self._dict[abssys_name].keys():
+            Zions = [comp.Zion for comp in comps]
+            if (1,1) not in Zions:
+                NHI = self._dict[abssys_name]['NHI']
+        # Now the System
+        vlim=np.array(self._dict[abssys_name]['vlim'])*u.km/u.s
+        abssys = class_by_type(self.abs_type).from_components(comps, vlim=vlim, NHI=NHI)
+        # Fill
+        if len(self._abs_sys) == 0:
+            self.init_abs_sys()
+        self._abs_sys[idx] = abssys
+        # Return too
+        return abssys
 
     def calculate_gz(self, zstep=1e-4, zmin=None, zmax=None):
         """ Uses sightlines table to generate a g(z) array
@@ -298,32 +364,30 @@ class IGMSurvey(object):
             raise IOError("Must be an IGMSystem object")
         return True
 
-    def components_from_dict(self, linelist=None):
+    def components_from_dict(self, abssys_name, coord=None, linelist=None):
         """ Build and return a list of AbsComponent objects
-        from the dict
+        from the dict for a given system
+
+        Parameters
+        ----------
+        abssys_name : str
+        coord : SkyCoord, optional
+          coordinates to use for the components
+        linelist : LineList, optional
 
         Returns
         -------
         compllist : list of AbsComponent objects
 
         """
-        # Linelist
+        # Do it
         if linelist is None:
-            if self.verbose:
-                print("No LineList input.  Assuming you want the ISM list")
-            from linetools.lists.linelist import LineList
-            linelist = LineList('ISM')
-        #
-        if self.verbose:
-            print("Building a list of components from the internal dict")
-        all_comps = []
-        for kk, key in enumerate(self._dict.keys()):
-            comps = ltiu.build_components_from_dict(self._dict[key],
-                                                    coord=self.coords[kk], linelist=linelist)
-            # Add
-            all_comps += comps
+            linelist = default_linelist(self.verbose)
+        # Components
+        comps = ltiu.build_components_from_dict(self._dict[abssys_name],
+                                                coord=coord, linelist=linelist)
         # Return
-        return all_comps
+        return comps
 
     def data_from_dict(self):
         """ Generate the data Table from the internal dict
@@ -684,3 +748,10 @@ def lst_to_array(lst, mask=None):
         # Return
         return tbl
 
+
+def default_linelist(verbose=True):
+    from linetools.lists.linelist import LineList
+    if verbose:
+        print("No LineList input.  Assuming you want the ISM list")
+    linelist = LineList('ISM')
+    return linelist
