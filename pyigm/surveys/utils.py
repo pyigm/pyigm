@@ -79,7 +79,6 @@ def load_sys_files(inp, type, ref=None, sys_path=False, build_abs_sys=False, **k
     survey.coords = SkyCoord(ra=ras, dec=decs, unit='deg')
 
     # Dummy abs_sys
-    survey.init_abs_sys()
     if build_abs_sys:
         survey.build_all_abs_sys()
 

@@ -410,7 +410,7 @@ class IGMSurvey(object):
             clm = Column(values, name=tclm)
             self._data.add_column(clm)
 
-    def fill_ions(self, use_dict=True, use_Nfile=False, jfile=None, use_components=False,
+    def fill_ions(self, use_Nfile=False, jfile=None, use_components=False,
                   verbose=True):
         """ Loop on systems to fill in _ionN Table
 
@@ -430,26 +430,23 @@ class IGMSurvey(object):
             # Loop on systems
             for abs_sys in self._abs_sys:
                 abs_sys.get_ions(idict=ions_dict[abs_sys.name])
-        elif use_dict: # Use internal dict
-            pass
         elif use_Nfile:
             for abs_sys in self._abs_sys:
                 abs_sys.get_ions(use_Nfile=True, verbose=verbose)
         elif use_components:
             for abs_sys in self._abs_sys:
-                abs_sys._ionN = ltiu.iontable_from_components(abs_sys._components,
-                                                              ztbl=abs_sys.zabs)
+                abs_sys._ionN = ltiu.table_from_complist(abs_sys._components)
         else:
             raise ValueError("Not sure how to load the ions")
 
     # Get ions
-    def ions(self, iZion, Ej=0., skip_null=False):
+    def ions(self, Zion, Ej=0., skip_null=False):
         """ Generate a Table of columns and so on
         Restrict to those systems where flg_clm > 0
 
         Parameters
         ----------
-        iZion : tuple
+        Zion : tuple
            Z, ion   e.g. (6,4) for CIV
         Ej : float [1/cm]
            Energy of the lower level (0. is resonance)
@@ -458,16 +455,50 @@ class IGMSurvey(object):
 
         Returns
         -------
-        Table of values for the Survey
+        tbl : MaskedTable of values for the Survey
+          Systems without the ion have rows masked
         """
         if self._abs_sys[0]._ionN is None:
-            raise IOError("ionN table not set.  Use fill_ionN")
-        # Find the first entry with a non-zero length table
+            raise IOError("ionN tables are not set.  Use fill_ionN")
+
+        # Loop me!
+        tbls = []
+        names = []
         for kk,abs_sys in enumerate(self._abs_sys):
-            if len(abs_sys._ionN) > 0:
-                break
+            if len(abs_sys._ionN) == 0:
+                names.append('MASK_ME')
+                tbls.append(None)
+            #
+            mt = (abs_sys._ionN['Z'] == Zion[0]) & (abs_sys._ionN['ion'] == Zion[1]) & (
+                abs_sys._ionN['Ej'] == Ej)
+            if np.any(mt):
+                tbls.append(abs_sys._ionN[mt])
+                names.append(abs_sys.name)
+            else:
+                tbls.append(None)
+                names.append('MASK_ME')
+        # Fill in the bad ones
+        names = np.array(names)
+        idx = np.where(names != 'MASK_ME')[0]
+        if len(idx) == 0:
+            return None
+        bad = np.where(names == 'MASK_ME')[0]
+        for ibad in bad:
+            tbls[ibad] = tbls[idx[0]]
+        # Stack me
+        tbl = vstack(tbls)
+        tbl['abssys_name'] = names
+        # Mask
+        tbl = Table(tbl, masked=True)
+        mask = names == 'MASK_ME'
+        for key in tbl.keys():
+            if key == 'flag_N':
+                tbl[key][mask] = 0
+            else:
+                tbl[key].mask = mask
+        '''
         #
-        keys = [u'name', ] + self._abs_sys[kk]._ionN.keys()
+        keys = [u'abssys_name', ] + list(self._abs_sys[kk]._ionN.keys())
         t = Table(self._abs_sys[kk]._ionN[0:1]).copy()   # Avoids mixin trouble
         t.add_column(Column(['dum']*len(t), name='name', dtype='<U32'))
         t = t[keys]
@@ -502,9 +533,13 @@ class IGMSurvey(object):
             else:
                 pdb.set_trace()
                 raise ValueError("Multple entries")
-
+        '''
+        # Reorder
+        all_keys = list(tbl.keys())
+        all_keys.remove('abssys_name')
+        all_keys = ['abssys_name']+all_keys
         # Return
-        return t[1:]
+        return tbl[all_keys]
 
     def trans(self, inp):
         """ Generate a Table of Data on a given transition, e.g. SiIII 1206
@@ -614,7 +649,12 @@ class IGMSurvey(object):
         """ Generate an array of attribute 'k' from the IGMSystems
         NOTE: We only get here if the Class doesn't have this attribute set already
 
-        Mask is applied
+        The Mask will be applied
+
+        Order of search is:
+          _data
+          _dict
+          _abs_sys
 
         Parameters
         ----------
@@ -625,20 +665,30 @@ class IGMSurvey(object):
         -------
         numpy array
         """
-        # Catch length 0 list
-        if len(self._abs_sys) == 0:
-            raise ValueError("Attribute does not exist")
-        try:
-            lst = [getattr(abs_sys, k) for abs_sys in self._abs_sys]
-        except ValueError:
-            raise ValueError("Attribute does not exist")
-        # Special cases
+        # Special case(s)
         if k == 'coord':
             lst = self.coords
             if self.mask is not None:
                 return lst[self.mask]
             else:
                 return lst
+        elif k in self._data.keys():  # _data
+            lst = self._data[k]
+        else:
+            lst = None
+        # Now try _dict
+        if lst is None:
+            if len(self._dict) > 0:
+                if k in next(iter(self._dict.items()))[1].keys():
+                    lst = [self._dict[key][k] for key in self._dict.keys()]
+        # AbsSystem last!
+        if lst is None:
+            if len(self._abs_sys) == 0:
+                raise ValueError("Attribute does not exist anywhere!")
+            try:
+                lst = [getattr(abs_sys, k) for abs_sys in self._abs_sys]
+            except ValueError:
+                raise ValueError("Attribute does not exist")
         # Recast as an array
         return lst_to_array(lst, mask=self.mask)
 

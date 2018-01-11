@@ -125,25 +125,28 @@ class DLASurvey(IGMSurvey):
         return dla_survey
 
     @classmethod
-    def load_H100(cls, grab_spectra=False, load_sys=True, isys_path=None):
+    def load_H100(cls, grab_spectra=False, load_sys=True, build_abs_sys=True,
+                  isys_path=None):
         """ Sample of unbiased HIRES DLAs compiled and analyzed by Neeleman+13
 
         Neeleman, M. et al. 2013, ApJ, 769, 54
 
         Parameters
         ----------
-        grab_spectra : bool, optional
-          Grab 1D spectra?  (141Mb)
         load_sys : bool, optional
-          Load systems? (takes ~60s for 100 systems)
-        skip_trans : bool, optional
-          Skip loading transitions (takes ~60s)?
+          Load systems? (takes ~15s for 100 systems)
+        build_abs_sys : bool, optional
+          Build AbsSystem objects (~10s)
+          Required for a fair bit of other things, e.g. kin
         isys_path : str, optional
           Read system files from this path
+        grab_spectra : bool, optional
+          Grab 1D spectra?  (141Mb)
+          deprecated..   Use igmspec
 
         Return
         ------
-        dla_survey
+        dla_survey : DLASurvey
         """
         from importlib import reload
         reload(pyisu)
@@ -164,18 +167,25 @@ class DLASurvey(IGMSurvey):
 
         if load_sys:  # This approach takes ~90s
             print('H100: Loading systems.  This takes ~90s')
-            dla_survey = pyisu.load_sys_files(sys_files, 'DLA', build_abs_sys=True)
+            dla_survey = pyisu.load_sys_files(sys_files, 'DLA', build_abs_sys=build_abs_sys)
             # Reset flag_NHI (which has been wrong)
             for key in dla_survey._dict.keys():
                 dla_survey._dict[key]['flag_NHI'] = 1
             # Fill ion Tables
-            print("Filling the _ionN tables...")
-            dla_survey.fill_ions(use_components=True)
+            if build_abs_sys:
+                print("Filling the _ionN tables...")
+                dla_survey.fill_ions(use_components=True)
         else:
+            pdb.set_trace()  # I don't trust what follows
             # Read
             dla_survey = cls.from_sfits(summ_fil)
             # Load ions
             dla_survey.fill_ions(jfile=ions_fil)
+        dla_survey.ref = 'Neeleman+13'
+
+        if not build_abs_sys:
+            print("Not loading up all the other data.  Use build_abs_sys=True for that!")
+            return dla_survey
 
         # Metallicities
         tbl2_file = resource_filename('pyigm', "/data/DLA/H100/H100_table2.dat")
@@ -222,7 +232,6 @@ class DLASurvey(IGMSurvey):
             dla_survey._abs_sys[mt[0]].kin['trans'] = tbl2['trans'][ii]
             dla_survey._abs_sys[mt[0]].selection = tbl2['Select'][ii]
 
-        dla_survey.ref = 'Neeleman+13'
 
         spath = pyigm_path+"/data/DLA/H100/Spectra/"
         for dla in dla_survey._abs_sys:
@@ -232,29 +241,6 @@ class DLASurvey(IGMSurvey):
         if grab_spectra:
             warnings.warn("All of these spectra are in igmspec at https://github.com/specdb/specdb")
             print("Grab them there!")
-            '''
-            specfils = glob.glob(spath+'H100_J*.fits')
-            if len(specfils) < 100:
-                import tarfile
-                print('H100: Downloading a 141Mb file.  Be patient..')
-                url = 'https://dl.dropboxusercontent.com/u/6285549/DLA/H100/H100_DLA_spectra.tar.gz'
-                spectra_fil = pyigm_path+'/data/DLA/H100/H100_spectra.tar.gz'
-                f = urlopen(url)
-                with open(spectra_fil, "wb") as code:
-                    code.write(f.read())
-                # Unpack
-                print('H100: Unpacking..')
-                outdir = pyigm_path+"/data/DLA/H100"
-                t = tarfile.open(spectra_fil, 'r:gz')
-                t.extractall(outdir)
-                # Remove
-                print('H100: Removing tar file')
-                os.remove(spectra_fil)
-                # Done
-                print('H100: All done')
-            else:
-                print('H100: Using files in {:s}'.format(spath))
-            '''
 
         print("All done!!")
         return dla_survey
