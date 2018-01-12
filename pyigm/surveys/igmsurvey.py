@@ -106,53 +106,33 @@ class IGMSurvey(object):
         if isinstance(summ_fits, Table):
             systems = summ_fits
         else:
-            systems = QTable.read(summ_fits)
+            systems = Table.read(summ_fits)
         nsys = len(systems)
-        # Dict
+        # Special keys
         kdict = dict(NHI=['NHI', 'logNHI'],
                      sig_NHI=['sig(logNHI)', 'SIGNHI', 'NHI_ERR'],
                      name=['Name'], vlim=['vlim'],
                      zabs=['Z_LLS', 'ZABS', 'zabs'],
                      zem=['Z_QSO', 'QSO_ZEM', 'ZEM'],
-                     RA=['RA'], Dec=['DEC', 'Dec'])
-        # Parse the Table
-        inputs = {}
+                     RA=['RA'], DEC=['DEC', 'Dec'])
+        # Parse the Table to make uniform the keys used
         for key in kdict.keys():
-            vals, tag = lsio.get_table_column(kdict[key], [systems],idx=0)
-            if vals is not None:
-                inputs[key] = vals
+            for ikey in kdict[key]:
+                if ikey in systems.keys():
+                    if ikey == key:
+                        pass
+                    else:
+                        systems.rename_column(ikey, key)
+        # Set
+        slf._data = systems
         # vlim
-        if 'vlim' not in inputs.keys():
+        if 'vlim' not in slf._data.keys():
             default_vlim = [-1000, 1000.]* u.km / u.s
-            inputs['vlim'] = [default_vlim]*nsys
+            slf._data['vlim'] = [default_vlim]*nsys
         # Coords
         if coords is None:
-            coords = SkyCoord(ra=inputs['RA'], dec=inputs['Dec'], unit='deg')
+            coords = SkyCoord(ra=slf._data['RA'], dec=slf._data['DEC'], unit='deg')
         slf.coords = coords
-        ra_names = slf.coords.icrs.ra.to_string(unit=u.hour,sep='',pad=True)
-        dec_names = slf.coords.icrs.dec.to_string(sep='',pad=True,alwayssign=True)
-        # Generate abssys -- Note we give a *dummy* coord to the abssys intentionally
-        dcoord = SkyCoord(ra=0., dec=0., unit='deg')
-        for kk in range(nsys):
-            # Generate keywords
-            kwargs = {}
-            args = {}
-            for key in inputs.keys():
-                if key in ['vlim', 'zabs', 'RA', 'Dec']:
-                    args[key] = inputs[key][kk]
-                else:
-                    kwargs[key] = inputs[key][kk]
-            # Instantiate
-            #abssys = class_by_type(slf.abs_type)((args['RA'], args['Dec']), args['zabs'], args['vlim'], **kwargs)
-            if 'name' not in kwargs.keys():
-                kwargs['name'] = 'J{:s}{:s}_z{:.3f}'.format(ra_names[kk], dec_names[kk], args['zabs'])  # Much faster than generating internally
-            abssys = class_by_type(slf.abs_type)(dcoord, args['zabs'], args['vlim'], **kwargs)
-            # spec_files
-            try:
-                abssys.spec_files += systems[kk]['SPEC_FILES'].tolist()
-            except (KeyError, AttributeError):
-                pass
-            slf._abs_sys.append(abssys)
         # Mask
         slf.mask = None
         slf.init_mask()
@@ -198,8 +178,10 @@ class IGMSurvey(object):
             return np.sum(self.mask)
         elif len(self._data) > 0:
             return len(self._data)
-        else:
+        elif len(self._dict) > 0:
             return len(self._dict)
+        else:
+            return len(self._abs_sys)
 
     def sys_idx(self, abssys_name):
         """ System index"""
@@ -273,7 +255,6 @@ class IGMSurvey(object):
         for key in self._dict.keys():
             _ = self.build_abs_sys(key, linelist=linelist, **kwargs)
         print("Done!")
-
 
     def build_abs_sys(self, abssys_name, **kwargs):
         """ Build an AbsSystem from the _dict (and maybe _data
