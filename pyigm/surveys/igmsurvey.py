@@ -195,7 +195,7 @@ class IGMSurvey(object):
 
 
     def abs_sys(self, inp, fill_coord=True):
-        """ Return an abs_system by index
+        """ Return an abs_system by index from the *masked* set
         Instantiate as needed
         Returns
         -------
@@ -245,18 +245,64 @@ class IGMSurvey(object):
 
     def build_all_abs_sys(self, linelist=None, **kwargs):
         """
-        Build all of the AbsSystem objects from the _dict (maybe _data soon)
+        Build all of the AbsSystem objects from the _dict
+        or _data if the _dict does not exist!
+        In that order
         """
         # This speeds things up a bunch
         if linelist is None:
             linelist = default_linelist(self.verbose)
         # Loop me
-        print("Starting the AbsSystem build.  Be patient..")
-        for key in self._dict.keys():
-            _ = self.build_abs_sys(key, linelist=linelist, **kwargs)
+        if len(self._dict) > 0:
+            print("Starting the AbsSystem build for the _dict.  Be patient..")
+            for key in self._dict.keys():
+                _ = self.build_abs_sys_from_dict(key, linelist=linelist, **kwargs)
+        elif len(self._data) > 0:
+            for qq in range(self.nsys):
+                _ = self.build_abs_sys_from_data(qq)
+        else:
+            raise IOError("Nothing to build the systems with!")
+        # Return
         print("Done!")
+        return
 
-    def build_abs_sys(self, abssys_name, **kwargs):
+    def build_abs_sys_from_data(self, row):
+        """ Build an AbsSystem from the _data
+        The item in self._abs_sys is filled and
+        the system is also returned
+
+        Parameters
+        ----------
+        row : int
+          Row of the _data table
+          Ignores any masking -- this may change
+
+        Returns
+        -------
+        abs_sys : AbsSystem
+
+        """
+        # vlim -- may make optional
+        vlim=self._data['vlim'][row]
+        if self._data['vlim'].unit is not None:
+            vlim *= self._data['vlim'].unit
+        else:
+            vlim = vlim * u.km/u.s
+        # skwargs
+        skwargs = {}
+        for key in ['NHI', 'sig_NHI', 'name', 'zem']:
+            if key in self._data.keys():
+                skwargs[key] = self._data[key][row]
+        # Instantiate
+        abssys = class_by_type(self.abs_type)(self.coords[row], self._data['zabs'][row], vlim, **skwargs)
+        # Fill
+        if len(self._abs_sys) == 0:
+            self.init_abs_sys()
+        self._abs_sys[row] = abssys
+        # Return too
+        return abssys
+
+    def build_abs_sys_from_dict(self, abssys_name, **kwargs):
         """ Build an AbsSystem from the _dict (and maybe _data
         soon enough)
         The item in self._abs_sys is filled and
