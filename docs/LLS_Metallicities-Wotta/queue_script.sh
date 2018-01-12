@@ -62,7 +62,7 @@ done {FD}< <(find -L "${pyvenv_loc}" -name "pyigm_mtlmcmc.py" -print0)
 ##  include the "--testing" option. See all options below.
 python "${pyigm_mtlmcmc_loc[0]}" \
     --wotta \
-    -grid="/afs/crc.nd.edu/group/CGMND/Cloudy_grids/grid_cgm_extensive" \
+    -grid="/path/to/grid_cgm" \
     -guessesfile="MCMC_initial_guesses-run_me.dat" \
     -row=${SGE_TASK_ID} \
     -nthread=${NSLOTS} \
