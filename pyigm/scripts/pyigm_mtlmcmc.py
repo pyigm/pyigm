@@ -174,7 +174,7 @@ def run_mcmc_wotta(args):
     ##Test whether to include the carbalpha parameter, and use the correct UVB
     ##...But set a default first
     if not args.grid:
-        args.grid = '/afs/crc.nd.edu/group/CGMND/Cloudy_grids/grid_cgm_extensive'
+        args.grid = 'grid_minimal'
     
     if str(carbalpha_use).lower() == 'false':
         ##Do NOT use the carbalpha parameter
