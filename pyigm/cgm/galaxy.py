@@ -15,6 +15,8 @@ from astropy.coordinates import SkyCoord
 
 from linetools.spectralline import AbsLine
 from linetools.isgm.abscomponent import AbsComponent
+from linetools.lists.linelist import LineList
+from linetools.analysis.absline import linear_clm
 
 from pyigm.abssys.igmsys import IGMSystem
 from pyigm.field.galaxy import Galaxy
@@ -44,12 +46,86 @@ class GalaxyCGM(CGM):
         if load:
             self.load_hotgas()
 
+    def load_coolgas(self):
+        """ Load data on cool gas (CII, CIV, SiII, SiIII)
+        Richter+17
+        """
+        llist = LineList('ISM')
+        # Ricther+17
+        print('Loading Richter+17 for CII, CIV, SiII, SiIII')
+        r17_a1_file = resource_filename('pyigm','/data/CGM/Galaxy/richter17_A1.fits')
+        r17_a1 = Table.read(r17_a1_file)
+        r17_a2_file = resource_filename('pyigm','/data/CGM/Galaxy/richter17_A2.fits')
+        r17_a2 = Table.read(r17_a2_file)
+        # Coords
+        coords = SkyCoord(ra=r17_a1['_RAJ2000'], dec=r17_a1['_DEJ2000'], unit='deg')
+        gc = coords.transform_to('galactic')
+        ra = np.zeros((len(r17_a2)))
+        dec = np.zeros((len(r17_a2)))
+
+        # Loop on Sightlines
+        for kk,row in enumerate(r17_a1):
+            a2_idx = np.where(r17_a2['Name'] == row['Name'])[0]
+            ra[a2_idx] = row['_RAJ2000']
+            dec[a2_idx] = row['_DEJ2000']
+            # Generate the components
+            icoord = gc[kk]
+            comps = []
+            for jj,idx in enumerate(a2_idx):
+                # Transition
+                trans = '{:s} {:d}'.format(r17_a2['Ion'][idx], int(r17_a2['lambda0'][idx]))
+                aline = AbsLine(trans, linelist=llist)
+                aline.attrib['coord'] = icoord
+                # Velocity
+                z = 0.
+                aline.setz(z)
+                vlim = np.array([r17_a2['vmin'][idx], r17_a2['vmax'][idx]]) * u.km / u.s
+                aline.limits.set(vlim)
+                # EW
+                aline.attrib['flag_EW'] = 1
+                aline.attrib['EW'] = r17_a2['W'][idx] / 1e3 * u.AA
+                aline.attrib['sig_EW'] = r17_a2['e_W'][idx] / 1e3 * u.AA
+                # Column
+                if row['l_logN'] == '>':
+                    aline.attrib['flag_N'] = 2
+                    aline.attrib['sig_logN'] = 99.99
+                else:
+                    aline.attrib['flag_N'] = 1
+                    aline.attrib['sig_logN'] = r17_a2['e_logN'][idx]
+                aline.attrib['logN'] = r17_a2['logN'][idx]
+                # Fill linear
+                _, _ = linear_clm(aline.attrib)
+                # Generate component and add
+                comp = AbsComponent.from_abslines([aline])
+                comp.synthesize_colm()
+                comps.append(comp)
+            # Limits
+            vmin = np.min([icomp.limits.vmin for icomp in comps])
+            vmax = np.max([icomp.limits.vmax for icomp in comps])
+            # Instantiate
+            abssys = IGMSystem(icoord, z, u.Quantity([vmin,vmax]),
+                               name=row['Name'] + '_z0')
+            abssys.add_component(comp, chk_sep=False)
+            # CGM Abs
+            rho, ang_sep = calc_Galactic_rho(abssys.coord)
+            cgmabs = CGMAbsSys(self.galaxy, abssys, rho=rho, ang_sep=ang_sep)
+            # Add to cgm_abs
+            self.abs.cgm_abs.append(cgmabs)
+        # Finish
+        r17_a2['RA'] = ra
+        r17_a2['DEC'] = dec
+        self.richter17 = r17_a2
+        # Reference
+        if len(self.refs) > 0:
+            self.refs += ','
+        self.refs += 'Ricther+17'
+        pdb.set_trace()
+
+
     def load_hotgas(self):
         """ Load data on hot gas (e.g. OVII, OVIII)
         Fang+15
         """
-        from linetools.lists.linelist import LineList
-        from linetools.analysis.absline import linear_clm
 
         llist = LineList('EUV')
         ovii = AbsLine('OVII 21', linelist=llist)
@@ -120,7 +196,7 @@ class GalaxyCGM(CGM):
         # # (should check to see if low-ion ones exist already)
         for row in self.savage03:
             # Coordinates
-            coord = SkyCoord(ra=row['_RA']*u.deg, dec=row['_DE']*u.deg, frame='fk5')
+            coord = SkyCoord(ra=row['_RA']*u.deg, dec=row['_DE']*u.deg, frame='icrs')
             gc = coord.transform_to('galactic')
             # Build the component
             vlim = np.array([row['V-'],row['V_']])*u.km/u.s
