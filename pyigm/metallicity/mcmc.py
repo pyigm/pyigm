@@ -446,7 +446,8 @@ class Emceebones(object):
         else:
             lutext = "False"
         
-        plot_title = "{}\nUVB={}, log U prior={}".format(self.info['name'], self.UVB, lutext)
+        # plot_title = "{}\nUVB={}, log U prior={}".format(self.info['name'], self.UVB, lutext)
+        plot_title = "{}".format(self.info['name'])
 
         
         ######
