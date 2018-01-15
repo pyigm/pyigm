@@ -35,9 +35,10 @@ class GalaxyCGM(CGM):
     load : bool, optional
       Load datasets
     """
-    def __init__(self, load=True, verbose=False, **kwargs):
+    def __init__(self, load=True, verbose=False, debug=False, **kwargs):
         # Init
         self.verbose = verbose
+        self.debug = debug
         # Generate the Milky Way
         milkyway = Galaxy((0.,0.), z=0.)
         self.galaxy = milkyway
@@ -70,6 +71,8 @@ class GalaxyCGM(CGM):
 
         # Loop on Sightlines
         for kk,row in enumerate(r17_a1):
+            if self.debug and (kk == 5):
+                break
             a2_idx = np.where(r17_a2['Name'] == row['Name'])[0]
             if len(a2_idx) == 0:
                 continue
