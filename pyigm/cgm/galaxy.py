@@ -15,6 +15,7 @@ from astropy.coordinates import SkyCoord
 
 from linetools.spectralline import AbsLine
 from linetools.isgm.abscomponent import AbsComponent
+from linetools.isgm import utils as ltiu
 from linetools.lists.linelist import LineList
 from linetools.analysis.absline import linear_clm
 
@@ -27,14 +28,16 @@ from pyigm.utils import calc_Galactic_rho
 c_kms = const.c.to('km/s').value
 
 class GalaxyCGM(CGM):
-    """Inherits CGM Abs Survey
+    """Inherits CGM class
 
     Parameters:
     -----------
     load : bool, optional
       Load datasets
     """
-    def __init__(self, load=True, **kwargs):
+    def __init__(self, load=True, verbose=False, **kwargs):
+        # Init
+        self.verbose = verbose
         # Generate the Milky Way
         milkyway = Galaxy((0.,0.), z=0.)
         self.galaxy = milkyway
@@ -44,6 +47,8 @@ class GalaxyCGM(CGM):
         self.abs = CGMAbsSurvey(survey='Galaxy')
         # Hot gas
         if load:
+            print("Loading data.  This takes ~10s...")
+            self.load_coolgas()  # This needs to be first!
             self.load_hotgas()
 
     def load_coolgas(self):
@@ -66,15 +71,20 @@ class GalaxyCGM(CGM):
         # Loop on Sightlines
         for kk,row in enumerate(r17_a1):
             a2_idx = np.where(r17_a2['Name'] == row['Name'])[0]
+            if len(a2_idx) == 0:
+                continue
             ra[a2_idx] = row['_RAJ2000']
             dec[a2_idx] = row['_DEJ2000']
             # Generate the components
             icoord = gc[kk]
-            comps = []
+            alines = []
             for jj,idx in enumerate(a2_idx):
                 # Transition
-                trans = '{:s} {:d}'.format(r17_a2['Ion'][idx], int(r17_a2['lambda0'][idx]))
-                aline = AbsLine(trans, linelist=llist)
+                trans = '{:s} {:d}'.format(r17_a2['Ion'][idx].strip(), int(r17_a2['lambda0'][idx]))
+                try:
+                    aline = AbsLine(trans, linelist=llist)
+                except ValueError:
+                    pdb.set_trace()
                 aline.attrib['coord'] = icoord
                 # Velocity
                 z = 0.
@@ -86,7 +96,7 @@ class GalaxyCGM(CGM):
                 aline.attrib['EW'] = r17_a2['W'][idx] / 1e3 * u.AA
                 aline.attrib['sig_EW'] = r17_a2['e_W'][idx] / 1e3 * u.AA
                 # Column
-                if row['l_logN'] == '>':
+                if r17_a2['l_logN'][idx] == '>':
                     aline.attrib['flag_N'] = 2
                     aline.attrib['sig_logN'] = 99.99
                 else:
@@ -95,17 +105,16 @@ class GalaxyCGM(CGM):
                 aline.attrib['logN'] = r17_a2['logN'][idx]
                 # Fill linear
                 _, _ = linear_clm(aline.attrib)
-                # Generate component and add
-                comp = AbsComponent.from_abslines([aline])
-                comp.synthesize_colm()
-                comps.append(comp)
+                alines.append(aline)
+            # Generate components from abslines
+            comps = ltiu.build_components_from_abslines(alines, chk_sep=False, chk_z=False)
             # Limits
-            vmin = np.min([icomp.limits.vmin for icomp in comps])
-            vmax = np.max([icomp.limits.vmax for icomp in comps])
+            vmin = np.min([icomp.limits.vmin.value for icomp in comps])
+            vmax = np.max([icomp.limits.vmax.value for icomp in comps])
             # Instantiate
-            abssys = IGMSystem(icoord, z, u.Quantity([vmin,vmax]),
-                               name=row['Name'] + '_z0')
-            abssys.add_component(comp, chk_sep=False)
+            s_kwargs = dict(name=row['Name'] + '_z0')
+            c_kwargs = dict(chk_sep=False, chk_z=False)
+            abssys = IGMSystem.from_components(comps, vlim=[vmin,vmax]*u.km/u.s, s_kwargs=s_kwargs, c_kwargs=c_kwargs)
             # CGM Abs
             rho, ang_sep = calc_Galactic_rho(abssys.coord)
             cgmabs = CGMAbsSys(self.galaxy, abssys, rho=rho, ang_sep=ang_sep)
@@ -119,7 +128,6 @@ class GalaxyCGM(CGM):
         if len(self.refs) > 0:
             self.refs += ','
         self.refs += 'Ricther+17'
-        pdb.set_trace()
 
 
     def load_hotgas(self):
@@ -127,8 +135,10 @@ class GalaxyCGM(CGM):
         Fang+15
         """
 
+        # Init
         llist = LineList('EUV')
         ovii = AbsLine('OVII 21', linelist=llist)
+        scoord = self.abs.scoord  # Sightline coordiantes
 
         # Fang+15  Table 1  [OVII]
         fang15_file = resource_filename('pyigm','/data/CGM/Galaxy/fang15_table1.dat')
@@ -173,15 +183,21 @@ class GalaxyCGM(CGM):
             aline.limits.set(vlim)
             # Generate component and add
             comp = AbsComponent.from_abslines([aline])
-            comp.synthesize_colm()
-            # Instantiate
-            abssys = IGMSystem(gc, z, vlim, name=row['Name']+'_z0', zem=row['z'])
-            abssys.add_component(comp, chk_sep=False)
-            # CGM Abs
-            rho, ang_sep = calc_Galactic_rho(abssys.coord)
-            cgmabs = CGMAbsSys(self.galaxy, abssys, rho=rho, ang_sep=ang_sep)
-            # Add to cgm_abs
-            self.abs.cgm_abs.append(cgmabs)
+            # Check for existing system
+            minsep = np.min(comp.coord.separation(scoord).to('arcsec'))
+            if minsep < 30*u.arcsec:  # Add component to existing system
+                idx = np.argmin(comp.coord.separation(scoord).to('arcsec'))
+                if self.verbose:
+                    print("Adding OVII system to {}".format(self.abs.cgm_abs[idx].igm_sys))
+                self.abs.cgm_abs[idx].igm_sys.add_component(comp, chk_sep=False, debug=True)
+            else: # Instantiate
+                abssys = IGMSystem(gc, z, vlim, name=row['Name']+'_z0', zem=row['z'])
+                abssys.add_component(comp, chk_sep=False)
+                # CGM Abs
+                rho, ang_sep = calc_Galactic_rho(abssys.coord)
+                cgmabs = CGMAbsSys(self.galaxy, abssys, rho=rho, ang_sep=ang_sep)
+                # Add to cgm_abs
+                self.abs.cgm_abs.append(cgmabs)
 
         scoord = self.abs.scoord  # Sightline coordiantes
         # Savage+03  Table 2  [OVI] -- Thick disk/halo only??

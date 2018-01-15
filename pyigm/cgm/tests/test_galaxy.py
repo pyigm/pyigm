@@ -10,9 +10,19 @@ import numpy as np
 from pyigm.cgm.galaxy import GalaxyCGM
 
 
-def test_init():
+def test_init_light():
+    mwcgm = GalaxyCGM(load=False)
+
+def test_init_full():
     mwcgm = GalaxyCGM()
     assert len(mwcgm.abs.cgm_abs) > 0
+
+    # Cool
+    assert 'Richter+17' in mwcgm.refs
+    pytest.set_trace()
+    SiII_tbl = mwcgm.abs.ion_tbl((14,2))
+
+    # Hot
     assert 'Fang+15' in mwcgm.refs
     # OVII table
     ovii_tbl = mwcgm.abs.ion_tbl((8,7))
