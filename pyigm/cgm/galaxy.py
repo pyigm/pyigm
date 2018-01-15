@@ -45,9 +45,9 @@ class GalaxyCGM(CGM):
         self.refs = ''
         # Absorption
         self.abs = CGMAbsSurvey(survey='Galaxy')
-        # Hot gas
+        # Load Data
         if load:
-            print("Loading data.  This takes ~10s...")
+            print("Loading data.  This takes ~30s to build it all...")
             self.load_coolgas()  # This needs to be first!
             self.load_hotgas()
 
@@ -107,7 +107,7 @@ class GalaxyCGM(CGM):
                 _, _ = linear_clm(aline.attrib)
                 alines.append(aline)
             # Generate components from abslines
-            comps = ltiu.build_components_from_abslines(alines, chk_sep=False, chk_z=False)
+            comps = ltiu.build_components_from_abslines(alines, chk_sep=False, chk_vel=False)
             # Limits
             vmin = np.min([icomp.limits.vmin.value for icomp in comps])
             vmax = np.max([icomp.limits.vmax.value for icomp in comps])
@@ -117,7 +117,7 @@ class GalaxyCGM(CGM):
             abssys = IGMSystem.from_components(comps, vlim=[vmin,vmax]*u.km/u.s, s_kwargs=s_kwargs, c_kwargs=c_kwargs)
             # CGM Abs
             rho, ang_sep = calc_Galactic_rho(abssys.coord)
-            cgmabs = CGMAbsSys(self.galaxy, abssys, rho=rho, ang_sep=ang_sep)
+            cgmabs = CGMAbsSys(self.galaxy, abssys, rho=rho, ang_sep=ang_sep, cosmo=self.cosmo)
             # Add to cgm_abs
             self.abs.cgm_abs.append(cgmabs)
         # Finish
@@ -127,7 +127,7 @@ class GalaxyCGM(CGM):
         # Reference
         if len(self.refs) > 0:
             self.refs += ','
-        self.refs += 'Ricther+17'
+        self.refs += 'Richter+17'
 
 
     def load_hotgas(self):
@@ -195,7 +195,7 @@ class GalaxyCGM(CGM):
                 abssys.add_component(comp, chk_sep=False)
                 # CGM Abs
                 rho, ang_sep = calc_Galactic_rho(abssys.coord)
-                cgmabs = CGMAbsSys(self.galaxy, abssys, rho=rho, ang_sep=ang_sep)
+                cgmabs = CGMAbsSys(self.galaxy, abssys, rho=rho, ang_sep=ang_sep, cosmo=self.cosmo)
                 # Add to cgm_abs
                 self.abs.cgm_abs.append(cgmabs)
 
@@ -235,7 +235,8 @@ class GalaxyCGM(CGM):
             minsep = np.min(comp.coord.separation(scoord).to('arcsec'))
             if minsep < 30*u.arcsec:
                 idx = np.argmin(comp.coord.separation(scoord).to('arcsec'))
-                self.abs.cgm_abs[idx].igm_sys.add_component(comp, chk_sep=False, debug=True)
+                self.abs.cgm_abs[idx].igm_sys.add_component(comp, chk_sep=False, debug=True,
+                                                            update_vlim=True)
             else:  # New
                 if row['RV'] > 0:
                     zem = row['RV']/c_kms
@@ -245,7 +246,7 @@ class GalaxyCGM(CGM):
                 abssys.add_component(comp, chk_sep=False, debug=True)
                 # CGM Abs
                 rho, ang_sep = calc_Galactic_rho(abssys.coord)
-                cgmabs = CGMAbsSys(self.galaxy, abssys, rho=rho, ang_sep=ang_sep, Galactic=True)
+                cgmabs = CGMAbsSys(self.galaxy, abssys, rho=rho, ang_sep=ang_sep, cosmo=self.cosmo)
                 # Add to cgm_abs
                 self.abs.cgm_abs.append(cgmabs)
 

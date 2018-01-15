@@ -19,8 +19,8 @@ def test_init_full():
 
     # Cool
     assert 'Richter+17' in mwcgm.refs
-    pytest.set_trace()
     SiII_tbl = mwcgm.abs.ion_tbl((14,2))
+    assert np.sum(SiII_tbl['flag_N'] > 0) == 192
 
     # Hot
     assert 'Fang+15' in mwcgm.refs

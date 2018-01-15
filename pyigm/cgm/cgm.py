@@ -34,7 +34,7 @@ class CGM(object):
 
     """
     # Initialize with a .dat file
-    def __init__(self, galaxy):
+    def __init__(self, galaxy, cosmo=None):
         # Checks
         if not isinstance(galaxy, Galaxy):
             raise IOError("CGM must be instantiated with a Galaxy")
@@ -49,8 +49,13 @@ class CGM(object):
                            hot=dict(T=[1e6, 1e10]*u.K))
         # rlim
         self.rlim = None
-        # AbsSys
-        self.cgm_abs = []
+
+        # Cosomlogy
+        if cosmo is None:
+            warnings.warn('cgm.CGMAbsSys: Using Planck15 cosmology')
+            self.cosmo = cosmology.Planck15
+        else:
+            self.cosmo = cosmo
 
     def __repr__(self):
         return ('<CGM: {:s} {:s}, z={:g}>'.format(
