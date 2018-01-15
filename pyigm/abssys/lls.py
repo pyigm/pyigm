@@ -466,8 +466,8 @@ class LLSSystem(IGMSystem):
 
     # Output
     def __repr__(self):
-        return ('<{:s}: {:s} {:s}, zabs={:g}, logNHI={:g}, tau_LL={:g}, [Z/H]={:g} dex>'.format(
-                self.__class__.__name__,
+        return ('<{:s}: {:s} {:s} {:s}, zabs={:g}, logNHI={:g}, tau_LL={:g}, [Z/H]={:g} dex>'.format(
+                self.__class__.__name__, self.name,
                  self.coord.ra.to_string(unit=u.hour,sep=':',pad=True),
                  self.coord.dec.to_string(sep=':',pad=True,alwayssign=True),
                  self.zabs, self.NHI, self.tau_LL, self.ZH))

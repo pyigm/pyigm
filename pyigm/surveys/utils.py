@@ -20,7 +20,7 @@ from .igmsurvey import IGMSurvey
 llist = LineList('ISM')
 
 
-def load_sys_files(inp, type, ref=None, sys_path=False, **kwargs):
+def load_sys_files(inp, type, ref=None, sys_path=False, build_abs_sys=False, **kwargs):
     """ Load up a set of SYS files from the hard-drive (JSON files)
 
     Parameters
@@ -34,6 +34,8 @@ def load_sys_files(inp, type, ref=None, sys_path=False, **kwargs):
     sys_path : str, optional
       indicates that inp is a path to a set of JSON SYS files
       otherwise, inp should be the filename of a tarball of JSON files
+    build_abs_sys : bool, optional
+      Build a list of AbsSystem's?  Can always be instantiated later
     **kwargs :
       Passed to system
 
@@ -46,6 +48,7 @@ def load_sys_files(inp, type, ref=None, sys_path=False, **kwargs):
     survey = class_by_type(type)(ref=ref)
     system = pyasu.class_by_type(type)
     if sys_path:
+        pdb.set_trace()  # THIS NEEDS TO BE UPDATED AS WAS DONE FOR THE TARBALL
         # Individual files
         files = glob.glob(inp+'*.json')
         files.sort()
@@ -66,13 +69,23 @@ def load_sys_files(inp, type, ref=None, sys_path=False, **kwargs):
             # Add keys (for backwards compatability)
             if ('NHI' in tdict.keys()) and ('flag_NHI' not in tdict.keys()):
                 tdict['flag_NHI'] = 1
-            # Generate
-            abssys = system.from_dict(tdict, chk_sep=False, linelist=llist, **kwargs)   # Consider use_coord=True as default
-            survey._abs_sys.append(abssys)
+            # Add to list of dicts
+            survey._dict[tdict['Name']] = tdict
         tar.close()
+
     # Set coordinates
-    icoords = [isys.coord for isys in survey._abs_sys]
-    survey.coords = SkyCoord(icoords)
+    ras = [survey._dict[key]['RA'] for key in survey._dict.keys()]
+    decs = [survey._dict[key]['DEC'] for key in survey._dict.keys()]
+    survey.coords = SkyCoord(ra=ras, dec=decs, unit='deg')
+
+    # Dummy abs_sys
+    if build_abs_sys:
+        survey.build_all_abs_sys()
+
+    # Generate the data table
+    print("Building the data Table from the internal dict")
+    survey.data_from_dict()
+
     # Return
     return survey
 
