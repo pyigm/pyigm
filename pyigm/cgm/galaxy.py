@@ -34,6 +34,7 @@ class GalaxyCGM(CGM):
     -----------
     load : bool, optional
       Load datasets
+    verbose : bool, optional
     """
     def __init__(self, load=True, verbose=False, debug=False, **kwargs):
         # Init
