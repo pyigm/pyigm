@@ -191,7 +191,7 @@ class GalaxyCGM(CGM):
             if aline.attrib['flag_N'] == 0: # Hack to merge later
                 comp.attrib['sig_logN'] = np.array([0., 0.])
             else:
-                pdb.set_trace()
+                pass
             # Check for existing system
             minsep = np.min(comp.coord.separation(scoord).to('arcsec'))
             if minsep < 30*u.arcsec:  # Add component to existing system
