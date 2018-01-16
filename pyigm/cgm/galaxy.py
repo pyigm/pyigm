@@ -49,7 +49,7 @@ class GalaxyCGM(CGM):
         self.abs = CGMAbsSurvey(survey='Galaxy')
         # Load Data
         if load:
-            print("Loading data.  This takes ~30s to build it all...")
+            print("Loading data.  This takes ~20s to build it all...")
             self.load_coolgas()  # This needs to be first!
             self.load_hotgas()
 
@@ -168,9 +168,10 @@ class GalaxyCGM(CGM):
                 z = 0.
                 vlim = np.array([-300,300]) * u.km/u.s
                 aline.attrib['flag_EW'] = 3
-                aline.attrib['flag_N'] = 0  # Might be able to set an upper limit
                 aline.attrib['EW'] = row['EW1'] / 1e3 * u.AA
                 aline.attrib['sig_EW'] = 99. * u.AA
+                #
+                aline.attrib['flag_N'] = 0  # Might be able to set an upper limit
             else:
                 aline.attrib['b'] = row['b'] * u.km / u.s
                 aline.attrib['flag_EW'] = 1
@@ -187,6 +188,10 @@ class GalaxyCGM(CGM):
             aline.limits.set(vlim)
             # Generate component and add
             comp = AbsComponent.from_abslines([aline])
+            if aline.attrib['flag_N'] == 0: # Hack to merge later
+                comp.attrib['sig_logN'] = np.array([0., 0.])
+            else:
+                pdb.set_trace()
             # Check for existing system
             minsep = np.min(comp.coord.separation(scoord).to('arcsec'))
             if minsep < 30*u.arcsec:  # Add component to existing system

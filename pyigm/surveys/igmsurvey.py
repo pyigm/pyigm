@@ -513,7 +513,10 @@ class IGMSurvey(object):
         for ibad in bad:
             tbls[ibad] = tbls[idx[0]]
         # Stack me
-        tbl = vstack(tbls)
+        try:
+            tbl = vstack(tbls)
+        except:
+            pdb.set_trace()
         tbl['abssys_name'] = names
         # Mask
         tbl = Table(tbl, masked=True)
