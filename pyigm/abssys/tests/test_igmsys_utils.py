@@ -37,10 +37,12 @@ def test_init_by_type():
 def test_hi_lya():
     # Simple system (without an absline)
     dla1 = DLASystem.from_json(data_path('J010311.38+131616.7_z2.309_ESI.json'))
-    dla1.zabs = 4.
+    dla1.limits._z = 4.
+    dla1.limits.set([-500,500]*u.km/u.s)
     dla1.NHI = 21.
     dla2 = DLASystem.from_json(data_path('J010311.38+131616.7_z2.309_ESI.json'))
-    dla2.zabs = 3.5
+    dla2.limits._z = 3.5
+    dla2.limits.set([-500,500]*u.km/u.s)
     dla2.NHI = 20.5
     spec_fil = linetools.__path__[0]+'/spectra/tests/files/PH957_f.fits'
     spec = lsio.readspec(spec_fil)

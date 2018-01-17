@@ -230,7 +230,7 @@ class COSHalos(CGMAbsSurvey):
             else:
                 comp = AbsComponent.from_abslines(abslines, chk_vel=False)
                 if comp.Zion != (1,1):
-                    comp.synthesize_colm()  # Combine the abs lines
+                    #comp.synthesize_colm()  # Combine the abs lines
                     if np.abs(comp.logN - float(iont['CLM'][0])) > 0.15:
                         print("New colm for ({:d},{:d}) and sys {:s} is {:g} different from old".format(
                             comp.Zion[0], comp.Zion[1], cgabs.name, comp.logN - float(iont['CLM'][0])))
