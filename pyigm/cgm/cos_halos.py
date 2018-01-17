@@ -172,7 +172,7 @@ class COSHalos(CGMAbsSurvey):
             for kk in range(ntrans):
                 flg = iont['FLG'][0][kk]
                 # Fill in
-                aline = AbsLine(iont['LAMBDA'][0][kk]*u.AA, closest=True)
+                aline = AbsLine(iont['LAMBDA'][0][kk]*u.AA, closest=True, z=igm_sys.zabs)
                 aline.attrib['flag_origCH'] = int(flg)
                 aline.attrib['EW'] = iont['WOBS'][0][kk]*u.AA/1e3  # Observed
                 aline.attrib['sig_EW'] = iont['SIGWOBS'][0][kk]*u.AA/1e3
@@ -184,8 +184,7 @@ class COSHalos(CGMAbsSurvey):
                 if (flg == 2) or (flg == 4) or (flg == 6):
                     aline.attrib['flag_EW'] = 3
                 #
-                aline.analy['vlim'] = [iont['VMIN'][0][kk],iont['VMAX'][0][kk]]*u.km/u.s
-                aline.attrib['z'] = igm_sys.zabs
+                aline.limits.set([iont['VMIN'][0][kk],iont['VMAX'][0][kk]]*u.km/u.s)
                 aline.attrib['coord'] = igm_sys.coord
                 # Check f
                 if (np.abs(aline.data['f']-iont['FVAL'][0][kk])/aline.data['f']) > 0.001:
