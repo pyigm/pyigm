@@ -233,13 +233,15 @@ class GalaxyCGM(CGM):
                 comp.attrib['b'] = row['b']*u.km/u.s
                 comp.attrib['sig_b'] = row['e_b']*u.km/u.s
                 # Column
-                comp.flag_N = 1
-                comp.logN = row['logN_OVI_']
-                comp.sig_logN = np.sqrt(row['e_sc']**2 + row['e_sys']**2)
+                comp.attrib['flag_N'] = 1
+                comp.attrib['logN'] = row['logN_OVI_']
+                comp.attrib['sig_logN'] = np.array([np.sqrt(row['e_sc']**2 + row['e_sys']**2)]*2)
             else: # Upper limit
-                comp.flag_N = 3
-                comp.logN = row['logN_OVI_']
-                comp.sig_logN = 99.
+                comp.attrib['flag_N'] = 3
+                comp.attrib['logN'] = row['logN_OVI_']
+                comp.attrib['sig_logN'] = np.array([99.]*2)
+            # Set linear quantities
+            _, _ = linear_clm(comp.attrib)
             # Check for existing system
             minsep = np.min(comp.coord.separation(scoord).to('arcsec'))
             if minsep < 30*u.arcsec:
