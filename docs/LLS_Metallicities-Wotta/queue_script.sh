@@ -26,7 +26,7 @@ fsync -d 300 $SGE_STDOUT_PATH &
 ########################
 
 ##Change to the desired directory
-cd ~/Lehner13-MCMC-CRC/
+cd ~/MCMC_Project/
 
 ##Define the python virtual environment location
 ##  (can be relative to the above path)
@@ -62,6 +62,7 @@ done {FD}< <(find -L "${pyvenv_loc}" -name "pyigm_mtlmcmc.py" -print0)
 ##  include the "--testing" option. See all options below.
 python "${pyigm_mtlmcmc_loc[0]}" \
     --wotta \
+    -grid="/path/to/grid_cgm" \
     -guessesfile="MCMC_initial_guesses-run_me.dat" \
     -row=${SGE_TASK_ID} \
     -nthread=${NSLOTS} \
@@ -88,10 +89,17 @@ date
 ## -sightline=__       type=str, Name of the System to analyze (auto-detected if using --wotta)
 ## -fileinput=__       type=str, The observed column density information (auto-detected if using --wotta)
 ## -outsave=__         type=str, The directory in which to save output
-## -grid=__            type=str, The path to the Cloudy model grid (auto-detected if using --wotta)
-## -logUconstraint=__  type=str, Should we use logU constraint on density (auto-detected if using --wotta)
+## -grid=__            type=str, Full path+basename to Cloudy grid.
+##                               E.g., "/afs/crc.nd.edu/group/CGMND/Cloudy_grids/grid_cgm_extensive" (this is the default).
+##                               Do NOT include UVB, carbalpha, or .pkl extension; you specify these with
+##                               the other options, on a per-absorber basis.
+## -logUconstraint=__  type=str, Should we use logU constraint on density? (auto-detected if using --wotta) Can be: "True", "False",
+##                               or comma-separated values for logUmean and logUsigma (e.g., "-3.1,0.2"), which assumes "True".
+##                               NOTE: This final (CSV) format overrides -logUmean and -logUsigma options!
 ## -logUmean=__        type=str, If we use logUconstraint, what is the mean for the Gaussian?
+##                               NOTE: This can be overridden by -logUconstraint option!
 ## -logUsigma=__       type=str, If we use logUconstraint, what is the sigma for the Gaussian?
+##                               NOTE: This can be overridden by -logUconstraint option!
 ## -UVB=__             type=str, The UVB to use when we are using the logU constraint on density (auto-detected if using --wotta)
 ## -nthread=__         type=int, Number of threads
 ## -nwalkers=__        type=int, Number of walkers
@@ -102,13 +110,15 @@ date
 ## -carbalpha=__       type=float, Guess at carbalpha (optim=guess) (auto-detected if using --wotta)
 ## --testing           If used, will over-ride minimum nwalkers and minimum nsamp
 ## --wotta             If used, reads in files using Wotta's file format (there is a guesses file,
-##                     and each sightline has separate input file). If specified, the guesses file contains: 'run now?' column;
-##                     the sightline name; metallicity initial guess; density initial guess; carbon/alpha ratio (carbalpha) initial guess;
-##                     whether or not to allow carbalpha to vary; whether to use the Wotta+16 logUconstraint as a prior on the density;
-##                     the UVB to use; and any notes (these are not used).
-##                     Then, all that needs to be specified here is: -guessesfile=__; -row=__ (in the guessesfile);
-##                     -nthread=__; -nwalkers=__; and -nsamp=__.
-## -guessesfile=__     type=str, The wotta-style input file holding the initial guesses
+##                     and each sightline has separate input file). If specified, the guesses file contains: dummy column at the front (not used here);
+##                     the sightline name; metallicity initial guess; density initial guess; carbon/alpha ratio (carbalpha) initial guess
+##                     (required, even if you don't want to use carbalpha); whether or not to allow carbalpha to vary;
+##                     whether to use the Wotta+16 logUconstraint as a prior on the density; the UVB to use; ions to comment out (not used here); 
+##                     and any additional notes (not used here).
+##                     Then, all that needs to be specified here is: -guessesfile=__; -row=__ (in the guessesfile, usually
+##                     automatically done by the supercomputer submission script); -nthread=__ (also done by the submission script);
+##                     -nwalkers=__; and -nsamp=__.
+## -guessesfile=__     type=str, The --wotta options input file holding the initial guesses
 ## -row=__             type=str, Row (sightline) in the guesses file to run, one-indexed (not zero-indexed)
 ##
 
