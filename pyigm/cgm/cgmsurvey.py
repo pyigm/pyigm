@@ -202,6 +202,7 @@ class CGMAbsSurvey(object):
         Returns
         -------
         tbl : astropy.Table
+           Returns None if there are no matches to input Zion
         """
         from linetools.abund.ions import name_to_ion
         if isinstance(Zion, basestring):
@@ -221,7 +222,8 @@ class CGMAbsSurvey(object):
                 rhos.append(cgmabs.rho.to(u.kpc).value)
         # Run ions
         tbl = dumb.ions(Zion)
-        # Add CGM name
+        if tbl is None:
+            return None
         tbl.add_column(Column(names, name='cgm_name'))
         # Add impact parameter
         tbl.add_column(Column(rhos*u.kpc, name='rho_impact'))

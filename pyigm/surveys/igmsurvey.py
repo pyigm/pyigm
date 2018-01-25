@@ -508,6 +508,7 @@ class IGMSurvey(object):
         names = np.array(names)
         idx = np.where(names != 'MASK_ME')[0]
         if len(idx) == 0:
+            warnings.warn("There were no entries matching your input Ion={}".format(Zion))
             return None
         bad = np.where(names == 'MASK_ME')[0]
         for ibad in bad:
