@@ -1,26 +1,21 @@
-"""
-The MCMC_output() class designed for easily getting the walkers, medians
-(for the met, col, dens, etc.), and PDFs/CDFs (for the met, col, dens, etc.).
-You send a list of *.pkl/*.hd5 files and run the various functions, as desired.
-See also pyigm/docs/LLS_Metallicities-Wotta/MCMC_output-how_to_use.ipynb for
-how to use the class, with examples.
-"""
-
 import numpy as np
 import random
 
 from six import string_types
 
-##Brief example:
+##See also "README_python_get_pdf_cdf.py" for a longer example!!
+##Note there are two methods: one where you send an individual file
+##  and one where you send a LIST of files
+
+##Example:
 # import sys
 # sys.path.append('../../../IDL/')
 # from MCMC_output import MCMC_output
 # mcmc = MCMC_output()
 # mcmc.infiles = 'J0910+1014_242_34_z0.26412_emcee.pkl'
 # mcmc.NHIlow = 15.0
-# mcmc.NHIhigh = 19.0
 # mcmc.quantity = 'met'
-# walkers, nsys, limit_code = mcmc.get_walkers()
+# walkers, nsys, limit_code = mcmc.get_output()
 # print("{} {} {}".format(len(walkers), nsys, limit_code))
 
 
@@ -29,15 +24,6 @@ from six import string_types
 ################################################
 ################################################
 
-
-"""
-This defines a dictionary of various NHI ranges and their names. It
-is for, e.g., plotting pLLS, LLS, etc. with different colors. It is
-also used within the MCMC_output() class if you wish to use the input
-mcmc.NHItype rather than setting mcmc.NHIlow and mcmc.NHIhigh. That is,
-you send MCMC_output() a list of all MCMC output files, give it and an
-NHI range, and it will return/include only those within the desired range.
-"""
 
 ##You can call this function independently
 ##  (e.g., for use in plotting scripts) like:
@@ -73,7 +59,7 @@ class MCMC_output(object):
     """
     Get data from MCMC output files (*.pkl or *.hdf5)
     
-    Parameters
+    Parameters - Inputs
     ----------
     infiles : str, or list of strings [str, str, ...]
         The filename or list of filenames (*.pkl or *.hd5) you want to read
@@ -87,12 +73,13 @@ class MCMC_output(object):
     quantity : str
         By default, it return metallicities. You can also return
         any of the other quantities looped over by the MCMC (as of
-        this writing, these are (col, red, met, dens, carbalpha))
-    err_ci_detections : decimal, 0.0 to 1.0
+        this writing, these are (col, red, met, dens, carbalpha)).
+        Or, if you want it to return EVERYTHING, set self.quantity=None
+    err_ci_detections : int/decimal, 0 to 100
         The confidence interval (C.I.) that should be returned for the
         errors on the median for detections.
-        Defaults to 0.50 (interquartile range).
-    err_ci_limits : decimal, 0.0 to 1.0
+        Defaults to 50 (interquartile range).
+    err_ci_limits : int/decimal, 0 to 100
         The confidence interval (C.I.) that should be returned for the
         errors on the median for upper/lower limits.
         Defaults to 0.80.
@@ -105,7 +92,9 @@ class MCMC_output(object):
         >>> hist[-1] >= limit_threshold*max(hist)
         --> lower limit, -2
     smash : bool -- True or False
-        Whether to smash the resulting PDFs.
+        Whether to smash the resulting PDFs (i.e., return
+        a single PDF that combines all others, or return
+        a PDF for each input file).
         Requires ndraw to be set.
     binsize : float
         The binsize for the histogram
@@ -119,10 +108,12 @@ class MCMC_output(object):
         The smash option requires this to be set.
     
     
-    Outputs - Sort of
+    Outputs
     -----------------
     You might find them useful at some point, anyway.
     
+    infiles_good : The list of files for which nsys=1 (not 0), indicating
+                   they are within the desired NHI range
     info        : Output of get_info(); mcmcout['info']
     median      : Output of get_median(); median of mcmcout['tags']
     err_low     : Output of get_median(); lower bound of median
@@ -132,58 +123,84 @@ class MCMC_output(object):
     pdf         : Output of get_pdf_cdf(); probability distribution of
                   mcmcout['tags'] (may be smashed if smash==True)
     bins        : The centroids of the histogram bins, whereas base_hist are the edges
-    walkers     : Output of get_walkers(); the mcmcout['tags'] walkers' positions
+    walkers     : Output of get_output(); the mcmcout['tags'] walkers' positions
     limit_code  : Output of test_if_limit(); whether the PDF is an
                   upper limit (-1), lower limit (-2), or detection (0).
-                  Only gets set if get_walkers() is called.
+                  Only gets set if get_output() is called.
     nsys        : The number of systems within the defined NHI range
     nsys_mask   : An array of 0's and 1's for whether each input file
-                  is within the defined NHI range (1) or not (0)
+                  is within the defined NHI range (nsys=1) or not (nsys=0)
     
     
     Functions - To be called by user
     --------------------------
+    load()          : Loads *.pkl or *.hd5 file. Only useful
+                      if you're doing stuff manually.
+                      Calls load_pickle() or load_h5py().
+                      Returns: mcmcout (*.pkl file object or *.hd5 file object)
+    get_output()    : Get all walkers in MCMC output for mcmcout['tags']
+                      (may be randomly-drawn --- e.g., if smash==True).
+                      Also creates medians, error bars on medians, etc.
+                      This is the primary function.
+                      Calls get_walkers_pickle() or get_walkers_h5py() and
+                      get_median().
+                      Returns: walkers, nsys, limit_code
+    
+    Functions - Behind-the-scenes, but MIGHT want to be called by user
+    --------------------------
     get_info()      : Get the mcmcout['info'] dictionary,
                       including NHI, eNHI, z, errz, initial guesses, etc.
+                      Calls get_info_pickle() or get_info_h5py().
+                      Called by get_output(), but it's useful separately if you
+                      don't want to spend time getting all of the walkers
+                      first. Otherwise, just use get_output() and then get the
+                      value of self.info
                       Returns: info, nsys
     get_median()    : Get median value (and errors) of a single mcmcout['tags'],
                       including col, met, dens, red, carbalpha
+                      Only useful if you want to smash the medians to get
+                      an OVERALL median!! Otherwise, just use get_output() and then
+                      get the value of self.median
                       Returns: median, err_low, err_high, nsys
     get_pdf_cdf()   : Get PDF and CDF of a single mcmcout['tags'],
                       including col, met, dens, red, carbalpha
+                      Only useful if you want to smash the medians to get
+                      an OVERALL median!! Otherwise, just use get_output() and then
+                      get the value of self.pdf and self.cdf
+                      NOT UPDATED for when self.quantity=None
                       Returns: pdf, cdf, nsys, base_hist, bins
-    get_walkers()   : Get all walkers in MCMC output for mcmcout['tags']
-                      (may be randomly-drawn --- e.g., if smash==True)
-                      Returns: walkers, nsys, limit_code
-    
-    Functions - Behind-the-scenes, Part 1
+
+    Functions - Behind-the-scenes, error checking/testing
     --------------------------
-    ndraw_error     : Checks if we NEED to randomly-draw walkers based
+    ndraw_error()   : Checks if we NEED to randomly-draw walkers based
                       on smash==True (you might want to in other cases,
                       but this forces it for smash==True)
                       Returns: (Nothing)
-    test_if_limit   : Tests if the PDF is an upper/lower limit
+    test_if_limit() : Tests if the PDF is an upper/lower limit
                       Returns: (Nothing)
-
-    Functions - Behind-the-scenes, Part 2
+    test_if_infiles_is_list() : Tests if self.infiles is a list (we have
+                      to loop over) or not (a single string/file)
+                      Returns: Bool (True or False)
+    
+    Functions - Behind-the-scenes, utilities to load files, etc.
     --------------------------
-    load_pickle     : Loads *.pkl file
+    load_pickle()   : Loads *.pkl file
                       Returns: mcmcout (*.pkl file object)
-    load_h5py       : Loads *.hd5 file
+    load_h5py()     : Loads *.hd5 file
                       Returns: mcmcout (*.hd5 file object)
-    get_info_pickle : Gets mcmcout['info'] for *.pkl file
+    get_info_pickle() : Gets mcmcout['info'] for *.pkl file
                       Returns: (Nothing)
-    get_info_h5py   : Gets mcmcout['info'] for *.hd5 file
+    get_info_h5py() : Gets mcmcout['info'] for *.hd5 file
                       Returns: (Nothing)
-    get_walkers_h5py : Gets walkers for *.hd5 file
+    get_walkers_h5py() : Gets walkers for *.hd5 file
                       Returns: walkers, nsys
-    get_walkers_pickle : Gets walkers for *.pkl file
+    get_walkers_pickle() : Gets walkers for *.pkl file
                       Returns: walkers, nsys
-
+    
     """
     
     
-    def __init__(self, infiles=False, NHItype=None, NHIlow=0.0, NHIhigh=99.0, quantity='met', err_ci=0.50, limit_threshold=0.70, smash=False, binsize=0.20, base_hist=None, ndraw=None):
+    def __init__(self, infiles=False, NHItype=None, NHIlow=0.0, NHIhigh=99.0, quantity='met', err_ci_detections=50, err_ci_limits=80, limit_threshold=0.70, smash=False, binsize=0.20, base_hist=None, ndraw=None):
         
         ##When this class is FIRST called, these all get run.
         ##It basically sets defaults.
@@ -199,8 +216,8 @@ class MCMC_output(object):
         self.quantity = quantity
         self.limit_threshold = limit_threshold
         ##err_ci is the Confidence Interval default
-        self.err_ci_detections = 0.50
-        self.err_ci_limits = 0.80
+        self.err_ci_detections = float(err_ci_detections)
+        self.err_ci_limits = float(err_ci_limits)
         
         self.smash = smash
         if (smash) and (ndraw is None):
@@ -218,6 +235,7 @@ class MCMC_output(object):
         ############
         ##The things below will be populated later, as outputs
         ############
+        self.infiles_good = []
         self.walkers = np.array([])
         self.info = []
         self.nsys = 0
@@ -226,6 +244,8 @@ class MCMC_output(object):
         
         ##For histogram
         self.bins=self.base_hist[0:-1] + (self.binsize/2.0)
+        self.pdf = []
+        self.cdf = []
         
         ##For median
         self.median = -999
@@ -243,6 +263,108 @@ class MCMC_output(object):
     
     
     
+    def inputs(self):
+        print("Inputs:")
+        print("    self.infiles            (str or list of str)")
+        print("    self.NHItype            (str, like 'pLLS')")
+        print("    self.NHIlow             (float, like 17.2)")
+        print("    self.NHIhigh            (float, like 19.0)")
+        print("    self.quantity           (str, like 'met')")
+        print("    self.err_ci_detections  (float/int, 0 to 100)")
+        print("    self.err_ci_limits      (float/int, 0 to 100)")
+        print("    self.limit_threshold    (float, 0 to 1)")
+        print("    self.smash              (bool)")
+        print("    self.binsize            (float)")
+        print("    self.base_hist          (np.array)")
+        print("    self.ndraw              (int)")
+        
+        return
+    
+        
+    ################################################
+    ################################################
+    
+    
+    def outputs(self):
+        print("Outputs:")
+        print("    self.infiles_good  (list of str)")
+        print("    self.info          (list of dict)")
+        print("    self.walkers       (list of np.array())")
+        print("    self.pdf           (list of np.array())")
+        print("    self.cdf           (list of np.array())")
+        print("    self.bins          (np.array())")
+        print("    self.median        (list of (lists of) int)")
+        print("    self.err_low       (list of float)")
+        print("    self.err_high      (list of float)")
+        print("    self.nsys          (int)")
+        print("    self.nsys_mask     (list of int: 0, 1)")
+        print("    self.limit_code    (list of int: 0, -1, -2)")
+        
+        return
+    
+        
+    ################################################
+    ################################################
+    
+    
+    def get_output(self):
+        self.get_info()
+        self.get_walkers()
+        self.get_median()
+        self.get_pdf_cdf()
+        return self.walkers, self.nsys, self.limit_code
+    
+    
+    ################################################
+    ################################################
+    
+    
+    def load(self):
+        """
+        Loads a *.pkl or *.hd5 file. Only useful if
+        doing something manually.
+        """
+        
+        ##Check if the "infiles" is a single string (otherwise,
+        ##  it's a list we want to loop over)
+        infiles_is_list = self.test_if_infiles_is_list()
+        
+        all_mcmcout = []
+        if infiles_is_list is True:
+            ##Then we have a LIST of input files to loop over and get
+            
+            old_infiles = self.infiles
+            
+            for fil in old_infiles:
+                self.infiles = fil
+                all_mcmcout.append(self.load())
+            
+            ############
+            ##Done looping over files
+            ############
+            
+            mcmcout = all_mcmcout[:]
+            
+            ##Reset the infiles
+            self.infiles = old_infiles
+            
+        else:
+            ##Get file extension for automatically detecting file format (*.pkl or *.hd5)
+            fileext = self.infiles.split('.')[-1]
+            
+            if fileext == 'pkl':
+                mcmcout = self.load_pickle()
+            else:
+                mcmcout = self.load_h5py()
+        
+        
+        return mcmcout
+    
+    
+    ################################################
+    ################################################
+    
+    
     def get_info(self):
         
         ##Check to see if user gave (NHItype) or (NHIlow and NHIhigh).
@@ -254,27 +376,23 @@ class MCMC_output(object):
         
         ##Check if the "infiles" is a single string (otherwise,
         ##  it's a list we want to loop over)
-        is_list = False
-        try:
-            if not isinstance(self.infiles, basestring):
-                is_list = True
-        except:
-            if not isinstance(self.infiles, string_types):
-                is_list = True
+        infiles_is_list = self.test_if_infiles_is_list()
         
-        # if not isinstance(self.infiles, basestring):
-        if is_list is True:
+        if infiles_is_list is True:
             ##Then we have a LIST of input files to loop over and get
             
             ##Check if we need to reset ndraw.
             ##  That is, if (smash is set) and (ndraw is not set), we have a problem.
-            if (self.smash) and (self.ndraw is None):
-                self.ndraw_error()
+            if self.smash:
+                # self.smash_error()
+                if self.ndraw is None:
+                    self.ndraw_error()
             
             ##Save the old infiles so we can get individual walkers
             ##  by overwriting self.infiles temporarily
             old_infiles = self.infiles
             
+            all_files_good = []
             all_info = []
             all_nsys = 0
             all_nsys_mask = []
@@ -293,6 +411,7 @@ class MCMC_output(object):
                 ##Check to make sure we actually want this sightline
                 ##  i.e., that it is within our NHI range
                 if self.nsys > 0:
+                    all_files_good.append(self.infiles)
                     all_info.append(self.info)
                     all_nsys += self.nsys
                     all_nsys_mask.append(1)
@@ -303,6 +422,7 @@ class MCMC_output(object):
             ##Done looping over files
             ############
             
+            self.infiles_good = all_files_good
             self.nsys = all_nsys
             self.nsys_mask = all_nsys_mask
             self.info = all_info
@@ -312,14 +432,20 @@ class MCMC_output(object):
         
         else:
             ##Then we have a single file to get
+            
+            ##Get file extension for automatically detecting file format (*.pkl or *.hd5)
+            fileext = self.infiles.split('.')[-1]
+            
             if fileext == 'pkl':
                 self.get_info_pickle()
             else:
                 self.get_info_h5py()
             
             if self.nsys > 0:
+                self.infiles_good = self.infiles
                 self.nsys_mask = [1]
             else:
+                self.infiles_good = []
                 self.info = []
                 self.nsys_mask = [0]
         
@@ -328,226 +454,6 @@ class MCMC_output(object):
         ########################
         
         return self.info, self.nsys
-    
-    
-    ################################################
-    ################################################
-    
-    
-    def get_median(self):
-        
-        ##Check if the "infiles" is a single string (otherwise,
-        ##  it's a list we want to loop over)
-        is_list = False
-        try:
-            if not isinstance(self.infiles, basestring):
-                is_list = True
-        except:
-            if not isinstance(self.infiles, string_types):
-                is_list = True
-        
-        # if not isinstance(self.infiles, basestring):
-        if is_list is True:
-            ##Then we have a LIST of input files to loop over and get
-            
-            ##Check if we need to reset ndraw.
-            ##  That is, if (smash is set) and (ndraw is not set), we have a problem.
-            if (self.smash) and (self.ndraw is None):
-                self.ndraw_error()
-            
-            ##Save the old infiles so we can get individual walkers
-            ##  by overwriting self.infiles temporarily
-            old_infiles = self.infiles
-            
-            all_walkers = []
-            all_medians = []
-            all_err_low = []
-            all_err_high = []
-            all_nsys = 0
-            all_nsys_mask = []
-            for fil in old_infiles:
-                self.infiles = fil
-                self.get_walkers()
-                
-                ##Check to make sure we actually want this sightline
-                ##  i.e., that it is within our NHI range
-                if self.nsys > 0:
-                    ##Check if this is a detection or a limit
-                    if self.limit_code == 0:
-                        ci_low = 0.50 - (self.err_ci_detections/2.0)
-                        ci_high = 0.50 + (self.err_ci_detections/2.0)
-                    else:
-                        ci_low = 0.50 - (self.err_ci_limits/2.0)
-                        ci_high = 0.50 + (self.err_ci_limits/2.0)
-                    
-                    all_walkers.append(self.walkers)
-                    all_medians.append(np.median(self.walkers))
-                    all_err_low.append(np.percentile(self.walkers,ci_low,axis=0))
-                    all_err_high.append(np.percentile(self.walkers,ci_high,axis=0))
-                    all_nsys += self.nsys
-                    all_nsys_mask.append(1)
-                else:
-                    all_nsys_mask.append(0)
-            
-            ############
-            ##Done looping over files
-            ############
-            
-            self.nsys = all_nsys
-            self.nsys_mask = all_nsys_mask
-            
-            ##Check if we want to return a single median of ALL walkers,
-            ##  or a list of medians, one for each sightline.
-            if self.smash:
-                ##Assume detections
-                ci_low = 0.50 - (self.err_ci_detections/2.0)
-                ci_high = 0.50 + (self.err_ci_detections/2.0)
-                
-                temp_all_walkers = np.array(all_walkers)
-                self.median = np.array(np.median(temp_all_walkers.flatten()))
-                self.err_low = np.array(np.percentile(temp_all_walkers,ci_low,axis=0))
-                self.err_high = np.array(np.percentile(temp_all_walkers,ci_high,axis=0))
-            else:
-                self.median = np.array(all_medians)
-                self.err_low = np.array(all_err_low)
-                self.err_high = np.array(all_err_high)
-            
-            ##Reset the infiles
-            self.infiles = old_infiles
-        
-        else:
-            ##Then we have a single file to get
-            self.get_walkers()
-            if self.nsys > 0:
-                ##Check if this is a detection or a limit
-                if self.limit_code == 0:
-                    ci_low = 0.50 - (self.err_ci_detections/2.0)
-                    ci_high = 0.50 + (self.err_ci_detections/2.0)
-                else:
-                    ci_low = 0.50 - (self.err_ci_limits/2.0)
-                    ci_high = 0.50 + (self.err_ci_limits/2.0)
-                
-                self.median = np.median(self.walkers)
-                self.err_low = np.percentile(self.walkers,ci_low,axis=0)
-                self.err_high = np.percentile(self.walkers,ci_high,axis=0)
-                self.nsys_mask = [1]
-            else:
-                self.median = -999
-                self.err_low = -999
-                self.err_high = -999
-                self.nsys_mask = [0]
-        
-        
-        
-        ########################
-        
-        return self.median, self.err_low, self.err_high, self.nsys
-    
-    
-    ################################################
-    ################################################
-    
-    
-    def get_pdf_cdf(self):
-        
-        ##Recalculate these in case the user changed base_hist.
-        ##  They're not used below, only outputted for convenience.
-        self.bins = self.base_hist[0:-1] + (self.binsize/2.0)
-        
-        ##Check if the "infiles" is a single string (otherwise,
-        ##  it's a list we want to loop over)
-        is_list = False
-        try:
-            if not isinstance(self.infiles, basestring):
-                is_list = True
-        except:
-            if not isinstance(self.infiles, string_types):
-                is_list = True
-
-        # if not isinstance(self.infiles, basestring):
-        if is_list is True:
-            ##Then we have a LIST of input files to loop over and get
-            
-            ##Check if we need to reset ndraw.
-            ##  That is, if (smash is set) and (ndraw is not set), we have a problem.
-            if (self.smash) and (self.ndraw is None):
-                self.ndraw_error()
-            
-            ##Save the old infiles so we can get individual walkers
-            ##  by overwriting self.infiles temporarily
-            old_infiles = self.infiles
-            
-            all_walkers = []
-            all_nsys = 0
-            all_nsys_mask = []
-            all_pdf = []
-            for fil in old_infiles:
-                self.infiles = fil
-                self.get_walkers()
-                
-                ##Check to make sure we actually want this sightline
-                ##  i.e., that it is within our NHI range
-                if self.nsys > 0:
-                    all_walkers.append(self.walkers)
-                    all_nsys += self.nsys
-                    all_nsys_mask.append(1)
-                    pdf_temp, edge_temp = np.histogram(np.sort(self.walkers), bins=self.base_hist, density=True)
-                    
-                    ##Normalize to the number of walkers
-                    all_pdf.append(pdf_temp/len(self.walkers))
-                else:
-                    all_nsys_mask.append(0)
-            
-            ############
-            ##Done looping over files
-            ############
-            
-            self.nsys_mask = all_nsys_mask
-            
-            ##Normalize the area
-            smashed_pdf = np.sum(all_pdf, axis=0)/all_nsys
-            area = np.sum(smashed_pdf, axis=0)*self.binsize
-            ##
-            smashed_pdf = smashed_pdf/area
-            all_pdf = np.array([ap/area for ap in all_pdf])
-            
-            ##Check if we want to return a single (smashed) PDF/CDF or individual ones
-            if self.smash:
-                ##Normalize
-                self.pdf = smashed_pdf
-                self.cdf = np.cumsum(smashed_pdf)*self.binsize
-            else:
-                self.pdf = all_pdf
-                # self.cdf = np.array([np.cumsum(my_pdf) for my_pdf in self.pdf])
-                ##Actually, let's ALWAYS assume we want the OVERALL CDF (i.e., smashed)!!
-                self.cdf = np.cumsum(smashed_pdf)*self.binsize
-            
-            ##Reset the infiles
-            self.infiles = old_infiles
-        
-        else:
-            ##Then we have a single file to get
-            self.get_walkers()
-            pdf_temp, edge_temp = np.histogram(np.sort(self.walkers), bins=self.base_hist, density=True)
-            
-            pdf_temp = pdf_temp/len(self.walkers)
-            
-            # ##Normalize
-            # smashed_pdf = np.sum(pdf_temp, axis=0)/self.nsys
-            # area = np.sum(smashed_pdf, axis=0)*self.binsize
-            # ##
-            # smashed_pdf = smashed_pdf/area
-            # pdf_temp = pdf_temp/area
-            
-            ##Normalize to the number of walkers
-            self.pdf = pdf_temp
-            self.cdf = np.cumsum(self.pdf)*self.binsize
-            self.nsys_mask = [self.nsys]
-        
-        
-        ########################
-        
-        return self.pdf, self.cdf, self.nsys, self.base_hist, self.bins
     
     
     ################################################
@@ -565,16 +471,9 @@ class MCMC_output(object):
         
         ##Check if the "infiles" is a single string (otherwise,
         ##  it's a list we want to loop over)
-        is_list = False
-        try:
-            if not isinstance(self.infiles, basestring):
-                is_list = True
-        except:
-            if not isinstance(self.infiles, string_types):
-                is_list = True
+        infiles_is_list = self.test_if_infiles_is_list()
         
-        # if not isinstance(self.infiles, basestring):
-        if is_list is True:
+        if infiles_is_list is True:
             ##Then we have a LIST of input files to loop over and get
             
             ##Save the old infiles so we can get individual walkers
@@ -585,6 +484,7 @@ class MCMC_output(object):
             ##
             old_infiles = self.infiles
             
+            all_files_good = []
             all_walkers = []
             all_nsys = 0
             all_nsys_mask = []
@@ -593,25 +493,37 @@ class MCMC_output(object):
                 self.infiles = fil
                 self.get_walkers()
                 if self.nsys > 0:
+                    all_files_good.append(self.infiles)
                     all_walkers.append(self.walkers)
                     all_nsys += self.nsys
                     all_nsys_mask.append(1)
                     all_limit_code.append(self.limit_code)
+                
                 else:
                     all_nsys_mask.append(0)
+            
+            ############
+            ##Done looping over files
+            ############
             
             ##Reset the infiles
             self.infiles = old_infiles
             ##Save the output
+            self.infiles_good = all_files_good
             self.walkers = all_walkers
             self.nsys = all_nsys
             self.nsys_mask = all_nsys_mask
             self.limit_code = all_limit_code
         
         else:
+            ########################
+            ##Just a single file
+            ########################
+            
             ##This NEEDS to be reset each time
             self.walkers = np.array([])
             self.nsys = 0
+            self.nsys_mask = []
             self.limit_code = 999
             
             ########################
@@ -648,12 +560,17 @@ class MCMC_output(object):
                     
                     self.walkers = random_walkers
                 
+                
+                self.infiles_good = self.infiles
                 self.nsys = nsys
+                self.nsys_mask.append(nsys)
             
             else:
-                ##These will be [] and 0, respectively
+                ##These will be [], [], and 0, respectively
+                self.infiles_good = []
                 self.walkers = walkers
                 self.nsys = nsys
+                self.nsys_mask.append(nsys)
             
             ########################
             
@@ -667,6 +584,236 @@ class MCMC_output(object):
         return self.walkers, self.nsys, self.limit_code
     
     
+    ################################################
+    ################################################
+    
+    
+    def get_median(self):
+        ##Check to see if get_output() has been called yet
+        if len(self.walkers) == 0:
+            print("You need to call get_walkers() first! Returning...")
+            return [[], [], [], []]
+        
+        ##Check if the "infiles" is a single string (otherwise,
+        ##  it's a list we want to loop over)
+        infiles_is_list = self.test_if_infiles_is_list()
+        
+        if infiles_is_list is True:
+            ##Then we have a LIST of input files to loop over and get
+            
+            ##Check if we need to reset ndraw.
+            ##  That is, if (smash is set) and (ndraw is not set), we have a problem.
+            if self.smash:
+                # self.smash_error()
+                if self.ndraw is None:
+                    self.ndraw_error()
+            
+            all_medians = []
+            all_err_low = []
+            all_err_high = []
+            for idx in range(len(self.walkers)):
+                # ##Check to make sure we actually want this sightline
+                # ##  i.e., that it is within our NHI range
+                # if self.nsys[idx] > 0:
+                
+                ##ASSUME IT IS WITHIN OUR NHI RANGE!! COULD BE DANGEROUS!!
+                ##Check if this is a detection or a limit
+                if self.limit_code[idx] == 0:
+                    ci_low = 50 - (self.err_ci_detections/2.0)
+                    ci_high = 50 + (self.err_ci_detections/2.0)
+                else:
+                    ci_low = 50 - (self.err_ci_limits/2.0)
+                    ci_high = 50 + (self.err_ci_limits/2.0)
+                
+                temp_all_walkers = np.array(self.walkers)
+                ##Need to check if we only have ONE walker axis, or if we
+                ##  have EVERYTHING (in which case we get a median for each axis)
+                if self.quantity:
+                    all_medians.append(np.median(temp_all_walkers[idx]))
+                    all_err_low.append(np.percentile(temp_all_walkers[idx],ci_low,axis=0))
+                    all_err_high.append(np.percentile(temp_all_walkers[idx],ci_high,axis=0))
+                else:
+                    all_medians.append([np.median(temp_all_walkers[idx][:,i]) for i in range(len(temp_all_walkers[idx][0]))])
+                    all_err_low.append([np.percentile(temp_all_walkers[idx][:,i],ci_low,axis=0) for i in range(len(temp_all_walkers[idx][0]))])
+                    all_err_high.append([np.percentile(temp_all_walkers[idx][:,i],ci_high,axis=0) for i in range(len(temp_all_walkers[idx][0]))])
+            
+            ############
+            ##Done looping over files
+            ############
+            
+            ##Check if we want to return a single median of ALL walkers,
+            ##  or a list of medians, one for each sightline.
+            if self.smash:
+                ##Assume detections
+                ci_low = 50 - (self.err_ci_detections/2.0)
+                ci_high = 50 + (self.err_ci_detections/2.0)
+                
+                temp_all_walkers = np.array(self.walkers)
+                if self.quantity:
+                    self.median = np.array(np.median(temp_all_walkers))
+                    self.err_low = np.array(np.percentile(temp_all_walkers,ci_low,axis=0))
+                    self.err_high = np.array(np.percentile(temp_all_walkers,ci_high,axis=0))
+                else:
+                    ##Get the median for EACH quantity
+                    self.median = [np.median(temp_all_walkers[:,:,i].flatten()) for i in range(len(self.walkers[0][0]))]
+                    self.err_low = [np.percentile(temp_all_walkers[:,:,i].flatten(),ci_low,axis=0) for i in range(len(self.walkers[0][0]))]
+                    self.err_high = [np.percentile(temp_all_walkers[:,:,i].flatten(),ci_high,axis=0) for i in range(len(self.walkers[0][0]))]
+            else:
+                self.median = all_medians[:]
+                self.err_low = all_err_low[:]
+                self.err_high = all_err_high[:]
+        
+        else:
+            ##Then we have a single file to get
+            if self.nsys > 0:
+                ##Check if this is a detection or a limit
+                if self.limit_code == 0:
+                    ci_low = 50 - (self.err_ci_detections/2.0)
+                    ci_high = 50 + (self.err_ci_detections/2.0)
+                else:
+                    ci_low = 50 - (self.err_ci_limits/2.0)
+                    ci_high = 50 + (self.err_ci_limits/2.0)
+                
+                temp_all_walkers = np.array(self.walkers)
+                ##Need to check if we only have ONE walker axis, or if we
+                ##  have EVERYTHING (in which case we get a median for each axis)
+                if self.quantity:
+                    self.median = np.median(temp_all_walkers)
+                    self.err_low = np.percentile(temp_all_walkers,ci_low,axis=0)
+                    self.err_high = np.percentile(temp_all_walkers,ci_high,axis=0)
+                else:
+                    self.median = [np.median(temp_all_walkers[:,i]) for i in range(len(temp_all_walkers[0]))]
+                    self.err_low = [np.percentile(temp_all_walkers[:,i],ci_low,axis=0) for i in range(len(temp_all_walkers[0]))]
+                    self.err_high = [np.percentile(temp_all_walkers[:,i],ci_high,axis=0) for i in range(len(temp_all_walkers[0]))]
+                
+                self.nsys_mask = [1]
+            else:
+                self.median = -999
+                self.err_low = -999
+                self.err_high = -999
+                self.nsys_mask = [0]
+        
+        
+        
+        ########################
+        
+        return self.median, self.err_low, self.err_high, self.nsys
+    
+    
+    ################################################
+    ################################################
+    
+    
+    def get_pdf_cdf(self):
+        
+        ##Check to see if get_output() has been called yet
+        if len(self.walkers) == 0:
+            print("You need to call get_walkers() first! Returning...")
+            return [[], [], [], [], []]
+        
+        ##Recalculate these in case the user changed base_hist.
+        ##  They're not used below, only outputted for convenience.
+        self.bins = self.base_hist[0:-1] + (self.binsize/2.0)
+        
+        
+        ##If we don't check now and self.quantity == None, then the
+        ##  next check -- if it's a list -- will always pass because
+        ##  there will of COURSE be a list of walkers. But, that does NOT
+        ##  mean there are NOT multiple input files, so it will get confused.
+        ##  We COULD adjust the code below to handle this, but... that's difficult.
+        if not self.quantity:
+            try:
+                from get_bash_color import bash_color
+                errtxt = bash_color('ERROR:', 'red', bold=True)
+            except:
+                errtxt = "ERROR:"
+            
+            print("\n{} get_pdf_cdf() is not set up to create PDFs/CDFs for EVERY quantity at once!! Returning...\n".format(errtxt))
+            return [[], [], [], [], []]
+        
+        
+        ##Check if the "walkers" is a single list or
+        ##  a 2D list (of numpy arrays)
+        infiles_is_list = False
+        if not isinstance(self.walkers[0], float):
+            infiles_is_list = True
+        
+        
+        if infiles_is_list is True:
+            ##Then we have a LIST of input files to loop over and get
+            
+            ##Check if we need to reset ndraw.
+            ##  That is, if (smash is set) and (ndraw is not set), we have a problem.
+            if self.smash:
+                # self.smash_error()
+                if self.ndraw is None:
+                    self.ndraw_error()
+            
+            all_pdf = []
+            all_walkers = []
+            all_nsys = 0
+            for idx in range(len(self.walkers)):
+                # ##Check to make sure we actually want this sightline
+                # ##  i.e., that it is within our NHI range
+                # if self.nsys[idx] > 0:
+                
+                ##ASSUME IT IS WITHIN OUR NHI RANGE!! COULD BE DANGEROUS!!
+                all_nsys += 1
+                all_walkers.append(self.walkers[idx])
+                pdf_temp, edge_temp = np.histogram(np.sort(self.walkers), bins=self.base_hist, density=True)
+                
+                ##Normalize to the number of walkers
+                all_pdf.append(pdf_temp/len(self.walkers))
+            
+            ############
+            ##Done looping over files
+            ############
+            
+            self.nsys = all_nsys
+            
+            ##Normalize the area
+            smashed_pdf = np.sum(all_pdf, axis=0)/all_nsys
+            area = np.sum(smashed_pdf, axis=0)*self.binsize
+            ##
+            smashed_pdf = smashed_pdf/area
+            all_pdf = np.array([ap/area for ap in all_pdf])
+            
+            ##Check if we want to return a single (smashed) PDF/CDF or individual ones
+            if self.smash:
+                ##Normalize
+                self.pdf = smashed_pdf
+                self.cdf = np.cumsum(smashed_pdf)*self.binsize
+            else:
+                self.pdf = all_pdf
+                # self.cdf = np.array([np.cumsum(my_pdf) for my_pdf in self.pdf])
+                ##Actually, let's ALWAYS assume we want the OVERALL CDF (i.e., smashed)!!
+                self.cdf = np.cumsum(smashed_pdf)*self.binsize
+        
+        else:
+            ##Then we have a single file to get
+            pdf_temp, edge_temp = np.histogram(np.sort(self.walkers), bins=self.base_hist, density=True)
+            
+            pdf_temp = pdf_temp/len(self.walkers)
+            
+            # ##Normalize
+            # smashed_pdf = np.sum(pdf_temp, axis=0)/self.nsys
+            # area = np.sum(smashed_pdf, axis=0)*self.binsize
+            # ##
+            # smashed_pdf = smashed_pdf/area
+            # pdf_temp = pdf_temp/area
+            
+            ##Normalize to the number of walkers
+            self.pdf = pdf_temp
+            self.cdf = np.cumsum(self.pdf)*self.binsize
+            self.nsys = 1
+            self.nsys_mask = [self.nsys]
+        
+        
+        ########################
+        
+        return self.pdf, self.cdf, self.nsys, self.base_hist, self.bins
+    
+    
     
     
     ################################################
@@ -677,6 +824,19 @@ class MCMC_output(object):
     
     
     
+    # def smash_error(self):
+    #     
+    #     print("(Remember because you set smash=True, you'll want to call get_pdf_cdf() and get_median() separately, not just get_output()...)")
+    #     
+    #     return
+    
+    
+    ################################################
+    ################################################
+    
+    
+
+
     def ndraw_error(self):
         
         self.ndraw = 10000
@@ -714,6 +874,29 @@ class MCMC_output(object):
         
         # return self.limit_code
         return
+    
+    
+    
+    
+    ################################################
+    ################################################
+    
+    
+    def test_if_infiles_is_list(self):
+        
+        ##Check if the "infiles" is a single string (otherwise,
+        ##  it's a list we want to loop over)
+        infiles_is_list = False
+        try:
+            if not isinstance(self.infiles, basestring):
+                infiles_is_list = True
+        except:
+            if not isinstance(self.infiles, string_types):
+                infiles_is_list = True
+        
+        return infiles_is_list
+    
+    
     
     
     ################################################
@@ -819,10 +1002,15 @@ class MCMC_output(object):
         mcmctags = np.array(mcmcout['tags'])
         nhiloc = np.where(mcmctags == 'col')[0][0]
         if float(self.NHIlow) <= mcmcout['guess'][nhiloc] < float(self.NHIhigh):
-            qnt= np.where(mcmctags == self.quantity)[0][0]
-            ##We need the pdf to be a numpy array before we try to do [:,qnt] on it
-            ##  it should already be, but let's be sure if that.
-            walkers = np.array(np.array(mcmcout['pdfs'])[:,qnt])
+            ##Need to check if we only have ONE walker axis,
+            ##  or if we have EVERYTHING
+            if self.quantity:
+                qnt= np.where(mcmctags == self.quantity)[0][0]
+                ##We need the pdf to be a numpy array before we try to do [:,qnt] on it
+                ##  it should already be, but let's be sure if that.
+                walkers = np.array(np.array(mcmcout['pdfs'])[:,qnt])
+            else:
+                walkers = np.array(np.array(mcmcout['pdfs'])[:,:])
             #Append
             nsys = 1
         else:
@@ -848,11 +1036,15 @@ class MCMC_output(object):
             mcmctags = np.array([str(i) for i in mcmcout['outputs']['tags'].value])
         
         if float(self.NHIlow) <= mcmcout['inputs']['guess'][0] < float(self.NHIhigh):
-            qnt= np.where(mcmctags == self.quantity)[0][0]
-            walkers = np.array(mcmcout['outputs']['pdfs'][:,qnt])
+            ##Need to check if we only have ONE walker axis,
+            ##  or if we have EVERYTHING
+            if self.quantity:
+                qnt= np.where(mcmctags == self.quantity)[0][0]
+                walkers = np.array(mcmcout['outputs']['pdfs'][:,qnt])
+            else:
+                walkers = np.array(mcmcout['outputs']['pdfs'][:,:])
             #Append
             nsys = 1
-            limit_code = 
         else:
             walkers = []
             nsys = 0

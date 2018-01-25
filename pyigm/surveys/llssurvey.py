@@ -251,6 +251,7 @@ class LLSSurvey(IGMSurvey):
 
         # Set data path and metallicity
         spath = pyigm_path+"/data/LLS/HD-LLS/Spectra/"
+        lls_survey.build_all_abs_sys()
         for kk in range(lls_survey.nsys):
             lls = lls_survey.abs_sys(kk)
             lls.spec_path = spath
@@ -493,34 +494,33 @@ def lls_stat(LLSs, qsos, vprox=3000.*u.km/u.s, maxdz=99.99,
     lls_zabs = LLSs.zabs
     qsos_coord = SkyCoord(ra=qsos['RA']*u.deg, dec=qsos['DEC']*u.deg)
 
-    for qq in range(LLSs.nsys): #enumerate(LLSs._abs_sys):
-        ills = LLSs.abs_sys(qq)
+    for qq, zabs, zem, coord, NHI in zip(range(LLSs.nsys), LLSs.zabs, LLSs.zem, LLSs.coords, LLSs.NHI):
         # Two LLS on one sightline?
-        small_sep = ills.coord.separation(lls_coord) < 3.6*u.arcsec
-        close_zem = np.abs(ills.zem-lls_zem) < 0.03
-        close_zabs = np.abs(ills.zabs-lls_zabs) < dz_toler
+        small_sep = coord.separation(lls_coord) < 3.6*u.arcsec
+        close_zem = np.abs(zem-lls_zem) < 0.03
+        close_zabs = np.abs(zabs-lls_zabs) < dz_toler
         if np.sum(small_sep & close_zem & close_zabs) != 1:
             raise ValueError("LLS are probably too close in z")
 
         # Cut on NHI
-        if partial & (ills.NHI > NHI_cut):
+        if partial & (NHI > NHI_cut):
             continue
-        if ~partial & (ills.NHI <= NHI_cut):
+        if ~partial & (NHI <= NHI_cut):
             continue
 
         # Match to QSO RA, DEC
-        idx = np.where( (ills.coord.separation(qsos_coord) < 3.6*u.arcsec) &
-                        (np.abs(qsos['ZEM']-ills.zem) < 0.03))[0]
+        idx = np.where( (coord.separation(qsos_coord) < 3.6*u.arcsec) &
+                        (np.abs(qsos['ZEM']-zem) < 0.03))[0]
         if len(idx) != 1:
             raise ValueError("Problem with matches")
 
         # Query redshift
         if ((zsrch[idx] > 0.) &
-                (ills.zabs > max(zsrch[idx], qsos['ZEM'][idx] - maxdz) - 1e-4) &
+                (zabs > max(zsrch[idx], qsos['ZEM'][idx] - maxdz) - 1e-4) &
                 (qsos['ZEM'][idx] > zem_min)):
-            if (~prox) & (ills.zabs < zmax[idx]):  #  Intervening
+            if (~prox) & (zabs < zmax[idx]):  #  Intervening
                 msk_smpl[qq] = True
-            if prox & (ills.zabs >= zmax[idx]):  # Proximate
+            if prox & (zabs >= zmax[idx]):  # Proximate
                 msk_smpl[qq] = True
 
     # Return

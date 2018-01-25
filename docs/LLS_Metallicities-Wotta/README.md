@@ -34,6 +34,7 @@ Then, edit `MCMC_initial_guesses-run_me.dat` to only include the systems you wan
     BASH$ source ./pythonvirtualenv/bin/activate
     BASH$ python pyigm_mtlmcmc.py \
               --wotta \
+              -grid="/path/to/grid_cgm" \
               -guessesfile="MCMC_initial_guesses-run_me.dat" \
               -row=${SGE_TASK_ID} \
               -nthread=${NSLOTS} \
@@ -49,6 +50,7 @@ If you just want to run a quick job (e.g., without allowing carbon/alpha to vary
     BASH$ source ./pythonvirtualenv/bin/activate
     BASH$ python pyigm_mtlmcmc.py \
               --wotta \
+              -grid="/path/to/grid_cgm" \
               -guessesfile="MCMC_initial_guesses-run_me.dat" \
               -row=1 \
               -nthread=12 \
@@ -60,7 +62,9 @@ If you just want to run a quick job (e.g., without allowing carbon/alpha to vary
 
 ## Extract MCMC output
 
-Please see `README-understanding_MCMC_output` for how to extract MCMC output information from the `*.pkl` format files.
+Please see `README-understanding_MCMC_output` for how to extract MCMC output information (by hand) from the `*.pkl` format files.
+
+Please see `MCMC_output-how_to_use.ipynb` for how to use the `pyigm.metallicity.MCMC_output` class to extract MCMC output information from your files in an automated/large-scale way.
 
 
 
