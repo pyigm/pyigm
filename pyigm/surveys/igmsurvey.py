@@ -570,6 +570,7 @@ class IGMSurvey(object):
         all_keys.remove('abssys_name')
         all_keys = ['abssys_name']+all_keys
         # Return
+        import pdb; pdb.set_trace()
         return tbl[all_keys]
 
     def trans(self, inp):
