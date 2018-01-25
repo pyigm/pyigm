@@ -212,7 +212,7 @@ class CGMAbsSurvey(object):
         rhos = []
         for cgmabs in self.cgm_abs:
             if fill_ion:
-                cgmabs.igm_sys.fill_ionN(vrange=vrange, summed_ion=True)
+                cgmabs.igm_sys.fill_ionN(vrange=vrange)
             if cgmabs.igm_sys._ionN is not None:
                 dumb._abs_sys.append(cgmabs.igm_sys)
                 # Names
