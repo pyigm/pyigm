@@ -487,11 +487,15 @@ E         : toggle displaying/hiding the external absorption model
             self.velplot_widg.current_comp.name = key
             # Set N,b,z
             self.velplot_widg.current_comp.attrib['z'] = igmg_dict['cmps'][key]['zfit']
-            self.velplot_widg.current_comp.attrib['b'] = igmg_dict['cmps'][key]['bfit']*u.km/u.s
+            try:
+                self.velplot_widg.current_comp.attrib['b'] = igmg_dict['cmps'][key]['bfit']['value'] * u.km/u.s
+            except: # backwards compatibility
+                self.velplot_widg.current_comp.attrib['b'] = igmg_dict['cmps'][key]['bfit'] * u.km/u.s
+
             self.velplot_widg.current_comp.attrib['logN'] = igmg_dict['cmps'][key]['Nfit']
-            try: # This should me removed in the future
+            try:
                 self.velplot_widg.current_comp.reliability = igmg_dict['cmps'][key]['Reliability']
-            except:
+            except:  # bkwrds compatibility; This should me removed in the future
                 self.velplot_widg.current_comp.reliability = igmg_dict['cmps'][key]['Quality']  # old version compatibility
             self.velplot_widg.current_comp.comment = igmg_dict['cmps'][key]['Comment']
             # Sync
@@ -535,11 +539,14 @@ E         : toggle displaying/hiding the external absorption model
             comp.mask_abslines = np.array(mask_abslines_aux)
 
             key = comp.name
+            # QtCore.pyqtRemoveInputHook()
+            # pdb.set_trace()
+            # QtCore.pyqtRestoreInputHook()
             out_dict['cmps'][key] = comp.to_dict()
             out_dict['cmps'][key]['zcomp'] = comp.zcomp
             out_dict['cmps'][key]['zfit'] = comp.attrib['z']
             out_dict['cmps'][key]['Nfit'] = comp.attrib['logN']
-            out_dict['cmps'][key]['bfit'] = comp.attrib['b'].value
+            out_dict['cmps'][key]['bfit'] = comp.attrib['b'] # this is already a dict because of comp.to_dict() method above
             out_dict['cmps'][key]['wrest'] = comp.init_wrest.value
             out_dict['cmps'][key]['vlim'] = list(comp.vlim.value)
             out_dict['cmps'][key]['Reliability'] = comp.reliability
@@ -834,6 +841,9 @@ class IGGVelPlotWidget(QWidget):
         self.current_comp = new_comp
         if update_model:
             self.update_model()
+        # QtCore.pyqtRemoveInputHook()
+        # pdb.set_trace()
+        # QtCore.pyqtRestoreInputHook()
 
     def fit_component(self, component):
         '''Fit the component and save values'''
@@ -863,9 +873,7 @@ class IGGVelPlotWidget(QWidget):
 
         # Fit
         fitter = fitting.LevMarLSQFitter()
-        #QtCore.pyqtRemoveInputHook()
-        #pdb.set_trace()
-        #QtCore.pyqtRestoreInputHook()
+
         parm = fitter(fitvoigt,self.spec.wavelength[fit_line.analy['pix']].value, self.spec.flux[fit_line.analy['pix']].value)
 
         # Save and sync
@@ -876,6 +884,9 @@ class IGGVelPlotWidget(QWidget):
         #component.sync_lines()
         sync_comp_lines(component)
         mask_comp_lines(component, min_ew=self.parent.min_ew)
+        # QtCore.pyqtRemoveInputHook()
+        # pdb.set_trace()
+        # QtCore.pyqtRestoreInputHook()
 
     def out_of_bounds(self,coord):
         '''Check for out of bounds

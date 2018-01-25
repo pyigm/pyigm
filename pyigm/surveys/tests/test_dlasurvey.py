@@ -15,6 +15,9 @@ from pyigm.abssys.dla import DLASystem
 
 remote_data = pytest.mark.remote_data
 
+import warnings
+warnings.filterwarnings("ignore")
+
 '''
 def data_path(filename):
     data_dir = os.path.join(os.path.dirname(__file__), 'files')
@@ -67,7 +70,7 @@ def test_fit_atan_lz():
 
 
 def test_read_h100_nosys():
-    h100 = DLASurvey.load_H100(load_sys=False)
+    h100 = DLASurvey.load_H100()
     assert h100.nsys == 100
 
 
@@ -99,10 +102,6 @@ def test_fit_atan_lz():
         assert key in boot_tbl.keys()
 
 
-def test_read_h100_nosys():
-    h100 = DLASurvey.load_H100(load_sys=False)
-    assert h100.nsys == 100
-
 def test_sdss():
     # All
     sdss = DLASurvey.load_SDSS_DR5(sample='all')
@@ -118,13 +117,9 @@ def test_sdss():
     assert fN.size == 4
     assert np.isclose(fN_lo[0], 0.0682087, atol=1e-4)
 
-def test_read_h100_nosys():
-    h100 = DLASurvey.load_H100(load_sys=False)
-    assert h100.nsys == 100
 
-@remote_data
 def test_read_h100():
-    """ Takes ~2min to load
+    """ Neelemean+13 dataset
     """
     h100 = DLASurvey.load_H100()
     assert h100.nsys == 100

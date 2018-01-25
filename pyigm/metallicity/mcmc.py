@@ -425,7 +425,35 @@ class Emceebones(object):
                     out_group[out_key] = self.final[out_key]
         except:
             pass
-                    
+        
+        ############
+        ##Plot
+        ############
+        
+        ######Setup
+        if self.ndim < 4:
+            title_xpos = 0.45
+            title_ypos = 0.80
+            title_fontsize = 12
+        else:
+            title_xpos = 0.35
+            title_ypos = 0.85
+            title_fontsize = 14
+        
+        
+        if self.logUconstraint.lower() == 'true':
+            lutext = "{} +/- {}".format(self.logUmean, self.logUsigma)
+        else:
+            lutext = "False"
+        
+        # plot_title = "{}\nUVB={}, log U prior={}".format(self.info['name'], self.UVB, lutext)
+        plot_title = "{}".format(self.info['name'])
+
+        
+        ######
+        ##Chains Plot
+        ######
+        
         #Start by plotting the chains with initial guess and final values
         xaxislabels = None
         fig=plt.figure()
@@ -447,7 +475,11 @@ class Emceebones(object):
             
             ax.set_xticklabels("")
             ax.tick_params(axis='both', direction='in', top=True)
-
+            
+            ##If it's the first (top) one, add a title
+            if ii == 0:
+                plt.title(plot_title,fontsize=10)
+            
             #overplot burnt in cut
             ax.axvline(x=self.burn,color='red',linewidth=3)
             #overplot median
@@ -459,17 +491,26 @@ class Emceebones(object):
         ax.set_xticklabels(xaxislabels)
         ax.tick_params(axis='both', direction='in', top=True)
         ax.set_xlabel('Steps')
-        fig.text(0.50,0.93,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='center',fontsize=8)
+        # fig.text(0.5,0.93,plot_title,horizontalalignment='center',fontsize=10)
         fig.savefig(self.outsave+'/'+self.info['name']+'_chains.pdf')
-
-        #now do a corner plot
-        samples = sampler.chain[:,self.burn:, :].reshape((-1,self.ndim))
-        cfig = corner.corner(samples, labels=self.mod_axistag, quantiles=[0.05,0.5,0.95],verbose=False)
-        cfig.text(0.33,0.90,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='left',fontsize=10)
-        cfig.savefig(self.outsave+'/'+self.info['name']+'_corner.pdf')
         plt.close(fig)
+
+
+        ######
+        ##Corner Plot
+        ######
         
-        #now plot the residuals
+        samples = sampler.chain[:,self.burn:, :].reshape((-1,self.ndim))
+        cfig = corner.corner(samples, labels=self.mod_axistag, label_kwargs = {"fontsize": 16}, quantiles=[0.05,0.5,0.95],verbose=False)
+        cfig.text(title_xpos,title_ypos,plot_title,horizontalalignment='left',fontsize=title_fontsize)
+        cfig.savefig(self.outsave+'/'+self.info['name']+'_corner.pdf')
+        plt.close(cfig)
+        
+        
+        ######
+        ##Residuals Plot
+        ######
+        
         rfig=plt.figure()
         
         #plot values
@@ -494,11 +535,14 @@ class Emceebones(object):
 
         plt.xticks(xaxis,axlab,rotation='vertical')
         plt.ylabel('Log Column')
-        rfig.text(0.50,0.93,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='center',fontsize=8)
+        plt.title(plot_title,fontsize=10)
         rfig.savefig(self.outsave+'/'+self.info['name']+'_residual.pdf')
         plt.close(rfig)
-
+        
+        ############
+        
         print('All done with system {}!'.format(self.info['name']))
+
 
     def setup_emc(self):
         """ As named
