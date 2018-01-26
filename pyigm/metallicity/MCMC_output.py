@@ -142,8 +142,8 @@ class MCMC_output(object):
                       (may be randomly-drawn --- e.g., if smash==True).
                       Also creates medians, error bars on medians, etc.
                       This is the primary function.
-                      Calls get_walkers_pickle() or get_walkers_h5py() and
-                      get_median().
+                      Calls get_info(), get_walkers(), get_median(), and
+                      get_pdf_cdf() --- in that order.
                       Returns: walkers, nsys, limit_code
     
     Functions - Behind-the-scenes, but MIGHT want to be called by user
@@ -156,6 +156,10 @@ class MCMC_output(object):
                       first. Otherwise, just use get_output() and then get the
                       value of self.info
                       Returns: info, nsys
+    get_walkers()   : Get all walkers in MCMC output for mcmcout['tags']
+                      (may be randomly-drawn --- e.g., if smash==True).
+                      Calls get_walkers_pickle() or get_walkers_h5py().
+                      Returns: walkers, nsys, limit_code
     get_median()    : Get median value (and errors) of a single mcmcout['tags'],
                       including col, met, dens, red, carbalpha
                       Only useful if you want to smash the medians to get
@@ -760,10 +764,10 @@ class MCMC_output(object):
                 ##ASSUME IT IS WITHIN OUR NHI RANGE!! COULD BE DANGEROUS!!
                 all_nsys += 1
                 all_walkers.append(self.walkers[idx])
-                pdf_temp, edge_temp = np.histogram(np.sort(self.walkers), bins=self.base_hist, density=True)
+                pdf_temp, edge_temp = np.histogram(np.sort(self.walkers[idx]), bins=self.base_hist, density=True)
                 
                 ##Normalize to the number of walkers
-                all_pdf.append(pdf_temp/len(self.walkers))
+                all_pdf.append(pdf_temp/len(self.walkers[idx]))
             
             ############
             ##Done looping over files
@@ -1002,17 +1006,33 @@ class MCMC_output(object):
         mcmctags = np.array(mcmcout['tags'])
         nhiloc = np.where(mcmctags == 'col')[0][0]
         if float(self.NHIlow) <= mcmcout['guess'][nhiloc] < float(self.NHIhigh):
-            ##Need to check if we only have ONE walker axis,
-            ##  or if we have EVERYTHING
+            ##Need to check if we only want ONE walker axis (e.g., self.quantity == 'met'),
+            ##  or if we want to get EVERYTHING (i.e., self.quantity == None)
             if self.quantity:
-                qnt= np.where(mcmctags == self.quantity)[0][0]
-                ##We need the pdf to be a numpy array before we try to do [:,qnt] on it
-                ##  it should already be, but let's be sure if that.
-                walkers = np.array(np.array(mcmcout['pdfs'])[:,qnt])
+                qnt= np.where(mcmctags == self.quantity)[0]
+                ##Check if the axis even exists for this absorber. If it does not,
+                ##  return an empty array
+                if len(qnt) == 0:
+                    ##Print an error to the screen
+                    errtxt = "Warning:"
+                    try:
+                        from get_bash_color import bash_color
+                        errtxt = bash_color(errtxt, 'red', bold=True)
+                    except:
+                        pass
+                    
+                    print("{} 'self.quantity={}' not found in {}".format(errtxt, self.quantity, self.infiles))
+                    walkers = []
+                    nsys = 0
+                else:
+                    qnt = qnt[0]
+                    ##We need the pdf to be a numpy array before we try to do [:,qnt] on it
+                    ##  it should already be, but let's be sure if that.
+                    walkers = np.array(np.array(mcmcout['pdfs'])[:,qnt])
+                    nsys = 1
             else:
                 walkers = np.array(np.array(mcmcout['pdfs'])[:,:])
-            #Append
-            nsys = 1
+                nsys = 1
         else:
             walkers = []
             nsys = 0
@@ -1036,15 +1056,33 @@ class MCMC_output(object):
             mcmctags = np.array([str(i) for i in mcmcout['outputs']['tags'].value])
         
         if float(self.NHIlow) <= mcmcout['inputs']['guess'][0] < float(self.NHIhigh):
-            ##Need to check if we only have ONE walker axis,
-            ##  or if we have EVERYTHING
+            ##Need to check if we only want ONE walker axis (e.g., self.quantity == 'met'),
+            ##  or if we want to get EVERYTHING (i.e., self.quantity == None)
             if self.quantity:
-                qnt= np.where(mcmctags == self.quantity)[0][0]
-                walkers = np.array(mcmcout['outputs']['pdfs'][:,qnt])
+                qnt= np.where(mcmctags == self.quantity)[0]
+                ##Check if the axis even exists for this absorber. If it does not,
+                ##  return an empty array
+                if len(qnt) == 0:
+                    ##Print an error to the screen
+                    errtxt = "Warning:"
+                    try:
+                        from get_bash_color import bash_color
+                        errtxt = bash_color(errtxt, 'red', bold=True)
+                    except:
+                        pass
+                    
+                    print("{} 'self.quantity={}' not found in {}".format(errtxt, self.quantity, self.infiles))
+                    walkers = []
+                    nsys = 0
+                else:
+                    qnt = qnt[0]
+                    ##We need the pdf to be a numpy array before we try to do [:,qnt] on it
+                    ##  it should already be, but let's be sure if that.
+                    walkers = np.array(mcmcout['outputs']['pdfs'][:,qnt])
+                    nsys = 1
             else:
                 walkers = np.array(mcmcout['outputs']['pdfs'][:,:])
-            #Append
-            nsys = 1
+                nsys = 1
         else:
             walkers = []
             nsys = 0
