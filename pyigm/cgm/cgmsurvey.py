@@ -207,6 +207,7 @@ class CGMAbsSurvey(object):
         from linetools.abund.ions import name_to_ion
         if isinstance(Zion, basestring):
             Zion = name_to_ion(Zion)
+
         # Generate dummy IGMSurvey
         dumb = GenericIGMSurvey()
         names = []
@@ -221,7 +222,7 @@ class CGMAbsSurvey(object):
                 # Impact parameters
                 rhos.append(cgmabs.rho.to(u.kpc).value)
         # Run ions
-        tbl = dumb.ions(Zion)
+        tbl = dumb.ions(Zion,skip_null=False)
         if tbl is None:
             return None
         tbl.add_column(Column(names, name='cgm_name'))
