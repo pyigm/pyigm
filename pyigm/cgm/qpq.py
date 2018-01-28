@@ -51,8 +51,8 @@ def load_qpq(v):
     if v == 8:
         q8file = resource_filename('pyigm', 'data/CGM/QPQ/qpq8_all_measured.dat')
         pdb.set_trace()
-        qpqdata = Table.read(q8file, format="ascii") #, guess=False, header_start=None)
-
+        qpqdata = Table.read(q8file, format='ascii')
+        
     if v == 7:
         q7file = resource_filename('pyigm', 'data/CGM/QPQ/qpq7_pairs.fits.gz')
         qpqdata = Table.read(q7file)
