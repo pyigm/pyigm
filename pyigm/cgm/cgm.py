@@ -188,6 +188,21 @@ class CGMAbsSys(object):
         else:
             self.name = name
 
+    def copy(self):
+        """Make a copy of the system
+
+        Returns
+        -------
+        newsys : CGMAbsSys
+            Copy of current system
+        """
+        newsys = CGMAbsSys(self.galaxy,self.igm_sys.copy(),name=self.name)
+        newsys.cosmo = self.cosmo
+        newsys.rho = self.rho
+        newsys.ang_sep = self.ang_sep
+        newsys.PA = self.PA
+        return newsys
+
     def to_dict(self):
         """ Convert the system to a JSON-ready dict for output
 

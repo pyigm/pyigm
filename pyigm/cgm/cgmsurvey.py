@@ -169,10 +169,12 @@ class CGMAbsSurvey(object):
 
         # Loop on systems
         for cgm_abs in self.cgm_abs:
-            # Dict
-            cdict = cgm_abs.to_dict()
+            # Dict from copy
+            cabscopy = cgm_abs.copy()
+            cdict = cabscopy.to_dict()
+
             # Temporary JSON file
-            json_fil = tmpdir+'/'+cgm_abs.name+'.json'
+            json_fil = tmpdir+'/'+cabscopy.name+'.json'
             jfiles.append(json_fil)
             with io.open(json_fil, 'w', encoding='utf-8') as f:
                 #try:
@@ -214,7 +216,7 @@ class CGMAbsSurvey(object):
         rhos = []
         for cgmabs in self.cgm_abs:
             if fill_ion:
-                cgmabs.igm_sys.fill_ionN(vrange=vrange)
+                cgmabs.igm_sys.fill_ionN(vrange=vrange,summed_ion=True)
             if cgmabs.igm_sys._ionN is not None:
                 dumb._abs_sys.append(cgmabs.igm_sys)
                 # Names
