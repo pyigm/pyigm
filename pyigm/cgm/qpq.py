@@ -140,7 +140,7 @@ def qpq6tab(itrans,non0=False):
     else:
         print('No data for {:s} in QPQ6'.format(itrans))
 
-
+  
  
 def qpq8tab(ion):
     """ Read table with QPQ8 transitions
