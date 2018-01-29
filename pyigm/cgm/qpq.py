@@ -164,7 +164,7 @@ def qpq8tab(ion):
     jj = [jname for jname in colnames if (((ion+colew) == jname[0:len(ion)+1]) | (jname in ['Pair','subsys']) )]
     tab8 = q8[jj]
 
-    # match with QPQ7?
+    # match with QPQ7? # J1420+1603 not found in QPQ 7 or 6
     ##
     to_match = False
     if to_match:
