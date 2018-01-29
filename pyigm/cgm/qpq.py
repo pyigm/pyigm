@@ -142,7 +142,6 @@ def qpq6tab(itrans,non0=False):
 
 
 
-
 def qpq8tab(ion):
     """ Read table with QPQ8 transitions
 
