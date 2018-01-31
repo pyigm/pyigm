@@ -33,6 +33,10 @@ def load_qpq(v):
         q8file = resource_filename('pyigm', 'data/CGM/QPQ/qpq8_all_measured.dat')
         qpqdata = Table.read(q8file, format='ascii')
 
+    if v == 8.5:  ## planning to change this somehow
+        q8file = resource_filename('pyigm', 'data/CGM/QPQ/qpq8_pairs.fits')
+        qpqdata = Table.read(q8file)
+
     if v == 7:
         q7file = resource_filename('pyigm', 'data/CGM/QPQ/qpq7_pairs.fits.gz')
         qpqdata = Table.read(q7file)
@@ -41,7 +45,7 @@ def load_qpq(v):
         q6file = resource_filename('pyigm', 'data/CGM/QPQ/qpq6_final_cut_2015nov16.fits')
         qpqdata = Table.read(q6file)
 
-    if v not in [6,7,8]:
+    if v not in [6,7,8,8.5]:
         print('Please choose 6, 7, or 8')
         return
 
