@@ -145,9 +145,6 @@ class DLASurvey(IGMSurvey):
         ------
         dla_survey : DLASurvey
         """
-        from importlib import reload
-        reload(pyisu)
-
         # Pull from Internet (as necessary)
         summ_fil = resource_filename('pyigm', "/data/DLA/H100/H100_DLA.fits")
         print('H100: Loading summary file {:s}'.format(summ_fil))

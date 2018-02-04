@@ -244,10 +244,14 @@ class IGMSurvey(object):
         self._abs_sys.append(abs_sys)
 
     def build_all_abs_sys(self, linelist=None, **kwargs):
-        """
-        Build all of the AbsSystem objects from the _dict
+        """ Build all of the AbsSystem objects from the _dict
         or _data if the _dict does not exist!
         In that order
+
+        Parameters
+        ----------
+        linelist : LineList, optional
+        **kwargs : Passed to build_abs_sys_from_dict
         """
         # This speeds things up a bunch
         if linelist is None:
@@ -303,8 +307,7 @@ class IGMSurvey(object):
         return abssys
 
     def build_abs_sys_from_dict(self, abssys_name, **kwargs):
-        """ Build an AbsSystem from the _dict (and maybe _data
-        soon enough)
+        """ Build an AbsSystem from the _dict
         The item in self._abs_sys is filled and
         the systems is also returned
 
@@ -313,7 +316,7 @@ class IGMSurvey(object):
         abssys_name : str
           Needs to match a key in the dict
         **kwargs
-          Passed to compoenents_from_dict()
+          Passed to components_from_dict()
 
         Returns
         -------
@@ -322,17 +325,10 @@ class IGMSurvey(object):
         """
         # Index
         idx = self.sys_idx(abssys_name)
-        # Components first
-        comps = self.components_from_dict(abssys_name, coord=self.coords[idx], **kwargs)
-        # Add HI if needed
-        NHI = None
-        if 'flag_NHI' in self._dict[abssys_name].keys():
-            Zions = [comp.Zion for comp in comps]
-            if (1,1) not in Zions:
-                NHI = self._dict[abssys_name]['NHI']
-        # Now the System
-        vlim=np.array(self._dict[abssys_name]['vlim'])*u.km/u.s
-        abssys = class_by_type(self.abs_type).from_components(comps, vlim=vlim, NHI=NHI)
+        # Instantiate
+        abssys = class_by_type(self.abs_type).from_dict(self._dict[abssys_name],
+                                                        coord=self.coords[idx],
+                                                        **kwargs)
         # Fill
         if len(self._abs_sys) == 0:
             self.init_abs_sys()

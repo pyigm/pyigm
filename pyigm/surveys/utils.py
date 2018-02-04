@@ -78,9 +78,9 @@ def load_sys_files(inp, type, ref=None, sys_path=False, build_abs_sys=False, **k
     decs = [survey._dict[key]['DEC'] for key in survey._dict.keys()]
     survey.coords = SkyCoord(ra=ras, dec=decs, unit='deg')
 
-    # Dummy abs_sys
+    # Build AbsSystem objects?
     if build_abs_sys:
-        survey.build_all_abs_sys()
+        survey.build_all_abs_sys(linelist=llist)
 
     # Generate the data table
     print("Building the data Table from the internal dict")
