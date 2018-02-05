@@ -81,14 +81,13 @@ def test_DLA_from_components():
     lya.analy['vlim'] = [-300.,300.]*u.km/u.s
     lya.attrib['flag_N'] = 1
     lya.attrib['N'] = 3e20 / u.cm**2
-    lya.attrib['sig_N'] = 1 / u.cm**2
+    lya.attrib['sig_N'] = [1]*2 / u.cm**2
     lyb = AbsLine(1025.7222*u.AA, z=lya.z)
     lyb.analy['vlim'] = [-300.,300.]*u.km/u.s
     lyb.attrib['N'] = 3e20 / u.cm**2
     lyb.attrib['flag_N'] = 1
-    lyb.attrib['sig_N'] = 1 / u.cm**2
+    lyb.attrib['sig_N'] = [1]*2 / u.cm**2
     abscomp = AbsComponent.from_abslines([lya,lyb])
-    abscomp.synthesize_colm()
     abscomp.coord = radec
     # Instantiate
     HIsys = DLASystem.from_components([abscomp])
