@@ -526,7 +526,9 @@ E         : toggle displaying/hiding the external absorption model
         # We need a deep copy here because ._abslines will be modified before writting
         # but we want to keep the original ._abslines list in case column density
         # increases and the lines that were masked out because of EW should reappear.
-        comps_aux = copy.deepcopy(self.comps_widg.all_comp)
+        comps_aux = [cp.copy() for cp in self.comps_widg.all_comp]
+        # comps_aux = copy.deepcopy(self.comps_widg.all_comp)
+
         for kk, comp in enumerate(comps_aux):
             # get rid of masked abslines for writting out to hard drive
             abslines_aux = []
@@ -1930,7 +1932,8 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s, min_ew=0.005*u.AA
     print('IGMGuesses: computing blends between components, it may take a while...\n')
 
     # create a copy of component list that has a minimum vlim incorporated
-    comps_copy = copy.deepcopy(components)
+    # comps_copy = copy.deepcopy(components)
+    comps_copy = [cp.copy() for cp in components]
 
     # first keep only lines with ew >= min_ew
     for comp in comps_copy:
