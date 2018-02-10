@@ -32,7 +32,9 @@ from astropy.table import Table
 def read_guesses_file(guesses_file, row_index_to_run):
     """
     For use with --wotta, this reads the "input guesses" file
-    and sets "optim=guess" for the MCMC.
+    and sets "optim=guess" for the MCMC
+    ...unless met_guess_in == "False" or
+      dens_guess_in == "False" (see run_mcmc_wotta())
     """
     
     
@@ -328,9 +330,9 @@ def main(args=None):
     parser.add_argument('-nwalkers', type=int, help='Number of walkers')
     parser.add_argument('-nsamp', type=int, help='Number of samples')
     parser.add_argument('-optim', type=str, help='Optimization method')
-    parser.add_argument('-dens', type=float, help='Guess at density (optim=guess)')
-    parser.add_argument('-met', type=float, help='Guess at metallicity (optim=guess)')
-    parser.add_argument('-carbalpha', type=float, help='Guess at carbalpha (optim=guess)')
+    parser.add_argument('-dens', type=float, help='Guess at density (optim=guess); if "False", then optim=False')
+    parser.add_argument('-met', type=float, help='Guess at metallicity (optim=guess); if "False", then optim=False')
+    parser.add_argument('-carbalpha', type=float, help='Guess at carbalpha; if "True", uses carbalpha grid; if "False", does not use carbalpha grid')
     parser.add_argument("--testing", help="Set to test (over-rides minimum nwalkers)", action="store_true")
     parser.add_argument("--wotta", help="If used, reads in files using Wotta's file format (there is a guesses file, and each sightline has separate input file). If specified, the guesses file contains: dummy column at the front (not used here); the sightline name; metallicity initial guess; density initial guess; carbon/alpha ratio (carbalpha) initial guess (required, even if you don't want to use carbalpha); whether or not to allow carbalpha to vary; whether to use the Wotta+16 logUconstraint as a prior on the density; the UVB to use; ions to comment out (not used here);  and any additional notes (not used here). Then, all that needs to be specified here is: -guessesfile=__; -row=__ (in the guessesfile, usually automatically done by the supercomputer submission script); -nthread=__ (also done by the submission script); -nwalkers=__; and -nsamp=__.", action="store_true")
     parser.add_argument('-guessesfile')
