@@ -21,7 +21,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import pdb
 import numpy as np
 import sys
 import os
@@ -49,16 +48,16 @@ def read_guesses_file(guesses_file, row_index_to_run):
           'comment_out',
           'notes_in')
     
-    fmts=('str',
-        'str',
-        'float',
-        'float',
-        'float',
-        'str',
-        'str',
-        'str',
-        'str',
-        'str',
+    fmts=(str,
+        str,
+        float,
+        float,
+        float,
+        str,
+        str,
+        str,
+        str,
+        str,
         )
     
     input_dict={}
@@ -76,10 +75,10 @@ def read_guesses_file(guesses_file, row_index_to_run):
             linespl = line.strip().split()
             # linespl = [i.strip() for i in line.strip().split('|')]
             ##
-            for ls in xrange(len(linespl)):
-                if fmts[ls] == 'float':
-                    input_dict[keys[ls]].append(float(linespl[ls]))
-                else:
+            for ls in range(len(linespl)):
+                try:
+                    input_dict[keys[ls]].append(fmts[ls](linespl[ls]))
+                except:
                     input_dict[keys[ls]].append(linespl[ls])
     
     infile.close()
@@ -143,6 +142,13 @@ def run_mcmc_wotta(args):
         args.UVB, \
         comment_out, \
         notes], all_guesses = read_guesses_file(args.guessesfile, row_index)
+    
+    if (str(args.met).lower() == "false") or (str(args.dens).lower() == "false"):
+        ##The important one
+        args.optim=False
+        ##Set these just in case it makes a difference
+        args.met=False
+        args.dens=False
 
 
     ##Take care of logU guess
