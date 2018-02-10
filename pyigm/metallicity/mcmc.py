@@ -108,25 +108,22 @@ from astropy import constants as const
 from scipy import integrate 
 from scipy.interpolate import interp1d
 
-def logU_to_dens(logU, redshift, UVB="HM05logU"):
+
+
+def integrate_uvb(redshift, UVB="HM05logU"):
     """
-    Convert logU to n_H (total H number density) using the given UVB.
+    Integrates the UVB spectrum, useful for computing logU.
     The only two UVBs for this are HM05 and HM12 because that's all I have packaged up.
     
     Parameters
     ----------
-    logU : float
-        The single value of logU that you wish to convert to density (n_H)
-    redshift : float
-        The redshift at which you'd like to convert logU --> density (n_H)
     UVB : str
         Which UVB to use. Currently, "HM05" and "HM12" are supported
     
     Returns
     ----------
-    dens : float
-        The single value of density (n_H) that corresponds to
-        the input logU and redshift, using the input UVB
+    phi,err : float np.array
+        The integrated UVB spectrum and corresponding error in the integration
     """
     ##This was taken almost directly from "getionisation.py" from Michele Fumagalli
     
@@ -165,6 +162,39 @@ def logU_to_dens(logU, redshift, UVB="HM05logU"):
     fint = interp1d(lognu,integrand)
     phi,err = integrate.quad(fint,ionnu,maxnu)
     
+    return phi,err
+
+
+
+def logU_to_dens(logU, redshift, spectrum=None, UVB="HM05logU"):
+    """
+    Convert logU to n_H (total H number density) using the given UVB.
+    The only two UVBs for this are HM05 and HM12 because that's all I have packaged up.
+    
+    Parameters
+    ----------
+    logU : float
+        The single value of logU that you wish to convert to density (n_H)
+    redshift : float
+        The redshift at which you'd like to convert logU --> density (n_H)
+    spectrum : float np.array
+        The phi spectrum (from integrate_uvb). This way, we don't have to
+        re-integrate the spectrum EVERY time this function is called.
+    UVB : str
+        Which UVB to use. Currently, "HM05" and "HM12" are supported
+    
+    Returns
+    ----------
+    dens : float
+        The single value of density (n_H) that corresponds to
+        the input logU and redshift, using the input UVB
+    """
+    
+    if not spectrum:
+        phi,err = integrate_uvb(redshift, UVB)
+    else:
+        phi = spectrum
+    
     #now compute the ionization parameter
     # den=result['tags'].index('dens')
     # Uparam=np.log10(phi)-result['pdfs'][:,den]-np.log10(const.c.to('cm/s').value)
@@ -174,7 +204,7 @@ def logU_to_dens(logU, redshift, UVB="HM05logU"):
     
 
 
-def dens_to_logU(dens, redshift, UVB='HM05logU'):
+def dens_to_logU(dens, redshift, spectrum=None, UVB='HM05logU'):
     
     """
     This converts density (n_H) to logU.
@@ -212,7 +242,7 @@ def dens_to_logU(dens, redshift, UVB='HM05logU'):
     testDens = -999
     while abs(testDens - dens) > tolerance_dens:
         logU = logUarray[i]
-        testDens = logU_to_dens(logU, redshift, UVB=UVB)
+        testDens = logU_to_dens(logU, redshift, spectrum=spectrum, UVB=UVB)
         ##If it gets to this point, the tolerance has NOT been met
         
         ##If it's greater (i.e., positive), then
@@ -224,7 +254,7 @@ def dens_to_logU(dens, redshift, UVB='HM05logU'):
         
         ##Go halfway between the highest "low" and
         ##  the lowest "high" i's
-        i = int(math.floor((high_i - low_i)/2. + low_i))
+        i = int(np.floor((high_i - low_i)/2. + low_i))
     
     
     return logU
