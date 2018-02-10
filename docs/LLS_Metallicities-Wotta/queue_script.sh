@@ -15,7 +15,7 @@
 basename "$0"
 ##Prints date+time to STDOUT
 ##  (to get an idea for how long this took to run)
-date
+date '+%Y-%m-%d %H:%M:%S'
 ##Flush open file buffers every 300 sec (5 min) so
 ##  you can see any STDOUT BEFORE the job is completed
 fsync -d 300 $SGE_STDOUT_PATH &
@@ -78,7 +78,7 @@ deactivate
 
 ##Prints date+time to STDOUT
 ##  (to get an idea for how long this took to run)
-date
+date '+%Y-%m-%d %H:%M:%S'
 
 
 
@@ -100,14 +100,14 @@ date
 ##                               NOTE: This can be overridden by -logUconstraint option!
 ## -logUsigma=__       type=str, If we use logUconstraint, what is the sigma for the Gaussian?
 ##                               NOTE: This can be overridden by -logUconstraint option!
-## -UVB=__             type=str, The UVB to use when we are using the logU constraint on density (auto-detected if using --wotta)
+## -UVB=__             type=str, The UVB to use when we are using the logU constraint on density; (auto-detected if using --wotta)
 ## -nthread=__         type=int, Number of threads
 ## -nwalkers=__        type=int, Number of walkers
 ## -nsamp=__           type=int, Number of samples/steps
 ## -optim=__           type=str, Optimization method
-## -dens=__            type=float, Guess at density (optim=guess) (auto-detected if using --wotta)
-## -met=__             type=float, Guess at metallicity (optim=guess) (auto-detected if using --wotta)
-## -carbalpha=__       type=float, Guess at carbalpha (optim=guess) (auto-detected if using --wotta)
+## -dens=__            type=float, Guess at density (optim=guess); if "False", then optim=False; (auto-detected if using --wotta)
+## -met=__             type=float, Guess at metallicity (optim=guess); if "False", then optim=False; (auto-detected if using --wotta)
+## -carbalpha=__       type=float, Guess at carbalpha; if "True", uses carbalpha grid; if "False", does not use carbalpha grid; (auto-detected if using --wotta)
 ## --testing           If used, will over-ride minimum nwalkers and minimum nsamp
 ## --wotta             If used, reads in files using Wotta's file format (there is a guesses file,
 ##                     and each sightline has separate input file). If specified, the guesses file contains: dummy column at the front (not used here);
