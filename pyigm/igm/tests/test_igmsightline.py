@@ -28,8 +28,7 @@ def test_make_igmsystems():
     assert len(igm_sys) == 2
 
 
-# def test_from_igmguesses_and_write_igmguesses():
-if 1:
+def test_from_igmguesses_and_write_igmguesses():
     igms = IGMSightline.from_igmguesses(data_path('J1410+2304_model.json'))
     # Test
     comps = igms._components
