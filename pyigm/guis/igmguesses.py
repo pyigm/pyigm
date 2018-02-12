@@ -494,10 +494,16 @@ E         : toggle displaying/hiding the external absorption model
 
             self.velplot_widg.current_comp.attrib['logN'] = igmg_dict['cmps'][key]['Nfit']
             try:
-                self.velplot_widg.current_comp.reliability = igmg_dict['cmps'][key]['Reliability']
+                self.velplot_widg.current_comp.reliability = igmg_dict['cmps'][key]['reliability']
             except:  # bkwrds compatibility; This should me removed in the future
-                self.velplot_widg.current_comp.reliability = igmg_dict['cmps'][key]['Quality']  # old version compatibility
-            self.velplot_widg.current_comp.comment = igmg_dict['cmps'][key]['Comment']
+                try:
+                    self.velplot_widg.current_comp.reliability = igmg_dict['cmps'][key]['Reliability']  # old version compatibi
+                except:
+                    self.velplot_widg.current_comp.reliability = igmg_dict['cmps'][key]['Quality']  # old version compatibility
+            try:
+                self.velplot_widg.current_comp.comment = igmg_dict['cmps'][key]['comment']
+            except:  # bkwrds compatibility;
+                self.velplot_widg.current_comp.comment = igmg_dict['cmps'][key]['Comment']
             # Sync
             sync_comp_lines(self.velplot_widg.current_comp)
             mask_comp_lines(self.velplot_widg.current_comp, min_ew=self.min_ew)
@@ -551,8 +557,8 @@ E         : toggle displaying/hiding the external absorption model
             out_dict['cmps'][key]['bfit'] = comp.attrib['b'] # this is already a dict because of comp.to_dict() method above
             out_dict['cmps'][key]['wrest'] = comp.init_wrest.value
             out_dict['cmps'][key]['vlim'] = list(comp.vlim.value)
-            out_dict['cmps'][key]['Reliability'] = comp.reliability
-            out_dict['cmps'][key]['Comment'] = comp.comment
+            out_dict['cmps'][key]['reliability'] = comp.reliability
+            out_dict['cmps'][key]['comment'] = comp.comment
             out_dict['cmps'][key]['mask_abslines'] = comp.mask_abslines
         # Write bad/good pixels out
         # good_pixels = np.where(self.velplot_widg.spec.good_pixels == 1)[0]
@@ -1833,7 +1839,7 @@ def comp_init_attrib(comp):
                'logN': 0., 'sig_logN': 0.,
                'b': 0.*u.km/u.s, 'bsig': 0.*u.km/u.s,  # Doppler
                'z': comp.zcomp, 'zsig': 0.,
-               'Reliability': 'none'}
+               'reliability': 'none'}
 
 
 def sync_comp_lines(comp, only_lims=False):

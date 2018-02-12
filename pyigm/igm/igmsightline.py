@@ -14,6 +14,8 @@ from linetools.isgm.abssystem import add_comps_from_dict
 from linetools.isgm.utils import build_systems_from_components
 from linetools import utils as ltu
 
+from pyigm.igm import utils as pyigmu
+
 
 class IGMSightline(AbsSightline):
     """Class for IGM Absorption Sightline
@@ -39,7 +41,7 @@ class IGMSightline(AbsSightline):
         return slf
 
     @classmethod
-    def from_igmguesses(cls, radec, zem, igmgfile, name=None, **kwargs):
+    def from_igmguesses_old(cls, radec, zem, igmgfile, name=None, **kwargs):
         """ Instantiate from a JSON file from IGMGuesses
         The input coordinates are used for all the components
 
@@ -57,7 +59,7 @@ class IGMSightline(AbsSightline):
 
         """
         # Read
-        jdict = ltu.loadjson(igmgfile)   # cmps, specfile
+        jdict = ltu.loadjson(igmgfile)   # cmps, specfile, meta
         # Add in additional keys
         coord = ltu.radec_to_coord(radec)
         jdict['RA'] = coord.fk5.ra.deg
@@ -69,6 +71,45 @@ class IGMSightline(AbsSightline):
                 coord.fk5.ra.to_string(unit=u.hour,sep='',pad=True)[0:4],
                 coord.fk5.dec.to_string(sep='',pad=True,alwayssign=True)[0:5],
                 zem)
+        jdict['name'] = name
+        jdict['components'] = jdict.pop('cmps')
+        kwargs['use_coord'] = True
+        slf = cls.from_dict(jdict, **kwargs)
+        # Return
+        return slf
+
+    @classmethod
+    def from_igmguesses(cls, igmgfile, name=None, **kwargs):
+        """ Instantiate from a JSON file from IGMGuesses
+
+        Parameters
+        ----------
+        igmgfile : str
+          Filename
+
+        Returns
+        -------
+
+        """
+        # Read
+        jdict = ltu.loadjson(igmgfile)  # cmps, specfile, meta
+        # Add in additional keys
+
+        jdict['RA'] = jdict['meta']['RA'] * u.deg
+        jdict['DEC'] = jdict['meta']['DEC'] * u.deg
+        coord = SkyCoord(jdict['RA'], jdict['DEC'], unit='deg')
+        jdict['zem'] = jdict['meta']['zem']
+        if jdict['zem'] == 0.:  # conforming IGMGuesses current rule zem = 0. means zem not set
+            jdict['zem'] = None
+        # Name
+        if name is None:
+            if jdict['zem'] is None:
+                zem = ''
+            else:
+                zem = 'z{:0.3f}'.format(jdict['zem'])
+            name = 'J{:s}{:s}_z{:s}'.format(
+                coord.fk5.ra.to_string(unit=u.hour, sep='', pad=True)[0:4],
+                coord.fk5.dec.to_string(sep='', pad=True, alwayssign=True)[0:5], zem)
         jdict['name'] = name
         jdict['components'] = jdict.pop('cmps')
         kwargs['use_coord'] = True
@@ -132,6 +173,10 @@ class IGMSightline(AbsSightline):
         igm_sys = build_systems_from_components(self._components, systype=igmsystem, **kwargs)
         # Return
         return igm_sys
+
+    def write_to_igmguesses(self, outfile):
+        pyigmu.write_igmg_from_components(self._components, zem = self.zem)
+
 
     def __repr__(self):
         txt = '<{:s}: {:s} {:s}, zem={:f}'.format(
