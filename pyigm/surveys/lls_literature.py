@@ -8,8 +8,6 @@
 #; PURPOSE:
 #;    Module for loading up literature data on Lyman Limit Systems
 #;   29-Jun-2015 by JXP
-#;-
-#;------------------------------------------------------------------------------
 """
 
 from __future__ import print_function, absolute_import, division, unicode_literals
