@@ -104,10 +104,10 @@ class IGMSightline(AbsSightline):
         # Name
         if name is None:
             if jdict['zem'] is None:
-                zem = ''
+                zem = 'z-unknown'
             else:
                 zem = 'z{:0.3f}'.format(jdict['zem'])
-            name = 'J{:s}{:s}_z{:s}'.format(
+            name = 'J{:s}{:s}_{:s}'.format(
                 coord.fk5.ra.to_string(unit=u.hour, sep='', pad=True)[0:4],
                 coord.fk5.dec.to_string(sep='', pad=True, alwayssign=True)[0:5], zem)
         jdict['name'] = name
@@ -153,6 +153,7 @@ class IGMSightline(AbsSightline):
     def __init__(self, radec, zem=None, **kwargs):
         AbsSightline.__init__(self, radec, sl_type='IGM', **kwargs)
         if zem is None:
+            self.zem = None
             warnings.warn("You really should set zem to create IGMSightline")
         else:
             self.zem = zem
@@ -174,14 +175,90 @@ class IGMSightline(AbsSightline):
         # Return
         return igm_sys
 
-    def write_to_igmguesses(self, outfile):
-        pyigmu.write_igmg_from_components(self._components, zem = self.zem)
+    def write_to_igmguesses(self, outfile, fwhm=3, specfilename=None, creator='unknown', instrument='unknown',
+                            altname='unknown'):
+        import json
+        """
+        Writes an IGMGuesses formatted JSON file
+
+        Parameters
+        ----------
+        outfile : str
+            Name of the IGMGuesses JSON file to write to.
+        fwhm : int
+            FWHM for IGMguesses
+        specfilename : str
+            Name of the spectrum file these guesses are associated to.
+        altname : str
+            Alternative name for the sightline. e.g. 3C273
+        creator : str
+            Name of the person who is creating the file. Important for tracking.
+        instrument : str
+            String indicating the instrument and its configuration associated to the specfilename.
+            e.g. HST/COS/G130M+G160M/LP2
+
+
+        Returns
+        -------
+
+        """
+        import datetime
+        # components
+        comp_list = self._components
+
+        # coordinates and meta
+        coord_ref = comp_list[0].coord
+        RA = coord_ref.ra.to('deg').value
+        DEC = coord_ref.dec.to('deg').value
+        date = str(datetime.date.today().strftime('%Y-%b-%d'))
+        jname = ltu.name_from_coord(coord_ref, precision=(2, 1))
+        if self.zem is None:
+            zem = 0.  # IGMGuesses rules
+        else:
+            zem = self.zem
+        # Create dict of the components
+        out_dict = dict(cmps={},
+                        spec_file=specfilename,
+                        fwhm=fwhm, bad_pixels=[],
+                        meta={'RA': RA, 'DEC': DEC, 'ALTNAME': altname,
+                              'zem': zem, 'Creator': creator,
+                              'Instrument': instrument, 'Date': date, 'JNAME': jname})
+
+        for comp in comp_list:
+            key = comp.name
+            out_dict['cmps'][key] = comp.to_dict()
+            # import pdb; pdb.set_trace()
+            # check coordinate
+            if comp.coord != coord_ref:
+                raise ValueError("All AbsComponent objects must have the same coordinates!")
+            out_dict['cmps'][key]['zcomp'] = comp.zcomp
+            out_dict['cmps'][key]['zfit'] = comp.zcomp
+            out_dict['cmps'][key]['Nfit'] = comp.logN
+            out_dict['cmps'][key]['bfit'] = comp.attrib['b']
+            out_dict['cmps'][key]['wrest'] = comp._abslines[0].wrest.value
+            out_dict['cmps'][key]['vlim'] = list(comp.vlim.value)
+            out_dict['cmps'][key]['reliability'] = str(comp.reliability)
+            out_dict['cmps'][key]['comment'] = str(comp.comment)
+            # out_dict['cmps'][key]['mask_abslines'] = comp.mask_abslines
+
+        # JSONify
+        gd_dict = ltu.jsonify(out_dict)
+
+        # Write file
+        # with io.open(outfile, 'w', encoding='utf-8') as f:
+        f = open(outfile, 'w')
+        f.write(unicode(json.dumps(gd_dict, sort_keys=True, indent=4, separators=(',', ': '))))
+        print('Wrote: {:s}'.format(outfile))
 
 
     def __repr__(self):
-        txt = '<{:s}: {:s} {:s}, zem={:f}'.format(
+        if self.zem is None:
+            zem = 'zem = unknown'
+        else:
+            zem = 'zem={:f}'.format(self.zem)
+        txt = '<{:s}: {:s} {:s}, {:s}'.format(
                 self.__class__.__name__, self.coord.fk5.ra.to_string(unit=u.hour,sep=':', pad=True),
-                self.coord.fk5.dec.to_string(sep=':',pad=True,alwayssign=True), self.zem)
+                self.coord.fk5.dec.to_string(sep=':',pad=True,alwayssign=True), zem)
 
         # Type?
         if self.em_type is not None:

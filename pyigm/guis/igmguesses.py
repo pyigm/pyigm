@@ -540,6 +540,8 @@ E         : toggle displaying/hiding the external absorption model
             abslines_aux = []
             mask_abslines_aux = []
             for ii, line in enumerate(comp._abslines):
+                line.setz(comp.zcomp)  # impose abslines to have the same z as zcomp
+                line.limits.set(comp.vlim)  # impose abslines to have the same vlim as component before writing
                 if comp.mask_abslines[ii] != 0:
                     abslines_aux += [line]
                     mask_abslines_aux += [comp.mask_abslines[ii]]
@@ -777,6 +779,7 @@ class IGGVelPlotWidget(QWidget):
                 wobs = absline.wrest * (1 + absline.z)
                 if (wobs > self.spec.wvmin) and (wobs < self.spec.wvmax):
                     new_abslines += [absline]
+
             inp._abslines = new_abslines
             new_comp = inp
 
