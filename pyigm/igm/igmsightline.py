@@ -14,8 +14,6 @@ from linetools.isgm.abssystem import add_comps_from_dict
 from linetools.isgm.utils import build_systems_from_components
 from linetools import utils as ltu
 
-from pyigm.igm import utils as pyigmu
-
 
 class IGMSightline(AbsSightline):
     """Class for IGM Absorption Sightline
