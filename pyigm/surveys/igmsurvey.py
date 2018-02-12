@@ -491,10 +491,14 @@ class IGMSurvey(object):
             if len(abs_sys._ionN) == 0:
                 names.append('MASK_ME')
                 tbls.append(None)
-            #
+                continue
+            # Parse
             mt = (abs_sys._ionN['Z'] == Zion[0]) & (abs_sys._ionN['ion'] == Zion[1]) & (
                 abs_sys._ionN['Ej'] == Ej)
             if np.any(mt):
+                if np.sum(mt) > 1:  # Generally should not get here
+                    warnings.warn("Two components for ion {} for system {}.  Taking the first one".format(Zion, abs_sys))
+                    mt[np.where(mt)[0][1:]] = False
                 tbls.append(abs_sys._ionN[mt])
                 names.append(abs_sys.name)
             else:

@@ -131,8 +131,8 @@ def jenkins2005():
         if (len(isplit[0].strip()) > 0) & (isplit[0][0] not in ['1','2']):
             ionc = isplit[0].strip()
             try:
-                Zion = ltai.name_ion(ionc)
-            except KeyError:
+                Zion = ltai.name_to_ion(ionc)
+            except (KeyError, RecursionError):
                 pdb.set_trace()
         # Generate the Line
         try:
@@ -235,7 +235,7 @@ def tripp2005():
             ipos = isplit[0].find('1')
             ionc = isplit[0][0:ipos-1].strip()
             try:
-                Zion = ltai.name_ion(ionc)
+                Zion = ltai.name_to_ion(ionc)
             except KeyError:
                 pdb.set_trace()
             flg = 1
@@ -267,7 +267,7 @@ def tripp2005():
         if (len(ionc) == 0) or (ionc in ions):
             continue
         #
-        Zion = ltai.name_ion(ionc)
+        Zion = ltai.name_to_ion(ionc)
         ion_dict[ionc] = dict(Z=Zion[0], ion=Zion[1], sig_logN=0.)
         if isplit[4][0] == '<':
             ion_dict[ionc]['logN'] = float(isplit[4][1:])
@@ -335,7 +335,7 @@ def peroux06b():
             # Grab ions and init
             ions = isplit[3:10]
             for ion in ions:
-                Zion = ltai.name_ion(ion)
+                Zion = ltai.name_to_ion(ion)
                 ion_dict[ion] = dict(clm=0., sig_clm=0.,flg_clm=1,Z=Zion[0],ion=Zion[1])
             continue
         # Column or sigma?
@@ -449,7 +449,7 @@ def meiring07():
                 ip2 = is2[2].find('}')
                 ionc = is2[1][2:].strip()+' '+is2[2][0:ip2].strip()
                 # Zion
-                Zion = ltai.name_ion(ionc)
+                Zion = ltai.name_to_ion(ionc)
                 # Append
                 ioncs.append(ionc)
                 Zions.append(Zion)
@@ -544,7 +544,7 @@ def meiring08():
                 #ip2 = is2[2].find('}')
                 ionc = iis.strip()
                 # Zion
-                Zion = ltai.name_ion(ionc)
+                Zion = ltai.name_to_ion(ionc)
                 # Append
                 ioncs.append(ionc)
                 Zions.append(Zion)
@@ -670,7 +670,7 @@ def meiring09():
                 #ip2 = is2[2].find('}')
                 ionc = iis.strip()
                 # Zion
-                Zion = ltai.name_ion(ionc)
+                Zion = ltai.name_to_ion(ionc)
                 # Append
                 ioncs.append(ionc)
                 Zions.append(Zion)
@@ -763,7 +763,7 @@ def dessauges09():
         # ADOM Columns
         ion_dict = {}
         for kk,ion in enumerate(['Fe II','Zn II']):
-            Zion = ltai.name_ion(ion)
+            Zion = ltai.name_to_ion(ion)
             is2 = isplit[7+kk].strip()
             if is2[0:2] == '$>':
                 ion_dict[ion] = dict(sig_clm=0.,flg_clm=2,Z=Zion[0],ion=Zion[1])
@@ -837,7 +837,7 @@ def tumlinson11():
         else:
             if is2[2] != gdl:
                 continue
-        Zion = ltai.name_ion(ion)
+        Zion = ltai.name_to_ion(ion)
         ion_dict[ion] = dict(logN=0., sig_logN=0., flag_N=0, Z=Zion[0],ion=Zion[1])
         # Combine components [could replace with SubSystems some day]
         for iis in isplit[1:-1]:
@@ -955,7 +955,7 @@ def battisti12():
         while (isplit[0][ipos] not in ['I','V']):
             ipos -= 1
         ion = isplit[0][0:ipos+1+len(isplit[0])]
-        Zion = ltai.name_ion(ion)
+        Zion = ltai.name_to_ion(ion)
         # Loop on systems
         for kk,iis in enumerate(isplit[1:-1]):
             if iis.strip()[0] == '.':
