@@ -39,51 +39,21 @@ class IGMSightline(AbsSightline):
         return slf
 
     @classmethod
-    def from_igmguesses_old(cls, radec, zem, igmgfile, name=None, **kwargs):
+    def from_igmguesses(cls, igmgfile, name=None, radec=None, zem=None, **kwargs):
         """ Instantiate from a JSON file from IGMGuesses
-        The input coordinates are used for all the components
 
         Parameters
         ----------
-        radec : RA/DEC input
-          See ltu.radec_to_coord for options
-        zem : float
+        igmgfile : str
+          Filename
+        name : str, optional
+          Name of the IGMSightline
+        radec : RA/DEC input, optional
+          See ltu.radec_to_coord for options on format
+          If given, it will overwrite the RA/DEC in IGMGuesses file (if any)
+        zem : float, optional
           Emission redshift of sightline
-        igmgfile : str
-          Filename
-
-        Returns
-        -------
-
-        """
-        # Read
-        jdict = ltu.loadjson(igmgfile)   # cmps, specfile, meta
-        # Add in additional keys
-        coord = ltu.radec_to_coord(radec)
-        jdict['RA'] = coord.fk5.ra.deg
-        jdict['DEC'] = coord.fk5.dec.deg
-        jdict['zem'] = zem
-        # Name
-        if name is None:
-            name = 'J{:s}{:s}_z{:0.3f}'.format(
-                coord.fk5.ra.to_string(unit=u.hour,sep='',pad=True)[0:4],
-                coord.fk5.dec.to_string(sep='',pad=True,alwayssign=True)[0:5],
-                zem)
-        jdict['name'] = name
-        jdict['components'] = jdict.pop('cmps')
-        kwargs['use_coord'] = True
-        slf = cls.from_dict(jdict, **kwargs)
-        # Return
-        return slf
-
-    @classmethod
-    def from_igmguesses(cls, igmgfile, name=None, **kwargs):
-        """ Instantiate from a JSON file from IGMGuesses
-
-        Parameters
-        ----------
-        igmgfile : str
-          Filename
+          If given, it will overwrite the zem in IGMGuesses file (if any)
 
         Returns
         -------
@@ -92,24 +62,33 @@ class IGMSightline(AbsSightline):
         # Read
         jdict = ltu.loadjson(igmgfile)  # cmps, specfile, meta
         # Add in additional keys
-
-        jdict['RA'] = jdict['meta']['RA'] * u.deg
-        jdict['DEC'] = jdict['meta']['DEC'] * u.deg
-        coord = SkyCoord(jdict['RA'], jdict['DEC'], unit='deg')
-        jdict['zem'] = jdict['meta']['zem']
-        if jdict['zem'] == 0.:  # conforming IGMGuesses current rule zem = 0. means zem not set
-            jdict['zem'] = None
+        # Coords
+        if radec is not None:
+            coord = ltu.radec_to_coord(radec)
+        else:
+            coord = SkyCoord(jdict['meta']['RA'], jdict['meta']['DEC'], unit='deg')
+        jdict['RA'] = coord.fk5.ra.deg
+        jdict['DEC'] = coord.fk5.dec.deg
+        # zem
+        if zem is not None:
+            jdict['zem'] = zem
+        else:
+            jdict['zem'] = jdict['meta']['zem']
+            if jdict['zem'] == 0.:  # conforming IGMGuesses current rule zem = 0. means zem not set
+                jdict['zem'] = None
         # Name
         if name is None:
             if jdict['zem'] is None:
-                zem = 'z-unknown'
+                zem_name = 'z-unknown'
             else:
-                zem = 'z{:0.3f}'.format(jdict['zem'])
+                zem_name = 'z{:0.3f}'.format(jdict['zem'])
             name = 'J{:s}{:s}_{:s}'.format(
                 coord.fk5.ra.to_string(unit=u.hour, sep='', pad=True)[0:4],
-                coord.fk5.dec.to_string(sep='', pad=True, alwayssign=True)[0:5], zem)
+                coord.fk5.dec.to_string(sep='', pad=True, alwayssign=True)[0:5], zem_name)
         jdict['name'] = name
+        # Components
         jdict['components'] = jdict.pop('cmps')
+
         kwargs['use_coord'] = True
         slf = cls.from_dict(jdict, **kwargs)
         # Return
@@ -174,7 +153,7 @@ class IGMSightline(AbsSightline):
         return igm_sys
 
     def write_to_igmguesses(self, outfile, fwhm=3, specfilename=None, creator='unknown', instrument='unknown',
-                            altname='unknown'):
+                            altname='unknown', overwrite=False):
         import json
         """
         Writes an IGMGuesses formatted JSON file
@@ -194,6 +173,8 @@ class IGMSightline(AbsSightline):
         instrument : str
             String indicating the instrument and its configuration associated to the specfilename.
             e.g. HST/COS/G130M+G160M/LP2
+        overwrite : bool
+            Wthether to overwrite output
 
 
         Returns
@@ -243,9 +224,7 @@ class IGMSightline(AbsSightline):
         gd_dict = ltu.jsonify(out_dict)
 
         # Write file
-        # with io.open(outfile, 'w', encoding='utf-8') as f:
-        f = open(outfile, 'w')
-        f.write(unicode(json.dumps(gd_dict, sort_keys=True, indent=4, separators=(',', ': '))))
+        ltu.savejson(outfile, gd_dict, overwrite=overwrite, sort_keys=True, indent=4, separators=(',', ': '))
         print('Wrote: {:s}'.format(outfile))
 
 
