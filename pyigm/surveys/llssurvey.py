@@ -171,9 +171,6 @@ class LLSSurvey(IGMSurvey):
         ------
         lls_survey
         """
-        from imp import reload
-        reload(pyisu)
-
         # Pull from Internet (as necessary)
         summ_fil = pyigm_path+"/data/LLS/HD-LLS/HD-LLS_DR1.fits"
         print('HD-LLS: Loading summary file {:s}'.format(summ_fil))
@@ -198,11 +195,13 @@ class LLSSurvey(IGMSurvey):
                 lls_survey = pyisu.load_sys_files(isys_path, 'LLS',sys_path=True, ref='HD-LLS')
             else:
                 lls_survey = pyisu.load_sys_files(sys_files, 'LLS', ref='HD-LLS', use_coord=True)
+            lls_survey.build_all_abs_sys()
             lls_survey.fill_ions(use_components=True)
         else:
             # Read
             lls_survey = cls.from_sfits(summ_fil)
             # Load ions
+            lls_survey.build_all_abs_sys()
             lls_survey.fill_ions(jfile=ions_fil)
         lls_survey.ref = 'HD-LLS'
 
@@ -251,7 +250,6 @@ class LLSSurvey(IGMSurvey):
 
         # Set data path and metallicity
         spath = pyigm_path+"/data/LLS/HD-LLS/Spectra/"
-        lls_survey.build_all_abs_sys()
         for kk in range(lls_survey.nsys):
             lls = lls_survey.abs_sys(kk)
             lls.spec_path = spath

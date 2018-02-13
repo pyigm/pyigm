@@ -61,7 +61,7 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import matplotlib as mpl
 
 #The next line works on queue systems for DISPLAY issues
-mpl.use('Agg')
+#mpl.use('Agg')   #  Commented out by X to avoid test failures
 
 import warnings
 import pdb

@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+#
+# See top-level LICENSE file for Copyright information
+#
+# -*- coding: utf-8 -*-
+
+
+"""
+Wrapper for the pyigm_fitlls script
+"""
+
+import pyigm.scripts.pyigm_fitlls as pyigm_fitlls
+
+if __name__ == '__main__':
+    args = pyigm_fitlls.parser()
+    pyigm_fitlls.main(args)
