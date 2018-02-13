@@ -220,6 +220,7 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
 
     """
     from pyigm.cgm.cgm import CGMAbsSys
+    import copy
     # Cosmology
     if cosmo is None:
         cosmo = cosmology.Planck15
@@ -255,10 +256,19 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
             cgm = CGMAbsSys(galaxy, dummysystem, cosmo=cosmo, **kwargs)
             cgm_list = [cgm]
     else:
+        from linetools.analysis.zlimits import zLimits
         # Loop to generate
         cgm_list = []
         for imatch in match:
-            cgm = CGMAbsSys(galaxy, igmsystems[imatch], cosmo=cosmo, **kwargs)
+            # Instantiate new IGMSystem
+            # Otherwise, updates to the IGMSystem cross-pollinate other CGMs
+            sysmatch = igmsystems[imatch]
+            newisys = sysmatch.copy()
+            zlim = ltu.z_from_dv((-dv_max.value,dv_max.value)*u.km/u.s,galaxy.z)
+            newlims = zLimits(galaxy.z,zlim.tolist())
+            newisys.limits = newlims
+            newisys.update_component_vel()
+            cgm = CGMAbsSys(galaxy, newisys, cosmo=cosmo, **kwargs)
             cgm_list.append(cgm)
 
     # Return

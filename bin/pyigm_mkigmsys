@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+#
+# See top-level LICENSE file for Copyright information
+#
+# -*- coding: utf-8 -*-
+
+
+"""
+Wrapper for the pyigm_mkigmsys script
+"""
+
+import pyigm.scripts.pyigm_mkigmsys as pyigm_mkigmsys
+
+if __name__ == '__main__':
+    args = pyigm_mkigmsys.parser()
+    pyigm_mkigmsys.main(args)

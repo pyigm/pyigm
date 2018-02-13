@@ -169,10 +169,12 @@ class CGMAbsSurvey(object):
 
         # Loop on systems
         for cgm_abs in self.cgm_abs:
-            # Dict
-            cdict = cgm_abs.to_dict()
+            # Dict from copy
+            cabscopy = cgm_abs.copy()
+            cdict = cabscopy.to_dict()
+
             # Temporary JSON file
-            json_fil = tmpdir+'/'+cgm_abs.name+'.json'
+            json_fil = tmpdir+'/'+cabscopy.name+'.json'
             jfiles.append(json_fil)
             with io.open(json_fil, 'w', encoding='utf-8') as f:
                 #try:
@@ -188,7 +190,7 @@ class CGMAbsSurvey(object):
             os.remove(jfile)
         os.rmdir(tmpdir)
 
-    def ion_tbl(self, Zion, fill_ion=True):
+    def ion_tbl(self, Zion, fill_ion=True, vrange=None):
         """ Generate a Table of Ionic column densities for an input ion
 
         Parameters
@@ -196,21 +198,25 @@ class CGMAbsSurvey(object):
         Zion : tuple or str
         fill_ion : bool, optional
           Fill each ionN table in the survey (a bit slow)
+        vrange : Quantity, optional
+          Velocity range of components to sum column densities
 
         Returns
         -------
         tbl : astropy.Table
+           Returns None if there are no matches to input Zion
         """
         from linetools.abund.ions import name_to_ion
         if isinstance(Zion, basestring):
             Zion = name_to_ion(Zion)
+
         # Generate dummy IGMSurvey
         dumb = GenericIGMSurvey()
         names = []
         rhos = []
         for cgmabs in self.cgm_abs:
             if fill_ion:
-                cgmabs.igm_sys.fill_ionN()
+                cgmabs.igm_sys.fill_ionN(vrange=vrange,summed_ion=True)
             if cgmabs.igm_sys._ionN is not None:
                 dumb._abs_sys.append(cgmabs.igm_sys)
                 # Names
@@ -218,15 +224,16 @@ class CGMAbsSurvey(object):
                 # Impact parameters
                 rhos.append(cgmabs.rho.to(u.kpc).value)
         # Run ions
-        tbl = dumb.ions(Zion)
-        # Add CGM name
+        tbl = dumb.ions(Zion,skip_null=False)
+        if tbl is None:
+            return None
         tbl.add_column(Column(names, name='cgm_name'))
         # Add impact parameter
         tbl.add_column(Column(rhos*u.kpc, name='rho_impact'))
         # Return
         return tbl
 
-    def component_tbl(self, Zion, vlim=None):
+    def component_tbl(self, Zion):
         """ Generate a Table of line measurements for an input ion broken
         down by component.
 
@@ -234,8 +241,6 @@ class CGMAbsSurvey(object):
         ----------
         Zion : tuple or str
             E.g., (8,6) or 'OVI'
-        vlim : Quantity, optional
-          Fill each ionN table in the survey (a bit slow)
 
         Returns
         -------

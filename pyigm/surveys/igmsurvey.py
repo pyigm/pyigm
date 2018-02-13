@@ -463,7 +463,7 @@ class IGMSurvey(object):
             raise ValueError("Not sure how to load the ions")
 
     # Get ions
-    def ions(self, Zion, Ej=0., skip_null=False):
+    def ions(self, Zion, Ej=0., skip_null=True):
         """ Generate a Table of columns and so on
         Restrict to those systems where flg_clm > 0
 
@@ -481,6 +481,7 @@ class IGMSurvey(object):
         tbl : MaskedTable of values for the Survey
           Systems without the ion have rows masked
         """
+        from linetools.abund.ions import ion_to_name
         if self._abs_sys[0]._ionN is None:
             raise IOError("ionN tables are not set.  Use fill_ionN")
 
@@ -491,19 +492,37 @@ class IGMSurvey(object):
             if len(abs_sys._ionN) == 0:
                 names.append('MASK_ME')
                 tbls.append(None)
-            #
+                continue
+            # Parse
             mt = (abs_sys._ionN['Z'] == Zion[0]) & (abs_sys._ionN['ion'] == Zion[1]) & (
                 abs_sys._ionN['Ej'] == Ej)
             if np.any(mt):
+                if np.sum(mt) > 1:  # Generally should not get here
+                    warnings.warn("Two components for ion {} for system {}.  Taking the first one".format(Zion, abs_sys))
+                    mt[np.where(mt)[0][1:]] = False
                 tbls.append(abs_sys._ionN[mt])
                 names.append(abs_sys.name)
             else:
-                tbls.append(None)
-                names.append('MASK_ME')
+                if skip_null is True:
+                    tbls.append(None)
+                    names.append('MASK_ME')
+                else:
+                    nulltbl = abs_sys._ionN[:0].copy()
+                    datatoadd = [abs_sys.coord.ra.deg,abs_sys.coord.dec.deg,
+                                 'none',Zion[0],Zion[1],Ej,
+                                 abs_sys.limits.vmin.value,
+                                 abs_sys.limits.vmax.value,
+                                 ion_to_name(Zion),0,0,0,'','none',abs_sys.zabs]
+                    nulltbl['ion_name'].dtype = '<U6'
+                    nulltbl.add_row(datatoadd)
+                    tbls.append(nulltbl)
+                    names.append(abs_sys.name)
+
         # Fill in the bad ones
         names = np.array(names)
         idx = np.where(names != 'MASK_ME')[0]
         if len(idx) == 0:
+            warnings.warn("There were no entries matching your input Ion={}".format(Zion))
             return None
         bad = np.where(names == 'MASK_ME')[0]
         for ibad in bad:

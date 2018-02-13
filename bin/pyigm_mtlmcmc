@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+#
+# See top-level LICENSE file for Copyright information
+#
+# -*- coding: utf-8 -*-
+
+
+"""
+Wrapper for the pyigm_mtlmcmc script
+"""
+
+import pyigm.scripts.pyigm_mtlmcmc as pyigm_mtlmcmc
+
+if __name__ == '__main__':
+    args = pyigm_mtlmcmc.parser()
+    pyigm_mtlmcmc.main(args)
