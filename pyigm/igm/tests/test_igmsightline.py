@@ -44,4 +44,3 @@ def test_from_igmguesses_and_write_igmguesses():
     igms.write_to_igmguesses(outfile=data_path('IGM_model.json'), specfilename='test.fits', overwrite=True)
     compare_two_files(data_path('IGM_model.json'),
                       resource_filename('pyigm', '/igm/tests/files/IGM_model_reference.json'), except_l2_has='2018-Feb-12')
-
