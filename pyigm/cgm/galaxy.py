@@ -103,7 +103,7 @@ class GalaxyCGM(CGM):
                 aline.attrib['EW'] = r17_a2['W'][idx] / 1e3 * u.AA
                 aline.attrib['sig_EW'] = r17_a2['e_W'][idx] / 1e3 * u.AA
                 # Column
-                if np.isnan(r17_a2['logN'][idx]):
+                if np.isnan(r17_a2['logN'][idx]):  # Odd that some lines had an error but no value
                     aline.attrib['flag_N'] = 0
                 elif r17_a2['l_logN'][idx] == '>':
                     aline.attrib['flag_N'] = 2
