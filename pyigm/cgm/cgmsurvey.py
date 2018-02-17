@@ -190,7 +190,7 @@ class CGMAbsSurvey(object):
             os.remove(jfile)
         os.rmdir(tmpdir)
 
-    def ion_tbl(self, Zion, fill_ion=True, vrange=None):
+    def ion_tbl(self, Zion, fill_ion=True, vrange=None,**kwargs):
         """ Generate a Table of Ionic column densities for an input ion
 
         Parameters
@@ -224,7 +224,7 @@ class CGMAbsSurvey(object):
                 # Impact parameters
                 rhos.append(cgmabs.rho.to(u.kpc).value)
         # Run ions
-        tbl = dumb.ions(Zion,skip_null=False)
+        tbl = dumb.ions(Zion,skip_null=False,**kwargs)
         if tbl is None:
             return None
         tbl.add_column(Column(names, name='cgm_name'))
