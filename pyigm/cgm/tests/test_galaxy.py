@@ -20,7 +20,8 @@ def test_init_full():
     # Cool
     assert 'Richter+17' in mwcgm.refs
     SiII_tbl = mwcgm.abs.ion_tbl((14,2))
-    assert np.sum(SiII_tbl['flag_N'] > 0) == 192
+    assert (not np.any(np.isnan(SiII_tbl['logN'])))
+    assert np.sum(SiII_tbl['flag_N'] > 0) == 188
 
     # Hot
     assert 'Fang+15' in mwcgm.refs

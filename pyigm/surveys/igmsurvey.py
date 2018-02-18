@@ -463,7 +463,7 @@ class IGMSurvey(object):
             raise ValueError("Not sure how to load the ions")
 
     # Get ions
-    def ions(self, Zion, Ej=0., skip_null=True):
+    def ions(self, Zion, Ej=0., skip_null=True, pad_with_nulls=False):
         """ Generate a Table of columns and so on
         Restrict to those systems where flg_clm > 0
 
@@ -474,7 +474,9 @@ class IGMSurvey(object):
         Ej : float [1/cm]
            Energy of the lower level (0. is resonance)
         skip_null : boolean (False)
-           Skip systems without an entry, else pad with zeros 
+           Skip systems without an entry, else pad with zeros
+        pad_with_nulls : bool, optional
+           Pad missing/null systems with empty values.  A bit risky
 
         Returns
         -------
@@ -503,20 +505,23 @@ class IGMSurvey(object):
                 tbls.append(abs_sys._ionN[mt])
                 names.append(abs_sys.name)
             else:
-                if skip_null is True:
-                    tbls.append(None)
-                    names.append('MASK_ME')
+                if skip_null is True:  # This is probably dangerous
+                    continue
                 else:
-                    nulltbl = abs_sys._ionN[:0].copy()
-                    datatoadd = [abs_sys.coord.ra.deg,abs_sys.coord.dec.deg,
-                                 'none',Zion[0],Zion[1],Ej,
-                                 abs_sys.limits.vmin.value,
-                                 abs_sys.limits.vmax.value,
-                                 ion_to_name(Zion),0,0,0,'','none',abs_sys.zabs]
-                    nulltbl['ion_name'].dtype = '<U6'
-                    nulltbl.add_row(datatoadd)
-                    tbls.append(nulltbl)
-                    names.append(abs_sys.name)
+                    if pad_with_nulls:
+                        nulltbl = abs_sys._ionN[:0].copy()
+                        datatoadd = [abs_sys.coord.ra.deg,abs_sys.coord.dec.deg,
+                                     'none',Zion[0],Zion[1],Ej,
+                                     abs_sys.limits.vmin.value,
+                                     abs_sys.limits.vmax.value,
+                                     ion_to_name(Zion),0,0,0,'','none',abs_sys.zabs]
+                        nulltbl['ion_name'].dtype = '<U6'
+                        nulltbl.add_row(datatoadd)
+                        tbls.append(nulltbl)
+                        names.append(abs_sys.name)
+                    else:
+                        tbls.append(None)
+                        names.append('MASK_ME')
 
         # Fill in the bad ones
         names = np.array(names)
