@@ -177,7 +177,8 @@ class IGMSightline(AbsSightline):
         # Return
         return igm_sys
 
-    def write_to_igmguesses(self, outfile, fwhm=3., specfilename=None, creator='unknown', instrument='unknown',
+    def write_to_igmguesses(self, outfile, fwhm=3., specfilename=None, creator=None,
+                            instrument='unknown',
                             altname='unknown', date=None, overwrite=False):
         import json
         """
@@ -216,24 +217,31 @@ class IGMSightline(AbsSightline):
         # components
         comp_list = self._components
         coord_ref = comp_list[0].coord
+        if date is None:
+            date = str(datetime.date.today().strftime('%Y-%b-%d'))
 
         # spec_file, meta
         if hasattr(self, 'igmg_dict'):
             spec_file = self.igmg_dict['spec_file']
             meta = self.igmg_dict['meta']
+            # Updates
+            meta['Date'] = date
+            if creator is not None:
+                meta['Creator'] = creator
+            #
             fwhm = self.igmg_dict['fwhm']
         else:
             spec_file = specfilename
             # coordinates and meta
             RA = coord_ref.ra.to('deg').value
             DEC = coord_ref.dec.to('deg').value
-            if date is None:
-                date = str(datetime.date.today().strftime('%Y-%b-%d'))
             jname = ltu.name_from_coord(coord_ref, precision=(2, 1))
             if self.zem is None:
                 zem = 0.  # IGMGuesses rules
             else:
                 zem = self.zem
+            if creator is None:
+                creator = 'unknown'
             meta = {'RA': RA, 'DEC': DEC, 'ALTNAME': altname,
                     'zem': zem, 'Creator': creator,
                     'Instrument': instrument, 'Date': date, 'JNAME': jname}

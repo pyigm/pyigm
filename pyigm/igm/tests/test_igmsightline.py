@@ -17,7 +17,6 @@ def data_path(filename):
     data_dir = os.path.join(os.path.dirname(__file__), 'files')
     return os.path.join(data_dir, filename)
 
-'''
 def test_make_igmsystems():
     # Load a sightline
     sl_file = pyigm.__path__[0]+'/data/sightlines/Blind_CIV/J161916.55+334238.41.json'
@@ -26,7 +25,6 @@ def test_make_igmsystems():
     # Make them
     igm_sys = igmsl.make_igmsystems()
     assert len(igm_sys) == 2
-'''
 
 
 def test_from_igmguesses_and_write_igmguesses():
