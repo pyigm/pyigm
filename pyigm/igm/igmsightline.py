@@ -59,6 +59,7 @@ class IGMSightline(AbsSightline):
         -------
 
         """
+        from linetools.isgm import abscomponent
         # Read
         jdict = ltu.loadjson(igmgfile)  # cmps, specfile, meta
         # Add in additional keys
@@ -67,8 +68,8 @@ class IGMSightline(AbsSightline):
             coord = ltu.radec_to_coord(radec)
         else:
             coord = SkyCoord(jdict['meta']['RA'], jdict['meta']['DEC'], unit='deg')
-        jdict['RA'] = coord.fk5.ra.deg
-        jdict['DEC'] = coord.fk5.dec.deg
+        jdict['RA'] = coord.icrs.ra.deg
+        jdict['DEC'] = coord.icrs.dec.deg
         # zem
         if zem is not None:
             jdict['zem'] = zem
@@ -83,14 +84,34 @@ class IGMSightline(AbsSightline):
             else:
                 zem_name = 'z{:0.3f}'.format(jdict['zem'])
             name = 'J{:s}{:s}_{:s}'.format(
-                coord.fk5.ra.to_string(unit=u.hour, sep='', pad=True)[0:4],
-                coord.fk5.dec.to_string(sep='', pad=True, alwayssign=True)[0:5], zem_name)
+                coord.icrs.ra.to_string(unit=u.hour, sep='', pad=True)[0:4],
+                coord.icrs.dec.to_string(sep='', pad=True, alwayssign=True)[0:5], zem_name)
         jdict['name'] = name
         # Components
         jdict['components'] = jdict.pop('cmps')
 
         kwargs['use_coord'] = True
         slf = cls.from_dict(jdict, **kwargs)
+
+        # Separate IGMGuesses attributes from AbsComponent
+        acomp_keys = list(abscomponent.init_attrib.keys())
+        for comp in slf._components:
+            comp.igmg_attrib = {}
+            akeys = list(comp.attrib.keys())
+            for key in akeys:
+                if key in acomp_keys:
+                    pass
+                else:
+                    comp.igmg_attrib[key] = comp.attrib.pop(key)
+            # Add other IGMGuesses specific attributes
+            comp.igmg_attrib['top_level'] = {}
+            for key in ['Nfit', 'bfit', 'zfit', 'mask_abslines', 'wrest', 'vlim']:  # I added vlim because these aren't always consistent. Must be something bad in igmguesses
+                if key in jdict['components'][comp.name].keys():
+                    comp.igmg_attrib['top_level'][key] = jdict['components'][comp.name][key]
+        # Slurp a few other IGMGuesses things
+        slf.igmg_dict = {}
+        for key in ['spec_file', 'meta', 'fwhm']:
+            slf.igmg_dict[key] = jdict[key]
         # Return
         return slf
 
@@ -113,6 +134,10 @@ class IGMSightline(AbsSightline):
         -------
 
         """
+        from linetools.lists.linelist import LineList
+        ism = LineList('ISM')
+        kwargs['linelist'] = ism
+        # Load ISM to speed things up
         slf = cls(SkyCoord(ra=idict['RA'], dec=idict['DEC'], unit='deg'),
                   zem=idict['zem'], name=idict['name'], **kwargs)
         # Other
@@ -152,8 +177,8 @@ class IGMSightline(AbsSightline):
         # Return
         return igm_sys
 
-    def write_to_igmguesses(self, outfile, fwhm=3, specfilename=None, creator='unknown', instrument='unknown',
-                            altname='unknown', overwrite=False):
+    def write_to_igmguesses(self, outfile, fwhm=3., specfilename=None, creator='unknown', instrument='unknown',
+                            altname='unknown', date=None, overwrite=False):
         import json
         """
         Writes an IGMGuesses formatted JSON file
@@ -182,26 +207,42 @@ class IGMSightline(AbsSightline):
 
         """
         import datetime
+        # Slurp IGMGuesses component attributes
+        from pyigm.guis.igmguesses import comp_init_attrib
+        from linetools.isgm.abscomponent import AbsComponent
+        tmp = AbsComponent((10.0*u.deg, 45*u.deg), (14,2), 1.0, [-300,300]*u.km/u.s)
+        comp_init_attrib(tmp)
+        igmg_akeys = list(tmp.attrib.keys())
         # components
         comp_list = self._components
-
-        # coordinates and meta
         coord_ref = comp_list[0].coord
-        RA = coord_ref.ra.to('deg').value
-        DEC = coord_ref.dec.to('deg').value
-        date = str(datetime.date.today().strftime('%Y-%b-%d'))
-        jname = ltu.name_from_coord(coord_ref, precision=(2, 1))
-        if self.zem is None:
-            zem = 0.  # IGMGuesses rules
+
+        # spec_file, meta
+        if hasattr(self, 'igmg_dict'):
+            spec_file = self.igmg_dict['spec_file']
+            meta = self.igmg_dict['meta']
+            fwhm = self.igmg_dict['fwhm']
         else:
-            zem = self.zem
+            spec_file = specfilename
+            # coordinates and meta
+            RA = coord_ref.ra.to('deg').value
+            DEC = coord_ref.dec.to('deg').value
+            if date is None:
+                date = str(datetime.date.today().strftime('%Y-%b-%d'))
+            jname = ltu.name_from_coord(coord_ref, precision=(2, 1))
+            if self.zem is None:
+                zem = 0.  # IGMGuesses rules
+            else:
+                zem = self.zem
+            meta = {'RA': RA, 'DEC': DEC, 'ALTNAME': altname,
+                    'zem': zem, 'Creator': creator,
+                    'Instrument': instrument, 'Date': date, 'JNAME': jname}
+
         # Create dict of the components
         out_dict = dict(cmps={},
-                        spec_file=specfilename,
+                        spec_file=spec_file,
                         fwhm=fwhm, bad_pixels=[],
-                        meta={'RA': RA, 'DEC': DEC, 'ALTNAME': altname,
-                              'zem': zem, 'Creator': creator,
-                              'Instrument': instrument, 'Date': date, 'JNAME': jname})
+                        meta=meta)
 
         for comp in comp_list:
             key = comp.name
@@ -211,14 +252,21 @@ class IGMSightline(AbsSightline):
             if comp.coord != coord_ref:
                 raise ValueError("All AbsComponent objects must have the same coordinates!")
             out_dict['cmps'][key]['zcomp'] = comp.zcomp
-            out_dict['cmps'][key]['zfit'] = comp.zcomp
-            out_dict['cmps'][key]['Nfit'] = comp.logN
-            out_dict['cmps'][key]['bfit'] = comp.attrib['b']
-            out_dict['cmps'][key]['wrest'] = comp._abslines[0].wrest.value
-            out_dict['cmps'][key]['vlim'] = list(comp.vlim.value)
+            # IGMGuesses specific component attr
+            for igm_key in ['zfit','Nfit','bfit', 'wrest', 'mask_abslines', 'vlim']:
+                out_dict['cmps'][key][igm_key] = comp.igmg_attrib['top_level'][igm_key]
+            # IGMGuesses attribute dict
+            out_dict['cmps'][key]['attrib'] = {}
+            for igm_key in igmg_akeys:
+                try:
+                    out_dict['cmps'][key]['attrib'][igm_key] = comp.igmg_attrib[igm_key]
+                except KeyError:
+                    out_dict['cmps'][key]['attrib'][igm_key] = comp.attrib[igm_key]
+            #out_dict['cmps'][key]['vlim'] = list(comp.vlim.value)
             out_dict['cmps'][key]['reliability'] = str(comp.reliability)
             out_dict['cmps'][key]['comment'] = str(comp.comment)
-            # out_dict['cmps'][key]['mask_abslines'] = comp.mask_abslines
+            # Compatability on sig_logN
+            out_dict['cmps'][key]['attrib']['sig_logN'] = comp.attrib['sig_logN'][0]
 
         # JSONify
         gd_dict = ltu.jsonify(out_dict)
@@ -234,8 +282,8 @@ class IGMSightline(AbsSightline):
         else:
             zem = 'zem={:f}'.format(self.zem)
         txt = '<{:s}: {:s} {:s}, {:s}'.format(
-                self.__class__.__name__, self.coord.fk5.ra.to_string(unit=u.hour,sep=':', pad=True),
-                self.coord.fk5.dec.to_string(sep=':',pad=True,alwayssign=True), zem)
+                self.__class__.__name__, self.coord.icrs.ra.to_string(unit=u.hour,sep=':', pad=True),
+                self.coord.icrs.dec.to_string(sep=':',pad=True,alwayssign=True), zem)
 
         # Type?
         if self.em_type is not None:
