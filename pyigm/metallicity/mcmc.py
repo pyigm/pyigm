@@ -166,7 +166,7 @@ def integrate_uvb(redshift, UVB="HM05logU"):
 
 
 
-def logU_to_dens(logU, redshift, spectrum=None, UVB="HM05logU"):
+def logU_to_dens(logU, redshift, UVB="HM05logU", spectrum=None):
     """
     Convert logU to n_H (total H number density) using the given UVB.
     The only two UVBs for this are HM05 and HM12 because that's all I have packaged up.
@@ -204,7 +204,7 @@ def logU_to_dens(logU, redshift, spectrum=None, UVB="HM05logU"):
     
 
 
-def dens_to_logU(dens, redshift, spectrum=None, UVB='HM05logU'):
+def dens_to_logU(dens, redshift, UVB='HM05logU', spectrum=None):
     
     """
     This converts density (n_H) to logU.
@@ -606,9 +606,9 @@ class Emceebones(object):
 
         ##calculate the density Gaussian based on the logU Gaussian
         ##NOTE: here we assume that it is symmetric
-        emc.densGaussMean=logU_to_dens(self.logUmean, self.info['z'], self.UVB)
-        # densGaussSigPos=logU_to_dens(logUmean+logUsigma, self.info['z'], self.UVB) - densGaussMean
-        # densGaussSigNeg=densGaussMean - logU_to_dens(logUmean-logUsigma, self.info['z'], self.UVB)
+        emc.densGaussMean=logU_to_dens(self.logUmean, self.info['z'], UVB=self.UVB)
+        # densGaussSigPos=logU_to_dens(logUmean+logUsigma, self.info['z'], UVB=self.UVB) - densGaussMean
+        # densGaussSigNeg=densGaussMean - logU_to_dens(logUmean-logUsigma, self.info['z'], UVB=self.UVB)
         # densGaussSig=max([densGaussSigPos,densGaussSigNeg])
         emc.densGaussSig=self.logUsigma
         ##CBW end
