@@ -38,8 +38,9 @@ def NHI_defs():
     NHIdict['names']    = ['pLLS', 'LLS', 'SLLS', 'DLA']
     # NHIdict['names']    = ['pLLS', 'LLS', 'pLLS+LLS', 'SLLS', 'DLA']
     
-    NHIdict['diff CGM'] = [15.0, 16.0]
-    NHIdict['pLLS']     = [16.0, 17.2]
+    NHIdict['absorber'] = [15.0, 19.0]
+    NHIdict['SLFS']     = [15.0, 16.2]
+    NHIdict['pLLS']     = [16.2, 17.2]
     NHIdict['LLS']      = [17.2, 19.0]
     NHIdict['pLLS+LLS'] = [NHIdict['pLLS'][0], NHIdict['LLS'][1]]
     NHIdict['SLLS']     = [19.0, 20.3]
@@ -884,7 +885,7 @@ class MCMC_output(object):
             temp_limit_code = []
             for idx in range(len(self.walkers[0])):
                 ##Get all the walkers for THIS axis
-                hist, edges = np.histogram(self.walkers[:,idx], bins=30)
+                hist, edges = np.histogram(np.array(self.walkers)[:,idx], bins=30)
                 max_height = hist.max()
                 
                 if hist[0] >= max_height*self.limit_threshold:
