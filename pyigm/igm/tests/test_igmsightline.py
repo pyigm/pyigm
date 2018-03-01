@@ -8,7 +8,6 @@ import os
 from pkg_resources import resource_filename
 
 from linetools import utils as ltu
-from linetools.isgm.tests.utils import compare_two_files
 
 from pyigm.igm.igmsightline import IGMSightline
 import pyigm
@@ -40,7 +39,5 @@ def test_from_igmguesses_and_write_igmguesses():
 
     # write
     # will write a file in directory ./files/
-    igms._components = igms._components[:2]  # chop off for convenience
-    igms.write_to_igmguesses(outfile=data_path('IGM_model.json'), specfilename='test.fits', overwrite=True)
-    compare_two_files(data_path('IGM_model.json'),
-                      resource_filename('pyigm', '/igm/tests/files/IGM_model_reference.json'), except_l2_has='2018-Feb-12')
+    igms.write_to_igmguesses(outfile=data_path('IGM_model.json'), overwrite=True, date='2018-Feb-12')
+    assert ltu.compare_two_json(data_path('IGM_model.json'), data_path('J1410+2304_model.json'))
