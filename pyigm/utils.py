@@ -411,3 +411,60 @@ def get_components(obj,ion,zrange=None):
         complist = [comp for comp in obj._components if
                  ((comp.Zion==Zion)&(comp.zcomp>zrange[0])&(comp.zcomp<zrange))]
     return complist
+
+def confintervals(hits,totals,sig=1):
+    """Wrapper for confinterval() function to accept arrays of hits and totals
+    
+    Parameters
+    ----------
+    hits : list or array
+        Numbers of instances
+    totals : list or array
+        Total numbers of instances possible
+    sig : int
+        Confidence level in multiples of sigma
+
+    Returns
+    -------
+    fracs : list of floats
+        Fractions of hits/totals
+    lolims : list of floats 
+        Lower bounds of confidence interval
+    uplims : list of floats
+        Upper bounds of confidence interval
+    """
+    fracs=np.zeros(len(hits)) ; uplims=np.zeros(len(hits)) ; lolims=np.zeros(len(hits))
+    for i,tt in enumerate(totals):
+        fracs[i],lolims[i],uplims[i]=confinterval(hits[i],totals[i],sig)
+    return fracs,lolims,uplims
+
+def confinterval(hits,total,sig=1):
+    """ Calculate Wilson confidence intervals
+    Parameters
+    ----------
+    hits : int
+        Number of instances
+    total : int
+        Total number of instances possible
+    sig : int
+        Confidence level in multiples of sigma
+
+    Returns
+    -------
+    frac : floats
+        Fraction of hits
+    lolim : list of floats
+        Lower bound of confidence interval
+    uplim : list of floats
+        Upper bound of confidence interval
+    """
+    from astropy.stats.funcs import binom_conf_interval as conf
+    if sig==1:
+        lowlim,uplim=conf(hits,total)
+    else:
+        if sig==2: lowlim,uplim=conf(hits,total,conf=0.9545)
+        elif sig==3: lowlim,uplim=conf(hits,total,conf=0.9973)
+        else:
+            raise ValueError('Invalid significance level')
+    frac = float(hits)/total
+    return frac,lowlim,uplim

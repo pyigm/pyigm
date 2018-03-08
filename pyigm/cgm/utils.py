@@ -274,4 +274,64 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
     # Return
     return cgm_list
 
+def covering_fraction(iontable,colthresh,rhobins=[0,150],returncounts=False,**kwargs):
+    """Given some detection threshold, calculate the ion covering fraction
+    within impact parameter bins
 
+    Parameters
+    ----------
+    iontable : Table
+        Output of CGMAbsSurvey.ion_tbl()
+    colthresh : float or None
+        Detection threshold in log column density; if None, impose no threshold
+    rhobins,optional : list of ints or floats
+        Bins in impact parameter
+    returncounts : bool, optional
+        If True, return numbers of hits and total systems within each bin
+
+    Returns
+    -------
+    fracs : list of floats
+        Covering fraction for each bin
+    lolims : list of floats
+        Lower limits on covering fractions
+    uplims : list of floats
+        Upper limits on covering fractions
+    dethist : list of ints, optional
+        Number of detections in each bin
+    tothist : list of ints, optional
+        Total number of systems in each bin
+
+    """
+    from pyigm import utils as pu
+
+    # Clean up table to remove nulls if they exist
+    itab = iontable.copy()
+    itab = itab[itab['flag_N']>0]
+    flag = itab['flag_N']
+    col = itab['logN']
+    rho = itab['rho_impact']
+
+    # Impose threshold if it exists and
+    if colthresh != None:
+        dets = np.where(((flag == 1) | (flag == 2))&(col > colthresh))[0]
+        nondets = np.where((flag == 3) & (col <= colthresh))[0]
+    else:
+        dets = np.where((flag == 1) | (flag == 2))[0]
+        nondets = np.where((flag == 3))[0]
+
+    # Set up and sort bins
+    dethist, bins = np.histogram(rho[dets], bins=rhobins)
+    nondethist, bins = np.histogram(rho[nondets], bins=rhobins)
+
+    # Get the stats
+    tothist = nondethist + dethist
+    fracs, lolims, uplims = pu.confintervals(dethist, tothist,**kwargs)
+    upbars = uplims - fracs
+    lobars = fracs - lolims
+
+    # Return
+    if returncounts == False:
+        return fracs, lobars, upbars
+    else:
+        return fracs, lobars, upbars, dethist, tothist
