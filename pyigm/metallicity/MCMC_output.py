@@ -38,8 +38,9 @@ def NHI_defs():
     NHIdict['names']    = ['pLLS', 'LLS', 'SLLS', 'DLA']
     # NHIdict['names']    = ['pLLS', 'LLS', 'pLLS+LLS', 'SLLS', 'DLA']
     
-    NHIdict['diff CGM'] = [15.0, 16.0]
-    NHIdict['pLLS']     = [16.0, 17.2]
+    NHIdict['absorber'] = [15.0, 19.0]
+    NHIdict['SLFS']     = [15.0, 16.2]
+    NHIdict['pLLS']     = [16.2, 17.2]
     NHIdict['LLS']      = [17.2, 19.0]
     NHIdict['pLLS+LLS'] = [NHIdict['pLLS'][0], NHIdict['LLS'][1]]
     NHIdict['SLLS']     = [19.0, 20.3]
@@ -233,7 +234,8 @@ class MCMC_output(object):
         if base_hist is not None:
             self.base_hist=base_hist
         else:
-            self.base_hist=np.arange(-3.6, 1.0001, self.binsize)
+            # self.base_hist=np.arange(-3.6, 1.0001, self.binsize)
+            self.base_hist=np.arange(-5.0, 2.5001, self.binsize)
         
         
         ############
@@ -629,17 +631,17 @@ class MCMC_output(object):
                     ci_low = 50 - (self.err_ci_limits/2.0)
                     ci_high = 50 + (self.err_ci_limits/2.0)
                 
-                temp_all_walkers = np.array(self.walkers)
+                temp_all_walkers = np.array(self.walkers[idx])
                 ##Need to check if we only have ONE walker axis, or if we
                 ##  have EVERYTHING (in which case we get a median for each axis)
                 if self.quantity:
-                    all_medians.append(np.median(temp_all_walkers[idx]))
-                    all_err_low.append(np.percentile(temp_all_walkers[idx],ci_low,axis=0))
-                    all_err_high.append(np.percentile(temp_all_walkers[idx],ci_high,axis=0))
+                    all_medians.append(np.median(temp_all_walkers))
+                    all_err_low.append(np.percentile(temp_all_walkers,ci_low,axis=0))
+                    all_err_high.append(np.percentile(temp_all_walkers,ci_high,axis=0))
                 else:
-                    all_medians.append([np.median(temp_all_walkers[idx][:,i]) for i in range(len(temp_all_walkers[idx][0]))])
-                    all_err_low.append([np.percentile(temp_all_walkers[idx][:,i],ci_low,axis=0) for i in range(len(temp_all_walkers[idx][0]))])
-                    all_err_high.append([np.percentile(temp_all_walkers[idx][:,i],ci_high,axis=0) for i in range(len(temp_all_walkers[idx][0]))])
+                    all_medians.append([np.median(temp_all_walkers[:,i]) for i in range(len(temp_all_walkers[0]))])
+                    all_err_low.append([np.percentile(temp_all_walkers[:,i],ci_low,axis=0) for i in range(len(temp_all_walkers[0]))])
+                    all_err_high.append([np.percentile(temp_all_walkers[:,i],ci_high,axis=0) for i in range(len(temp_all_walkers[0]))])
             
             ############
             ##Done looping over files
@@ -864,17 +866,38 @@ class MCMC_output(object):
         if self.nsys <= 0:
             self.limit_code = 999
         
-        hist, edges = np.histogram(self.walkers, bins=20)
-        max_height = hist.max()
-        
-        if hist[0] >= max_height*self.limit_threshold:
-            ##Upper limit
-            self.limit_code = -1
-        elif hist[-1] >= max_height*self.limit_threshold:
-            ##Lower limit
-            self.limit_code = -2
+        ##Need to check if we only want ONE walker axis (e.g., self.quantity == 'met'),
+        ##  or if we want to get EVERYTHING (i.e., self.quantity == None)
+        if self.quantity:
+            ##Then we have a single axis to get
+            hist, edges = np.histogram(self.walkers, bins=30)
+            max_height = hist.max()
+            
+            if hist[0] >= max_height*self.limit_threshold:
+                ##Upper limit
+                self.limit_code = -1
+            elif hist[-1] >= max_height*self.limit_threshold:
+                ##Lower limit
+                self.limit_code = -2
+            else:
+                self.limit_code = 0
         else:
-            self.limit_code = 0
+            temp_limit_code = []
+            for idx in range(len(self.walkers[0])):
+                ##Get all the walkers for THIS axis
+                hist, edges = np.histogram(np.array(self.walkers)[:,idx], bins=30)
+                max_height = hist.max()
+                
+                if hist[0] >= max_height*self.limit_threshold:
+                    ##Upper limit
+                    temp_limit_code.append(-1)
+                elif hist[-1] >= max_height*self.limit_threshold:
+                    ##Lower limit
+                    temp_limit_code.append(-2)
+                else:
+                    temp_limit_code.append(0)
+                
+            self.limit_code = temp_limit_code
         
         # return self.limit_code
         return
@@ -892,9 +915,11 @@ class MCMC_output(object):
         ##  it's a list we want to loop over)
         infiles_is_list = False
         try:
+            ##Python2
             if not isinstance(self.infiles, basestring):
                 infiles_is_list = True
         except:
+            ##Python3
             if not isinstance(self.infiles, string_types):
                 infiles_is_list = True
         
