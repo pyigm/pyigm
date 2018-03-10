@@ -412,7 +412,7 @@ def get_components(obj,ion,zrange=None):
                  ((comp.Zion==Zion)&(comp.zcomp>zrange[0])&(comp.zcomp<zrange))]
     return complist
 
-def confintervals(hits,totals,sig=1):
+def confintervals(hits,totals,sig=1,confidence=None):
     """Wrapper for confinterval() function to accept arrays of hits and totals
     
     Parameters
@@ -421,8 +421,10 @@ def confintervals(hits,totals,sig=1):
         Numbers of instances
     totals : list or array
         Total numbers of instances possible
-    sig : int
+    sig : int,optional
         Confidence level in multiples of sigma
+    confidence : float, optional
+        Actual confidence level, e.g., 0.997; if provided, sig is ignored
 
     Returns
     -------
@@ -435,10 +437,10 @@ def confintervals(hits,totals,sig=1):
     """
     fracs=np.zeros(len(hits)) ; uplims=np.zeros(len(hits)) ; lolims=np.zeros(len(hits))
     for i,tt in enumerate(totals):
-        fracs[i],lolims[i],uplims[i]=confinterval(hits[i],totals[i],sig)
+        fracs[i],lolims[i],uplims[i]=confinterval(hits[i],totals[i],sig,confidence)
     return fracs,lolims,uplims
 
-def confinterval(hits,total,sig=1):
+def confinterval(hits,total,sig=1,confidence=None):
     """ Calculate Wilson confidence intervals
     Parameters
     ----------
@@ -446,8 +448,10 @@ def confinterval(hits,total,sig=1):
         Number of instances
     total : int
         Total number of instances possible
-    sig : int
+    sig : int,optional
         Confidence level in multiples of sigma
+    confidence : float, optional
+        Actual confidence level, e.g., 0.997; if provided, sig is ignored
 
     Returns
     -------
@@ -459,12 +463,27 @@ def confinterval(hits,total,sig=1):
         Upper bound of confidence interval
     """
     from astropy.stats.funcs import binom_conf_interval as conf
-    if sig==1:
-        lowlim,uplim=conf(hits,total)
+
+    # Get confidence level
+    if confidence is None:
+        cl = conflevel(sig)
     else:
-        if sig==2: lowlim,uplim=conf(hits,total,conf=0.9545)
-        elif sig==3: lowlim,uplim=conf(hits,total,conf=0.9973)
-        else:
-            raise ValueError('Invalid significance level')
+        cl = confidence
+
+    # Calculate
+    lowlim,uplim=conf(hits,total,conf=cl)
     frac = float(hits)/total
+
     return frac,lowlim,uplim
+
+def conflevel(sigma):
+    """Return confidence level assuming Gaussian distribution
+
+    Parameters
+    ----------
+    sigma: float
+        Number of standard deviations from mean within which to calculate confidence level
+    """
+    from scipy.stats import norm
+    cl = norm.cdf(sigma)
+    return cl

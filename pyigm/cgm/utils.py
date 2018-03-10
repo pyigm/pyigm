@@ -274,7 +274,7 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
     # Return
     return cgm_list
 
-def covering_fraction(iontable,colthresh,rhobins=[0,150],returncounts=False,**kwargs):
+def covering_fraction(iontable,colthresh,rhobins=None,returncounts=False,**kwargs):
     """Given some detection threshold, calculate the ion covering fraction
     within impact parameter bins
 
@@ -284,8 +284,9 @@ def covering_fraction(iontable,colthresh,rhobins=[0,150],returncounts=False,**kw
         Output of CGMAbsSurvey.ion_tbl()
     colthresh : float or None
         Detection threshold in log column density; if None, impose no threshold
+        Nondetections with upper limits above this threshold are ignored
     rhobins,optional : list of ints or floats
-        Bins in impact parameter
+        Bins in impact parameter (units of kpc).  If None,
     returncounts : bool, optional
         If True, return numbers of hits and total systems within each bin
 
@@ -312,7 +313,10 @@ def covering_fraction(iontable,colthresh,rhobins=[0,150],returncounts=False,**kw
     col = itab['logN']
     rho = itab['rho_impact']
 
-    # Impose threshold if it exists and
+    if rhobins is None:
+        rhobins = [0,np.max(rho)]
+
+    # Impose threshold if it exists
     if colthresh != None:
         dets = np.where(((flag == 1) | (flag == 2))&(col > colthresh))[0]
         nondets = np.where((flag == 3) & (col <= colthresh))[0]
