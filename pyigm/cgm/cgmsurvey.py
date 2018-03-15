@@ -307,21 +307,34 @@ class CGMAbsSurvey(object):
         """
         from astropy.table import Table
 
-        keys = self.cgm_abs[0].igm_sys.kin[lbl].keys
-        t = Table(names=keys,
-                  dtype=self.cgm_abs[0].igm_sys.kin[lbl].key_dtype)
+        # The folowing line will fial if the first system is not populated..
+        keys = list(self.cgm_abs[0].igm_sys.kin[lbl].keys())
+        clms = []
+        for ii in range(len(keys)):
+            clms.append([])
 
-        for cgm_abs in self.cgm_abs:
+        isyss = []
+        for isys, cgm_abs in enumerate(self.cgm_abs):
+            # Populated?
             try:
                 kdict = cgm_abs.igm_sys.kin[lbl]
             except KeyError:
-                # No dict.  Filling in zeros
-                row =  [0 for key in keys]
-                t.add_row( row )
                 continue
-            # Filling
-            row = [kdict[key] for key in keys]
-            t.add_row( row )
+            if len(kdict) == 0:
+                continue
+            #
+            isyss.append(isys)
+            for jj,key in enumerate(keys):
+                try:  # Deal with Quantity
+                    clms[jj].append(kdict[key].value)
+                except AttributeError:
+                    clms[jj].append(kdict[key])
+                except KeyError:
+                    pdb.set_trace()
+
+        # Table me
+        t = Table(clms, names=keys)
+        t['sys_idx'] = isyss
         return t
 
     def get_cgmsys(self, cgmname, return_index=False):
