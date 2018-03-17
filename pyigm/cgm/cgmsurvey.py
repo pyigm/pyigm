@@ -574,7 +574,7 @@ class CGMAbsSurvey(object):
         for ii in range(len(keys)):
             clms.append([])
 
-        isyss = []
+        cgm_names = []
         for isys, cgm_abs in enumerate(self.cgm_abs):
             # Populated?
             try:
@@ -584,7 +584,7 @@ class CGMAbsSurvey(object):
             if len(kdict) == 0:
                 continue
             #
-            isyss.append(isys)
+            cgm_names.append(cgm_abs.name)
             for jj,key in enumerate(keys):
                 try:  # Deal with Quantity
                     clms[jj].append(kdict[key].value)
@@ -595,7 +595,7 @@ class CGMAbsSurvey(object):
 
         # Table me
         t = Table(clms, names=keys)
-        t['sys_idx'] = isyss
+        t['name'] = cgm_names
         return t
 
     def get_cgmsys(self, cgmname, return_index=False):
