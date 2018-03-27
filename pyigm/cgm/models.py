@@ -5,6 +5,7 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 
 import numpy as np
 import pdb
+from scipy.special import hyp2f1
 
 from astropy import units as u
 from astropy import constants as const
@@ -111,7 +112,7 @@ class ModifiedNFW(CGMPhase):
     c : float, optional
       concentration of the halo
     f_hot : float, optional
-      Fraction of the brayons in this hot phase
+      Fraction of the baryons in this hot phase
     alpha : float, optional
       Parameter to modify NFW profile power-law
     y0 : float, optional
@@ -139,12 +140,17 @@ class ModifiedNFW(CGMPhase):
         self.rhoc = 9.2e-30 * u.g / u.cm**3
         # Dark Matter
         self.r200 = (((3*self.M_halo) / (4*np.pi*200*self.rhoc))**(1/3)).to('kpc')
-        self.rho0 = 200*self.rhoc/3  * self.c**3 / self.fy(self.c)   # Central density
+        self.rho0 = 200*self.rhoc/3 * self.c**3 / self.fy_DM(self.c)   # Central density
+        # Baryons
+        self.M_b = self.M_halo * self.fb
+        self.rho0_b = (self.M_b / (4*np.pi) * (self.c/self.r200)**3 / self.fy_b(self.c)).cgs
         # Misc
         self.mu = 1.33   # Reduced mass correction for Helium
 
-    def fy(self, y):
-        """ Enclosed mass function
+    def fy_DM(self, y):
+        """ Enclosed mass function for the DM
+        NFW
+
         Parameters
         ----------
         y : float or ndarray
@@ -152,9 +158,26 @@ class ModifiedNFW(CGMPhase):
         Returns
         -------
         f_y : float or ndarray
-
         """
         f_y = np.log(1+y) - y/(1+y)
+        #
+        return f_y
+
+    def fy_b(self, y):
+        """ Enclosed mass function for the baryons
+
+        Parameters
+        ----------
+        y : float or ndarray
+
+        Returns
+        -------
+        f_y : float or ndarray
+        """
+        f_y = (y/(self.y0 + y))**(1+self.alpha) * (
+            self.y0**(-self.alpha) * (self.y0 + y)**(1+self.alpha) * hyp2f1(
+                1+self.alpha, 1+self.alpha, 2+self.alpha, -1*y/self.y0)
+            - self.y0) / (1+self.alpha) / self.y0
         return f_y
 
     def ne(self, xyz):
@@ -191,11 +214,11 @@ class ModifiedNFW(CGMPhase):
           Density in cm**-3
 
         """
-        nH = self.rho(xyz).value / self.mu / m_p
+        nH = self.rho_b(xyz).value / self.mu / m_p
         # Return
         return nH
 
-    def rho(self, xyz):
+    def rho_b(self, xyz):
         """ Mass density in baryons; modified
 
         Parameters
@@ -211,7 +234,7 @@ class ModifiedNFW(CGMPhase):
         """
         radius = np.sqrt(rad3d2(xyz))
         y = self.c * (radius/self.r200.to('kpc').value)
-        rho = (self.fb*self.f_hot*self.rho0) / y**(1-self.alpha) / (self.y0+y)**(2+self.alpha)
+        rho = self.rho0_b / y**(1-self.alpha) / (self.y0+y)**(2+self.alpha)
         # Return
         return rho
 
