@@ -238,7 +238,7 @@ class ModifiedNFW(CGMPhase):
         # Return
         return rho
 
-    def Ne_Rperp(self, Rperp, step_size=0.1*u.kpc, rmax=1., epsrel=1e-4, epsabs=1e-6,
+    def Ne_Rperp(self, Rperp, step_size=0.1*u.kpc, rmax=1., epsrel=1e-4,
                  *arg, **kwargs):
         """ Calculate N_H at an input impact parameter Rperp
 
