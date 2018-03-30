@@ -38,7 +38,7 @@ def parser(options=None):
     if options is None:
         args = parser.parse_args()
     else:
-        args = parser.parse_args(options)
+        args = parser.parse_args(namespace=options)
     return args
 
 

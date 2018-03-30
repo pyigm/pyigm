@@ -382,9 +382,7 @@ Q         : Quit the GUI
             QtCore.pyqtRemoveInputHook()
             import pdb; pdb.set_trace()
             QtCore.pyqtRestoreInputHook()
-        tau_Lyman = lav.voigt_from_abslines(wa1, all_lines,
-                                            ret='tau',
-                                            skip_wveval=self.skip_wveval)
+        tau_Lyman = lav.voigt_from_abslines(wa1, all_lines, ret='tau', skip_wveval=self.skip_wveval)
         all_tau_model = tau_Lyman
         # Loop on forest lines
         for forest in self.all_forest:
@@ -424,6 +422,9 @@ Q         : Quit the GUI
         self.dla_low *= self.conti_dict['co']
         self.dla_high *= self.conti_dict['co']
         # Over-absorbed
+        #QtCore.pyqtRemoveInputHook()
+        #import pdb; pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
         self.spec_widg.bad_model = np.where( (self.dla_model < 0.7) &
             (self.full_model.flux < (self.spec_widg.spec.flux-
                 self.spec_widg.spec.sig*1.5)))[0]
@@ -632,10 +633,11 @@ Q         : Quit the GUI
             iline.attrib['sig_N'] = 1 / u.cm**2  # Avoid nan
             iline.attrib['b'] = bval
             iline.attrib['coord'] = SkyCoord(ra=0*u.deg,dec=0*u.deg)
+            iline.analy['do_analysis'] = 0  # Avoids plotting
             dla_lines.append(iline)
         # Generate system
         HIcomponent = ltiu.build_components_from_abslines(dla_lines)[0]
-        HIcomponent.synthesize_colm()
+        HIcomponent.synthesize_colm(overwrite=True)
         new_sys = DLASystem.from_components([HIcomponent]) #(0*u.deg,0*u.deg),z,None,NHI)
         new_sys.bval = bval # This is not standard, but for convenience
         new_sys.comment = comment
