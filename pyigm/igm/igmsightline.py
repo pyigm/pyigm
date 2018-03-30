@@ -134,9 +134,10 @@ class IGMSightline(AbsSightline):
         -------
 
         """
-        from linetools.lists.linelist import LineList
-        ism = LineList('ISM')
-        kwargs['linelist'] = ism
+        if 'linelist' not in kwargs.keys():
+            from linetools.lists.linelist import LineList
+            ism = LineList('ISM')
+            kwargs['linelist'] = ism
         # Load ISM to speed things up
         slf = cls(SkyCoord(ra=idict['RA'], dec=idict['DEC'], unit='deg'),
                   zem=idict['zem'], name=idict['name'], **kwargs)
