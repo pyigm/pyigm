@@ -9,6 +9,37 @@ from pkg_resources import resource_filename
 from astropy.table import Table, Column
 from pyigm.cgm.cgmsurvey import CGMAbsSurvey
 import pyigm
+from astropy.coordinates import SkyCoord
+
+
+
+### added more
+
+import os, glob
+import warnings
+import h5py
+import json, yaml
+
+from astropy.io import fits, ascii
+from astropy import units as u
+
+from linetools.spectra import io as lsio
+from linetools.spectralline import AbsLine
+from linetools.analysis import absline as ltaa
+from linetools.analysis import abskin as laak
+from linetools.isgm.abscomponent import AbsComponent
+
+from pyigm.metallicity.pdf import MetallicityPDF, DensityPDF, GenericPDF
+from pyigm.field.galaxy import Galaxy
+from .cgm import CGMAbsSys
+from pyigm.abssys.igmsys import IGMSystem
+
+try:
+    basestring
+except NameError:  # For Python 3
+    basestring = str
+
+
 
 try:
     basestring
@@ -199,5 +230,94 @@ def qpq8tab(ion):
 
 
     return tab8
+
+
+
+class QPQ6(CGMAbsSurvey):
+    """Inherits CGM Abs Survey
+
+        Parameters:
+        -----------
+        cdir : str, optional
+          Path to the data
+        """
+
+    def __init__(self, cdir=None, load=True, **kwargs):
+        CGMAbsSurvey.__init__(self)
+        self.survey = 'QPQ6'
+        self.ref = 'Prochaska+13'
+        #
+        if cdir is None:
+            self.cdir = pyigm.__path__[0] + '/data/CGM/QPQ/'
+        else:
+            self.cdir = cdir
+        self.data_file = pyigm.__path__[0] + '/data/CGM/QPQ/'+'qpq6_final_cut_2015nov16.fits'
+
+        # Init?
+        if load:
+            self.load_data(**kwargs)
+
+
+    def load_data(self, **kwargs):
+        #
+        q6file = resource_filename('pyigm', 'data/CGM/QPQ/qpq6_final_cut_2015nov16.fits')
+        qpqdata = Table.read(q6file)
+        nmax = len(qpqdata)   # max number of QSOs
+        for i in range(nmax):
+            # Instantiate the galaxy
+            gal = Galaxy((qpqdata['RAD'][i],qpqdata['DECD'][i]), z=qpqdata['Z_FG'][i])
+            gal.L_BOL = qpqdata['L_BOL'][i]
+            gal.L_912 = qpqdata['L_912'][i]
+            gal.G_UV = qpqdata['G_UV'][i]
+            gal.flg_BOSS = qpqdata['FLG_BOSS'][i]
+            gal.zsig = qpqdata['Z_FSIG'][i]*u.km/u.s
+
+            # Instantiate the IGM System
+            igm_sys = IGMSystem((qpqdata['RAD_BG'][i], qpqdata['DECD_BG'][i]),
+                                qpqdata['Z_LYA'][i], [-1500, 1500.] * u.km / u.s,
+                                abs_type='CGM')
+            igm_sys.zem = qpqdata['Z_BG'][i]
+            igm_sys.NHI = qpqdata['NHI'][i]
+            igm_sys.sig_NHI = qpqdata['SIG_NHI'][i]
+            igm_sys.flag_NHI = qpqdata['FLG_NHI'][i]
+            igm_sys.s2n_lya = qpqdata['S2N_LYA'][i]
+            igm_sys.flg_othick = qpqdata['FLG_OTHICK'][i]
+
+            iname = qpqdata['QSO'][i]
+            # Instantiate
+            rho = qpqdata['R_PHYS'][i]*u.kpc
+            cgabs = CGMAbsSys(gal, igm_sys, name=iname, rho = rho, **kwargs)
+            aline = AbsLine(1215.67*u.AA, closest=True, z=igm_sys.zabs)
+            aline.attrib['EW'] = qpqdata['EWLYA'][i]* u.AA   # Observed?? - check
+            aline.attrib['sig_EW'] = qpqdata['SIG_EWLYA'][i] * u.AA
+            if aline.attrib['EW'] > 3. * aline.attrib['sig_EW']:
+                aline.attrib['flag_EW'] = 1
+            else:
+                aline.attrib['flag_EW'] = 3
+
+            aline.attrib['coord'] = igm_sys.coord
+            aline.limits._wvlim = qpqdata['WVMNX'][i]*u.AA
+            abslines = []
+            abslines.append(aline)
+            ###
+            comp = AbsComponent.from_abslines(abslines, chk_vel=False)
+
+            # add ang_sep
+            qsocoord = SkyCoord(ra=qpqdata['RAD'][i], dec=qpqdata['DECD'][i], unit='deg')
+            bgcoord = SkyCoord(ra=qpqdata['RAD_BG'][i], dec=qpqdata['DECD_BG'][i], unit='deg')
+            cgabs.ang_sep = qsocoord.separation(bgcoord).to('arcsec')
+
+            cgabs.igm_sys.add_component(comp)
+            self.cgm_abs.append(cgabs)
+
+
+
+
+
+
+
+
+
+
 
 
