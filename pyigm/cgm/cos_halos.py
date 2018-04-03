@@ -356,6 +356,8 @@ class COSHalos(CGMAbsSurvey):
         if empty:
             self.cgm_abs = []
         # Load
+        self.load_tarball(tfile, llist=llist, build_sys=True)
+        '''
         tar = tarfile.open(tfile)
         for kk, member in enumerate(tar.getmembers()):
             if '.' not in member.name:
@@ -373,6 +375,7 @@ class COSHalos(CGMAbsSurvey):
                                          linelist=llist, **kwargs)
             self.cgm_abs.append(cgmsys)
         tar.close()
+        '''
         # Werk+14
         if ('Halos' in self.fits_path) and (self.werk14_cldy is not None):
                 self.load_werk14()

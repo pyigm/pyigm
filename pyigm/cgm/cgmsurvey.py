@@ -10,9 +10,13 @@ import json, io
 
 from pkg_resources import resource_filename
 
+from collections import OrderedDict
+
 from astropy.table import Table, Column
 from astropy.coordinates import SkyCoord
 from astropy import  units as u
+
+from linetools.lists.linelist import LineList
 
 from pyigm.utils import lst_to_array
 from pyigm.surveys.igmsurvey import GenericIGMSurvey
@@ -45,34 +49,13 @@ class CGMAbsSurvey(object):
         -------
 
         """
-        import tarfile
-        import json
-        from linetools.lists.linelist import LineList
-        llist = LineList('ISM')
 
         slf = cls(**kwargs)
-        # Load
-        tar = tarfile.open(tfile)
-        for kk, member in enumerate(tar.getmembers()):
-            if '.json' not in member.name:
-                print('Skipping a likely folder: {:s}'.format(member.name))
-                continue
-            # Debug
-            if debug and (kk == 5):
-                break
-            # Extract
-            f = tar.extractfile(member)
-            try:
-                tdict = json.load(f)
-            except:
-                print('Unable to load {}'.format(member))
-                continue
-            # Generate
-            cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, chk_data=False,
-                                         use_coord=True, use_angrho=True,
-                                         linelist=llist, **kwargs)
-            slf.cgm_abs.append(cgmsys)
-        tar.close()
+
+        # Dict
+        llist = LineList('ISM')
+        slf._dict = slf.load_tarball(tfile, llist=llist, **kwargs)
+
         # Return
         return slf
 
@@ -139,6 +122,9 @@ class CGMAbsSurvey(object):
         self.survey = survey
         self.ref = ref
 
+        # Several ways to hold the data
+        self._dict = OrderedDict()
+        self._data = Table()
         self.cgm_abs = []
         self.mask = None
 
@@ -189,6 +175,45 @@ class CGMAbsSurvey(object):
         for jfile in jfiles:
             os.remove(jfile)
         os.rmdir(tmpdir)
+
+    def load_tarball(self, tfile, build_sys=False, llist=None, **kwargs):
+        import tarfile
+        # Load
+        tar = tarfile.open(tfile)
+        survey_dict = OrderedDict()
+        for kk, member in enumerate(tar.getmembers()):
+            if '.json' not in member.name:
+                print('Skipping a likely folder: {:s}'.format(member.name))
+                continue
+            # Extract
+            f = tar.extractfile(member)
+            try:
+                tdict = json.load(f)
+            except:
+                print('Unable to load {}'.format(member))
+                continue
+            # Build dict
+            survey_dict[tdict['Name']] = tdict
+            # Generate
+            if build_sys:
+                cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, chk_data=False,
+                                         use_coord=True, use_angrho=True,
+                                         linelist=llist, **kwargs)
+                self.cgm_abs.append(cgmsys)
+        tar.close()
+
+        # Galaxy coords
+        ras = [survey_dict[key]['RA'] for key in survey_dict.keys()]
+        decs = [survey_dict[key]['DEC'] for key in survey_dict.keys()]
+        self.coords = SkyCoord(ra=ras, dec=decs, unit='deg')
+
+        # Sightline coords
+        ras = [survey_dict[key]['igm_sys']['RA'] for key in survey_dict.keys()]
+        decs = [survey_dict[key]['igm_sys']['DEC'] for key in survey_dict.keys()]
+        self.scoords = SkyCoord(ra=ras, dec=decs, unit='deg')
+
+        # Return
+        return survey_dict
 
     def ion_tbl(self, Zion, fill_ion=True, vrange=None,**kwargs):
         """ Generate a Table of Ionic column densities for an input ion
@@ -369,8 +394,8 @@ class CGMAbsSurvey(object):
                     pdb.set_trace()
         # Special cases
         if k == 'coord':
-            ra = [coord.fk5.ra.value for coord in lst]
-            dec = [coord.fk5.dec.value for coord in lst]
+            ra = [coord.icrs.ra.value for coord in lst]
+            dec = [coord.icrs.dec.value for coord in lst]
             lst = SkyCoord(ra=ra, dec=dec, unit='deg')
             if self.mask is not None:
                 return lst[self.mask]
@@ -378,8 +403,8 @@ class CGMAbsSurvey(object):
                 return lst
         elif k == 'scoord':  # Sightline coordinates
             lst = [getattr(cgm_abs.igm_sys, 'coord') for cgm_abs in self.cgm_abs]
-            ra = [coord.fk5.ra.value for coord in lst]
-            dec = [coord.fk5.dec.value for coord in lst]
+            ra = [coord.icrs.ra.value for coord in lst]
+            dec = [coord.icrs.dec.value for coord in lst]
             lst = SkyCoord(ra=ra, dec=dec, unit='deg')
             if self.mask is not None:
                 return lst[self.mask]
