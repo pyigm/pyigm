@@ -8,6 +8,8 @@ import os, pdb
 import pytest
 remote_data = pytest.mark.remote_data
 
+from astropy.table import Table
+
 from pyigm.cgm.cos_halos import COSHalos#, COSDwarfs
 
 def data_path(filename):
@@ -62,6 +64,12 @@ def test_load_sngl_dwarf():
     cos_dwarfs.load_single( ('J0042-1037', '358_9'))
 """
 
+def test_data_for_survey():
+    cos_halos = COSHalos()#debug=True)
+    assert isinstance(cos_halos._data, Table)
+    # Add an ion
+    cos_halos.add_ion_to_data('OVI')
+    assert 'flag_N_OVI' in cos_halos._data.keys()
 
 def test_load_survey():
     # Class
