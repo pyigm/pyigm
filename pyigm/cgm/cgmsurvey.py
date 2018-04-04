@@ -152,7 +152,7 @@ class CGMAbsSurvey(object):
         from linetools.analysis import absline as ltaa
         ion = inp_ion.replace(' ','')
         # Check for previous
-        if 'flag_N_{s}'.format(ion) in self._data.keys():
+        if 'flag_N_{:s}'.format(ion) in self._data.keys():
             print("Ion data is already in the _data table")
             return
         # Loop on the systems
