@@ -29,8 +29,7 @@ def test_from_json():
     assert len(cos_halos.cgm_abs) == 0
     # Build the systems too
     cos_halos2 = CGMAbsSurvey.from_json(data_path('cos_halos.json'), build_sys=True)
-    assert len(cos_halos2) == 44
-
+    assert len(cos_halos2.cgm_abs) == 44
 
 def test_data_for_survey():
     cos_halos = COSHalos()

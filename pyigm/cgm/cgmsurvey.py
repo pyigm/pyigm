@@ -41,6 +41,17 @@ class CGMAbsSurvey(object):
 
     @classmethod
     def from_json(cls, jfile, **kwargs):
+        """ Instantiate from a single JSON file
+        Parameters
+        ----------
+        jfile : str
+        kwargs
+
+        Returns
+        -------
+        CGMAbsSurvey
+
+        """
         llist = LineList('ISM')
         #
         slf = cls(**kwargs)
@@ -48,7 +59,7 @@ class CGMAbsSurvey(object):
         return slf
 
     @classmethod
-    def from_tarball(cls, tfile, debug=False, **kwargs):
+    def from_tarball(cls, tfile, **kwargs):
         """ Load the COS-Halos survey from a tarball of JSON files
         Parameters
         ----------
@@ -58,7 +69,7 @@ class CGMAbsSurvey(object):
         -------
 
         """
-        warnings.warn("This is being deprecated..  One will eventually only load/write JSON files.")
+        warnings.warn("This is being deprecated..  One will eventually only load/write JSON files.", DeprecationWarning)
 
         slf = cls(**kwargs)
 
@@ -241,7 +252,7 @@ class CGMAbsSurvey(object):
             clm = Column(values, name=tclm)
             self._data.add_column(clm)
 
-    def to_json(self, outfile):
+    def to_json(self, outfile, overwrite=True):
         """ Generates a gzipped JSON file of the survey
 
         Parameters
@@ -258,7 +269,9 @@ class CGMAbsSurvey(object):
 
         # JSON
         clean_dict = ltu.jsonify(survey_dict)
-        ltu.savejson(outfile, clean_dict)
+        ltu.savejson(outfile, clean_dict, overwrite=overwrite)
+        print("Wrote: {:s}".format(outfile))
+        print("You may now wish to compress it..")
 
     def to_json_tarball(self, outfil):
         """ Generates a gzipped tarball of JSON files, one per system
@@ -269,6 +282,8 @@ class CGMAbsSurvey(object):
 
         """
         import subprocess
+        warnings.warn("This method is likely to be Deprecated", DeprecationWarning)
+
         tmpdir = 'CGM_JSON'
         try:
             os.mkdir(tmpdir)
@@ -290,7 +305,6 @@ class CGMAbsSurvey(object):
                 f.write(json.dumps(cdict, sort_keys=True, indent=4,
                                            separators=(',', ': ')))
         # Tar
-        warnings.warn("Modify to write directly to tar file")
         subprocess.call(['tar', '-czf', outfil, tmpdir])
         print('Wrote: {:s}'.format(outfil))
 
