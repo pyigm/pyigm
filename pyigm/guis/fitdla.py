@@ -291,10 +291,10 @@ Q         : Quit the GUI
             self.abssys_widg.all_abssys[idx].NHI = 20.
         # z
         try:
-            self.abssys_widg.all_abssys[idx].zabs = (
+            self.abssys_widg.all_abssys[idx].limits._z = (
                 float(self.zwidget.box.text()))
         except:
-            self.abssys_widg.all_abssys[idx].zabs = 2.
+            self.abssys_widg.all_abssys[idx].limits._z = 2.
         # b-value
         try:
             self.abssys_widg.all_abssys[idx].bval = (
@@ -491,9 +491,9 @@ Q         : Quit the GUI
                 imn = np.argmin(np.abs(wrest-awrest))
                 self.abssys_widg.all_abssys[idx].zabs = event.xdata/awrest[imn]-1.
             elif event.key == 'Z': #Add to redshift
-                self.abssys_widg.all_abssys[idx].zabs += 0.0002
+                self.abssys_widg.all_abssys[idx].limits._z += 0.0002
             elif event.key == 'z': #Subtract from redshift
-                self.abssys_widg.all_abssys[idx].zabs -= 0.0002
+                self.abssys_widg.all_abssys[idx].limits._z -= 0.0002
             elif event.key == 'U': #Add to sig_NHI
                 self.sig_NHI += 0.05
                 print('sig_NHI={}'.format(self.sig_NHI))
