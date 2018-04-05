@@ -16,6 +16,7 @@ from linetools import utils as ltu
 from linetools.lists.linelist import LineList
 from linetools.isgm.abscomponent import AbsComponent
 from linetools.spectralline import AbsLine
+from linetools.analysis.zlimits import zLimits
 
 from pyigm.field.galaxy import Galaxy
 from pyigm.abssys.igmsys import IGMSystem
@@ -140,10 +141,8 @@ def cgmabssys_from_sightline_field(field,sightline,rho_max=300.*u.kpc,minz=0.001
     closegals = get_close_galaxies(field,rho_max,minz,zmax)
     cgmabslist = []
     for i,gal in enumerate(closegals):
-        print('i={:d}'.format(i))
-
+        #print('i={:d}'.format(i))
         galobj = Galaxy((gal['RA'],gal['DEC']),z=gal['Z'])
-        #pdb.set_trace()
         cgmobj = cgm_from_galaxy_igmsystems(galobj,sightline._abssystems,
                                             dv_max=dv_max, dummysys=dummysys,
                                             dummyspec=dummyspec, rho_max=rho_max,
@@ -197,7 +196,7 @@ def cgmsurvey_from_sightlines_fields(fields, sightlines, rho_max=300*u.kpc,
 
 
 def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400*u.km/u.s,
-                               cosmo=None, dummysys=False, dummyspec=None, **kwargs):
+                               cosmo=None, dummysys=False, dummyspec=None, verbose=True, **kwargs):
     """ Generate a list of CGMAbsSys objects given an input galaxy and a list of IGMSystems
 
     Parameters
@@ -222,7 +221,6 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
 
     """
     from pyigm.cgm.cgm import CGMAbsSys
-    import copy
     # Cosmology
     if cosmo is None:
         cosmo = cosmology.Planck15
@@ -246,7 +244,8 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
             print("No IGMSystem paired to this galaxy. CGM object not created.")
             return []
         else:
-            print("No IGMSystem match found. Attaching dummy IGMSystem.")
+            if verbose:
+                print("No IGMSystem match found. Attaching dummy IGMSystem.")
             dummysystem = IGMSystem(dummycoords,galaxy.z,vlim=None)
             dummycomp = AbsComponent(dummycoords,(1,1),galaxy.z,[-100.,100.]*u.km/u.s)
             dummycomp.flag_N = 3
@@ -258,7 +257,6 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
             cgm = CGMAbsSys(galaxy, dummysystem, cosmo=cosmo, **kwargs)
             cgm_list = [cgm]
     else:
-        from linetools.analysis.zlimits import zLimits
         # Loop to generate
         cgm_list = []
         for imatch in match:
@@ -270,7 +268,7 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
             newlims = zLimits(galaxy.z,zlim.tolist())
             newisys.limits = newlims
             newisys.update_component_vel()
-            cgm = CGMAbsSys(galaxy, newisys, cosmo=cosmo, **kwargs)
+            cgm = CGMAbsSys(galaxy, newisys, cosmo=cosmo, rho=rho[imatch], ang_sep=angles[imatch], **kwargs)
             cgm_list.append(cgm)
 
     # Return

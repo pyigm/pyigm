@@ -17,6 +17,7 @@ from astropy.coordinates import SkyCoord
 from astropy import  units as u
 
 from linetools.lists.linelist import LineList
+from linetools import utils as ltu
 
 from pyigm.utils import lst_to_array
 from pyigm.surveys.igmsurvey import GenericIGMSurvey
@@ -39,6 +40,14 @@ class CGMAbsSurvey(object):
     """
 
     @classmethod
+    def from_json(cls, jfile, **kwargs):
+        llist = LineList('ISM')
+        #
+        slf = cls(**kwargs)
+        slf.load_json(jfile, llist=llist, **kwargs)
+        return slf
+
+    @classmethod
     def from_tarball(cls, tfile, debug=False, **kwargs):
         """ Load the COS-Halos survey from a tarball of JSON files
         Parameters
@@ -49,6 +58,7 @@ class CGMAbsSurvey(object):
         -------
 
         """
+        warnings.warn("This is being deprecated..  One will eventually only load/write JSON files.")
 
         slf = cls(**kwargs)
 
@@ -135,7 +145,14 @@ class CGMAbsSurvey(object):
         -------
         nsys : int
         """
-        return len(self.cgm_abs)
+        if self.mask is not None:
+            return np.sum(self.mask)
+        elif len(self._data) > 0:
+            return len(self._data)
+        elif len(self._dict) > 0:
+            return len(self._dict)
+        else:
+            return len(self.cgm_abs)
 
     def add_ion_to_data(self, inp_ion):
         """ Add columns for ion info (column density)
@@ -190,6 +207,13 @@ class CGMAbsSurvey(object):
         self._data.add_column(Column(Ns, name='logN_{:s}'.format(ion)))
         self._data.add_column(Column(sigNs, name='sig_logN_{:s}'.format(ion)))
 
+    def build_sys_from_dict(self, llist=None, **kwargs):
+        for key in self._dict.keys():
+            tdict = self._dict[key]
+            cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, chk_data=False,
+                                         use_coord=True, use_angrho=True,
+                                         linelist=llist, **kwargs)
+            self.cgm_abs.append(cgmsys)
 
     def data_from_dict(self):
         # Table columns
@@ -216,6 +240,25 @@ class CGMAbsSurvey(object):
             # Add column
             clm = Column(values, name=tclm)
             self._data.add_column(clm)
+
+    def to_json(self, outfile):
+        """ Generates a gzipped JSON file of the survey
+
+        Parameters
+        ----------
+        outfil : str
+
+        """
+        survey_dict = OrderedDict()
+        # Loop on systems
+        for cgm_abs in self.cgm_abs:
+            # Dict from copy
+            cdict = cgm_abs.to_dict()
+            survey_dict[cdict['Name']] = cdict.copy()
+
+        # JSON
+        clean_dict = ltu.jsonify(survey_dict)
+        ltu.savejson(outfile, clean_dict)
 
     def to_json_tarball(self, outfil):
         """ Generates a gzipped tarball of JSON files, one per system
@@ -255,6 +298,41 @@ class CGMAbsSurvey(object):
         for jfile in jfiles:
             os.remove(jfile)
         os.rmdir(tmpdir)
+
+    def load_json(self, jfile, build_data=True, build_sys=False, verbose=True, **kwargs):
+        """
+        Parameters
+        ----------
+        jfile
+        build_data
+        build_sys
+        kwargs
+
+        Returns
+        -------
+
+        """
+        # Load
+        self._dict = ltu.loadjson(jfile)
+        # Generate
+        if build_sys:
+            self.build_sys_from_dict(**kwargs)
+
+        # Galaxy coords
+        ras = [self._dict[key]['RA'] for key in self._dict.keys()]
+        decs = [self._dict[key]['DEC'] for key in self._dict.keys()]
+        self.coords = SkyCoord(ra=ras, dec=decs, unit='deg')
+
+        # Sightline coords
+        ras = [self._dict[key]['igm_sys']['RA'] for key in self._dict.keys()]
+        decs = [self._dict[key]['igm_sys']['DEC'] for key in self._dict.keys()]
+        self.scoords = SkyCoord(ra=ras, dec=decs, unit='deg')
+
+        # Data table
+        if build_data:
+            self.data_from_dict()
+        # Return
+        return
 
     def load_tarball(self, tfile, build_data=True, build_sys=False, llist=None, verbose=True, **kwargs):
         """
@@ -512,6 +590,4 @@ class CGMAbsSurvey(object):
 
     def __repr__(self):
         str1 = '<CGM_Survey: {:s} nsys={:d}, ref={:s}>\n'.format(self.survey, self.nsys, self.ref)
-        for ii in range(self.nsys):
-            str1 = str1+self.cgm_abs[ii].igm_sys.__repr__()+'\n'
         return str1
