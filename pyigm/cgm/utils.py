@@ -140,8 +140,10 @@ def cgmabssys_from_sightline_field(field,sightline,rho_max=300.*u.kpc,minz=0.001
     closegals = get_close_galaxies(field,rho_max,minz,zmax)
     cgmabslist = []
     for i,gal in enumerate(closegals):
+        print('i={:d}'.format(i))
 
         galobj = Galaxy((gal['RA'],gal['DEC']),z=gal['Z'])
+        #pdb.set_trace()
         cgmobj = cgm_from_galaxy_igmsystems(galobj,sightline._abssystems,
                                             dv_max=dv_max, dummysys=dummysys,
                                             dummyspec=dummyspec, rho_max=rho_max,

@@ -161,10 +161,12 @@ class CGMAbsSurvey(object):
             igm_comp = self._dict[key]['igm_sys']['components']
             comps = [] # Allow for more than one
             for comp in igm_comp.keys():
-                sion, zion = comp.split('_')
+                sion = comp.split('_')[0]
                 if sion == ion:
                     if 'attrib' in igm_comp[comp].keys():
-                        comps.append(igm_comp[comp]['attrib'])
+                        attrib = igm_comp[comp]['attrib']
+                        attrib['sig_logN'] = np.array(attrib['sig_logN'])
+                        comps.append(attrib.copy())
                     else: # Deprecated
                         comps.append(dict(logN=igm_comp[comp]['logN'],
                                           flag_N=igm_comp[comp]['flag_N'],
@@ -254,7 +256,7 @@ class CGMAbsSurvey(object):
             os.remove(jfile)
         os.rmdir(tmpdir)
 
-    def load_tarball(self, tfile, build_data=True, build_sys=False, llist=None, **kwargs):
+    def load_tarball(self, tfile, build_data=True, build_sys=False, llist=None, verbose=True, **kwargs):
         """
         Parameters
         ----------
@@ -280,7 +282,8 @@ class CGMAbsSurvey(object):
             try:
                 tdict = json.load(f)
             except:
-                print('Unable to load {}'.format(member))
+                if verbose:
+                    print('Unable to load {}'.format(member))
                 continue
             # Build dict
             self._dict[tdict['Name']] = tdict
