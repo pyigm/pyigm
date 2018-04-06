@@ -10,7 +10,6 @@ from pkg_resources import resource_filename
 from linetools import utils as ltu
 
 from pyigm.igm.igmsightline import IGMSightline
-import pyigm
 
 
 def data_path(filename):
@@ -19,12 +18,16 @@ def data_path(filename):
 
 def test_make_igmsystems():
     # Load a sightline
-    sl_file = pyigm.__path__[0]+'/data/sightlines/Blind_CIV/J161916.55+334238.41.json'
+    sl_file = resource_filename('pyigm', '/data/sightlines/Blind_CIV/J161916.55+334238.41.json')
     sl_dict = ltu.loadjson(sl_file)
     igmsl = IGMSightline.from_dict(sl_dict)
     # Make them
-    igm_sys = igmsl.make_igmsystems()
-    assert len(igm_sys) == 2
+    igmsl._abssystems = igmsl.make_igmsystems()
+    assert len(igmsl._abssystems) == 2
+    # Write
+    igmsl.write_to_json(data_path('tst_sl.json'))
+    # Read
+    igmsl2 = IGMSightline.from_json(data_path('tst_sl.json'))
 
 
 def test_from_igmguesses_and_write_igmguesses():

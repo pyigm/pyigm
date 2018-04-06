@@ -116,6 +116,14 @@ class IGMSightline(AbsSightline):
         return slf
 
     @classmethod
+    def from_json(cls, jfile, **kwargs):
+        """ Instantiate from a JSON file
+        """
+        jdict = ltu.loadjson(jfile)
+        slf = cls.from_dict(jdict, **kwargs)
+        return slf
+
+    @classmethod
     def from_dict(cls, idict, **kwargs):
         """ Instantiate from a dict
 
@@ -135,6 +143,7 @@ class IGMSightline(AbsSightline):
 
         """
         from linetools.lists.linelist import LineList
+        from pyigm.abssys.utils import class_by_type
         ism = LineList('ISM')
         kwargs['linelist'] = ism
         # Load ISM to speed things up
@@ -149,6 +158,11 @@ class IGMSightline(AbsSightline):
         # Components
         add_comps_from_dict(slf, idict, **kwargs)
 
+        # Systems
+        if 'systems' in idict.keys():
+            for key in idict['systems'].keys():
+                asys = class_by_type(idict['systems'][key]['abs_type']).from_dict(idict['systems'][key])
+                slf._abssystems.append(asys)
         # Return
         return slf
 
@@ -176,6 +190,14 @@ class IGMSightline(AbsSightline):
         igm_sys = build_systems_from_components(self._components, systype=igmsystem, **kwargs)
         # Return
         return igm_sys
+
+    def write_to_json(self, outfile):
+        # Generate the dict
+        igms_dict = self.to_dict()
+        # Jsonify
+        clean_dict = ltu.jsonify(igms_dict)
+        # Write
+        ltu.savejson(outfile, clean_dict, overwrite=True)
 
     def write_to_igmguesses(self, outfile, fwhm=3., specfilename=None, creator=None,
                             instrument='unknown',
