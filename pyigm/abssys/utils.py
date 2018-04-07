@@ -540,12 +540,15 @@ def class_by_type(type):
     """
     from .lls import LLSSystem
     from .dla import DLASystem
+    from .igmsys import IGMSystem
 
     if type == 'LLS':
         system = LLSSystem
     elif type == 'DLA':
         system = DLASystem
+    elif type == 'IGMSystem':
+        system = IGMSystem
     else:
-        raise IOError("Bad system type!")
+        raise IOError("Bad system type! {:s}".format(type))
     # Return
     return system
