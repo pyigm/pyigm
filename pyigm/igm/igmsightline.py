@@ -116,7 +116,6 @@ class IGMSightline(AbsSightline):
         # Return
         return slf
 
-
     @classmethod
     def from_dict(cls, idict, **kwargs):
         """ Instantiate from a dict
@@ -136,7 +135,10 @@ class IGMSightline(AbsSightline):
         -------
 
         """
-        from linetools.lists.linelist import LineList
+        if 'linelist' not in kwargs.keys():
+            from linetools.lists.linelist import LineList
+            ism = LineList('ISM')
+            kwargs['linelist'] = ism
         from pyigm.abssys.utils import class_by_type
         ism = LineList('ISM')
         kwargs['linelist'] = ism

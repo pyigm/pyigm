@@ -16,8 +16,8 @@ def parser(options=None):
     import argparse
     # Parse
     parser = argparse.ArgumentParser(
-        description='Show contents of a JSON file, assuming one of several formats. (v1.1)')
-    parser.add_argument("itype", help="Type of IGMSystem: dla, lls, mgii")
+        description='Show contents of a JSON file, assuming one of several formats. (v1.2)')
+    parser.add_argument("itype", help="Type of IGMSystem: dla, lls, mgii, igm")
     parser.add_argument("zabs", type=float, help="Absorption redshift")
     parser.add_argument("outfile", type=str, help="Name of JSON file to create")
     parser.add_argument("--NHI", type=float, help="log10 NHI value")
@@ -39,7 +39,7 @@ def main(args=None):
     from linetools import utils as ltu
     from pyigm.abssys.dla import DLASystem
     from pyigm.abssys.lls import LLSSystem
-    from pyigm.abssys.igmsys import MgIISystem
+    from pyigm.abssys.igmsys import MgIISystem, IGMSystem
 
     if args is None:
         pargs = parser()
@@ -65,6 +65,8 @@ def main(args=None):
         isys = LLSSystem(coord, pargs.zabs, vlims, NHI=pargs.NHI, zem=pargs.zem, sig_NHI=pargs.sigNHI)
     elif pargs.itype.lower() == 'mgii':
         isys = MgIISystem(coord, pargs.zabs, vlims, NHI=pargs.NHI, zem=pargs.zem, sig_NHI=pargs.sigNHI)
+    elif pargs.itype.lower() == 'igm':
+        isys = IGMSystem(coord, pargs.zabs, vlims, NHI=pargs.NHI, zem=pargs.zem, sig_NHI=pargs.sigNHI)
     else:
         raise IOError("Not prepared for this type of IGMSystem")
 
