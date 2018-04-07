@@ -36,15 +36,13 @@ def test_from_igmguesses_and_write_igmguesses():
     comps = igms._components
     assert comps[0].name == 'CIV_z-0.00024'
     assert comps[0].reliability == 'a'
-    assert comps[8].zcomp == -0.0001
-    assert len(comps) == 132
-    assert len(comps[119]._abslines) == 29
+    assert np.isclose(comps[1].zcomp, -0.00024)
+    assert len(comps) == 2
+    assert len(comps[1]._abslines) == 2
 
     # write
     # will write a file in directory ./files/
     igms.write_to_igmguesses(outfile=data_path('IGM_model.json'), overwrite=True, date='2018-Feb-12')
-    d1 = ltu.loadjson(data_path('IGM_model.json'))
-    d2 = ltu.loadjson(data_path('J1410+2304_model.json'))
-    added, removed, modified, same = ltu.compare_two_dict(d1,d2)
-    pytest.set_trace()
+    #d1 = ltu.loadjson(data_path('IGM_model.json'))
+    #d2 = ltu.loadjson(data_path('J1410+2304_model.json'))
     assert ltu.compare_two_json(data_path('IGM_model.json'), data_path('J1410+2304_model.json'))
