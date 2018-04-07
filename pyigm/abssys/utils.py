@@ -549,6 +549,6 @@ def class_by_type(type):
     elif type == 'IGMSystem':
         system = IGMSystem
     else:
-        raise IOError("Bad system type!")
+        raise IOError("Bad system type! {:s}".format(type))
     # Return
     return system

@@ -18,6 +18,7 @@ from linetools import utils as ltu
 class IGMSightline(AbsSightline):
     """Class for IGM Absorption Sightline
     """
+
     @classmethod
     def from_json(cls, jsonfile, **kwargs):
         """ Instantiate from a JSON file
@@ -115,13 +116,6 @@ class IGMSightline(AbsSightline):
         # Return
         return slf
 
-    @classmethod
-    def from_json(cls, jfile, **kwargs):
-        """ Instantiate from a JSON file
-        """
-        jdict = ltu.loadjson(jfile)
-        slf = cls.from_dict(jdict, **kwargs)
-        return slf
 
     @classmethod
     def from_dict(cls, idict, **kwargs):
@@ -161,7 +155,7 @@ class IGMSightline(AbsSightline):
         # Systems
         if 'systems' in idict.keys():
             for key in idict['systems'].keys():
-                asys = class_by_type(idict['systems'][key]['abs_type']).from_dict(idict['systems'][key])
+                asys = class_by_type(idict['systems'][key]['abs_type']).from_dict(idict['systems'][key], **kwargs)
                 slf._abssystems.append(asys)
         # Return
         return slf

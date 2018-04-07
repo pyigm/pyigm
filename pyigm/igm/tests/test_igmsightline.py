@@ -43,4 +43,8 @@ def test_from_igmguesses_and_write_igmguesses():
     # write
     # will write a file in directory ./files/
     igms.write_to_igmguesses(outfile=data_path('IGM_model.json'), overwrite=True, date='2018-Feb-12')
+    d1 = ltu.loadjson(data_path('IGM_model.json'))
+    d2 = ltu.loadjson(data_path('J1410+2304_model.json'))
+    added, removed, modified, same = ltu.compare_two_dict(d1,d2)
+    pytest.set_trace()
     assert ltu.compare_two_json(data_path('IGM_model.json'), data_path('J1410+2304_model.json'))
