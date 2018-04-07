@@ -283,6 +283,8 @@ class CGMAbsSurvey(object):
         """
         import subprocess
         warnings.warn("This method is likely to be Deprecated", DeprecationWarning)
+        print("Continue at your own peril...")
+        pdb.set_trace()
 
         tmpdir = 'CGM_JSON'
         try:
