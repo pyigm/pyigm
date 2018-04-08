@@ -237,7 +237,7 @@ class CGMAbsSurvey(object):
             IGM_RA.append(self._dict[key]['igm_sys']['RA'])
             IGM_DEC.append(self._dict[key]['igm_sys']['DEC'])
         self._data.add_column(Column(IGM_RA, name='RA_IGM'))
-        self._data.add_column(Column(IGM_RA, name='DEC_IGM'))
+        self._data.add_column(Column(IGM_DEC, name='DEC_IGM'))
         # Remove unwanted ones
         rmv_keys = ['CreationDate', 'cosmo', 'ebv', 'user', 'Refs', 'igm_sys', 'galaxy']
         for rkey in rmv_keys:
