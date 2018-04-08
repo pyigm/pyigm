@@ -218,12 +218,20 @@ class CGMAbsSurvey(object):
         self._data.add_column(Column(Ns, name='logN_{:s}'.format(ion)))
         self._data.add_column(Column(sigNs, name='sig_logN_{:s}'.format(ion)))
 
-    def build_sys_from_dict(self, llist=None, **kwargs):
+    def build_sys_from_dict(self, sys_name, append=False, llist=None, **kwargs):
+        tdict = self._dict[sys_name]
+        cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, chk_data=False,
+                                 use_coord=True, use_angrho=True,
+                                     linelist=llist, **kwargs)
+        if append:
+            self.cgm_abs.append(cgmsys)
+        # Return
+        return cgmsys
+
+
+    def build_systems_from_dict(self, **kwargs):
         for key in self._dict.keys():
-            tdict = self._dict[key]
-            cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, chk_data=False,
-                                         use_coord=True, use_angrho=True,
-                                         linelist=llist, **kwargs)
+            cgmsys = self.build_sys_from_dict(key, **kwargs)
             self.cgm_abs.append(cgmsys)
 
     def data_from_dict(self):
@@ -233,11 +241,14 @@ class CGMAbsSurvey(object):
         # Handle RA/DEC
         IGM_RA = []
         IGM_DEC = []
+        zabs = []
         for key in self._dict.keys():
             IGM_RA.append(self._dict[key]['igm_sys']['RA'])
             IGM_DEC.append(self._dict[key]['igm_sys']['DEC'])
+            zabs.append(self._dict[key]['igm_sys']['zabs'])
         self._data.add_column(Column(IGM_RA, name='RA_IGM'))
         self._data.add_column(Column(IGM_DEC, name='DEC_IGM'))
+        self._data.add_column(Column(zabs, name='zabs'))
         # Remove unwanted ones
         rmv_keys = ['CreationDate', 'cosmo', 'ebv', 'user', 'Refs', 'igm_sys', 'galaxy']
         for rkey in rmv_keys:
@@ -332,7 +343,7 @@ class CGMAbsSurvey(object):
         self._dict = ltu.loadjson(jfile)
         # Generate
         if build_sys:
-            self.build_sys_from_dict(**kwargs)
+            self.build_systems_from_dict(**kwargs)
 
         # Galaxy coords
         ras = [self._dict[key]['RA'] for key in self._dict.keys()]

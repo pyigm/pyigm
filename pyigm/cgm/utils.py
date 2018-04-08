@@ -264,10 +264,14 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
             # Otherwise, updates to the IGMSystem cross-pollinate other CGMs
             sysmatch = igmsystems[imatch]
             newisys = sysmatch.copy()
+            # Handle z limits
             zlim = ltu.z_from_dv((-dv_max.value,dv_max.value)*u.km/u.s,galaxy.z)
             newlims = zLimits(galaxy.z,zlim.tolist())
             newisys.limits = newlims
+            # Allow for components extending beyond dv_max
+            newisys.update_vlim()
             newisys.update_component_vel()
+            # Finish
             cgm = CGMAbsSys(galaxy, newisys, cosmo=cosmo, rho=rho[imatch], ang_sep=angles[imatch], **kwargs)
             cgm_list.append(cgm)
 
