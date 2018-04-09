@@ -117,7 +117,7 @@ class CGMAbsSurvey(object):
             b16_tarfile = resource_filename('pyigm', '/data/CGM/z0/B16_kpc_sys.tar')
         print('Loading Burchett+16 using {:s} selection method'.format(select_method))
         # Load
-        b16 = CGMAbsSurvey.from_tarball(b16_tarfile, chk_lowz=True, chk_z=False)
+        b16 = CGMAbsSurvey.from_tarball(b16_tarfile, chk_lowz=True, chk_z=False, build_sys=True)
         return b16
 
     @classmethod
@@ -125,7 +125,7 @@ class CGMAbsSurvey(object):
         """ Load the Johnson+15 sample
         """
         j15_tarfile = resource_filename('pyigm', '/data/CGM/z0/J15_sys.tar')
-        j15 = CGMAbsSurvey.from_tarball(j15_tarfile, chk_lowz=False, chk_z=False)
+        j15 = CGMAbsSurvey.from_tarball(j15_tarfile, chk_lowz=False, chk_z=False, build_sys=True)
         return j15
 
     def __init__(self, survey='', ref='', **kwargs):
