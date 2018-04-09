@@ -218,23 +218,54 @@ class CGMAbsSurvey(object):
         self._data.add_column(Column(Ns, name='logN_{:s}'.format(ion)))
         self._data.add_column(Column(sigNs, name='sig_logN_{:s}'.format(ion)))
 
-    def build_sys_from_dict(self, sys_name, append=False, llist=None, **kwargs):
+    def build_sys_from_dict(self, sys_name, llist=None, **kwargs):
+        """ Build CGMAbsSys from the internal dict
+
+        Parameters
+        ----------
+        sys_name : str
+          Name of the system
+        llist : LineList, optional
+        kwargs : passed to CGMAbsSys.from_dict
+
+        Returns
+        -------
+        CGMAbsSys
+
+        """
         tdict = self._dict[sys_name]
         cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, chk_data=False,
                                  use_coord=True, use_angrho=True,
                                      linelist=llist, **kwargs)
-        if append:
-            self.cgm_abs.append(cgmsys)
         # Return
         return cgmsys
 
-
     def build_systems_from_dict(self, **kwargs):
+        """ Build all of the CGMAbsSys objects from the interal _dict
+
+        Parameters
+        ----------
+        kwargs : passed to build_sys_from_dict
+
+        Returns
+        -------
+
+        """
+        # Check for LineList
+        if 'llist' not in kwargs.keys():
+            warnings.warn("It will likely speed things up greatly to pass a LineList in to build the systems")
+        #
         for key in self._dict.keys():
             cgmsys = self.build_sys_from_dict(key, **kwargs)
             self.cgm_abs.append(cgmsys)
+        return
 
-    def data_from_dict(self):
+    def build_data_from_dict(self):
+        """ Build the _data Table from the internal _dict
+        Columns are:  RA_IGM, DEC_IGM, RA, DEC, zabs, and likely a few others (e.g. rho)
+
+        Other methods add on Ion info, etc.
+        """
         # Table columns
         key0 = list(self._dict.keys())[0]
         tab_clms = list(self._dict[key0].keys())
@@ -264,7 +295,7 @@ class CGMAbsSurvey(object):
             self._data.add_column(clm)
 
     def to_json(self, outfile, overwrite=True):
-        """ Generates a gzipped JSON file of the survey
+        """ Generates a JSON file of the survey
 
         Parameters
         ----------
@@ -330,9 +361,11 @@ class CGMAbsSurvey(object):
         """
         Parameters
         ----------
-        jfile
-        build_data
-        build_sys
+        jfile : str
+        build_data : bool, optional
+          Generate the internal _data Table  [very fast and recommended]
+        build_sys : bool, optional
+          Generate the list of cgm_abs objects from the internal _dict [May be slow]
         kwargs
 
         Returns
@@ -357,7 +390,7 @@ class CGMAbsSurvey(object):
 
         # Data table
         if build_data:
-            self.data_from_dict()
+            self.build_data_from_dict()
         # Return
         return
 
@@ -412,7 +445,7 @@ class CGMAbsSurvey(object):
 
         # Data table
         if build_data:
-            self.data_from_dict()
+            self.build_data_from_dict()
         # Return
         return
 
