@@ -55,7 +55,7 @@ def calc_rho(coords1, coords2, z2, cosmo, ang_sep=None, correct_lowz=True,
     if ang_sep is None:
         ang_sep = coords1.separation(coords2).to('arcsec')
     # Init rho
-    rho = np.zeros_like(z2) * u.kpc
+    rho = np.zeros_like(z2, dtype=np.float64) * u.kpc
     # Handle cases where object's distance needs correction from peculiar velocities
     # This is especially important at very low redshifts
     lowz = z2 < z_low
