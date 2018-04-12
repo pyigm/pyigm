@@ -87,6 +87,7 @@ def get_close_galaxies(field,rho_max=300.*u.kpc,minz=0.001,maxz=None):
 def cgmabssys_from_sightline_field(field,sightline,rho_max=300.*u.kpc,minz=0.001,
                                    maxz=None,dv_max=400.*u.km/u.s,embuffer=None,
                                    dummysys=True,dummyspec=None,linelist=None,
+                                   debug=False,
                                    **kwargs):
     """Instantiate list of CgmAbsSys objects from IgmgGalaxyField and IGMSightline.
 
@@ -139,6 +140,8 @@ def cgmabssys_from_sightline_field(field,sightline,rho_max=300.*u.kpc,minz=0.001
 
 
     closegals = get_close_galaxies(field,rho_max,minz,zmax)
+    if debug:
+        closegals = closegals[0:10]
     cgmabslist = []
     for i,gal in enumerate(closegals):
         #print('i={:d}'.format(i))
