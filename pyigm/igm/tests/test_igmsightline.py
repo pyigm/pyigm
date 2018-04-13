@@ -32,6 +32,8 @@ def test_make_igmsystems():
 
 def test_from_igmguesses_and_write_igmguesses():
     igms = IGMSightline.from_igmguesses(data_path('J1410+2304_model.json'))
+    
+    igms.write_to_igmguesses(outfile=data_path('IGM_model.json'), overwrite=True, date='2018-Feb-12')
     # Test
     comps = igms._components
     assert comps[0].name == 'CIV_z-0.00024'
@@ -45,4 +47,5 @@ def test_from_igmguesses_and_write_igmguesses():
     igms.write_to_igmguesses(outfile=data_path('IGM_model.json'), overwrite=True, date='2018-Feb-12')
     #d1 = ltu.loadjson(data_path('IGM_model.json'))
     #d2 = ltu.loadjson(data_path('J1410+2304_model.json'))
+    # assert ltu.compare_two_files(data_path('IGM_model.json'), data_path('J1410+2304_model.json'), verbose=True)
     assert ltu.compare_two_json(data_path('IGM_model.json'), data_path('J1410+2304_model.json'))
