@@ -40,4 +40,5 @@ def test_from_igmguesses_and_write_igmguesses():
     # write
     # will write a file in directory ./files/
     igms.write_to_igmguesses(outfile=data_path('IGM_model.json'), overwrite=True, date='2018-Feb-12')
+    # assert ltu.compare_two_files(data_path('IGM_model.json'), data_path('J1410+2304_model.json'), verbose=True)
     assert ltu.compare_two_json(data_path('IGM_model.json'), data_path('J1410+2304_model.json'))
