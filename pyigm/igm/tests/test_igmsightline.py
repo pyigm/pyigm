@@ -33,7 +33,6 @@ def test_make_igmsystems():
 def test_from_igmguesses_and_write_igmguesses():
     igms = IGMSightline.from_igmguesses(data_path('J1410+2304_model.json'))
 
-    igms.write_to_igmguesses(outfile=data_path('IGM_model.json'), overwrite=True, date='2018-Feb-12')
     # Test
     comps = igms._components
     assert comps[0].name == 'CIV_z-0.00024'
