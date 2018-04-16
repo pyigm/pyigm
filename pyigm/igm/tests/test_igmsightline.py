@@ -37,7 +37,7 @@ def test_from_igmguesses_and_write_igmguesses():
     comps = igms._components
     assert comps[0].name == 'CIV_z-0.00024'
     assert comps[0].reliability == 'a'
-    assert np.isclose(comps[1].zcomp, -0.00024)
+    assert np.isclose(comps[1].zcomp,  -0.00024)
     assert len(comps) == 2
     assert len(comps[1]._abslines) == 2
 
