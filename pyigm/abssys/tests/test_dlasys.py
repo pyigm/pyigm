@@ -6,6 +6,9 @@ import numpy as np
 import os
 import pytest
 
+import warnings
+warnings.filterwarnings("ignore")
+
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 
@@ -14,6 +17,9 @@ from linetools.isgm.abscomponent import AbsComponent
 from linetools.spectra import io as lsio
 from linetools.abund.relabund import RelAbund
 import linetools
+from linetools.lists.linelist import LineList
+
+ism = LineList('ISM')
 
 from pyigm.abssys.dla import DLASystem
 
@@ -22,7 +28,7 @@ def data_path(filename):
     data_dir = os.path.join(os.path.dirname(__file__), 'files')
     return os.path.join(data_dir, filename)
 
-
+'''
 def test_simple_dla_init():
 	# Init 
     dla = DLASystem((0.*u.deg, 0.*u.deg), 2.5, None, NHI=20.55)
@@ -42,11 +48,11 @@ def test_dat_init():
     #
     np.testing.assert_allclose(dla.NHI, 21.37)
     np.testing.assert_allclose(dla.zabs, 2.309)
-
+'''
 
 def test_model_abs():
     # Simple system (without an absline)
-    dla = DLASystem.from_json(data_path('J010311.38+131616.7_z2.309_ESI.json'))
+    dla = DLASystem.from_json(data_path('J010311.38+131616.7_z2.309_ESI.json'), linelist=ism)
     spec_fil = linetools.__path__[0]+'/spectra/tests/files/PH957_f.fits'
     spec = lsio.readspec(spec_fil)
     model, lya_lines = dla.model_abs(spec)
@@ -65,7 +71,7 @@ def test_parse_ion():
     datfil = 'Data/PH957.z2309.dat'
     dla = DLASystem.from_datfile(datfil, tree=os.environ.get('DLA'))
     #
-    dla.get_ions(use_Nfile=True)
+    dla.get_ions(use_Nfile=True, linelist=ism)
     assert len(dla._ionN) == 14
 
 

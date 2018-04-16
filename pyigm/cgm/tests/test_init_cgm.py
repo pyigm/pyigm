@@ -55,7 +55,7 @@ def test_init_cgmabssurvey():
 
 def test_p11_survey():
     p11_tarfile = resource_filename('pyigm', '/data/CGM/P11/P11_sys.tar')
-    p11 = CGMAbsSurvey.from_tarball(p11_tarfile, chk_lowz=False, chk_z=False)
+    p11 = CGMAbsSurvey.from_tarball(p11_tarfile, chk_lowz=False, chk_z=False, build_sys=True)
     assert len(p11.cgm_abs[2].igm_sys._components) == 2
 
 
@@ -101,7 +101,7 @@ def test_cgm_from_igmsystems():
     # Galaxy
     galaxy = Galaxy((178.84787, 54.65734), z=0.00283)
     # Go
-    cgm_list = cgm_from_galaxy_igmsystems(galaxy, igmsys, correct_lowz=False)
+    cgm_list = cgm_from_galaxy_igmsystems(galaxy, igmsys, cosmo=cosmo, correct_lowz=False)
     assert len(cgm_list) == 1
     np.testing.assert_allclose(cgm_list[0].rho.value, 127.8324005876)
 
@@ -113,6 +113,6 @@ def test_cgm_from_igmsystems_lowz():
     # Galaxy
     galaxy = Galaxy((178.84787, 54.65734), z=0.00283)
     # Go
-    cgm_list = cgm_from_galaxy_igmsystems(galaxy, igmsys, correct_lowz=True)
+    cgm_list = cgm_from_galaxy_igmsystems(galaxy, igmsys, cosmo=cosmo, correct_lowz=True)
     assert len(cgm_list) == 1
-    np.testing.assert_allclose(cgm_list[0].rho.value, 189.01377)
+    np.testing.assert_allclose(cgm_list[0].rho.value, 188.80894355281708)

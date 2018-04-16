@@ -233,8 +233,12 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
             dummyspec = igmsystems[0]._components[0]._abslines[0].analy['spec']
         dummycoords = igmsystems[0].coord
 
-    # R
-    rho, angles = calc_cgm_rho(galaxy, igmsystems, cosmo)
+    # R -- speed things up
+    rho, angles = calc_cgm_rho(galaxy, igmsystems, cosmo, **kwargs)
+    if len(igmsystems) == 1:  # Kludge
+        rho = u.Quantity([rho])
+        angles = u.Quantity([angles])
+
 
     # dv
     igm_z = np.array([igmsystem.zabs for igmsystem in igmsystems])

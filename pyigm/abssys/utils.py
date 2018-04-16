@@ -289,9 +289,9 @@ def read_all_file(all_file, components=None, verbose=False):
                 pass
             elif len(mt) == 1:
                 # Fill
-                components[mt[0]].flag_N = row['flag_N']
-                components[mt[0]].logN = row['logN']
-                components[mt[0]].sig_logN = row['sig_logN']
+                components[mt[0]].attrib['flag_N'] = row['flag_N']
+                components[mt[0]].attrib['logN'] = row['logN']
+                components[mt[0]].attrib['sig_logN'] = np.array([row['sig_logN']]*2)
             else:
                 raise ValueError("Found multiple component matches in read_all_file")
     # Write
@@ -463,7 +463,7 @@ def read_ion_file(ion_fil, components, lines=None, linelist=None, tol=0.05*u.AA)
             kk = all_idx[mt[0]][1]
             components[jj]._abslines[kk].attrib['flag_N'] = row['flag_N']
             components[jj]._abslines[kk].attrib['logN'] = row['logN']
-            components[jj]._abslines[kk].attrib['sig_logN'] = row['sig_logN']
+            components[jj]._abslines[kk].attrib['sig_logN'] = np.array([row['sig_logN']]*2)
             components[jj]._abslines[kk].analy['flg_inst'] = row['flg_inst']
         else:
             pdb.set_trace()
