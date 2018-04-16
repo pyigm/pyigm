@@ -35,7 +35,6 @@ import re
 
 from pkg_resources import resource_filename
 
-
 class Cldyion():
 
     """
@@ -67,6 +66,7 @@ class Cldyion():
         self.clm={}  #column densities 
         self.prof={} #radial profiles
         self.abund={} #abundances
+        self.temperature_out=False #abundances
 
 
         #A dictionary that stores values of frequency log [Hz] and mean intensity (log 4 pi J_nu [erg/s/Hz/cm^2])
@@ -132,7 +132,7 @@ class Cldyion():
         metal      -> the log metallicity in solar unit [X/H] 
         redshift   -> the redshift
         density    -> the total hydrogen volume density [log]
-        fstar      -> the strength of the dust deplition [linear]
+        fstar      -> the strength of the dust depletion [linear]
 
         """
 
@@ -356,26 +356,27 @@ class Cldyion():
         fil.write("cmb, z={0}\n".format(self.redshift))
 
         #if using HM05, write the call to the spectrum here
+        ##else write the continuum by hand
         if(self.HM05write != ""):
             fil.write(self.HM05write)
-
-        # #compute integral over range free of difficulties
-        # #Define min-max in Hz
-        # maxnu=(const.c.to('cm/s')/(1250*1e-8)).value
-        # ionnu=(const.c.to('cm/s')/(2000*1e-8)).value
-
-        # #make sure interval is in range of model, and convert to Ry
-        # ionnu = np.max((ionnu,10**np.min(self.source['lgnu'])))
-        # maxry=(4.1356675e-15*maxnu/13.605698066)
-        # minry=(4.1356675e-15*ionnu/13.605698066)
-
-        # #integrate
-        # fint = interp1d(10**self.source['lgnu'],10**self.source['lgfpiJ'])
-        # integral = np.log10(integrate.quad(fint,ionnu,maxnu))
-
-        # #now write
-        # self.writecontinuum(fil)
-        # fil.write("intensity {0}, range {1} to {2} Ryd\n".format(integral[0],minry,maxry))
+        else:
+            #compute integral over range free of difficulties
+            #Define min-max in Hz
+            maxnu=(const.c.to('cm/s')/(1250*1e-8)).value
+            ionnu=(const.c.to('cm/s')/(2000*1e-8)).value
+        
+            #make sure interval is in range of model, and convert to Ry
+            ionnu = np.max((ionnu,10**np.min(self.source['lgnu'])))
+            maxry=(4.1356675e-15*maxnu/13.605698066)
+            minry=(4.1356675e-15*ionnu/13.605698066)
+        
+            #integrate
+            fint = interp1d(10**self.source['lgnu'],10**self.source['lgfpiJ'])
+            integral = np.log10(integrate.quad(fint,ionnu,maxnu))
+        
+            #now write
+            self.writecontinuum(fil)
+            fil.write("intensity {0}, range {1} to {2} Ryd\n".format(integral[0],minry,maxry))
 
         #stop/save
         fil.write("##StopSave\n")
@@ -395,6 +396,7 @@ class Cldyion():
         #fil.write('save last radius ".rad"\n')
 
         fil.close()
+
 
     def inituvb(self):
 
@@ -458,7 +460,7 @@ class Cldyion():
                 #parse cuba redshift first
                 if(flag == 0):
                     line=line.strip()
-                    line=line.split(" ")
+                    line=line.split()
                     for l in line:
                         cuba_red.append(float(l))
                     cuba_red=np.array(cuba_red)
@@ -470,7 +472,7 @@ class Cldyion():
 
                     #wave
                     line=line.strip()
-                    line=line.split(" ")
+                    line=line.split()
                     cuba_wave.append(float(line[0]))
 
                     #check edge of the grid
@@ -548,20 +550,20 @@ class Cldyion():
         input_spectrum = resource_filename("pyigm", "/data/euvb/UVB_HM05.dat")
         uvb=open(input_spectrum)
         flag=0
-        
+
         #store the input hm05cbw
         hm05cbw_red=[]
         hm05cbw_wave=[]
-        
+
         #pick the flux at three redshifts near to the z of interest
         hm05cbw_one=[]
         hm05cbw_two=[]
         hm05cbw_three=[]
-        
+
         #loop hm05cbw file 
         for line in uvb:
             if not "#" in line:
-                
+
                 #parse hm05cbw redshift first
                 if(flag == 0):
                     line=line.strip()
@@ -570,36 +572,36 @@ class Cldyion():
                         hm05cbw_red.append(float(l))
                     hm05cbw_red=np.array(hm05cbw_red)
                     flag = flag+1
-                    
-                    
+
+
                 #now read the left and right spectrum for input redshift
                 else:
-                    
+
                     #wave
                     line=line.strip()
                     line=line.split()
                     hm05cbw_wave.append(float(line[0]))
-                    
+
                     #check edge of the grid
                     index=np.argmin(abs(self.redshift - hm05cbw_red))
-                    
-                    
+
+
                     #if edge of the grid - stay at that redshift
                     if((index < 1) | (index > hm05cbw_red.size-2)):
                         hm05cbw_one.append(float(line[index+1]))
                         hm05cbw_two.append(float(line[index+1]))
                         hm05cbw_three.append(float(line[index+1]))
                         hm05cbw_int_red=[hm05cbw_red[index],hm05cbw_red[index],hm05cbw_red[index]]
-                        
+
                     else: 
                         #prepare for interpolation by loading z +/- 1 setp
                         hm05cbw_one.append(float(line[index]))
                         hm05cbw_two.append(float(line[index+1]))
                         hm05cbw_three.append(float(line[index+2]))
                         hm05cbw_int_red=[hm05cbw_red[index-1],hm05cbw_red[index],hm05cbw_red[index+1]]
-                        
+
         uvb.close()
-        
+
         #turn to arrays - interpolate in log space
         hm05cbw_wave=np.array(hm05cbw_wave)
         hm05cbw_one=np.log10(np.array(hm05cbw_one))
@@ -607,18 +609,18 @@ class Cldyion():
         hm05cbw_three=np.log10(np.array(hm05cbw_three))
         hm05cbw_int_red=np.array(hm05cbw_int_red)
         hm05cbw_int=np.zeros(hm05cbw_one.size)
-        
+
         #interpolate to give redshift
         for ii in range(hm05cbw_wave.size):
             hm05cbw_int[ii]=np.interp([self.redshift],hm05cbw_int_red,[hm05cbw_one[ii],hm05cbw_two[ii],hm05cbw_three[ii]])
             #print(hm05cbw_wave[ii], hm05cbw_int[ii])
-            
+
         #hm05cbw has the same wave twice at discontinuities.
         #cloudy does not like that, so perturbe these values 
         for ii in range(hm05cbw_wave.size-1):
             if(hm05cbw_wave[ii]==hm05cbw_wave[ii+1]):
                 hm05cbw_wave[ii]=hm05cbw_wave[ii]-0.005
-                
+
         #import matplotlib.pyplot as plt
         #hm05cbw_wave=np.log10(hm05cbw_wave)
         #plt.plot(hm05cbw_wave,hm05cbw_one,color='red')
@@ -626,7 +628,7 @@ class Cldyion():
         #plt.plot(hm05cbw_wave,hm05cbw_three,color='blue')
         #plt.plot(hm05cbw_wave,hm05cbw_int,color='black')
         #plt.show()
-        
+
         #store the interpolated UVB
         lgnu=const.c.to('cm/s')/(hm05cbw_wave*1e-8)
         lgnu=np.log10(lgnu.value) #Log of Hz
@@ -929,6 +931,50 @@ class Cldyion():
                     self.abund[ff]=np.append(self.abund[ff],float(line[ii]))
                     ii=ii+1
 
+            #close and return
+            file1.close()
+
+        else:
+            print("Check model... Something is wrong!")
+            return
+
+
+    def gettemperature(self):
+
+        """
+        Get the overall/average physical temperature
+
+        """
+        
+        ##CBW wrote this
+        
+        #import re
+        #import numpy as np
+
+        #first check if everything is fine
+        status=self.checkrun()
+
+        #if so proceed
+        if status:
+
+            #open safe
+            filname=self.path+'/'+self.root+'.out'
+            try:
+                file1=open(filname,"r")
+            except:
+                print("Temperature not found")
+                return
+
+            search_string = "Te      Te(Ne)   Te(NeNp)"
+            
+            results = []
+            for line in file1:
+                if search_string in line:
+                    results.append(file1.next())
+            
+            res = results[-1]
+            self.temperature_out = np.log10(float(res.split()[1]))
+            
             #close and return
             file1.close()
 
