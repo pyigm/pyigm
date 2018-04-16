@@ -1,3 +1,4 @@
+from COSCGMLegacyPath_define import COSCGMLegacyPath
 import glob
 import pickle
 import matplotlib.pyplot as plt
@@ -245,7 +246,7 @@ Initialise the interpolator over the grid
 
 """
 
-def init_interpolator(grid):
+def init_interpolator(grid, ions=['HI','SiII','SiIII','CII','CIII','CIV']):
     
     print("Loading Cloudy grid...")
     
@@ -273,36 +274,15 @@ def init_interpolator(grid):
         #append axis value in a list
         mod_axisval.append(modl[1][tt])
     
-    #extract x_HI
-    xhigrid=modl[2]['HI']
-    #set up interpolator for this ions 
-    xhi_interp=interpolate.RegularGridInterpolator(mod_axisval,xhigrid,method='linear',bounds_error=False,fill_value=-np.inf)
     
-    #extract x_SiII
-    xsi2grid=modl[2]['SiII']
-    #set up interpolator for this ions 
-    xsi2_interp=interpolate.RegularGridInterpolator(mod_axisval,xsi2grid,method='linear',bounds_error=False,fill_value=-np.inf)
-    
-    #extract x_SiIII
-    xsi3grid=modl[2]['SiIII']
-    #set up interpolator for this ions 
-    xsi3_interp=interpolate.RegularGridInterpolator(mod_axisval,xsi3grid,method='linear',bounds_error=False,fill_value=-np.inf)
-    
-    #extract x_CII
-    xc2grid=modl[2]['CII']
-    #set up interpolator for this ions 
-    xc2_interp=interpolate.RegularGridInterpolator(mod_axisval,xc2grid,method='linear',bounds_error=False,fill_value=-np.inf)
-    
-    #extract x_CIII
-    xc3grid=modl[2]['CIII']
-    #set up interpolator for this ions 
-    xc3_interp=interpolate.RegularGridInterpolator(mod_axisval,xc3grid,method='linear',bounds_error=False,fill_value=-np.inf)
-    
-    #extract x_CIV
-    xc4grid=modl[2]['CIV']
-    #set up interpolator for this ions 
-    xc4_interp=interpolate.RegularGridInterpolator(mod_axisval,xc4grid,method='linear',bounds_error=False,fill_value=-np.inf)
-    
+    interp = {}
+    for ion in ions:
+        try:
+            xiongrid = modl[2][ion]
+            x_interp=interpolate.RegularGridInterpolator(mod_axisval,xiongrid,method='linear',bounds_error=False,fill_value=-np.inf)
+            interp[ion] = x_interp
+        except:
+            print("{} not in grid. Skipping.\n".format(ion))
     
     try:
         ##CBW: extract temperatures
@@ -311,11 +291,9 @@ def init_interpolator(grid):
         temperature_interp=interpolate.RegularGridInterpolator(mod_axisval,temperaturegrid,method='linear',bounds_error=False,fill_value=-np.inf)
         
         #return
-        interp={'HI':xhi_interp,'SiII':xsi2_interp,'SiIII':xsi3_interp,'CII':xc2_interp,'CIII':xc3_interp,'CIV':xc4_interp,'temperature':temperature_interp}
-    
+        interp['temperature'] = temperature_interp
     except:
-        #return
-        interp={'HI':xhi_interp,'SiII':xsi2_interp,'SiIII':xsi3_interp,'CII':xc2_interp,'CIII':xc3_interp,'CIV':xc4_interp}
+        pass
     
     return interp
 
@@ -548,7 +526,8 @@ def getionization(sample,grid_interp):
 
 
 def main():
-    grid='grid_minimal'
+    # grid='{}/Strong_LLSs/Cloudy/Cloudy_grids/grid_minimal_HM05_carbalpha.pkl'.format(COSCGMLegacyPath)
+    grid='{}/Strong_LLSs/Cloudy/Cloudy_grids/grid_cgm_extensive_HM05_carbalpha.pkl'.format(COSCGMLegacyPath)
     
     interp=init_interpolator(grid)
 
