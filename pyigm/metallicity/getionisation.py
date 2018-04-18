@@ -60,24 +60,24 @@ def getions_uparam(result,base,uvb="HM05logU"):
     #print('Get ionization parameter for ', result['info']['name'])
     
     #init UVB at given redshift
-    uvb=cld.Cldyion(uvb=uvb)
-    uvb.redshift=result['info']['z']
+    uvb_spectrum=cld.Cldyion(uvb=uvb)
+    uvb_spectrum.redshift=result['info']['z']
     
     ##This should be taken care of when calling cld.Cldyion(uvb=uvb)
     ##  but I'm going to do this again, just in case.
-    uvb.uvbtype=uvb
+    uvb_spectrum.uvbtype=uvb
     #Get the freqeunce Log of Hz and UVB Log of erg/s/cm2/Hz
-    uvb.inituvb()
+    uvb_spectrum.inituvb()
     
     #now integrate 4pi Jnu / h  in d log nu
-    sort=np.argsort(uvb.source['lgnu'])
-    uvb.source['lgnu']=uvb.source['lgnu'][sort]
-    uvb.source['lgfpiJ']=uvb.source['lgfpiJ'][sort]
+    sort=np.argsort(uvb_spectrum.source['lgnu'])
+    uvb_spectrum.source['lgnu']=uvb_spectrum.source['lgnu'][sort]
+    uvb_spectrum.source['lgfpiJ']=uvb_spectrum.source['lgfpiJ'][sort]
     
     #define integal quantity (integrate in d log nu)
-    lognu=np.log(10**uvb.source['lgnu'])
+    lognu=np.log(10**uvb_spectrum.source['lgnu'])
     hplanck = 6.6260755e-27 # erg/s
-    integrand=10**uvb.source['lgfpiJ']/hplanck
+    integrand=10**uvb_spectrum.source['lgfpiJ']/hplanck
     
     #Define min-max in log_natural Hz
     maxnu=np.max(lognu)
@@ -132,24 +132,24 @@ def getions_uparam_unbinned(result,uvb="HM05logU"):
     #print('Get ionization parameter for ', result['info']['name'])
     
     #init UVB at given redshift
-    uvb=cld.Cldyion(uvb=uvb)
-    uvb.redshift=result['info']['z']
+    uvb_spectrum=cld.Cldyion(uvb=uvb)
+    uvb_spectrum.redshift=result['info']['z']
     
     ##This should be taken care of when calling cld.Cldyion(uvb=uvb)
     ##  but I'm going to do this again, just in case.
-    uvb.uvbtype=uvb
+    uvb_spectrum.uvbtype=uvb
     #Get the freqeunce Log of Hz and UVB Log of erg/s/cm2/Hz
-    uvb.inituvb()
+    uvb_spectrum.inituvb()
     
     #now integrate 4pi Jnu / h  in d log nu
-    sort=np.argsort(uvb.source['lgnu'])
-    uvb.source['lgnu']=uvb.source['lgnu'][sort]
-    uvb.source['lgfpiJ']=uvb.source['lgfpiJ'][sort]
+    sort=np.argsort(uvb_spectrum.source['lgnu'])
+    uvb_spectrum.source['lgnu']=uvb_spectrum.source['lgnu'][sort]
+    uvb_spectrum.source['lgfpiJ']=uvb_spectrum.source['lgfpiJ'][sort]
     
     #define integal quantity (integrate in d log nu)
-    lognu=np.log(10**uvb.source['lgnu'])
+    lognu=np.log(10**uvb_spectrum.source['lgnu'])
     hplanck = 6.6260755e-27 # erg/s
-    integrand=10**uvb.source['lgfpiJ']/hplanck
+    integrand=10**uvb_spectrum.source['lgfpiJ']/hplanck
     
     #Define min-max in log_natural Hz
     maxnu=np.max(lognu)
@@ -446,11 +446,11 @@ def getionisation(grid_interp, infile_list, outfile, ions=["HI", "SiII", "SiIII"
         try:
             ##Python2
             fil=open(fit)
-            modl=pickle.load(fil)
+            result=pickle.load(fil)
         except:
             ##Python3
             fil=open(fit,'rb')
-            modl=pickle.load(fil, encoding='latin1')
+            result=pickle.load(fil, encoding='latin1')
         
         fil.close()
         
