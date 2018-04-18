@@ -26,23 +26,46 @@ from pyigm.euvb import cloudyiongrid as cld
 
 
 
-"""
-
-Compute the ionization parameter along the chains - assumes HM05
-
-"""
-
-def getions_uparam(result,base):
+def getions_uparam(result,base,uvb="HM05logU"):
+    """
+    Compute the ionization parameter (logU) along the chains
+    
+    Inputs:
+    --------------------------
+    result: list of lists (of floats/walkers)
+        Usually from the MCMC output (pickle.load('mcmc_out.pkl')),
+        with length = number_of_walkers/trials (e.g., 100,000) and
+        length[0] = number_of_axes (e.g., NHI, z, [X/H], n_H).
+        It is can also be done artificially like:
+            result['pdfs'] = [
+                [17.2, 0.7, -1.0, -2.3],
+                [17.1, 0.7, -1.1, -2.4],
+                [17.2, 0.8, -1.0, -2.4],
+                [17.2, 0.7, -1.0, -2.3],
+            ]
+    base: np.array
+        Histogram edges to use for logU binning, np.arange(...)
+    uvb: str
+        Which UVB to integrate (see cloudyiongrid.py)
+    
+    Outputs:
+    --------------------------
+    histogram: np.array
+        The logU histogram y values (x values are based on "base" input)
+    median: float
+        The median logU value of this system
+    
+    """
     
     #print('Get ionization parameter for ', result['info']['name'])
     
     #init UVB at given redshift
-    uvb=cld.Cldyion(uvb='HM05logU')
+    uvb=cld.Cldyion(uvb=uvb)
     uvb.redshift=result['info']['z']
     
-    ##This should be taken care of when calling cld.Cldyion(uvb='HM05logU')
+    ##This should be taken care of when calling cld.Cldyion(uvb=uvb)
     ##  but I'm going to do this again, just in case.
-    uvb.uvbtype='HM05logU'
+    uvb.uvbtype=uvb
     #Get the freqeunce Log of Hz and UVB Log of erg/s/cm2/Hz
     uvb.inituvb()
     
@@ -75,18 +98,46 @@ def getions_uparam(result,base):
 
 
 
-def getions_uparam_unbinned(result):
+def getions_uparam_unbinned(result,uvb="HM05logU"):
+    """
+    Compute the ionization parameter (logU) along the chains, unbinned
+    
+    Inputs:
+    --------------------------
+    result: list of lists (of floats/walkers)
+        Usually from the MCMC output (pickle.load('mcmc_out.pkl')),
+        with length = number_of_walkers/trials (e.g., 100,000) and
+        length[0] = number_of_axes (e.g., NHI, z, [X/H], n_H).
+        It is can also be done artificially like:
+            result['pdfs'] = [
+                [17.2, 0.7, -1.0, -2.3],
+                [17.1, 0.7, -1.1, -2.4],
+                [17.2, 0.8, -1.0, -2.4],
+                [17.2, 0.7, -1.0, -2.3],
+            ]
+    base: np.array
+        Histogram edges to use for logU binning, np.arange(...)
+    uvb: str
+        Which UVB to integrate (see cloudyiongrid.py)
+    
+    Outputs:
+    --------------------------
+    logU: np.array
+        The logU values for every walker
+    
+    """
+    
     ##Added by CBW
     
     #print('Get ionization parameter for ', result['info']['name'])
     
     #init UVB at given redshift
-    uvb=cld.Cldyion(uvb='HM05logU')
+    uvb=cld.Cldyion(uvb=uvb)
     uvb.redshift=result['info']['z']
     
-    ##This should be taken care of when calling cld.Cldyion(uvb='HM05logU')
+    ##This should be taken care of when calling cld.Cldyion(uvb=uvb)
     ##  but I'm going to do this again, just in case.
-    uvb.uvbtype='HM05logU'
+    uvb.uvbtype=uvb
     #Get the freqeunce Log of Hz and UVB Log of erg/s/cm2/Hz
     uvb.inituvb()
     
@@ -120,12 +171,39 @@ def getions_uparam_unbinned(result):
 
 
 
-"""
-Compute the X_ion ionization correction along the chains
-
-"""
-
 def getions_x_ICF(result,ion,base,interp):
+    """
+    Compute the x_ion ionization correction (ICF) along the chains
+    
+    Inputs:
+    --------------------------
+    result: list of lists (of floats/walkers)
+        Usually from the MCMC output (pickle.load('mcmc_out.pkl')),
+        with length = number_of_walkers/trials (e.g., 100,000) and
+        length[0] = number_of_axes (e.g., NHI, z, [X/H], n_H).
+        It is can also be done artificially like:
+            result['pdfs'] = [
+                [17.2, 0.7, -1.0, -2.3],
+                [17.1, 0.7, -1.1, -2.4],
+                [17.2, 0.8, -1.0, -2.4],
+                [17.2, 0.7, -1.0, -2.3],
+            ]
+    ion: str
+        The ion you want to get the ICF for. This HAS to exist within init_interpolator()
+    base: np.array
+        Histogram edges to use for logU binning, np.arange(...)
+    interp: RegularGridInterpolator
+        The interpolated Cloudy grid; see init_interpolator() (below)
+    
+    Outputs:
+    --------------------------
+    histogram: np.array
+        The histogram y values (x values are based on "base" input)
+    median: float
+        The median value of this system
+    
+    """
+    
 
     #print('Get XSiII  for ', result['info']['name'])
     xhichain=interp['HI'](result['pdfs'])
@@ -137,14 +215,40 @@ def getions_x_ICF(result,ion,base,interp):
     return (hist,np.median(diff))
 
 
-"""
-Compute the X_ion along the chains
-
-"""
-
 def getions_x(result,ion,base,interp):
 
-    #print('Get XSiII  for ', result['info']['name'])
+    """
+    Compute the x_ion ionization along the chains
+    
+    Inputs:
+    --------------------------
+    result: list of lists (of floats/walkers)
+        Usually from the MCMC output (pickle.load('mcmc_out.pkl')),
+        with length = number_of_walkers/trials (e.g., 100,000) and
+        length[0] = number_of_axes (e.g., NHI, z, [X/H], n_H).
+        It is can also be done artificially like:
+            result['pdfs'] = [
+                [17.2, 0.7, -1.0, -2.3],
+                [17.1, 0.7, -1.1, -2.4],
+                [17.2, 0.8, -1.0, -2.4],
+                [17.2, 0.7, -1.0, -2.3],
+            ]
+    ion: str
+        The ion you want to get the ICF for. This HAS to exist within init_interpolator()
+    base: np.array
+        Histogram edges to use for logU binning, np.arange(...)
+    interp: RegularGridInterpolator
+        The interpolated Cloudy grid; see cloudyiongrid.py
+    
+    Outputs:
+    --------------------------
+    histogram: np.array
+        The histogram y values (x values are based on "base" input)
+    median: float
+        The median value of this system
+    
+    """
+    
     xchain=interp[ion](result['pdfs'])
     hist,edge=np.histogram(xchain,bins=base)
     hist=hist/(1.*len(xchain))
@@ -152,12 +256,37 @@ def getions_x(result,ion,base,interp):
 
 
 
-"""
-Compute the temperature along the chains
-
-"""
-
 def gettemperature(result,base,interp):
+    """
+    Compute the temperature along the chains
+    
+    Inputs:
+    --------------------------
+    result: list of lists (of floats/walkers)
+        Usually from the MCMC output (pickle.load('mcmc_out.pkl')),
+        with length = number_of_walkers/trials (e.g., 100,000) and
+        length[0] = number_of_axes (e.g., NHI, z, [X/H], n_H).
+        It is can also be done artificially like:
+            result['pdfs'] = [
+                [17.2, 0.7, -1.0, -2.3],
+                [17.1, 0.7, -1.1, -2.4],
+                [17.2, 0.8, -1.0, -2.4],
+                [17.2, 0.7, -1.0, -2.3],
+            ]
+    base: np.array
+        Histogram edges to use for logU binning, np.arange(...)
+    interp: RegularGridInterpolator
+        The interpolated Cloudy grid; see cloudyiongrid.py
+    
+    Outputs:
+    --------------------------
+    histogram: np.array
+        The histogram y values (x values are based on "base" input)
+    median: float
+        The median value of this system
+    
+    """
+    
 
     temperaturechain=interp['temperature'](result['pdfs'])
     hist,edge=np.histogram(temperaturechain,bins=base)
@@ -172,6 +301,22 @@ Initialise the interpolator over the grid
 """
 
 def init_interpolator(grid, ions=["HI", "SiII", "SiIII", "CII", "CIII", "CIV", "MgII"]):
+    """
+    Initialise the interpolator over the grid
+    
+    Inputs:
+    --------------------------
+    grid: str
+        The path to the location of the Cloudy grid (*.pkl), output of
+        grid_compress.py (or something similar).
+    
+    Outputs:
+    --------------------------
+    interpolated_grid: RegularGridInterpolator
+        The interpolated Cloudy grid
+    
+    """
+    
     
     print("Loading Cloudy grid...")
     
@@ -228,6 +373,27 @@ def init_interpolator(grid, ions=["HI", "SiII", "SiIII", "CII", "CIII", "CIV", "
 
 def getionisation(grid_interp, infile_list, outfile, ions=["HI", "SiII", "SiIII", "CII", "CIII", "CIV", "MgII"]):
     
+    """
+    Get the histograms of ionisation for a set of ions (e.g., x_SiII)
+    
+    Inputs:
+    --------------------------
+    grid_interp: RegularGridInterpolator
+        The interpolated Cloudy grid, output of init_interpolator()
+    infile_list: list of str
+        A list of the *.pkl files, as outputted by the MCMC code
+    outfile: str
+        The file you want to save the histograms to
+    ions: list of str
+        The ions you want to get the x_ion histograms for.
+    
+    Outputs:
+    --------------------------
+    outdict: *.pkl pickle file
+        File of binned histograms
+    
+    """
+    
     ##Aliases of input variable name, so it's clearer below
     ionlist = ions
 
@@ -263,6 +429,13 @@ def getionisation(grid_interp, infile_list, outfile, ions=["HI", "SiII", "SiIII"
     x_hist_bin["CIII"] = np.arange(-6.,0.4,wdt)
     x_hist_bin["CIV"] = np.arange(-6.,0.4,wdt)
     x_hist_bin["MgII"] = np.arange(-6.,0.4,wdt)
+    
+    ##In case the ion we need isn't pre-defined above
+    for ion in ionlist:
+        try:
+            dummy = x_hist_bin[ion]
+        except:
+            x_hist_bin[ion] = np.arange(-6.,0.4,wdt)
 
     ############
 
