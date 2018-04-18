@@ -1,4 +1,3 @@
-from COSCGMLegacyPath_define import COSCGMLegacyPath
 import glob
 import pickle
 import matplotlib.pyplot as plt
@@ -15,7 +14,7 @@ mblue='#1E90FF'
 mred='#DC143C'
 
 from astropy import constants as const
-from scipy import integrate 
+from scipy import integrate
 from scipy.interpolate import interp1d
 
 
@@ -302,28 +301,13 @@ def init_interpolator(grid, ions=['HI','SiII','SiIII','CII','CIII','CIV']):
 ################################################
 
 
-def getionization(sample,grid_interp):
+def getionization(sample,grid_interp,listin,outfile):
     
     print("Computing log U for "+sample+" sample...")
     
     ##CBW adjust
     #define the model
-    mcmcoutputlist='{}/Strong_LLSs/Figures/plot-logU-{}_MCMC.list'.format(COSCGMLegacyPath, sample)
-    outfile='{}/Strong_LLSs/Figures/plot-logU-{}_MCMC_ionization.pkl'.format(COSCGMLegacyPath, sample)
-
     interp = grid_interp
-
-    #load the models
-    # figname=mcmcoutputlist
-    ##CBW
-    # listin=glob.glob(mcmcoutputlist+'/*emcee*pkl')
-    listin=[]
-    for line in open(mcmcoutputlist):
-        li=line.strip()
-        ##skip blank lines and skip commented-out lines
-        if li and not li.startswith("#"):
-            listin.append(COSCGMLegacyPath+'/'+line.rstrip())
-    print('Found {} fits'.format(len(listin)))
     
     #store arrays for distributions
     allname=[]
@@ -522,20 +506,4 @@ def getionization(sample,grid_interp):
 
 
     return
-
-
-
-def main():
-    # grid='{}/Strong_LLSs/Cloudy/Cloudy_grids/grid_minimal_HM05_carbalpha.pkl'.format(COSCGMLegacyPath)
-    grid='{}/Strong_LLSs/Cloudy/Cloudy_grids/grid_cgm_extensive_HM05_carbalpha.pkl'.format(COSCGMLegacyPath)
-    
-    interp=init_interpolator(grid)
-
-    samples = ["L13","W16","W17","L18"]
-    for sample in samples:
-        getionization(sample,interp)
-
-
-if __name__ == '__main__':
-    main()
 
