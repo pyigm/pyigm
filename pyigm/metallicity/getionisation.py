@@ -14,7 +14,7 @@ mblue='#1E90FF'
 mred='#DC143C'
 
 from astropy import constants as const
-from scipy import integrate
+from scipy import integrate 
 from scipy.interpolate import interp1d
 
 
@@ -121,109 +121,35 @@ def getions_uparam_unbinned(result):
 
 
 """
-
-Compute the XHI along the chains
-
-"""
-
-def getions_xhi(result,base,interp):
-
-    #print('Get XHI  for ', result['info']['name'])
-
-    #grab XHI [tested against cloudy]
-    xhichain=interp['HI'](result['pdfs'])
-    hist,edge=np.histogram(xhichain,bins=base)
-    hist=hist/(1.*len(xhichain))
-
-    return (hist,np.median(xhichain))
-
-
-"""
-Compute the X_MgII ionization correction along the chains
+Compute the X_ion ionization correction along the chains
 
 """
 
-def getions_xmg2(result,base,interp):
+def getions_x_ICF(result,ion,base,interp):
 
     #print('Get XSiII  for ', result['info']['name'])
     xhichain=interp['HI'](result['pdfs'])
-    xsi2chain=interp['MgII'](result['pdfs'])
-    diff=xsi2chain-xhichain
+    x_chain=interp[ion](result['pdfs'])
+    diff=x_chain-xhichain
     hist,edge=np.histogram(diff,bins=base)
     hist=hist/(1.*len(diff))
 
     return (hist,np.median(diff))
 
+
 """
-Compute the X_SiII ionization correction along the chains
+Compute the X_ion along the chains
 
 """
 
-def getions_xsi2(result,base,interp):
+def getions_x(result,ion,base,interp):
 
     #print('Get XSiII  for ', result['info']['name'])
-    xhichain=interp['HI'](result['pdfs'])
-    xsi2chain=interp['SiII'](result['pdfs'])
-    diff=xsi2chain-xhichain
-    hist,edge=np.histogram(diff,bins=base)
-    hist=hist/(1.*len(diff))
+    xchain=interp[ion](result['pdfs'])
+    hist,edge=np.histogram(xchain,bins=base)
+    hist=hist/(1.*len(xchain))
+    return (hist,np.median(xchain))
 
-    return (hist,np.median(diff))
-
-"""
-Compute the X_SiIII along the chains
-
-"""
-
-def getions_xsi3(result,base,interp):
-
-    #print('Get XSiII  for ', result['info']['name'])
-    xsi3chain=interp['SiIII'](result['pdfs'])
-    hist,edge=np.histogram(xsi3chain,bins=base)
-    hist=hist/(1.*len(xsi3chain))
-    return (hist,np.median(xsi3chain))
-
-
-
-"""
-Compute the X_CII along the chains
-
-"""
-
-def getions_xc2(result,base,interp):
-
-    xC2chain=interp['CII'](result['pdfs'])
-    hist,edge=np.histogram(xC2chain,bins=base)
-    hist=hist/(1.*len(xC2chain))
-
-    return (hist,np.median(xC2chain))
-
-"""
-Compute the X_CIII along the chains
-
-"""
-
-def getions_xc3(result,base,interp):
-
-    xC3chain=interp['CIII'](result['pdfs'])
-    hist,edge=np.histogram(xC3chain,bins=base)
-    hist=hist/(1.*len(xC3chain))
-
-    return (hist,np.median(xC3chain))
-
-
-"""
-Compute the X_CIV along the chains
-
-"""
-
-def getions_xc4(result,base,interp):
-
-    xC4chain=interp['CIV'](result['pdfs'])
-    hist,edge=np.histogram(xC4chain,bins=base)
-    hist=hist/(1.*len(xC4chain))
-
-    return (hist,np.median(xC4chain))
 
 
 """
@@ -245,7 +171,7 @@ Initialise the interpolator over the grid
 
 """
 
-def init_interpolator(grid, ions=['HI','SiII','SiIII','CII','CIII','CIV']):
+def init_interpolator(grid, ions=["HI", "SiII", "SiIII", "CII", "CIII", "CIV", "MgII"]):
     
     print("Loading Cloudy grid...")
     
@@ -272,7 +198,6 @@ def init_interpolator(grid, ions=['HI','SiII','SiIII','CII','CIII','CIV']):
         nmodels=nmodels*(modl[1][tt]).size
         #append axis value in a list
         mod_axisval.append(modl[1][tt])
-    
     
     interp = {}
     for ion in ions:
@@ -301,14 +226,11 @@ def init_interpolator(grid, ions=['HI','SiII','SiIII','CII','CIII','CIV']):
 ################################################
 
 
-def getionization(sample,grid_interp,listin,outfile):
+def getionisation(grid_interp, infile_list, outfile, ions=["HI", "SiII", "SiIII", "CII", "CIII", "CIV", "MgII"]):
     
-    print("Computing log U for "+sample+" sample...")
-    
-    ##CBW adjust
-    #define the model
-    interp = grid_interp
-    
+    ##Aliases of input variable name, so it's clearer below
+    ionlist = ions
+
     #store arrays for distributions
     allname=[]
     allz=[]
@@ -321,52 +243,44 @@ def getionization(sample,grid_interp,listin,outfile):
     U_medians=[]
     U_hist_bin=np.arange(-7.,1.,wdt)
     
-    X_hist=[]
-    X_medians=[]
-    X_hist_bin=np.arange(-6.,0.4,wdt)
-    
-    Xsi2_hist=[]
-    Xsi2_medians=[]
-    Xsi2_hist_bin=np.arange(-3.,3.,wdt)
-    
-    Xsi3_hist=[]
-    Xsi3_medians=[]
-    Xsi3_hist_bin=np.arange(-6.,0.4,wdt)
-    
-    XC2_hist=[]
-    XC2_medians=[]
-    XC2_hist_bin=np.arange(-6.,0.4,wdt)
-    
-    XC3_hist=[]
-    XC3_medians=[]
-    XC3_hist_bin=np.arange(-6.,0.4,wdt)
-    
-    XC4_hist=[]
-    XC4_medians=[]
-    XC4_hist_bin=np.arange(-6.,0.4,wdt)
-
     temperature_hist=[]
     temperature_medians=[]
     temperature_hist_bin=np.arange(1.,5.,wdt)
 
-    #compress results
-    for fit in listin:
+    ############
+    
+    x_hist = {}
+    x_medians = {}
+    x_hist_bin = {}
+    for ion in ionlist:
+        x_hist[ion] = []
+        x_medians[ion] = []
+    
+    x_hist_bin["HI"] = np.arange(-6.,0.4,wdt)
+    x_hist_bin["SiII"] = np.arange(-3.,3.,wdt)
+    x_hist_bin["SiIII"] = np.arange(-6.,0.4,wdt)
+    x_hist_bin["CII"] = np.arange(-6.,0.4,wdt)
+    x_hist_bin["CIII"] = np.arange(-6.,0.4,wdt)
+    x_hist_bin["CIV"] = np.arange(-6.,0.4,wdt)
+    x_hist_bin["MgII"] = np.arange(-6.,0.4,wdt)
 
-        print('Process ', fit)
+    ############
+
+    #compress results
+    for fit in infile_list:
 
         #open the grid 
         try:
             ##Python2
-            fl=open(fit)
-            modl=pickle.load(fl)
+            fil=open(fit)
+            modl=pickle.load(fil)
         except:
             ##Python3
-            fl=open(fit,'rb')
-            modl=pickle.load(fl, encoding='latin1')
-
-        fl.close()
-
-        # result=h5py.File(fit, 'r')
+            fil=open(fit,'rb')
+            modl=pickle.load(fil, encoding='latin1')
+        
+        fil.close()
+        
 
         #grab the indexes of percentile and quantities
         med=result['percent'].index(50)
@@ -425,51 +339,18 @@ def getionization(sample,grid_interp,listin,outfile):
             # U_hist.append(this_U)
             U_medians.append(med_U)
             
-            #grab the X HI histogram 
-            this_X,med_X=getions_xhi(result,X_hist_bin,interp)
-            X_hist.append(this_X/wdt)
-            # X_hist.append(this_X)
-            X_medians.append(med_X)
+            ############
             
-            #grab the X Mg2 ionization correction histogram 
-            this_Xmg2,med_Xmg2=getions_xmg2(result,Xmg2_hist_bin,interp)
-            Xmg2_hist.append(this_Xmg2/wdt)
-            # Xmg2_hist.append(this_Xmg2)
-            Xmg2_medians.append(med_Xmg2)
+            for ion in ionlist:
+                this_X, med_X = getions_x(result,ion,x_hist_bin[ion],grid_interp)
+                x_hist[ion].append(this_X/wdt)
+                x_medians[ion].append(med_X)
             
-            #grab the X Si2 ionization correction histogram 
-            this_Xsi2,med_Xsi2=getions_xsi2(result,Xsi2_hist_bin,interp)
-            Xsi2_hist.append(this_Xsi2/wdt)
-            # Xsi2_hist.append(this_Xsi2)
-            Xsi2_medians.append(med_Xsi2)
+            ############
             
-            #grab the X Si3 fraction histogram 
-            this_Xsi3,med_Xsi3=getions_xsi3(result,Xsi3_hist_bin,interp)
-            Xsi3_hist.append(this_Xsi3/wdt)
-            # Xsi3_hist.append(this_Xsi3)
-            Xsi3_medians.append(med_Xsi3)
-
-            #grab the XC2 histogram 
-            this_XC2,med_XC2=getions_xc2(result,XC2_hist_bin,interp)
-            XC2_hist.append(this_XC2/wdt)
-            # XC2_hist.append(this_XC2)
-            XC2_medians.append(med_XC2)
-            
-            #grab the XC3 histogram 
-            this_XC3,med_XC3=getions_xc3(result,XC3_hist_bin,interp)
-            XC3_hist.append(this_XC3/wdt)
-            # XC3_hist.append(this_XC3)
-            XC3_medians.append(med_XC3)
-
-            #grab the XC4 histogram 
-            this_XC4,med_XC4=getions_xc4(result,XC4_hist_bin,interp)
-            XC4_hist.append(this_XC4/wdt)
-            # XC4_hist.append(this_XC4)
-            XC4_medians.append(med_XC4)
-        
             try:
                 #grab the temperature histogram 
-                this_temperature,med_temperature=gettemperature(result,temperature_hist_bin,interp)
+                this_temperature,med_temperature=gettemperature(result,temperature_hist_bin,grid_interp)
                 temperature_hist.append(this_temperature/wdt)
                 # temperature_hist.append(this_temperature)
                 temperature_medians.append(med_temperature)
@@ -479,31 +360,34 @@ def getionization(sample,grid_interp,listin,outfile):
         
         else:
             print("Skipping ",fit," because it is not within the z and/or NHI range.")
-
-    #save
+    
+    outdict = {}
+    outdict['name'] = allname
+    outdict['z'] = allz
+    outdict['logNHI'] = allnhi
+    
+    outdict['U_base'] = U_hist_bin
+    outdict['U_hist'] = U_hist
+    outdict['U_med'] = U_medians
+    for ion in ionlist:
+        keyname_base = "X{}_base".format(ion)
+        keyname_hist = "X{}_hist".format(ion)
+        keyname_med = "X{}_med".format(ion)
+        outdict[keyname_base] = x_hist_bin[ion]
+        outdict[keyname_hist] = x_hist[ion]
+        outdict[keyname_med] = x_medians[ion]
+    
+    
     if temperature_on is True:
-        pickle.dump({'U_base':U_hist_bin,'U_hist':U_hist,'U_med':U_medians,
-                     'XHI_base':X_hist_bin,'XHI_hist':X_hist,'XHI_med':X_medians,
-                     'XMgII_base':Xmg2_hist_bin,'XMgII_hist':Xmg2_hist,'XMgII_med':Xmg2_medians,
-                     'XSiII_base':Xsi2_hist_bin,'XSiII_hist':Xsi2_hist,'XSiII_med':Xsi2_medians,
-                     'XSiIII_base':Xsi3_hist_bin,'XSiIII_hist':Xsi3_hist,'XSiIII_med':Xsi3_medians,
-                     'XCII_base':XC2_hist_bin,'XCII_hist':XC2_hist,'XCII_med':XC2_medians,
-                     'XCIII_base':XC3_hist_bin,'XCIII_hist':XC3_hist,'XCIII_med':XC3_medians,
-                     'XCIV_base':XC4_hist_bin,'XCIV_hist':XC4_hist,'XCIV_med':XC4_medians,
-                     ##CBW
-                     'temperature_base':temperature_hist_bin,'temperature_hist':temperature_hist,
-                     'name':allname,'z':allz,'logNHI':allnhi},open(outfile,"w"))
-    else:
-        pickle.dump({'U_base':U_hist_bin,'U_hist':U_hist,'U_med':U_medians,
-                     'XHI_base':X_hist_bin,'XHI_hist':X_hist,'XHI_med':X_medians,
-                     'XMgII_base':Xmg2_hist_bin,'XMgII_hist':Xmg2_hist,'XMgII_med':Xmg2_medians,
-                     'XSiII_base':Xsi2_hist_bin,'XSiII_hist':Xsi2_hist,'XSiII_med':Xsi2_medians,
-                     'XSiIII_base':Xsi3_hist_bin,'XSiIII_hist':Xsi3_hist,'XSiIII_med':Xsi3_medians,
-                     'XCII_base':XC2_hist_bin,'XCII_hist':XC2_hist,'XCII_med':XC2_medians,
-                     'XCIII_base':XC3_hist_bin,'XCIII_hist':XC3_hist,'XCIII_med':XC3_medians,
-                     'XCIV_base':XC4_hist_bin,'XCIV_hist':XC4_hist,'XCIV_med':XC4_medians,
-                     'name':allname,'z':allz,'logNHI':allnhi},open(outfile,"w"))
-
-
+        outdict['temperature_base'] = temperature_hist_bin
+        outdict['temperature_hist'] = temperature_hist
+    
+    
+    #save
+    pickle.dump(outdict,open(outfile,"w"))
+    
+    
     return
+
+
 
