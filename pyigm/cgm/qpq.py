@@ -231,7 +231,8 @@ class QPQ6(CGMAbsSurvey):
             self.cdir = pyigm.__path__[0] + '/data/CGM/QPQ/'
         else:
             self.cdir = cdir
-        self.data_file = pyigm.__path__[0] + '/data/CGM/QPQ/'+'qpq6_final_cut_2015nov16.fits'
+        #self.data_file = pyigm.__path__[0] + '/data/CGM/QPQ/'+'qpq6_final_cut_2015nov16.fits'
+        self.data_file = self.cdir + 'qpq6_final_cut_2015nov16.fits'
 
         # Init?
         if load:
@@ -240,7 +241,8 @@ class QPQ6(CGMAbsSurvey):
 
     def load_data(self, **kwargs):
         #
-        q6file = resource_filename('pyigm', 'data/CGM/QPQ/qpq6_final_cut_2015nov16.fits')
+        #q6file = resource_filename('pyigm', 'data/CGM/QPQ/qpq6_final_cut_2015nov16.fits')
+        q6file = self.data_file
         qpqdata = Table.read(q6file)
         nmax = len(qpqdata)   # max number of QSOs
         for i in range(nmax):
@@ -254,8 +256,8 @@ class QPQ6(CGMAbsSurvey):
 
             # Instantiate the IGM System
             igm_sys = IGMSystem((qpqdata['RAD_BG'][i], qpqdata['DECD_BG'][i]),
-                                qpqdata['Z_FG'][i], [-1500, 1500.] * u.km / u.s,
-                                abs_type='CGM')
+                                qpqdata['Z_FG'][i], [-5500, 5500.] * u.km / u.s,
+                                abs_type='CGM')   ## if velocity range lower - does not load all abslines
             igm_sys.zem = qpqdata['Z_BG'][i]
             igm_sys.NHI = qpqdata['NHI'][i]
             igm_sys.sig_NHI = qpqdata['SIG_NHI'][i]
@@ -294,6 +296,8 @@ class QPQ6(CGMAbsSurvey):
             cgabs.igm_sys.add_component(comp)
             self.cgm_abs.append(cgabs)
 
+            #if i == 11:
+            #    pdb.set_trace()
 
 class QPQ7(CGMAbsSurvey):
     """Inherits CGM Abs Survey
@@ -313,7 +317,8 @@ class QPQ7(CGMAbsSurvey):
             self.cdir = pyigm.__path__[0] + '/data/CGM/QPQ/'
         else:
             self.cdir = cdir
-        self.data_file = pyigm.__path__[0] + '/data/CGM/QPQ/'+'qpq7_pairs.fits.gz'
+        #self.data_file = pyigm.__path__[0] + '/data/CGM/QPQ/'+'qpq7_pairs.fits.gz'
+        self.data_file = self.cdir + 'qpq7_pairs.fits.gz'
 
         # Init?
         if load:
@@ -322,7 +327,8 @@ class QPQ7(CGMAbsSurvey):
 
     def load_data(self, **kwargs):
         #
-        q7file = resource_filename('pyigm', 'data/CGM/QPQ/qpq7_pairs.fits.gz')
+        #q7file = resource_filename('pyigm', 'data/CGM/QPQ/qpq7_pairs.fits.gz')
+        q7file = self.data_file
         qpqdata = Table.read(q7file)
         nmax = len(qpqdata)   # max number of QSOs
         for i in range(nmax):
@@ -336,7 +342,7 @@ class QPQ7(CGMAbsSurvey):
 
             # Instantiate the IGM System
             igm_sys = IGMSystem((qpqdata['RAD_BG'][i], qpqdata['DECD_BG'][i]),
-                                qpqdata['Z_FG'][i], [-1500, 1500.] * u.km / u.s,
+                                qpqdata['Z_FG'][i], [-5500, 5500.] * u.km / u.s,
                                 abs_type='CGM')
             igm_sys.zem = qpqdata['Z_BG'][i]
             igm_sys.NHI = qpqdata['NHI'][i]
@@ -395,7 +401,6 @@ class QPQ7(CGMAbsSurvey):
 
 
 
-
 class QPQ8(CGMAbsSurvey):
     """Inherits CGM Abs Survey
         Contains information about different components
@@ -415,7 +420,8 @@ class QPQ8(CGMAbsSurvey):
             self.cdir = pyigm.__path__[0] + '/data/CGM/QPQ/'
         else:
             self.cdir = cdir
-        self.data_file = pyigm.__path__[0] + '/data/CGM/QPQ/'+'qpq8_pairs.fits'
+        #self.data_file = pyigm.__path__[0] + '/data/CGM/QPQ/'+'qpq8_pairs.fits'
+        self.data_file = self.cdir +'qpq8_all_measured.dat'
 
         # Init?
         if load:
@@ -423,7 +429,8 @@ class QPQ8(CGMAbsSurvey):
 
     def load_data(self, **kwargs):
         #
-        q8file = resource_filename('pyigm', 'data/CGM/QPQ/qpq8_all_measured.dat')
+        #q8file = resource_filename('pyigm', 'data/CGM/QPQ/qpq8_all_measured.dat')
+        q8file = self.data_file
         qpqdata = Table.read(q8file,format='ascii')
         nmax = len(qpqdata)   # max number of QSOs
         q8filecoord = resource_filename('pyigm', 'data/CGM/QPQ/qpq8_pairs.fits')
@@ -447,7 +454,7 @@ class QPQ8(CGMAbsSurvey):
 
             # Instantiate the IGM System
             igm_sys = IGMSystem((qpqdatacoord['RAD_BG'][j], qpqdatacoord['DECD_BG'][j]),
-                                qpqdatacoord['Z_FG'][j], [-1500, 1500.] * u.km / u.s,
+                                qpqdatacoord['Z_FG'][j], [-5500, 5500.] * u.km / u.s,
                                 abs_type='CGM')
             # Redshifts: QSO emission redshifts
             igm_sys.zem = qpqdatacoord['Z_BG'][j]
@@ -504,8 +511,8 @@ class QPQ8(CGMAbsSurvey):
                     if qpqdata[ewstr][i] != '/':
                         iline = AbsLine(wave0 * u.AA, closest=True, z=igm_sys.zabs)
                         ## EW
-                        iline.attrib['EW'] = qpqdata[ewstr][i] * u.AA  # Rest EW
-                        iline.attrib['sig_EW'] = qpqdata[ewerrstr][i] * u.AA
+                        iline.attrib['EW'] = float(qpqdata[ewstr][i]) * u.AA  # Rest EW
+                        iline.attrib['sig_EW'] = float(qpqdata[ewerrstr][i]) * u.AA
                         flgew = 1
                         if iline.attrib['EW'] < 3.*iline.attrib['sig_EW']:
                             flgew=3
@@ -530,6 +537,4 @@ class QPQ8(CGMAbsSurvey):
 
             cgabs.vlim = [qpqdata['v_lobound'][i],qpqdata['v_upbound'][i]]*u.km/u.s
 
-
             self.cgm_abs.append(cgabs)
-
