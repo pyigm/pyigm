@@ -16,6 +16,7 @@ from linetools import utils as ltu
 from linetools.lists.linelist import LineList
 from linetools.isgm.abscomponent import AbsComponent
 from linetools.spectralline import AbsLine
+from linetools.analysis.zlimits import zLimits
 
 from pyigm.field.galaxy import Galaxy
 from pyigm.abssys.igmsys import IGMSystem
@@ -86,6 +87,7 @@ def get_close_galaxies(field,rho_max=300.*u.kpc,minz=0.001,maxz=None):
 def cgmabssys_from_sightline_field(field,sightline,rho_max=300.*u.kpc,minz=0.001,
                                    maxz=None,dv_max=400.*u.km/u.s,embuffer=None,
                                    dummysys=True,dummyspec=None,linelist=None,
+                                   debug=False,
                                    **kwargs):
     """Instantiate list of CgmAbsSys objects from IgmgGalaxyField and IGMSightline.
 
@@ -138,9 +140,11 @@ def cgmabssys_from_sightline_field(field,sightline,rho_max=300.*u.kpc,minz=0.001
 
 
     closegals = get_close_galaxies(field,rho_max,minz,zmax)
+    if debug:
+        closegals = closegals[0:10]
     cgmabslist = []
     for i,gal in enumerate(closegals):
-
+        #print('i={:d}'.format(i))
         galobj = Galaxy((gal['RA'],gal['DEC']),z=gal['Z'])
         cgmobj = cgm_from_galaxy_igmsystems(galobj,sightline._abssystems,
                                             dv_max=dv_max, dummysys=dummysys,
@@ -195,7 +199,7 @@ def cgmsurvey_from_sightlines_fields(fields, sightlines, rho_max=300*u.kpc,
 
 
 def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400*u.km/u.s,
-                               cosmo=None, dummysys=False, dummyspec=None, **kwargs):
+                               cosmo=None, dummysys=False, dummyspec=None, verbose=True, **kwargs):
     """ Generate a list of CGMAbsSys objects given an input galaxy and a list of IGMSystems
 
     Parameters
@@ -220,7 +224,6 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
 
     """
     from pyigm.cgm.cgm import CGMAbsSys
-    import copy
     # Cosmology
     if cosmo is None:
         cosmo = cosmology.Planck15
@@ -230,8 +233,12 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
             dummyspec = igmsystems[0]._components[0]._abslines[0].analy['spec']
         dummycoords = igmsystems[0].coord
 
-    # R
-    rho, angles = calc_cgm_rho(galaxy, igmsystems, cosmo)
+    # R -- speed things up
+    rho, angles = calc_cgm_rho(galaxy, igmsystems, cosmo, **kwargs)
+    if len(igmsystems) == 1:  # Kludge
+        rho = u.Quantity([rho])
+        angles = u.Quantity([angles])
+
 
     # dv
     igm_z = np.array([igmsystem.zabs for igmsystem in igmsystems])
@@ -244,7 +251,8 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
             print("No IGMSystem paired to this galaxy. CGM object not created.")
             return []
         else:
-            print("No IGMSystem match found. Attaching dummy IGMSystem.")
+            if verbose:
+                print("No IGMSystem match found. Attaching dummy IGMSystem.")
             dummysystem = IGMSystem(dummycoords,galaxy.z,vlim=None)
             dummycomp = AbsComponent(dummycoords,(1,1),galaxy.z,[-100.,100.]*u.km/u.s)
             dummycomp.flag_N = 3
@@ -256,7 +264,6 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
             cgm = CGMAbsSys(galaxy, dummysystem, cosmo=cosmo, **kwargs)
             cgm_list = [cgm]
     else:
-        from linetools.analysis.zlimits import zLimits
         # Loop to generate
         cgm_list = []
         for imatch in match:
@@ -264,11 +271,15 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
             # Otherwise, updates to the IGMSystem cross-pollinate other CGMs
             sysmatch = igmsystems[imatch]
             newisys = sysmatch.copy()
+            # Handle z limits
             zlim = ltu.z_from_dv((-dv_max.value,dv_max.value)*u.km/u.s,galaxy.z)
             newlims = zLimits(galaxy.z,zlim.tolist())
             newisys.limits = newlims
+            # Allow for components extending beyond dv_max
+            newisys.update_vlim()
             newisys.update_component_vel()
-            cgm = CGMAbsSys(galaxy, newisys, cosmo=cosmo, **kwargs)
+            # Finish
+            cgm = CGMAbsSys(galaxy, newisys, cosmo=cosmo, rho=rho[imatch], ang_sep=angles[imatch], **kwargs)
             cgm_list.append(cgm)
 
     # Return
