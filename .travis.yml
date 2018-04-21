@@ -61,8 +61,8 @@ matrix:
         #  env: SETUP_CMD='test'
 
         # Do a coverage test.
-        - os: linux
-          env: SETUP_CMD='test --coverage'
+        #- os: linux
+        #  env: SETUP_CMD='test --coverage'
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
@@ -70,9 +70,9 @@ matrix:
         #  env: SETUP_CMD='build_docs -w'
 
         # Now try Astropy dev and LTS vesions with the latest 3.x and 2.7.
-        - os: linux
-          env: PYTHON_VERSION=2.7 ASTROPY_VERSION=development
-               EVENT_TYPE='pull_request push cron'
+        #- os: linux
+        #  env: PYTHON_VERSION=3.5 ASTROPY_VERSION=development
+        #       EVENT_TYPE='pull_request push cron'
         - os: linux
           env: ASTROPY_VERSION=development
                EVENT_TYPE='pull_request push cron'
@@ -87,7 +87,9 @@ matrix:
         # time.
 
         - os: linux
-          env: PYTHON_VERSION=2.7 NUMPY_VERSION=1.11
+          env: PYTHON_VERSION=2.7 NUMPY_VERSION=1.13
+        - os: linux
+          env: PYTHON_VERSION=2.7 NUMPY_VERSION=1.14
         #- os: linux
         #  env: PYTHON_VERSION=3.3 NUMPY_VERSION=1.8
         #- os: linux
@@ -95,7 +97,9 @@ matrix:
         #- os: linux
         #  env: PYTHON_VERSION=3.5 NUMPY_VERSION=1.10
         - os: linux
-          env: NUMPY_VERSION=1.11
+          env: NUMPY_VERSION=1.13
+        - os: linux
+          env: NUMPY_VERSION=1.14
 
         # Try numpy pre-release
         - os: linux
@@ -123,5 +127,5 @@ script:
     - $MAIN_CMD $SETUP_CMD
 
 
-after_success:
-    - if [[ $SETUP_CMD == 'test --coverage' ]]; then coveralls --rcfile='pyigm/tests/coveragerc'; fi
+#after_success:
+#    - if [[ $SETUP_CMD == 'test --coverage' ]]; then coveralls --rcfile='pyigm/tests/coveragerc'; fi

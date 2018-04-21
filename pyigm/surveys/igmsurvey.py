@@ -244,10 +244,15 @@ class IGMSurvey(object):
         self._abs_sys.append(abs_sys)
 
     def build_all_abs_sys(self, linelist=None, **kwargs):
-        """
-        Build all of the AbsSystem objects from the _dict
+
+        """ Build all of the AbsSystem objects from the _dict
         or _data if the _dict does not exist!
         In that order
+
+        Parameters
+        ----------
+        linelist : LineList, optional
+        **kwargs : Passed to build_abs_sys_from_dict
         """
         # This speeds things up a bunch
         if linelist is None:
@@ -303,8 +308,8 @@ class IGMSurvey(object):
         return abssys
 
     def build_abs_sys_from_dict(self, abssys_name, **kwargs):
-        """ Build an AbsSystem from the _dict (and maybe _data
-        soon enough)
+
+        """ Build an AbsSystem from the _dict
         The item in self._abs_sys is filled and
         the systems is also returned
 
@@ -313,7 +318,8 @@ class IGMSurvey(object):
         abssys_name : str
           Needs to match a key in the dict
         **kwargs
-          Passed to compoenents_from_dict()
+
+          Passed to components_from_dict()
 
         Returns
         -------
@@ -322,17 +328,11 @@ class IGMSurvey(object):
         """
         # Index
         idx = self.sys_idx(abssys_name)
-        # Components first
-        comps = self.components_from_dict(abssys_name, coord=self.coords[idx], **kwargs)
-        # Add HI if needed
-        NHI = None
-        if 'flag_NHI' in self._dict[abssys_name].keys():
-            Zions = [comp.Zion for comp in comps]
-            if (1,1) not in Zions:
-                NHI = self._dict[abssys_name]['NHI']
-        # Now the System
-        vlim=np.array(self._dict[abssys_name]['vlim'])*u.km/u.s
-        abssys = class_by_type(self.abs_type).from_components(comps, vlim=vlim, NHI=NHI)
+
+        # Instantiate
+        abssys = class_by_type(self.abs_type).from_dict(self._dict[abssys_name],
+                                                        coord=self.coords[idx],
+                                                        **kwargs)
         # Fill
         if len(self._abs_sys) == 0:
             self.init_abs_sys()
@@ -467,7 +467,8 @@ class IGMSurvey(object):
             raise ValueError("Not sure how to load the ions")
 
     # Get ions
-    def ions(self, Zion, Ej=0., skip_null=False):
+
+    def ions(self, Zion, Ej=0., skip_null=True, pad_with_nulls=False):
         """ Generate a Table of columns and so on
         Restrict to those systems where flg_clm > 0
 
@@ -478,13 +479,16 @@ class IGMSurvey(object):
         Ej : float [1/cm]
            Energy of the lower level (0. is resonance)
         skip_null : boolean (False)
-           Skip systems without an entry, else pad with zeros 
+           Skip systems without an entry, else pad with zeros
+        pad_with_nulls : bool, optional
+           Pad missing/null systems with empty values.  A bit risky
 
         Returns
         -------
         tbl : MaskedTable of values for the Survey
           Systems without the ion have rows masked
         """
+        from linetools.abund.ions import ion_to_name
         if self._abs_sys[0]._ionN is None:
             raise IOError("ionN tables are not set.  Use fill_ionN")
 
@@ -495,19 +499,40 @@ class IGMSurvey(object):
             if len(abs_sys._ionN) == 0:
                 names.append('MASK_ME')
                 tbls.append(None)
-            #
+                continue
+            # Parse
             mt = (abs_sys._ionN['Z'] == Zion[0]) & (abs_sys._ionN['ion'] == Zion[1]) & (
                 abs_sys._ionN['Ej'] == Ej)
             if np.any(mt):
+                if np.sum(mt) > 1:  # Generally should not get here
+                    warnings.warn("Two components for ion {} for system {}.  Taking the first one".format(Zion, abs_sys))
+                    mt[np.where(mt)[0][1:]] = False
                 tbls.append(abs_sys._ionN[mt])
                 names.append(abs_sys.name)
             else:
-                tbls.append(None)
-                names.append('MASK_ME')
+                if skip_null is True:  # This is probably dangerous
+                    continue
+                else:
+                    if pad_with_nulls:
+                        nulltbl = abs_sys._ionN[:0].copy()
+                        datatoadd = [abs_sys.coord.ra.deg,abs_sys.coord.dec.deg,
+                                     'none',Zion[0],Zion[1],Ej,
+                                     abs_sys.limits.vmin.value,
+                                     abs_sys.limits.vmax.value,
+                                     ion_to_name(Zion),0,0,0,'','none',abs_sys.zabs]
+                        nulltbl['ion_name'].dtype = '<U6'
+                        nulltbl.add_row(datatoadd)
+                        tbls.append(nulltbl)
+                        names.append(abs_sys.name)
+                    else:
+                        tbls.append(None)
+                        names.append('MASK_ME')
+
         # Fill in the bad ones
         names = np.array(names)
         idx = np.where(names != 'MASK_ME')[0]
         if len(idx) == 0:
+            warnings.warn("There were no entries matching your input Ion={}".format(Zion))
             return None
         bad = np.where(names == 'MASK_ME')[0]
         for ibad in bad:

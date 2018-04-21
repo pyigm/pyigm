@@ -356,6 +356,8 @@ class COSHalos(CGMAbsSurvey):
         if empty:
             self.cgm_abs = []
         # Load
+        self.load_tarball(tfile, llist=llist, build_sys=True)
+        '''
         tar = tarfile.open(tfile)
         for kk, member in enumerate(tar.getmembers()):
             if '.' not in member.name:
@@ -373,6 +375,7 @@ class COSHalos(CGMAbsSurvey):
                                          linelist=llist, **kwargs)
             self.cgm_abs.append(cgmsys)
         tar.close()
+        '''
         # Werk+14
         if ('Halos' in self.fits_path) and (self.werk14_cldy is not None):
                 self.load_werk14()
@@ -397,8 +400,16 @@ class COSHalos(CGMAbsSurvey):
         mkeys.remove('right_edge_bins')
         mkeys = np.array(mkeys)
 
+        def init_as_none(cga):
+            cga.igm_sys.metallicity = None
+            cga.igm_sys.NHIPDF = None
+            cga.igm_sys.density = None
+
         # Loop
         for cgm_abs in self.cgm_abs:
+            # Init
+            init_as_none(cgm_abs)
+            # Truncating
             if '0943+0531_227_19' in cgm_abs.name:
                 print('Not including 0943+0531_227_19'.format(cgm_abs.name))
                 print('See Prochaska+17 for details')
@@ -415,7 +426,16 @@ class COSHalos(CGMAbsSurvey):
                                          fh5['met'][mkeys[mt][0]])
             cgm_abs.igm_sys.metallicity.inputs = {}
             for key in fh5['inputs'][cgm_abs.name]:
+                # Warning the inputs here are goofy hdf5 bytes..
                 cgm_abs.igm_sys.metallicity.inputs[key] = fh5['inputs'][cgm_abs.name][key].value
+
+            # Check mtl quality
+            qual = mtl_quality(cgm_abs)
+            if qual <= 0:
+                # Back to None
+                init_as_none(cgm_abs)
+                continue
+
             # NHI
             cgm_abs.igm_sys.NHIPDF = GenericPDF(fh5['col']['left_edge_bins']+
                                                  fh5['col']['left_edge_bins'].attrs['BINSIZE']/2.,
@@ -901,3 +921,36 @@ class COSDwarfs(COSHalos):
             self.cgm_abs.append(cgmsys)
         tar.close()
 
+
+def mtl_quality(cgm_abs, verbose=True):
+    """ Assess the quality of the metallicity measurement for future analysis
+    Taken from the Patchup analysis
+
+    Parameters
+    ----------
+    cgmabs
+
+    Returns
+    -------
+    qual : int
+      -1 == No measurement at all
+      0  == Only limits to the ions
+      1  == Only one non-limit
+      #  == Two or more (number is the number)
+
+    """
+    try:
+        flgs = cgm_abs.igm_sys.metallicity.inputs['data'][:, 3].astype(int)
+    except IndexError:
+        if verbose:
+            print('No constraint for {:s}'.format(cgm_abs.name))
+            print('Skipping')
+        return -1
+    indices = np.where(flgs != -1)[0]
+    if len(indices) == 0:
+        if verbose:
+            print('No detection for {:s}'.format(cgm_abs.name))
+            print('Skipping')
+        return 0
+    else:
+        return len(indices)

@@ -156,7 +156,7 @@ class CGMAbsSys(object):
         if self.galaxy.z is None:
             raise IOError('Galaxy redshift *must* be specified')
         if not isinstance(igm_sys, IGMSystem):
-            raise IOError('CGMAbsSys instantiated with an IGMSystem')
+                raise IOError('CGMAbsSys instantiated with an IGMSystem')
         self.igm_sys = igm_sys
 
         # Calculate rho
@@ -187,6 +187,21 @@ class CGMAbsSys(object):
                 int(np.round(self.ang_sep.to('arcsec').value)))
         else:
             self.name = name
+
+    def copy(self):
+        """Make a copy of the system
+
+        Returns
+        -------
+        newsys : CGMAbsSys
+            Copy of current system
+        """
+        newsys = CGMAbsSys(self.galaxy,self.igm_sys.copy(),name=self.name)
+        newsys.cosmo = self.cosmo
+        newsys.rho = self.rho
+        newsys.ang_sep = self.ang_sep
+        newsys.PA = self.PA
+        return newsys
 
     def to_dict(self):
         """ Convert the system to a JSON-ready dict for output
@@ -343,8 +358,12 @@ class CGMAbsSys(object):
                         lines2plot.append(complines[compnames == strong['name']])
                     else:  # Multiple lines covered
                         complines = np.array(complines) # For the indexing
-                        tokeep = [complines[compnames == sn][0] for sn in strong['name']]
-                        lines2plot.extend(tokeep)
+                        try:
+                            tokeep = [complines[compnames == sn][0] for sn in strong['name']]
+                            lines2plot.extend(tokeep)
+                        except:
+                            warnings.warn('{} covered by spectra but not in'
+                                          'components list'.format(sn))
         else:
             lines2plot = to_plot
 

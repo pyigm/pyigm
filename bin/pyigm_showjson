@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+#
+# See top-level LICENSE file for Copyright information
+#
+# -*- coding: utf-8 -*-
+
+
+"""
+Wrapper for the pyigm_showjson script
+"""
+
+import pyigm.scripts.pyigm_showjson as pyigm_showjson
+
+if __name__ == '__main__':
+    args = pyigm_showjson.parser()
+    pyigm_showjson.main(args)

@@ -1,138 +1,86 @@
 #!/usr/bin/env python
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
+from __future__ import absolute_import, division, print_function
+#
+# Standard imports
+#
+import glob, os
+#
+# setuptools' sdist command ignores MANIFEST.in
+#
+#from distutils.command.sdist import sdist as DistutilsSdist
+from setuptools import setup, find_packages
+#
+# DESI support code.
+#
+#from desiutil.setup import DesiTest, DesiVersion, get_version
+#
+# Begin setup
+#
+setup_keywords = dict()
+#
+# THESE SETTINGS NEED TO BE CHANGED FOR EVERY PRODUCT.
+#
+setup_keywords['name'] = 'pyigm'
+setup_keywords['description'] = 'IGM/CGM and more!'
+setup_keywords['author'] = 'IGM Community'
+setup_keywords['author_email'] = 'xavier@ucolick.org'
+setup_keywords['license'] = 'BSD'
+setup_keywords['url'] = 'https://github.com/pyigm/pyigm'
+#
+# END OF SETTINGS THAT NEED TO BE CHANGED.
+#
+setup_keywords['version'] = '0.1.dev0' #get_version(setup_keywords['name'])
+#
+# Use README.rst as long_description.
+#
+setup_keywords['long_description'] = ''
+if os.path.exists('README.md'):
+    with open('README.md') as readme:
+        setup_keywords['long_description'] = readme.read()
+#
+# Set other keywords for the setup function.  These are automated, & should
+# be left alone unless you are an expert.
+#
+# Treat everything in bin/ except *.rst as a script to be installed.
+#
+if os.path.isdir('bin'):
+    setup_keywords['scripts'] = [fname for fname in glob.glob(os.path.join('bin', '*'))
+        if not os.path.basename(fname).endswith('.rst')]
+setup_keywords['provides'] = [setup_keywords['name']]
+setup_keywords['requires'] = ['Python (>2.7.0)']
+# setup_keywords['install_requires'] = ['Python (>2.7.0)']
+setup_keywords['zip_safe'] = False
+#setup_keywords['use_2to3'] = True
+setup_keywords['packages'] = find_packages()
+#setup_keywords['package_dir'] = {'':'py'}
+#setup_keywords['cmdclass'] = {'version': DesiVersion, 'test': DesiTest, 'sdist': DistutilsSdist}
+#etup_keywords['test_suite']='{name}.tests.{name}_test_suite.{name}_test_suite'.format(**setup_keywords)
+setup_keywords['setup_requires']=['pytest-runner']
+setup_keywords['tests_require']=['pytest']
 
-import glob
-import os
-import sys
+# Autogenerate command-line scripts.
+#
+# setup_keywords['entry_points'] = {'console_scripts':['desiInstall = desiutil.install.main:main']}
 
-import ah_bootstrap
-from setuptools import setup
+#
+# Add internal data directories.
+#
 
-#A dirty hack to get around some early import/configurations ambiguities
-if sys.version_info[0] >= 3:
-    import builtins
-else:
-    import __builtin__ as builtins
-builtins._ASTROPY_SETUP_ = True
+data_files = []
 
-from astropy_helpers.setup_helpers import (
-    register_commands, adjust_compiler, get_debug_option, get_package_info)
-from astropy_helpers.git_helpers import get_git_devstr
-from astropy_helpers.version_helpers import generate_version_py
+# walk through the data directory, adding all files
+data_generator = os.walk('pyigm/data')
+for path, directories, files in data_generator:
+    for f in files:
+        data_path = '/'.join(path.split('/')[1:])
+        data_files.append(data_path + '/' + f)
+setup_keywords['package_data'] = {'pyigm': data_files,
+                                  '': ['*.rst', '*.txt', '*.yaml']}
+setup_keywords['include_package_data'] = True
 
-# Get some values from the setup.cfg
-try:
-    from ConfigParser import ConfigParser
-except ImportError:
-    from configparser import ConfigParser
-conf = ConfigParser()
-conf.read(['setup.cfg'])
-metadata = dict(conf.items('metadata'))
+#
+# Run setup command.
+#
+setup(**setup_keywords)
 
-PACKAGENAME = metadata.get('package_name', 'package')
-DESCRIPTION = metadata.get('description', 'Astropy affiliated package')
-AUTHOR = metadata.get('author', '')
-AUTHOR_EMAIL = metadata.get('author_email', '')
-LICENSE = metadata.get('license', 'unknown')
-URL = metadata.get('url', 'http://astropy.org')
-
-# Get the long description from the package's docstring
-__import__(PACKAGENAME)
-package = sys.modules[PACKAGENAME]
-LONG_DESCRIPTION = package.__doc__
-
-# Store the package name in a built-in variable so it's easy
-# to get from other parts of the setup infrastructure
-builtins._ASTROPY_PACKAGE_NAME_ = PACKAGENAME
-
-# VERSION should be PEP386 compatible (http://www.python.org/dev/peps/pep-0386)
-VERSION = '0.1.dev'
-
-# Indicates if this version is a release version
-RELEASE = 'dev' not in VERSION
-
-if not RELEASE:
-    VERSION += get_git_devstr(False)
-
-# Populate the dict of setup command overrides; this should be done before
-# invoking any other functionality from distutils since it can potentially
-# modify distutils' behavior.
-cmdclassd = register_commands(PACKAGENAME, VERSION, RELEASE)
-
-# Adjust the compiler in case the default on this platform is to use a
-# broken one.
-adjust_compiler(PACKAGENAME)
-
-# Freeze build information in version.py
-generate_version_py(PACKAGENAME, VERSION, RELEASE,
-                    get_debug_option(PACKAGENAME))
-
-# Treat everything in scripts except README.rst as a script to be installed
-scripts = [fname for fname in glob.glob(os.path.join('scripts', '*'))
-           if os.path.basename(fname) != 'README.rst']
-
-
-# Get configuration information from all of the various subpackages.
-# See the docstring for setup_helpers.update_package_files for more
-# details.
-package_info = get_package_info()
-
-# Add the project-global data
-package_info['package_data'].setdefault(PACKAGENAME, [])
-
-# Need a recursive glob to find all package data files if there are
-# subdirectories (copied from specutils)
-import fnmatch
-def recursive_glob(basedir, pattern):
-    matches = []
-    for root, dirnames, filenames in os.walk(basedir):
-        for filename in fnmatch.filter(filenames, pattern):
-            matches.append(os.path.join(root, filename))
-    return matches
-
-data_files = recursive_glob(os.path.join(PACKAGENAME, 'data'), '*')
-data_files = [f[len(PACKAGENAME)+1:] for f in data_files]
-package_info['package_data'][PACKAGENAME] += data_files
-
-# Define entry points for command-line scripts
-entry_points = {}
-entry_points['console_scripts'] = [
-    'pyigm_mtlmcmc = pyigm.scripts.pyigm_mtlmcmc:main',
-    'pyigm_igmguesses = pyigm.scripts.pyigm_igmguesses:main',
-    'pyigm_fitdla = pyigm.scripts.pyigm_fitdla:main',
-    'pyigm_fitlls = pyigm.scripts.pyigm_fitlls:main',
-    'pyigm_showjson = pyigm.scripts.pyigm_showjson:main',
-    'pyigm_mkigmsys = pyigm.scripts.pyigm_mkigmsys:main',
-#    'astropy-package-template-example = packagename.example_mod:main',
-]
-
-# Include all .c files, recursively, including those generated by
-# Cython, since we can not do this in MANIFEST.in with a "dynamic"
-# directory name.
-c_files = []
-for root, dirs, files in os.walk(PACKAGENAME):
-    for filename in files:
-        if filename.endswith('.c'):
-            c_files.append(
-                os.path.join(
-                    os.path.relpath(root, PACKAGENAME), filename))
-package_info['package_data'][PACKAGENAME].extend(c_files)
-
-setup(name=PACKAGENAME,
-      version=VERSION,
-      description=DESCRIPTION,
-      scripts=scripts,
-      requires=['astropy'],
-      install_requires=['astropy'],
-      provides=[PACKAGENAME],
-      author=AUTHOR,
-      author_email=AUTHOR_EMAIL,
-      license=LICENSE,
-      url=URL,
-      long_description=LONG_DESCRIPTION,
-      cmdclass=cmdclassd,
-      zip_safe=False,
-      use_2to3=False,
-      entry_points=entry_points,
-      **package_info
-)

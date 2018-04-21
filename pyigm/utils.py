@@ -55,7 +55,7 @@ def calc_rho(coords1, coords2, z2, cosmo, ang_sep=None, correct_lowz=True,
     if ang_sep is None:
         ang_sep = coords1.separation(coords2).to('arcsec')
     # Init rho
-    rho = np.zeros_like(z2) * u.kpc
+    rho = np.zeros_like(z2, dtype=np.float64) * u.kpc
     # Handle cases where object's distance needs correction from peculiar velocities
     # This is especially important at very low redshifts
     lowz = z2 < z_low
@@ -411,3 +411,79 @@ def get_components(obj,ion,zrange=None):
         complist = [comp for comp in obj._components if
                  ((comp.Zion==Zion)&(comp.zcomp>zrange[0])&(comp.zcomp<zrange))]
     return complist
+
+def confintervals(hits,totals,sig=1,confidence=None):
+    """Wrapper for confinterval() function to accept arrays of hits and totals
+    
+    Parameters
+    ----------
+    hits : list or array
+        Numbers of instances
+    totals : list or array
+        Total numbers of instances possible
+    sig : int,optional
+        Confidence level in multiples of sigma
+    confidence : float, optional
+        Actual confidence level, e.g., 0.997; if provided, sig is ignored
+
+    Returns
+    -------
+    fracs : list of floats
+        Fractions of hits/totals
+    lolims : list of floats 
+        Lower bounds of confidence interval
+    uplims : list of floats
+        Upper bounds of confidence interval
+    """
+    fracs=np.zeros(len(hits)) ; uplims=np.zeros(len(hits)) ; lolims=np.zeros(len(hits))
+    for i,tt in enumerate(totals):
+        fracs[i],lolims[i],uplims[i]=confinterval(hits[i],totals[i],sig,confidence)
+    return fracs,lolims,uplims
+
+def confinterval(hits,total,sig=1,confidence=None):
+    """ Calculate Wilson confidence intervals
+    Parameters
+    ----------
+    hits : int
+        Number of instances
+    total : int
+        Total number of instances possible
+    sig : int,optional
+        Confidence level in multiples of sigma
+    confidence : float, optional
+        Actual confidence level, e.g., 0.997; if provided, sig is ignored
+
+    Returns
+    -------
+    frac : floats
+        Fraction of hits
+    lolim : list of floats
+        Lower bound of confidence interval
+    uplim : list of floats
+        Upper bound of confidence interval
+    """
+    from astropy.stats.funcs import binom_conf_interval as conf
+
+    # Get confidence level
+    if confidence is None:
+        cl = conflevel(sig)
+    else:
+        cl = confidence
+
+    # Calculate
+    lowlim,uplim=conf(hits,total,conf=cl)
+    frac = float(hits)/total
+
+    return frac,lowlim,uplim
+
+def conflevel(sigma):
+    """Return confidence level assuming Gaussian distribution
+
+    Parameters
+    ----------
+    sigma: float
+        Number of standard deviations from mean within which to calculate confidence level
+    """
+    from scipy.stats import norm
+    cl = norm.cdf(sigma)
+    return cl
