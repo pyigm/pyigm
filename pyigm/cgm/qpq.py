@@ -397,7 +397,7 @@ class QPQ7(CGMAbsSurvey):
 
             self.cgm_abs.append(cgabs)
 
-
+   
 
 
 
