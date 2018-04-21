@@ -33,7 +33,7 @@ def load_qpq(v):
     Parameters
     ----------
     v : int
-      dataset (6,7,8)
+      dataset (5,6,7,8)
 
     Returns
     -------
@@ -56,8 +56,14 @@ def load_qpq(v):
         q6file = resource_filename('pyigm', 'data/CGM/QPQ/qpq6_final_cut_2015nov16.fits')
         qpqdata = Table.read(q6file)
 
-    if v not in [6,7,8,8.5]:
-        print('Please choose 6, 7, 8, or 8.5 for QPQ6, QPQ7, QPQ8, additional information about QPQ8')
+    if v == 5:
+        q7file = resource_filename('pyigm', 'data/CGM/QPQ/qpq7_pairs.fits.gz')
+        qpqdata7 = Table.read(q7file)
+        ii = np.where(qpqdata7['R_PHYS'] < 300.)
+        qpqdata = qpqdata7[ii[0]]
+
+    if v not in [5,6,7,8,8.5]:
+        print('Please choose 5, 6, 7, 8, or 8.5 for QPQ6, QPQ7, QPQ8, additional information about QPQ8')
         return
 
     return qpqdata

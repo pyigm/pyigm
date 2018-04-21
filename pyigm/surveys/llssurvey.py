@@ -250,7 +250,6 @@ class LLSSurvey(IGMSurvey):
 
         # Set data path and metallicity
         spath = pyigm_path+"/data/LLS/HD-LLS/Spectra/"
-        lls_survey.build_all_abs_sys()
         for kk in range(lls_survey.nsys):
             lls = lls_survey.abs_sys(kk)
             lls.spec_path = spath
