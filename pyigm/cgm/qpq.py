@@ -228,7 +228,7 @@ class QPQ6(CGMAbsSurvey):
           Path to the data
         """
 
-    def __init__(self, cdir=None, load=True, **kwargs):
+    def __init__(self, cdir=None, nmax=None, load=True, **kwargs):
         CGMAbsSurvey.__init__(self)
         self.survey = 'QPQ6'
         self.ref = 'Prochaska+13'
@@ -240,6 +240,8 @@ class QPQ6(CGMAbsSurvey):
         #self.data_file = pyigm.__path__[0] + '/data/CGM/QPQ/'+'qpq6_final_cut_2015nov16.fits'
         self.data_file = self.cdir + 'qpq6_final_cut_2015nov16.fits'
 
+        self.nmax = nmax
+
         # Init?
         if load:
             self.load_data(**kwargs)
@@ -250,7 +252,11 @@ class QPQ6(CGMAbsSurvey):
         #q6file = resource_filename('pyigm', 'data/CGM/QPQ/qpq6_final_cut_2015nov16.fits')
         q6file = self.data_file
         qpqdata = Table.read(q6file)
-        nmax = len(qpqdata)   # max number of QSOs
+        if self.nmax is not None:
+            nmax = self.nmax
+        else:
+            nmax = len(qpqdata)
+        #nmax = len(qpqdata)   # max number of QSOs
         for i in range(nmax):
             # Instantiate the galaxy
             gal = Galaxy((qpqdata['RAD'][i],qpqdata['DECD'][i]), z=qpqdata['Z_FG'][i])
@@ -314,7 +320,7 @@ class QPQ7(CGMAbsSurvey):
           Path to the data
         """
 
-    def __init__(self, cdir=None, load=True, **kwargs):
+    def __init__(self, cdir=None, nmax=None, load=True, **kwargs):
         CGMAbsSurvey.__init__(self)
         self.survey = 'QPQ7'
         self.ref = 'Prochaska+14'
@@ -325,6 +331,7 @@ class QPQ7(CGMAbsSurvey):
             self.cdir = cdir
         #self.data_file = pyigm.__path__[0] + '/data/CGM/QPQ/'+'qpq7_pairs.fits.gz'
         self.data_file = self.cdir + 'qpq7_pairs.fits.gz'
+        self.nmax = nmax
 
         # Init?
         if load:
@@ -336,7 +343,11 @@ class QPQ7(CGMAbsSurvey):
         #q7file = resource_filename('pyigm', 'data/CGM/QPQ/qpq7_pairs.fits.gz')
         q7file = self.data_file
         qpqdata = Table.read(q7file)
-        nmax = len(qpqdata)   # max number of QSOs
+        if self.nmax is not None:
+            nmax = self.nmax
+        else:
+            nmax = len(qpqdata)
+        #nmax = len(qpqdata)   # max number of QSOs
         for i in range(nmax):
             # Instantiate the galaxy
             gal = Galaxy((qpqdata['RAD'][i],qpqdata['DECD'][i]), z=qpqdata['Z_FG'][i])
@@ -513,7 +524,7 @@ class QPQ8(CGMAbsSurvey):
           Path to the data
         """
 
-    def __init__(self, cdir=None, load=True, **kwargs):
+    def __init__(self, cdir=None, nmax=None, load=True, **kwargs):
         CGMAbsSurvey.__init__(self)
         self.survey = 'QPQ8'
         self.ref = 'Lau+16'
@@ -525,6 +536,8 @@ class QPQ8(CGMAbsSurvey):
         #self.data_file = pyigm.__path__[0] + '/data/CGM/QPQ/'+'qpq8_pairs.fits'
         self.data_file = self.cdir +'qpq8_all_measured.dat'
 
+        self.nmax = nmax
+
         # Init?
         if load:
             self.load_data(**kwargs)
@@ -534,7 +547,11 @@ class QPQ8(CGMAbsSurvey):
         #q8file = resource_filename('pyigm', 'data/CGM/QPQ/qpq8_all_measured.dat')
         q8file = self.data_file
         qpqdata = Table.read(q8file,format='ascii')
-        nmax = len(qpqdata)   # max number of QSOs
+        #nmax = len(qpqdata)   # max number of QSOs
+        if self.nmax is not None:
+            nmax = self.nmax
+        else:
+            nmax = len(qpqdata)
         q8filecoord = resource_filename('pyigm', 'data/CGM/QPQ/qpq8_pairs.fits')
         qpqdatacoord = Table.read(q8filecoord)
 
