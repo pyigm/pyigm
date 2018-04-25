@@ -16,7 +16,7 @@ def test_qpq():
     assert len(qpq5.cgm_abs) == 73
     assert len(qpq6.cgm_abs) == 646
     assert len(qpq7.cgm_abs) == 427
-
+ 
     #assert len(qpq8.cgm_abs) == 35   # it is 14. Need to count all components
 
     # EW : QPQ6
