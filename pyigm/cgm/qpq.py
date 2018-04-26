@@ -458,22 +458,27 @@ class QPQ8(CGMAbsSurvey):
 
             qpqdata = Table.read(q8file,format='ascii')
             #nmax = len(qpqdata)   # max number of QSOs
+            q8filecoord = resource_filename('pyigm', 'data/CGM/QPQ/qpq8_pairs.fits')
+            qpqdatacoord = Table.read(q8filecoord)
             if self.nmax is not None:
                 nmax = self.nmax
             else:
-                nmax = len(qpqdata)
-            q8filecoord = resource_filename('pyigm', 'data/CGM/QPQ/qpq8_pairs.fits')
-            qpqdatacoord = Table.read(q8filecoord)
+                nmax = len(qpqdatacoord) #(qpqdata)
 
             # match names with qpqdatacoord
             qnames = []
             for i in range(len(qpqdatacoord)):
                 qname = qpqdatacoord['QSO'][i].strip()
                 qnames.append(qname[-10:])
+            qnames2 = []
+            for i in range(len(qpqdata)):
+                qname = qpqdata['Pair'][i]
+                qnames2.append(qname)
 
-            for i in range(nmax):
+
+            for j in range(nmax):   # i,j
                 # match names with qpqdatacoord
-                j = np.where(np.asarray(qnames) == qpqdata['Pair'][i])[0][0]
+                i = np.where(np.asarray(qnames2) == qnames[j])[0]
                 # Instantiate the galaxy
                 gal = Galaxy((qpqdatacoord['RAD'][j],qpqdatacoord['DECD'][j]), z=qpqdatacoord['Z_FG'][j])
                 gal.L_BOL = qpqdatacoord['L_BOL'][j]
@@ -491,7 +496,7 @@ class QPQ8(CGMAbsSurvey):
                 igm_sys.sig_NHI = [qpqdata['HIcolhierr'][i],qpqdata['HIcolloerr'][i]]
                 igm_sys.s2n_lya = qpqdatacoord['S2N_LYA'][j]
 
-                iname = qpqdata['Pair'][i]+'_'+qpqdata['subsys'][i]
+                iname = qpqdata['Pair'][i][0] #+'_'+qpqdata['subsys'][i]
                 # Instantiate
                 rho = qpqdatacoord['R_PHYS'][j]*u.kpc
                 cgabs = CGMAbsSys(gal, igm_sys, name=iname, rho = rho, **kwargs)
@@ -507,36 +512,58 @@ class QPQ8(CGMAbsSurvey):
                          ['SiIV 1393','SiIV 1402'],['FeII 1608','FeII 2344','FeII 2374','FeII 2382','FeII 2586','FeII 2600'],
                          ['FeIII 1122']]
 
-                for icmp in range(len(lines)):
-                    abslines = []
-                    for ii in range(len(lines[icmp])):
-                        wave0 = float(lines[icmp][ii].split(' ')[1])
-                        ewstr = str(lines[icmp][ii].split(' ')[1]) + 'EW'
-                        ewerrstr = str(lines[icmp][ii].split(' ')[1]) + 'EWerr'
-                        if ewstr == '1808EW':
-                            ewstr = '1808E'
-                        if ewerrstr == '1122EWerr':
-                            ewerrstr = '122EWerr'
-                        if qpqdata[ewstr][i] != '/':
-                            iline = AbsLine(wave0 * u.AA, closest=True, z=igm_sys.zabs)
-                            ## EW
-                            iline.attrib['EW'] = float(qpqdata[ewstr][i]) * u.AA  # Rest EW
-                            iline.attrib['sig_EW'] = float(qpqdata[ewerrstr][i]) * u.AA
-                            flgew = 1
-                            if iline.attrib['EW'] < 3.*iline.attrib['sig_EW']:
-                                flgew=3
-                            iline.attrib['flag_EW'] = flgew
-                            ## column densities
-                            colstr = str(lines[icmp][ii].split(' ')[0]) + 'col'
-                            colerrstr = str(lines[icmp][ii].split(' ')[0]) + 'colerr'
-                            iline.attrib['logN'] = qpqdata[colstr][i]
-                            iline.attrib['sig_logN'] = qpqdata[colerrstr][i]
-                            ##
-                            iline.attrib['coord'] = igm_sys.coord
-                            abslines.append(iline)
-                    if len(abslines) > 0:
-                        comp = AbsComponent.from_abslines(abslines, chk_vel=False)
-                        cgabs.igm_sys.add_component(comp)
+                for kk in i:
+
+                    for icmp in range(len(lines)):
+                        abslines = []
+                        for ii in range(len(lines[icmp])):
+                            wave0 = float(lines[icmp][ii].split(' ')[1])
+                            ewstr = str(lines[icmp][ii].split(' ')[1]) + 'EW'
+                            ewerrstr = str(lines[icmp][ii].split(' ')[1]) + 'EWerr'
+                            if ewstr == '1808EW':
+                                ewstr = '1808E'
+                            if ewerrstr == '1122EWerr':
+                                ewerrstr = '122EWerr'
+                            if qpqdata[ewstr][kk] != '/':
+                                # find z
+                                v0 = 0.5*(qpqdata['v_lobound'][kk]+ qpqdata['v_upbound'][kk]) * u.km / u.s
+                                dv = v0
+                                zref = igm_sys.zabs
+                                z_cmp = ltu.z_from_dv(dv, zref)
+
+                                ## vlim
+                                v1 = qpqdata['v_lobound'][kk] * u.km / u.s
+                                z1 = ltu.z_from_dv(v1, zref)
+                                v1_cmp = ltu.dv_from_z(z1,z_cmp)
+
+                                v2 = qpqdata['v_upbound'][kk] * u.km / u.s
+                                z2 = ltu.z_from_dv(v2, zref)
+                                v2_cmp = ltu.dv_from_z(z2, z_cmp)
+
+                                # iline
+                                iline = AbsLine(wave0 * u.AA, closest=True, z=z_cmp)
+                                iline.attrib['coord'] = igm_sys.coord
+
+                                ## EW
+                                iline.attrib['EW'] = float(qpqdata[ewstr][kk]) * u.AA  # Rest EW
+                                iline.attrib['sig_EW'] = float(qpqdata[ewerrstr][kk]) * u.AA
+                                flgew = 1
+                                if iline.attrib['EW'] < 3.*iline.attrib['sig_EW']:
+                                    flgew=3
+                                iline.attrib['flag_EW'] = flgew
+
+                                ## column densities
+                                colstr = str(lines[icmp][ii].split(' ')[0]) + 'col'
+                                colerrstr = str(lines[icmp][ii].split(' ')[0]) + 'colerr'
+                                iline.attrib['logN'] = qpqdata[colstr][kk]
+                                iline.attrib['sig_logN'] = qpqdata[colerrstr][kk]
+
+                                abslines.append(iline)
+
+                        if len(abslines) > 0:
+                            comp = AbsComponent.from_abslines(abslines, chk_vel=False)
+                            comp.limits._vlim = [v1_cmp.value, v2_cmp.value] * u.km / u.s
+                            cgabs.igm_sys.add_component(comp)
 
 
                 # add ang_sep
@@ -544,6 +571,5 @@ class QPQ8(CGMAbsSurvey):
                 bgcoord = SkyCoord(ra=qpqdatacoord['RAD_BG'][j], dec=qpqdatacoord['DECD_BG'][j], unit='deg')
                 cgabs.ang_sep = qsocoord.separation(bgcoord).to('arcsec')
 
-                cgabs.vlim = [qpqdata['v_lobound'][i],qpqdata['v_upbound'][i]]*u.km/u.s
-
                 self.cgm_abs.append(cgabs)
+
