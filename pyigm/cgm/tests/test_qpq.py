@@ -5,7 +5,7 @@ Module to run tests on pyigm.cgm.qpq
 
 import numpy as np
 from pyigm.cgm.qpq import QPQ5,QPQ6,QPQ7,QPQ8
-import pdb
+import pdb 
 
 def test_qpq():
     # Load classes
