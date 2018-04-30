@@ -18,7 +18,7 @@ class Survey2D2PCF(object):
     Parameters
     ----------
     field : ClusteringField object
-      The field which initializes sets the binning.  It also
+      The field which initializes this object sets the binning.  It also
       sets whether galaxy-galaxy, absorber-absorber, and galaxy-absorber analysis is on
       So, load a good one first!
     """
@@ -75,9 +75,9 @@ class Survey2D2PCF(object):
 
         """
         # Check edges
-        if not np.isclose(new_field.rbinedges, self.rbinedges):
+        if not np.all(np.isclose(new_field.rbinedges, self.rbinedges)):
             raise IOError("rbinedges of new field does not match Survey!!")
-        if not np.isclose(new_field.tbinedges, self.tbinedges):
+        if not np.all(np.isclose(new_field.tbinedges, self.tbinedges)):
             raise IOError("tbinedges of new field does not match Survey!!")
 
         #f = copy.deepcopy(field)
@@ -255,4 +255,17 @@ class Survey2D2PCF(object):
             self.nRaRa = None
             self.nDaRa = None
             self.nDgRg = None
+
+    # Output
+    def __repr__(self):
+        rstr = '<{:s}: nfield={:d} gal_anly={:s} abs_analy={:s} \n'.format(
+            self.__class__.__name__,
+            len(self.fields),
+            str(self.gal_anly),
+            str(self.abs_anly))
+
+        for field in self.fields:
+            rstr += 'field at ({},{}) \n'.format(field.coord.ra.value, field.coord.dec.value)
+        rstr += '>'
+        return rstr
 
