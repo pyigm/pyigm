@@ -24,9 +24,9 @@ def auto_pairs_rt(X, Y, Z, rbinedges, tbinedges, wrap=True, track_time=False):
 
     npair_rt = np.zeros((len(rbinedges) - 1, len(tbinedges) - 1), float)
 
-    for i in xrange(len(x) - 1):
+    for i in range(len(x) - 1):
         # radial separation
-        if wrapped:
+        if wrap:
             rsep = np.abs(x[i+1:] - x[i])
         else:
             rsep = x[i+1:] - x[i]
@@ -38,7 +38,7 @@ def auto_pairs_rt(X, Y, Z, rbinedges, tbinedges, wrap=True, track_time=False):
         npair_rt += vals
 
     end=time.clock()
-    print '\t Time elapsed = %s seconds.'%(end-start)
+    print('\t Time elapsed = {} seconds.'.format(end-start))
     return npair_rt
 
 
@@ -72,7 +72,7 @@ def cross_pairs_rt(x1, y1, z1, x2, y2, z2, rbinedges, tbinedges,wrapped=True):
         y2=auxy
         z2=auxz
 
-    for i in xrange(len(x1) - 1):
+    for i in range(len(x1) - 1):
         # radial separation
         if wrapped:
             rsep = np.abs(x1[i] - x2)
@@ -86,7 +86,7 @@ def cross_pairs_rt(x1, y1, z1, x2, y2, z2, rbinedges, tbinedges,wrapped=True):
         npair_rt += vals
 
     end=time.clock()
-    print '\t Time elapsed = %s seconds.'%(end-start)
+    print('\t Time elapsed = {} seconds.'.format(end-start))
     return npair_rt
 
 
@@ -195,7 +195,7 @@ def W3(DD,RR,DR,RD,Ndd=None,Nrr=None,Ndr=None,Nrd=None):
     #print 'integral constraint: %s'%C
     W3 = (1 + C)*(1+W3) - 1
     if np.fabs(C)>1:
-        print 'integral constraint: %s'%C
+        print('integral constraint: {}'.format(C))
 
 
     #clean W3 and errors
@@ -248,9 +248,12 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.):
 
     Returns
     -------
+    galrand : np rec array
+      Copy of galreal, Nrand times
     """
-    from pyntejos.sampledist import RanDist
-    from pyntejos.fit import InterpCubicSpline
+    from pyigm.clustering.randist import RanDist
+    #from pyntejos.fit import InterpCubicSpline
+    from scipy.interpolate import CubicSpline
     from scipy.ndimage import gaussian_filter as gf
 
     debug = 0
@@ -271,7 +274,8 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.):
     SPL = dict()
     aux_hist, _ = np.histogram(galreal.ZGAL, bins)
     VALS['all'] = gf(aux_hist.astype(float), smooth_scale)  # smooth the histogram
-    SPL['all'] = InterpCubicSpline(0.5 * (bins[:-1] + bins[1:]), VALS['all'].astype(float))
+    #SPL['all'] = InterpCubicSpline(0.5 * (bins[:-1] + bins[1:]), VALS['all'].astype(float))
+    SPL['all'] = CubicSpline(0.5 * (bins[:-1] + bins[1:]), VALS['all'].astype(float))
 
     delta_mag2 = delta_mag
     magbins = np.arange(17, 26, delta_mag2)
@@ -290,21 +294,23 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.):
 
         aux_hist, _ = np.histogram(galreal.ZGAL[cond], bins)
         VALS['{}'.format(mag)] = gf(aux_hist.astype(float), smooth_scale)  # smooth the histogram
-        SPL['{}'.format(mag)] = InterpCubicSpline(0.5 * (bins[:-1] + bins[1:]), VALS['{}'.format(mag)].astype(float))
+        SPL['{}'.format(mag)] = CubicSpline(0.5 * (bins[:-1] + bins[1:]), VALS['{}'.format(mag)].astype(float))
         vals = VALS['{}'.format(mag)]
         spl = SPL['{}'.format(mag)]
         rand_z = RanDist(rvals, spl(rvals))
         if debug:
+            import matplotlib.pyplot as pl
             pl.plot(bins, spl(bins), '-', label='{}'.format(mag))
             pl.plot(bins[:-1], aux_hist, drawstyle='steps-mid')
             pl.xlim(0, 2)
             pl.legend()
             pl.show()
     if debug:
+        import matplotlib.pyplot as pl
         pl.legend()
         pl.show()
 
-    for i in xrange(len(galreal)):
+    for i in range(len(galreal)):
         if (galreal.MAG[i] > 90) or (galreal.MAG[i] < -90):  # no magnitude, use the whole distribution
             vals = VALS['all']
             spl = SPL['all']
@@ -314,8 +320,7 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.):
             vals = VALS['{}'.format(mag)]
             spl = SPL['{}'.format(mag)]
         if i % 1000 == 0:
-            print
-            '{}/{}'.format(i + 1, len(galreal))
+            print('{}/{}'.format(i + 1, len(galreal)))
 
         dist = np.array(spl(rvals))
         dist = np.where((rvals < zmin) | (rvals > zmax), 0, dist)  # get rid of redshifts beyond observed
