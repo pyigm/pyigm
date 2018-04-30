@@ -1,6 +1,7 @@
 """Utilities for xcorr calculations"""
 import time
 import numpy as np
+from scipy.ndimage import gaussian_filter as gf
 
 def auto_pairs_rt(X, Y, Z, rbinedges, tbinedges, wrap=True, track_time=False):
     """
@@ -328,3 +329,14 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.):
         zrand = rand_z.random(Nrand)
         galrand.ZGAL[i * Nrand:(i + 1) * Nrand] = zrand
     return galrand
+
+
+def collapse_along_LOS(DD, nbins=None, s=0):
+    """Sums pair counts over the first nbins along the sightline
+    dimension. Returns an array with the values for transverse bins. If
+    nbins is None then collapses the whole array."""
+    DD = gf(DD, s)
+    if nbins is None:
+        nbins = len(DD[0].T)
+    DD_1D = np.array([np.sum(DD.T[i][:nbins]) for i in range(len(DD[0]))])
+    return DD_1D

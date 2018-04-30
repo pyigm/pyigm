@@ -3,6 +3,7 @@
 from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
+from scipy.ndimage import gaussian_filter as gf
 
 from pyigm.field.igmfield import IgmGalaxyField
 from pyigm.clustering.xcorr_utils import random_gal, auto_pairs_rt, cross_pairs_rt
@@ -102,38 +103,43 @@ class ClusteringField(IgmGalaxyField):
             self.galrand = np.append(self.galrand, aux)
             self.galrand = np.rec.array(self.galrand)
 
-    def compute_auto_pairs(self, tbinedges, rbinedges, full=True):
+    def compute_pairs(self, tbinedges, rbinedges):
         """Computes relevant pairs"""
 
-        wrapped = self.wrapped
         self.tbinedges = tbinedges
         self.rbinedges = rbinedges
 
-        self.XYZ()
-        if self.proper:
-            self.XYZ_proper()
 
+        # Gal-gal only
         if self.galreal is not None:
-            self.DgDg = auto_pairs_rt(self.xg, self.yg, self.zg, rbinedges, tbinedges, wrapped=wrapped)
-            self.RgRg = auto_pairs_rt(self.xgr, self.ygr, self.zgr, rbinedges, tbinedges, wrapped=wrapped)
+            self.XYZ_gal()
+            if self.proper:
+                self.XYZ_proper()
+            self.DgDg = auto_pairs_rt(self.xg, self.yg, self.zg, rbinedges, tbinedges, wrap=self.wrapped)
+            self.RgRg = auto_pairs_rt(self.xgr, self.ygr, self.zgr, rbinedges, tbinedges, wrap=self.wrapped)
+            self.DgRg = cross_pairs_rt(self.xg, self.yg, self.zg, self.xgr, self.ygr, self.zgr, rbinedges, tbinedges,
+                                       wrapped=self.wrapped)
 
+        # Abs-abs only
         if self.absreal is not None:
-            self.DaDa = auto_pairs_rt(self.xa, self.ya, self.za, rbinedges, tbinedges, wrapped=wrapped)
-            self.RaRa = auto_pairs_rt(self.xar, self.yar, self.zar, rbinedges, tbinedges, wrapped=wrapped)
+            self.XYZ_abs()
+            if self.proper:
+                self.XYZ_proper()
+            self.DaDa = auto_pairs_rt(self.xa, self.ya, self.za, rbinedges, tbinedges, wrap=self.wrapped)
+            self.RaRa = auto_pairs_rt(self.xar, self.yar, self.zar, rbinedges, tbinedges, wrap=self.wrapped)
+            self.DaRa = cross_pairs_rt(self.xa, self.ya, self.za, self.xar, self.yar, self.zar, rbinedges, tbinedges,
+                                       wrapped=self.wrapped)
+
 
             '''
             self.DaDg = cross_pairs_rt(self.xa, self.ya, self.za, self.xg, self.yg, self.zg, rbinedges, tbinedges,
                                        wrapped=wrapped)
 
-            self.DgRg = cross_pairs_rt(self.xg, self.yg, self.zg, self.xgr, self.ygr, self.zgr, rbinedges, tbinedges,
-                                       wrapped=wrapped)
             self.DaRg = cross_pairs_rt(self.xa, self.ya, self.za, self.xgr, self.ygr, self.zgr, rbinedges, tbinedges,
                                        wrapped=wrapped)
             self.RaRg = cross_pairs_rt(self.xar, self.yar, self.zar, self.xgr, self.ygr, self.zgr, rbinedges, tbinedges,
                                        wrapped=wrapped)
             self.RaDg = cross_pairs_rt(self.xar, self.yar, self.zar, self.xg, self.yg, self.zg, rbinedges, tbinedges,
-                                       wrapped=wrapped)
-            self.DaRa = cross_pairs_rt(self.xa, self.ya, self.za, self.xar, self.yar, self.zar, rbinedges, tbinedges,
                                        wrapped=wrapped)
             '''
 
