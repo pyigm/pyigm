@@ -6,18 +6,23 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import numpy as np
 import pdb
 
+from pkg_resources import resource_filename
+
 from astropy import units as u
 from astropy.table import Table
 from astropy.coordinates import SkyCoord
 
 from linetools.spectralline import AbsLine
 from linetools.isgm.abscomponent import AbsComponent
+from linetools.lists.linelist import LineList
+from linetools import utils as ltu
 
 import pyigm
 from pyigm.field.galaxy import Galaxy
 from pyigm.abssys.igmsys import IGMSystem
 from pyigm.cgm.cgm import CGMAbsSys
 from pyigm.cgm.cgmsurvey import CGMAbsSurvey
+
 
 def p11():
     """ Ingest Prochaska et al. 2011 CGM survey
@@ -118,10 +123,215 @@ def p11():
     p11.to_json_tarball(out_file)
 
 
+def ingest_burchett16(smthd='vir'):
+    """ Ingest Burchett+16
+    """
+    # Virial matching
+    if smthd == 'vir':
+        b16_file = resource_filename('pyigm', 'data/CGM/z0/Burchett2016_CIV_HI_virselect.fits')
+    else:
+        b16_file = resource_filename('pyigm', 'data/CGM/z0/Burchett2016_CIV_HI_kpcselect.fits')
+    b16_tbl = Table.read(b16_file)
+
+    # CGM Survey
+    b16 = CGMAbsSurvey(survey='B16', ref='Burchett+16')
+
+    # Linelist
+    llist = LineList('ISM')
+
+    for row in b16_tbl:
+        # RA, DEC
+        # Galaxy
+        gal = Galaxy((row['ra_gal'], row['dec_gal']), z=row['zgal'])
+        gal.SFR = row['SFR']
+        gal.sig_SFR = row['SFR_err']
+        gal.Mstar = row['mstars']
+        gal.field = row['field']
+        gal.RRvir = row['rrvir']
+        gal.NSAidx = row['NSAidx']
+        #
+        igmsys = IGMSystem((row['ra_qso'], row['dec_qso']), row['zgal'], (-400., 400.) * u.km / u.s)
+        # HI
+        if row['flag_h1'] > 0:
+            # Lya
+            lya = AbsLine(1215.67 * u.AA, z=row['zgal'], linelist=llist)
+            lya.attrib['EW'] = row['EW_h1'] * u.AA
+            lya.attrib['logN'] = row['col_h1']
+            lya.attrib['N'] = 10**row['col_h1'] * u.cm**-2
+            if row['flag_h1'] == 3:
+                lya.attrib['flag_EW'] = 3
+                lya.attrib['flag_N'] = 3
+                lya.attrib['sig_N'] = (10 ** (row['col_h1']))/3. * u.cm ** -2
+            elif row['flag_h1'] == 2:
+                lya.attrib['flag_EW'] = 1
+                lya.attrib['flag_N'] = 2
+            else:
+                lya.attrib['flag_EW'] = 1
+                lya.attrib['flag_N'] = 1
+                lya.attrib['sig_N'] = (10 ** (row['col_h1'] + row['colsig_h1']) -
+                                       10 ** row['col_h1']) * u.cm ** -2
+            lya.attrib['sig_EW'] = row['EWsig_h1'] * u.AA
+            # Ref
+            lya.attrib['Ref'] = 'Burchett+16'
+            # HI component
+            if row['colsig_h1'] >= 99.:
+                flagN = 2
+            elif row['colsig_h1'] <= 0.:
+                flagN = 3
+            else:
+                flagN = 1
+            HIcomp = AbsComponent((row['ra_qso'], row['dec_qso']),
+                                  (1, 1), row['zgal'],
+                                  (-400, 400) * u.km / u.s,
+                                  Ntup=(flagN, row['col_h1'], row['colsig_h1']))
+            HIcomp._abslines.append(lya)
+            igmsys._components.append(HIcomp)
+            # NHI
+            igmsys.NHI = HIcomp.logN
+            igmsys.flag_NHI = HIcomp.flag_N
+            igmsys.sig_NHI = HIcomp.sig_N
+        # CIV
+        if row['flag_c4'] > 0:
+            # CIV 1548
+            civ1548 = AbsLine(1548.195*u.AA, z=row['zgal'], linelist=llist)
+            civ1548.attrib['EW'] = row['EW_c4'] * u.AA
+            civ1548.attrib['logN'] = row['col_c4']
+            civ1548.attrib['N'] = 10 ** row['col_c4'] * u.cm ** -2
+            if row['flag_c4'] == 3:
+                civ1548.attrib['flag_EW'] = 3
+                civ1548.attrib['flag_N'] = 3
+                civ1548.attrib['sig_N'] = (10 ** (row['col_c4']))/3. * u.cm ** -2
+            elif row['flag_c4'] == 2:
+                civ1548.attrib['flag_EW'] = 1
+                civ1548.attrib['flag_N'] = 2
+            else:
+                civ1548.attrib['flag_EW'] = 1
+                civ1548.attrib['flag_N'] = 1
+                civ1548.attrib['sig_N'] = (10 ** (row['col_c4'] + row['colsig_c4']) -
+                                           10 ** row['col_c4']) * u.cm ** -2
+            civ1548.attrib['sig_EW'] = row['EWsig_c4'] * u.AA
+            # Ref
+            civ1548.attrib['Ref'] = 'Burchett+16'
+            # CIV component
+            if row['colsig_c4'] >= 99.:
+                flagN = 2
+            elif row['colsig_c4'] <= 0.:
+                flagN = 3
+            else:
+                flagN = 1
+            CIVcomp = AbsComponent((row['ra_qso'], row['dec_qso']),
+                                  (6, 4), row['zgal'],
+                                  (-400, 400) * u.km / u.s,
+                                  Ntup=(flagN, row['col_c4'], row['colsig_c4']))
+            CIVcomp._abslines.append(civ1548)
+            igmsys._components.append(CIVcomp)
+        # CGM
+        cgmabs = CGMAbsSys(gal, igmsys, correct_lowz=False)
+        b16.cgm_abs.append(cgmabs)
+    # Write tarball
+    if smthd == 'vir':
+        out_file = resource_filename('pyigm', '/data/CGM/z0/B16_vir_sys.tar')
+    else:
+        out_file = resource_filename('pyigm', '/data/CGM/z0/B16_kpc_sys.tar')
+    b16.to_json_tarball(out_file)
+
+
+def ingest_johnson15():
+    """ Ingest Johnson+15
+    """
+    # Dict for QSO coords
+    qsos = {}
+    qsos['1ES1028+511'] = ltu.radec_to_coord('J103118.52517+505335.8193')
+    qsos['FBQS1010+3003'] = ltu.radec_to_coord((152.5029167,30.056111))
+    qsos['HE0226-4110'] = ltu.radec_to_coord('J022815.252-405714.62')
+    qsos['HS1102+3441'] = ltu.radec_to_coord('J110539.8189+342534.672')
+    qsos['LBQS1435-0134'] = ltu.radec_to_coord((219.451183,-1.786328))
+    qsos['PG0832+251'] = ltu.radec_to_coord('J083535.8048+245940.146')
+    qsos['PG1522+101'] = ltu.radec_to_coord((231.1023075, 9.9749372))
+    qsos['PKS0405-123'] = ltu.radec_to_coord('J040748.4376-121136.662')
+    qsos['SBS1108+560'] = ltu.radec_to_coord((167.8841667,55.790556))
+    qsos['SBS1122+594'] = ltu.radec_to_coord((171.4741250,59.172667))
+    qsos['Ton236'] = ltu.radec_to_coord((232.1691746,28.424928))
+
+    # Virial matching
+    j15_file = resource_filename('pyigm', 'data/CGM/z0/johnson2015_table1.fits')
+    j15_tbl = Table.read(j15_file)
+
+    # Clip COS-Halos
+    keep = j15_tbl['Survey'] != 'COS-Halos'
+    j15_tbl = j15_tbl[keep]
+
+    # CGM Survey
+    j15 = CGMAbsSurvey(survey='J15', ref='Johnson+15')
+
+    # Linelist
+    llist = LineList('ISM')
+
+    for row in j15_tbl:
+        # RA, DEC
+        # Galaxy
+        gal = Galaxy((row['RAJ2000'], row['DEJ2000']), z=float(row['zgal']))
+        gal.Class = row['Class']
+        gal.Mstar = row['logM_']
+        gal.field = row['Name']
+        gal.Env = row['Env']
+        gal.d_Rh = row['d_Rh']
+        #
+        igmsys = IGMSystem(qsos[row['Name']], float(row['zgal']), (-400., 400.) * u.km / u.s)
+        # HI
+        if np.isnan(row['logNHI']):
+            pass
+        else:
+            # HI component
+            if row['l_logNHI'] == '<':
+                flagN = 3
+                sigNHI = 99.
+            elif np.isnan(row['e_logNHI']):
+                flagN = 2
+                sigNHI = 99.
+            else:
+                flagN = 1
+                sigNHI = row['e_logNHI']
+            HIcomp = AbsComponent(qsos[row['Name']], (1, 1), float(row['zgal']),
+                                      (-400, 400)*u.km/u.s, Ntup=(flagN, row['logNHI'], sigNHI))
+            igmsys._components.append(HIcomp)
+            # NHI
+            igmsys.NHI = HIcomp.logN
+            igmsys.flag_NHI = HIcomp.flag_N
+            igmsys.sig_NHI = HIcomp.sig_N
+        # OVI
+        if np.isnan(row['logNHOVI']):
+            pass
+        else:
+            # OVI component
+            if row['l_logNHOVI'] == '<':
+                flagN = 3
+                sigNHOVI = 99.
+            elif np.isnan(row['e_logNHOVI']):
+                flagN = 2
+                sigNHOVI = 99.
+            else:
+                flagN = 1
+                sigNHOVI = row['e_logNHOVI']
+            OVIcomp = AbsComponent(qsos[row['Name']], (8, 6), float(row['zgal']),
+                                      (-400, 400)*u.km/u.s, Ntup=(flagN, row['logNHOVI'], sigNHOVI))
+            igmsys._components.append(OVIcomp)
+        # CGM
+        cgmabs = CGMAbsSys(gal, igmsys, chk_lowz=False)
+        j15.cgm_abs.append(cgmabs)
+    # Write tarball
+    out_file = resource_filename('pyigm', '/data/CGM/z0/J15_sys.tar')
+    j15.to_json_tarball(out_file)
+
 def main(flg):
 
     if (flg % 2**1) >= 2**0:
         p11()  # Prochaska et al. 2011
+    if flg & 2**1:
+        ingest_burchett16()
+        ingest_burchett16(smthd='kpc')
+    if flg & 2**2:
+        ingest_johnson15()
 
 # Command line execution
 if __name__ == '__main__':
@@ -129,7 +339,9 @@ if __name__ == '__main__':
 
     if len(sys.argv) == 1:
         flg = 0
-        flg += 2**0   # P11
+        #flg += 2**0   # P11
+        flg += 2**1   # Burchett+16
+        #flg += 2**2   # Johnson+15
     else:
         flg = sys.argv[1]
 

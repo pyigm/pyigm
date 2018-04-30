@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+#
+# See top-level LICENSE file for Copyright information
+#
+# -*- coding: utf-8 -*-
+
+
+"""
+Wrapper for the pyigm_fitdla script
+"""
+
+import pyigm.scripts.pyigm_fitdla as pyigm_fitdla
+
+if __name__ == '__main__':
+    args = pyigm_fitdla.parser()
+    pyigm_fitdla.main(args)

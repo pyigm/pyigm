@@ -9,6 +9,8 @@ from abc import ABCMeta
 import warnings
 import pdb
 
+from collections import OrderedDict
+
 from astropy import coordinates as coords
 from astropy.io import ascii
 from astropy import units as u
@@ -43,6 +45,10 @@ class IGMSurvey(object):
       Defines a subset of the systems (e.g. statistical)
     sightlines : Table, optional
       Table of the sightlines in the survey
+    _data : Table, optional
+      Table of 'key' data
+    _dict : OrderedDict, optional
+      Nested data
     """
 
     __metaclass__ = ABCMeta
@@ -80,7 +86,7 @@ class IGMSurvey(object):
         return slf
 
     @classmethod
-    def from_sfits(cls, summ_fits, **kwargs):
+    def from_sfits(cls, summ_fits, coords=None, **kwargs):
         """Generate the Survey from a summary FITS file or Table
 
         Handles SPEC_FILES too.
@@ -89,6 +95,8 @@ class IGMSurvey(object):
         ----------
         summ_fits : str or Table or QTable
           Summary FITS file
+        coords : SkyCoord array
+          Contains all the coords for all the systems
         **kwargs : dict
           passed to __init__
         """
@@ -98,50 +106,40 @@ class IGMSurvey(object):
         if isinstance(summ_fits, Table):
             systems = summ_fits
         else:
-            systems = QTable.read(summ_fits)
+            systems = Table.read(summ_fits)
         nsys = len(systems)
-        # Dict
+        # Special keys
         kdict = dict(NHI=['NHI', 'logNHI'],
                      sig_NHI=['sig(logNHI)', 'SIGNHI', 'NHI_ERR'],
                      name=['Name'], vlim=['vlim'],
                      zabs=['Z_LLS', 'ZABS', 'zabs'],
                      zem=['Z_QSO', 'QSO_ZEM', 'ZEM'],
-                     RA=['RA'], Dec=['DEC', 'Dec'])
-        # Parse the Table
-        inputs = {}
+                     RA=['RA'], DEC=['DEC', 'Dec'])
+        # Parse the Table to make uniform the keys used
         for key in kdict.keys():
-            vals, tag = lsio.get_table_column(kdict[key], [systems],idx=0)
-            if vals is not None:
-                inputs[key] = vals
+            for ikey in kdict[key]:
+                if ikey in systems.keys():
+                    if ikey == key:
+                        pass
+                    else:
+                        systems.rename_column(ikey, key)
+        # Set
+        slf._data = systems
         # vlim
-        if 'vlim' not in inputs.keys():
+        if 'vlim' not in slf._data.keys():
             default_vlim = [-1000, 1000.]* u.km / u.s
-            inputs['vlim'] = [default_vlim]*nsys
-        # Generate
-        for kk in range(nsys):
-            # Generate keywords
-            kwargs = {}
-            args = {}
-            for key in inputs.keys():
-                if key in ['vlim', 'zabs', 'RA', 'Dec']:
-                    args[key] = inputs[key][kk]
-                else:
-                    kwargs[key] = inputs[key][kk]
-            # Instantiate
-            abssys = class_by_type(slf.abs_type)((args['RA'], args['Dec']), args['zabs'], args['vlim'], **kwargs)
-            # spec_files
-            try:
-                abssys.spec_files += systems[kk]['SPEC_FILES'].tolist()
-            except (KeyError, AttributeError):
-                pass
-            slf._abs_sys.append(abssys)
+            slf._data['vlim'] = [default_vlim]*nsys
+        # Coords
+        if coords is None:
+            coords = SkyCoord(ra=slf._data['RA'], dec=slf._data['DEC'], unit='deg')
+        slf.coords = coords
         # Mask
+        slf.mask = None
         slf.init_mask()
         # Return
         return slf
 
-    def __init__(self, abs_type, ref=''):
-        # Expecting a list of files describing the absorption systems
+    def __init__(self, abs_type, ref='', verbose=False):
         """  Initiator
 
         Parameters
@@ -154,9 +152,11 @@ class IGMSurvey(object):
         self.abs_type = abs_type
         self.ref = ref
         self._abs_sys = []
+        self._data = Table()
+        self._dict = OrderedDict()
         self.sightlines = None
-
-        #
+        self.coords = None  # Intended to be a SkyCoord obj with *all* of the system coordinates
+        self.verbose=verbose
 
         # Mask
         self.mask = None
@@ -176,18 +176,57 @@ class IGMSurvey(object):
         """
         if self.mask is not None:
             return np.sum(self.mask)
+        elif len(self._data) > 0:
+            return len(self._data)
+        elif len(self._dict) > 0:
+            return len(self._dict)
         else:
             return len(self._abs_sys)
+
+    def sys_idx(self, abssys_name):
+        """ System index"""
+        # Index
+        try:
+            idx = list(self._dict.keys()).index(abssys_name)
+        except ValueError:
+            raise ValueError("System {:s} is not in the _dict".format(abssys_name))
+        # Return
+        return idx
+
+
+    def abs_sys(self, inp, fill_coord=True):
+        """ Return an abs_system by index from the *masked* set
+        Instantiate as needed
+        Returns
+        -------
+        inp : int
+
+        """
+        # Mask?
+        if self.mask is not None:
+            idx = np.where(self.mask)[0][inp]
+        else:
+            idx = inp
+        # Pull the system
+        isys = self._abs_sys[idx]
+        # Add coord
+        if fill_coord:
+            isys.coord = self.coords[idx]
+        return isys
+
+    def init_abs_sys(self, clobber=False):
+        """ Initialize the abs_sys list
+        """
+        if (len(self._abs_sys) == 0) or clobber:
+            self._abs_sys = [None]*self.nsys
+        else:
+            warnings.warn("abs_sys list is already initialized.  Use clobber=True to reset")
 
     def init_mask(self):
         """ Initialize the mask for abs_sys
         """
         if self.nsys > 0:
             self.mask = np.array([True]*self.nsys)
-
-    def abs_sys(self):
-        # Recast as an array
-        return lst_to_array(self._abs_sys, mask=self.mask)
 
     def add_abs_sys(self, abs_sys):
         """ Add an IGMSys to the Survey
@@ -203,6 +242,99 @@ class IGMSurvey(object):
 
         # Append
         self._abs_sys.append(abs_sys)
+
+    def build_all_abs_sys(self, linelist=None, **kwargs):
+        """ Build all of the AbsSystem objects from the _dict
+        or _data if the _dict does not exist!
+        In that order
+
+        Parameters
+        ----------
+        linelist : LineList, optional
+        **kwargs : Passed to build_abs_sys_from_dict
+        """
+        # This speeds things up a bunch
+        if linelist is None:
+            linelist = default_linelist(self.verbose)
+        # Loop me
+        if len(self._dict) > 0:
+            print("Starting the AbsSystem build for the _dict.  Be patient..")
+            for key in self._dict.keys():
+                _ = self.build_abs_sys_from_dict(key, linelist=linelist, **kwargs)
+        elif len(self._data) > 0:
+            for qq in range(self.nsys):
+                _ = self.build_abs_sys_from_data(qq)
+        else:
+            raise IOError("Nothing to build the systems with!")
+        # Return
+        print("Done!")
+        return
+
+    def build_abs_sys_from_data(self, row):
+        """ Build an AbsSystem from the _data
+        The item in self._abs_sys is filled and
+        the system is also returned
+
+        Parameters
+        ----------
+        row : int
+          Row of the _data table
+          Ignores any masking -- this may change
+
+        Returns
+        -------
+        abs_sys : AbsSystem
+
+        """
+        # vlim -- may make optional
+        vlim=self._data['vlim'][row]
+        if self._data['vlim'].unit is not None:
+            vlim *= self._data['vlim'].unit
+        else:
+            vlim = vlim * u.km/u.s
+        # skwargs
+        skwargs = {}
+        for key in ['NHI', 'sig_NHI', 'name', 'zem']:
+            if key in self._data.keys():
+                skwargs[key] = self._data[key][row]
+        # Instantiate
+        abssys = class_by_type(self.abs_type)(self.coords[row], self._data['zabs'][row], vlim, **skwargs)
+        # Fill
+        if len(self._abs_sys) == 0:
+            self.init_abs_sys()
+        self._abs_sys[row] = abssys
+        # Return too
+        return abssys
+
+    def build_abs_sys_from_dict(self, abssys_name, **kwargs):
+        """ Build an AbsSystem from the _dict
+        The item in self._abs_sys is filled and
+        the systems is also returned
+
+        Parameters
+        ----------
+        abssys_name : str
+          Needs to match a key in the dict
+        **kwargs
+          Passed to components_from_dict()
+
+        Returns
+        -------
+        abs_sys : AbsSystem
+
+        """
+        # Index
+        idx = self.sys_idx(abssys_name)
+        # Instantiate
+        abssys = class_by_type(self.abs_type).from_dict(self._dict[abssys_name],
+                                                        coord=self.coords[idx],
+                                                        **kwargs)
+        # Fill
+        if len(self._abs_sys) == 0:
+            self.init_abs_sys()
+        self._abs_sys[idx] = abssys
+        # Return too
+        return abssys
 
     def calculate_gz(self, zstep=1e-4, zmin=None, zmax=None):
         """ Uses sightlines table to generate a g(z) array
@@ -239,7 +371,6 @@ class IGMSurvey(object):
         # Return
         return zeval, gz
 
-
     def chk_abs_sys(self, abs_sys):
         """ Preform checks on input abs_sys
 
@@ -256,9 +387,55 @@ class IGMSurvey(object):
             raise IOError("Must be an IGMSystem object")
         return True
 
+    def components_from_dict(self, abssys_name, coord=None, linelist=None):
+        """ Build and return a list of AbsComponent objects
+        from the dict for a given system
+
+        Parameters
+        ----------
+        abssys_name : str
+        coord : SkyCoord, optional
+          coordinates to use for the components
+        linelist : LineList, optional
+
+        Returns
+        -------
+        compllist : list of AbsComponent objects
+
+        """
+        # Do it
+        if linelist is None:
+            linelist = default_linelist(self.verbose)
+        # Components
+        comps = ltiu.build_components_from_dict(self._dict[abssys_name],
+                                                coord=coord, linelist=linelist)
+        # Return
+        return comps
+
+    def data_from_dict(self):
+        """ Generate the data Table from the internal dict
+        """
+        from astropy.table import Column
+        # Table columns
+        key0 = list(self._dict.keys())[0]
+        tab_clms = list(self._dict[key0].keys())
+        # Remove unwanted ones
+        rmv_keys = ['abs_type', 'components', 'kin', 'Refs']
+        for rkey in rmv_keys:
+            if rkey in tab_clms:
+                tab_clms.remove(rkey)
+        # Build it
+        for tclm in tab_clms:
+            values = []
+            for key in self._dict.keys():
+                values.append(self._dict[key][tclm])
+            # Add column
+            clm = Column(values, name=tclm)
+            self._data.add_column(clm)
+
     def fill_ions(self, use_Nfile=False, jfile=None, use_components=False,
                   verbose=True):
-        """ Loop on systems to fill in ions
+        """ Loop on systems to fill in _ionN Table
 
         Parameters
         ----------
@@ -281,45 +458,105 @@ class IGMSurvey(object):
                 abs_sys.get_ions(use_Nfile=True, verbose=verbose)
         elif use_components:
             for abs_sys in self._abs_sys:
-                abs_sys._ionN = ltiu.iontable_from_components(abs_sys._components,
-                                                              ztbl=abs_sys.zabs)
+                abs_sys._ionN = ltiu.table_from_complist(abs_sys._components)
         else:
             raise ValueError("Not sure how to load the ions")
 
     # Get ions
-    def ions(self, iZion, Ej=0., skip_null=False):
+    def ions(self, Zion, Ej=0., skip_null=True, pad_with_nulls=False):
         """ Generate a Table of columns and so on
         Restrict to those systems where flg_clm > 0
 
         Parameters
         ----------
-        iZion : tuple
+        Zion : tuple
            Z, ion   e.g. (6,4) for CIV
         Ej : float [1/cm]
            Energy of the lower level (0. is resonance)
         skip_null : boolean (False)
-           Skip systems without an entry, else pad with zeros 
+           Skip systems without an entry, else pad with zeros
+        pad_with_nulls : bool, optional
+           Pad missing/null systems with empty values.  A bit risky
 
         Returns
         -------
-        Table of values for the Survey
+        tbl : MaskedTable of values for the Survey
+          Systems without the ion have rows masked
         """
-        if self.abs_sys()[0]._ionN is None:
-            raise IOError("ionN table not set.  Use fill_ionN")
-        # Find the first entry with a non-zero length table
+        from linetools.abund.ions import ion_to_name
+        if self._abs_sys[0]._ionN is None:
+            raise IOError("ionN tables are not set.  Use fill_ionN")
+
+        # Loop me!
+        tbls = []
+        names = []
         for kk,abs_sys in enumerate(self._abs_sys):
-            if len(abs_sys._ionN) > 0:
-                break
+            if len(abs_sys._ionN) == 0:
+                names.append('MASK_ME')
+                tbls.append(None)
+                continue
+            # Parse
+            mt = (abs_sys._ionN['Z'] == Zion[0]) & (abs_sys._ionN['ion'] == Zion[1]) & (
+                abs_sys._ionN['Ej'] == Ej)
+            if np.any(mt):
+                if np.sum(mt) > 1:  # Generally should not get here
+                    warnings.warn("Two components for ion {} for system {}.  Taking the first one".format(Zion, abs_sys))
+                    mt[np.where(mt)[0][1:]] = False
+                tbls.append(abs_sys._ionN[mt])
+                names.append(abs_sys.name)
+            else:
+                if skip_null is True:  # This is probably dangerous
+                    continue
+                else:
+                    if pad_with_nulls:
+                        nulltbl = abs_sys._ionN[:0].copy()
+                        datatoadd = [abs_sys.coord.ra.deg,abs_sys.coord.dec.deg,
+                                     'none',Zion[0],Zion[1],Ej,
+                                     abs_sys.limits.vmin.value,
+                                     abs_sys.limits.vmax.value,
+                                     ion_to_name(Zion),0,0,0,'','none',abs_sys.zabs]
+                        nulltbl['ion_name'].dtype = '<U6'
+                        nulltbl.add_row(datatoadd)
+                        tbls.append(nulltbl)
+                        names.append(abs_sys.name)
+                    else:
+                        tbls.append(None)
+                        names.append('MASK_ME')
+
+        # Fill in the bad ones
+        names = np.array(names)
+        idx = np.where(names != 'MASK_ME')[0]
+        if len(idx) == 0:
+            warnings.warn("There were no entries matching your input Ion={}".format(Zion))
+            return None
+        bad = np.where(names == 'MASK_ME')[0]
+        for ibad in bad:
+            tbls[ibad] = tbls[idx[0]]
+        # Stack me
+        try:
+            tbl = vstack(tbls)
+        except:
+            pdb.set_trace()
+        tbl['abssys_name'] = names
+        # Mask
+        tbl = Table(tbl, masked=True)
+        mask = names == 'MASK_ME'
+        for key in tbl.keys():
+            if key == 'flag_N':
+                tbl[key][mask] = 0
+            else:
+                tbl[key].mask = mask
+        '''
         #
-        keys = [u'name', ] + self.abs_sys()[kk]._ionN.keys()
-        t = Table(self.abs_sys()[kk]._ionN[0:1]).copy()   # Avoids mixin trouble
+        keys = [u'abssys_name', ] + list(self._abs_sys[kk]._ionN.keys())
+        t = Table(self._abs_sys[kk]._ionN[0:1]).copy()   # Avoids mixin trouble
         t.add_column(Column(['dum']*len(t), name='name', dtype='<U32'))
         t = t[keys]
         if 'Ej' not in keys:
             warnings.warn("Ej not in your ionN table.  Ignoring. Be careful..")
 
         # Loop on systems (Masked)
-        for abs_sys in self.abs_sys():
+        for abs_sys in self._abs_sys:
             # Grab
             if 'Ej' in keys:
                 mt = ((abs_sys._ionN['Z'] == iZion[0])
@@ -346,9 +583,13 @@ class IGMSurvey(object):
             else:
                 pdb.set_trace()
                 raise ValueError("Multple entries")
-
+        '''
+        # Reorder
+        all_keys = list(tbl.keys())
+        all_keys.remove('abssys_name')
+        all_keys = ['abssys_name']+all_keys
         # Return
-        return t[1:]
+        return tbl[all_keys]
 
     def trans(self, inp):
         """ Generate a Table of Data on a given transition, e.g. SiIII 1206
@@ -369,7 +610,7 @@ class IGMSurvey(object):
         clms = []
         for ii in range(nattrib):
             clms.append([])
-        for abs_sys in self.abs_sys():
+        for abs_sys in self._abs_sys:
             # Name
             clms[0].append(abs_sys.name)
             #
@@ -409,13 +650,16 @@ class IGMSurvey(object):
         else:
             raise ValueError('abs_survey: Needs developing!')
 
-    def write_survey(self, outfile='tmp.tar', tmpdir = 'IGM_JSON'):
+    def write_survey(self, outfile='tmp.tar', tmpdir = 'IGM_JSON', chk_dict=True):
         """ Generates a gzipped tarball of JSON files, one per system
 
         Parameters
         ----------
         outfile : str, optional
+          Output filename
         tmpdir : str, optional
+        chk_dict : bool, optional
+          Check that the _dict matches what is in the _abs_sys list
 
         Returns
         -------
@@ -455,7 +699,12 @@ class IGMSurvey(object):
         """ Generate an array of attribute 'k' from the IGMSystems
         NOTE: We only get here if the Class doesn't have this attribute set already
 
-        Mask is applied
+        The Mask will be applied
+
+        Order of search is:
+          _data
+          _dict
+          _abs_sys
 
         Parameters
         ----------
@@ -466,22 +715,30 @@ class IGMSurvey(object):
         -------
         numpy array
         """
-        # Catch length 0 list
-        if len(self._abs_sys) == 0:
-            raise ValueError("Attribute does not exist")
-        try:
-            lst = [getattr(abs_sys, k) for abs_sys in self._abs_sys]
-        except ValueError:
-            raise ValueError("Attribute does not exist")
-        # Special cases
+        # Special case(s)
         if k == 'coord':
-            ra = [coord.ra.value for coord in lst]
-            dec = [coord.dec.value for coord in lst]
-            lst = SkyCoord(ra=ra, dec=dec, unit='deg')
+            lst = self.coords
             if self.mask is not None:
                 return lst[self.mask]
             else:
                 return lst
+        elif k in self._data.keys():  # _data
+            lst = self._data[k]
+        else:
+            lst = None
+        # Now try _dict
+        if lst is None:
+            if len(self._dict) > 0:
+                if k in next(iter(self._dict.items()))[1].keys():
+                    lst = [self._dict[key][k] for key in self._dict.keys()]
+        # AbsSystem last!
+        if lst is None:
+            if len(self._abs_sys) == 0:
+                raise ValueError("Attribute does not exist anywhere!")
+            try:
+                lst = [getattr(abs_sys, k) for abs_sys in self._abs_sys]
+            except ValueError:
+                raise ValueError("Attribute does not exist")
         # Recast as an array
         return lst_to_array(lst, mask=self.mask)
 
@@ -591,3 +848,10 @@ def lst_to_array(lst, mask=None):
         # Return
         return tbl
 
+
+def default_linelist(verbose=True):
+    from linetools.lists.linelist import LineList
+    if verbose:
+        print("No LineList input.  Assuming you want the ISM list")
+    linelist = LineList('ISM')
+    return linelist

@@ -116,6 +116,17 @@ class COSHalos(CGMAbsSurvey):
         gal.stellar_mass = summ['LOGMFINAL'][0]
         gal.rvir = galx['RVIR'][0]
         gal.MH = galx['ABUN'][0]
+        # AB
+        for filter in ['U','G','R','I','Z']:
+            # Value
+            key = 'ABMAG'+filter
+            attr = 'abmag'+filter.lower()
+            setattr(gal, attr, galx[key][0])
+            # Error
+            key = 'ABMAG'+filter+'ERR'
+            attr = 'abmag'+filter.lower()+'err'
+            setattr(gal, attr, galx[key][0])
+        #
         gal.flag_MH = galx['ABUN_FLAG'][0]
         gal.sdss_phot = [galx[key][0] for key in ['SDSSU','SDSSG','SDSSR','SDSSI','SDSSZ']]
         gal.sdss_phot_sig = [galx[key][0] for key in ['SDSSU_ERR','SDSSG_ERR','SDSSR_ERR','SDSSI_ERR','SDSSZ_ERR']]
@@ -161,7 +172,7 @@ class COSHalos(CGMAbsSurvey):
             for kk in range(ntrans):
                 flg = iont['FLG'][0][kk]
                 # Fill in
-                aline = AbsLine(iont['LAMBDA'][0][kk]*u.AA, closest=True)
+                aline = AbsLine(iont['LAMBDA'][0][kk]*u.AA, closest=True, z=igm_sys.zabs)
                 aline.attrib['flag_origCH'] = int(flg)
                 aline.attrib['EW'] = iont['WOBS'][0][kk]*u.AA/1e3  # Observed
                 aline.attrib['sig_EW'] = iont['SIGWOBS'][0][kk]*u.AA/1e3
@@ -173,8 +184,7 @@ class COSHalos(CGMAbsSurvey):
                 if (flg == 2) or (flg == 4) or (flg == 6):
                     aline.attrib['flag_EW'] = 3
                 #
-                aline.analy['vlim'] = [iont['VMIN'][0][kk],iont['VMAX'][0][kk]]*u.km/u.s
-                aline.attrib['z'] = igm_sys.zabs
+                aline.limits.set([iont['VMIN'][0][kk],iont['VMAX'][0][kk]]*u.km/u.s)
                 aline.attrib['coord'] = igm_sys.coord
                 # Check f
                 if (np.abs(aline.data['f']-iont['FVAL'][0][kk])/aline.data['f']) > 0.001:
@@ -219,7 +229,7 @@ class COSHalos(CGMAbsSurvey):
             else:
                 comp = AbsComponent.from_abslines(abslines, chk_vel=False)
                 if comp.Zion != (1,1):
-                    comp.synthesize_colm()  # Combine the abs lines
+                    #comp.synthesize_colm()  # Combine the abs lines
                     if np.abs(comp.logN - float(iont['CLM'][0])) > 0.15:
                         print("New colm for ({:d},{:d}) and sys {:s} is {:g} different from old".format(
                             comp.Zion[0], comp.Zion[1], cgabs.name, comp.logN - float(iont['CLM'][0])))
@@ -268,7 +278,7 @@ class COSHalos(CGMAbsSurvey):
         pckl_fil : string
           Name of file for pickling
         """
-        warnings.warn("This method will be DEPRECATED")
+        warnings.warn("This method may be DEPRECATED")
         # Loop
         if test is True:
             cos_files = glob.glob(self.fits_path+'/J09*.fits.gz')  # For testing
@@ -276,6 +286,8 @@ class COSHalos(CGMAbsSurvey):
             cos_files = glob.glob(self.fits_path+'/*.fits')
         else:  # COS-Halos
             cos_files = glob.glob(self.fits_path+'/J*.fits.gz')
+        # Sort
+        cos_files.sort()
         # Read
         for fil in cos_files:
             self.load_single_fits(fil, **kwargs)
@@ -385,8 +397,16 @@ class COSHalos(CGMAbsSurvey):
         mkeys.remove('right_edge_bins')
         mkeys = np.array(mkeys)
 
+        def init_as_none(cga):
+            cga.igm_sys.metallicity = None
+            cga.igm_sys.NHIPDF = None
+            cga.igm_sys.density = None
+
         # Loop
         for cgm_abs in self.cgm_abs:
+            # Init
+            init_as_none(cgm_abs)
+            # Truncating
             if '0943+0531_227_19' in cgm_abs.name:
                 print('Not including 0943+0531_227_19'.format(cgm_abs.name))
                 print('See Prochaska+17 for details')
@@ -403,7 +423,16 @@ class COSHalos(CGMAbsSurvey):
                                          fh5['met'][mkeys[mt][0]])
             cgm_abs.igm_sys.metallicity.inputs = {}
             for key in fh5['inputs'][cgm_abs.name]:
+                # Warning the inputs here are goofy hdf5 bytes..
                 cgm_abs.igm_sys.metallicity.inputs[key] = fh5['inputs'][cgm_abs.name][key].value
+
+            # Check mtl quality
+            qual = mtl_quality(cgm_abs)
+            if qual <= 0:
+                # Back to None
+                init_as_none(cgm_abs)
+                continue
+
             # NHI
             cgm_abs.igm_sys.NHIPDF = GenericPDF(fh5['col']['left_edge_bins']+
                                                  fh5['col']['left_edge_bins'].attrs['BINSIZE']/2.,
@@ -674,7 +703,7 @@ class COSHalos(CGMAbsSurvey):
             raise ValueError("Multiple hits.  Should not happen")
 
 
-def update_cos_halos(v10=False, v11=True):
+def update_cos_halos(v10=False, v11=False, v12=True):
     """ Updates the JSON tarball
     Returns
     -------
@@ -684,7 +713,7 @@ def update_cos_halos(v10=False, v11=True):
     # Generate v1.0
     if v10:
         print("Generate v1.0 of the JSON tarball")
-        cos_halos = COSHalos()
+        cos_halos = COSHalos(load=False)
         cos_halos.load_mega()
         tarfil = cos_halos.cdir+'/cos-halos_systems.v1.0.tar.gz'
         cos_halos.write_survey(tarfil)
@@ -695,10 +724,10 @@ def update_cos_halos(v10=False, v11=True):
     if v11:
         print("Generate v1.1 of the JSON tarball")
         cos_halos_v10 = COSHalos(load=False)
-        tfile = pyigm.__path__[0]+'/data/CGM/COS_Halos/cos-halos_systems.v1.0.tar.gz'
+        tfile = resource_filename('pyigm','/data/CGM/COS_Halos/cos-halos_systems.v1.0.tar.gz')
         cos_halos_v10.load_sys(tfile=tfile)
         # NHI
-        LLS_file = pyigm.__path__[0]+'/data/CGM/COS_Halos/COS_Halos_LLS.json'
+        LLS_file = resource_filename('pyigm','/data/CGM/COS_Halos/COS_Halos_LLS.json')
         with open(LLS_file) as json_file:
             fdict = json.load(json_file)
         # Loop on systems
@@ -763,7 +792,7 @@ def update_cos_halos(v10=False, v11=True):
                 else:
                     raise ValueError("Bad mod_type")
         # Metallicity
-        mtlfil = pyigm.__path__[0]+'/data/CGM/COS_Halos/COS_Halos_MTL_final.hdf5'
+        mtlfil = resource_filename('pyigm','/data/CGM/COS_Halos/COS_Halos_MTL_final.hdf5')
         cos_halos_v10.load_mtl_pdfs(mtlfil)
         #
         for cgm_abs in cos_halos_v10.cgm_abs:
@@ -773,6 +802,39 @@ def update_cos_halos(v10=False, v11=True):
         # Write
         tarfil = pyigm.__path__[0]+'/data/CGM/COS_Halos/cos-halos_systems.v1.1.tar.gz'
         cos_halos_v10.write_survey(tarfil)
+
+    if v12:
+        # Adds in abmagr from megastructure
+        print("Generate v1.2 of the JSON tarball")
+        # Load v1.1
+        cos_halos_v11 = COSHalos(load=False)
+        tfile = resource_filename('pyigm','/data/CGM/COS_Halos/cos-halos_systems.v1.1.tar.gz')
+        cos_halos_v11.load_sys(tfile=tfile)
+        # Load mega for abmagr
+        print("Loading mega...")
+        cos_halos_mega = COSHalos(load=False, fits_path=os.getenv('DROPBOX_DIR')+'/COS-Halos-Data/Summary/')
+        cos_halos_mega.load_mega(skip_ions=True, verbose=False)
+        # Fill up abmagr
+        for kk, mega_cgm_abs in enumerate(cos_halos_mega.cgm_abs):
+            # Check
+            cgm_abs = cos_halos_v11.cgm_abs[kk]
+            try:
+                assert mega_cgm_abs.name == cgm_abs.name
+            except:
+                pdb.set_trace()
+            # Fill
+            for filter in ['u', 'g', 'r', 'i', 'z']:
+                # Value
+                attr = 'abmag'+filter
+                setattr(cgm_abs.galaxy, attr, getattr(mega_cgm_abs.galaxy, attr))
+                # Error
+                attr = 'abmag'+filter+'err'
+                setattr(cgm_abs.galaxy, attr, getattr(mega_cgm_abs.galaxy, attr))
+            # EBV (not sure why this wasn't in there already)
+            cgm_abs.ebv = mega_cgm_abs.ebv
+        # Write
+        tarfil = resource_filename('pyigm','/data/CGM/COS_Halos/cos-halos_systems.v1.2.tar.gz')
+        cos_halos_v11.write_survey(tarfil)
 
 
 class COSDwarfs(COSHalos):
@@ -856,3 +918,36 @@ class COSDwarfs(COSHalos):
             self.cgm_abs.append(cgmsys)
         tar.close()
 
+
+def mtl_quality(cgm_abs, verbose=True):
+    """ Assess the quality of the metallicity measurement for future analysis
+    Taken from the Patchup analysis
+
+    Parameters
+    ----------
+    cgmabs
+
+    Returns
+    -------
+    qual : int
+      -1 == No measurement at all
+      0  == Only limits to the ions
+      1  == Only one non-limit
+      #  == Two or more (number is the number)
+
+    """
+    try:
+        flgs = cgm_abs.igm_sys.metallicity.inputs['data'][:, 3].astype(int)
+    except IndexError:
+        if verbose:
+            print('No constraint for {:s}'.format(cgm_abs.name))
+            print('Skipping')
+        return -1
+    indices = np.where(flgs != -1)[0]
+    if len(indices) == 0:
+        if verbose:
+            print('No detection for {:s}'.format(cgm_abs.name))
+            print('Skipping')
+        return 0
+    else:
+        return len(indices)

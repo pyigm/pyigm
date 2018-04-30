@@ -85,8 +85,8 @@ class LLSSystem(IGMSystem):
           Usually read from the hard-drive
         """
         from linetools.isgm.abssystem import add_comps_from_dict, add_other_from_dict
-        kwargs = dict(zem=idict['zem'], NHI=idict['NHI'],
-                      sig_NHI=idict['sig_NHI'], name=idict['Name'])
+        akwargs = dict(zem=idict['zem'], NHI=idict['NHI'], sig_NHI=idict['sig_NHI'], name=idict['Name'])
+        kwargs = dict(kwargs, **akwargs)
         # Optional
         for key in ['flag_NHI']:
             if key in idict.keys():
@@ -98,13 +98,14 @@ class LLSSystem(IGMSystem):
         add_other_from_dict(slf, idict)
         add_comps_from_dict(slf, idict, **kwargs)
 
+
         # Subsystems
         if 'A' in idict.keys():
             lbls= map(chr, range(65, 91))
             for lbl in lbls:
                 if lbl in idict.keys():
                     # Generate
-                    subsys = AbsSubSystem.from_dict(slf, idict[lbl], lbl)
+                    subsys = AbsSubSystem.from_dict(slf, idict[lbl], lbl, **kwargs)
                     slf.subsys[lbl] = subsys
                 else:
                     pass
@@ -466,8 +467,8 @@ class LLSSystem(IGMSystem):
 
     # Output
     def __repr__(self):
-        return ('<{:s}: {:s} {:s}, zabs={:g}, logNHI={:g}, tau_LL={:g}, [Z/H]={:g} dex>'.format(
-                self.__class__.__name__,
+        return ('<{:s}: {:s} {:s} {:s}, zabs={:g}, logNHI={:g}, tau_LL={:g}, [Z/H]={:g} dex>'.format(
+                self.__class__.__name__, self.name,
                  self.coord.ra.to_string(unit=u.hour,sep=':',pad=True),
                  self.coord.dec.to_string(sep=':',pad=True,alwayssign=True),
                  self.zabs, self.NHI, self.tau_LL, self.ZH))

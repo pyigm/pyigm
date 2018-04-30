@@ -23,6 +23,20 @@ def test_load_kin():
     cos_halos.load_abskin()
 '''
 
+
+def test_PDF():
+    cos_halos = COSHalos()
+    cos_halos.load_mtl_pdfs()
+    all_NHI = []
+    all_mtl = []
+    for sl, sightline in enumerate(cos_halos.cgm_abs):
+        if sightline.igm_sys.NHIPDF is not None:
+            this_nhi = sightline.igm_sys.NHIPDF.median
+            all_NHI.append(this_nhi)
+            all_mtl.append(sightline.igm_sys.metallicity.median)
+    # Test
+    assert len(all_NHI) == 31
+
 def test_load_sngl():
     # Class
     cos_halos = COSHalos(fits_path=data_path(''), cdir=data_path(''), load=False)
@@ -55,9 +69,9 @@ def test_load_survey():
     assert len(cos_halos.cgm_abs) == 44
     # Metallicity
     cos_halos.load_mtl_pdfs()
-    # Confirm  J0943+0531_227_19 is out
+    # Confirm  J0943+0531_227_19 is out for metallicity
     cgm_j0943 = cos_halos[('J0943+0531','227_19')]
-    assert (not hasattr(cgm_j0943.igm_sys, 'metallicity'))
+    assert cgm_j0943.igm_sys.metallicity is None
 
 
 def test_getitem():

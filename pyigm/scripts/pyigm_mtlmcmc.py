@@ -21,7 +21,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import pdb
 import numpy as np
 import sys
 import os
@@ -33,7 +32,9 @@ from astropy.table import Table
 def read_guesses_file(guesses_file, row_index_to_run):
     """
     For use with --wotta, this reads the "input guesses" file
-    and sets "optim=guess" for the MCMC.
+    and sets "optim=guess" for the MCMC
+    ...unless met_guess_in == "False" or
+      dens_guess_in == "False" (see run_mcmc_wotta())
     """
     
     
@@ -46,17 +47,19 @@ def read_guesses_file(guesses_file, row_index_to_run):
           'carbalpha_use_in',
           'logUconstraint_use_in',
           'uvb_in',
+          'comment_out',
           'notes_in')
     
-    fmts=('str',
-        'str',
-        'float',
-        'float',
-        'float',
-        'str',
-        'str',
-        'str',
-        'str',
+    fmts=(str,
+        str,
+        float,
+        float,
+        float,
+        str,
+        str,
+        str,
+        str,
+        str,
         )
     
     input_dict={}
@@ -67,12 +70,17 @@ def read_guesses_file(guesses_file, row_index_to_run):
     infile=open(guesses_file, 'r')
     for line in infile:
         if line and not line.startswith("#"):
+            ##For each line, use "|" as the delimiter. Then we'll
+            ##  want to remove any whitespace surrounding the leftover
+            ##  text (but not WITHIN it).
+            ##  E.g., "  my comment   "  -->  "my comment"
             linespl = line.strip().split()
+            # linespl = [i.strip() for i in line.strip().split('|')]
             ##
-            for ls in xrange(len(linespl)):
-                if fmts[ls] == 'float':
-                    input_dict[keys[ls]].append(float(linespl[ls]))
-                else:
+            for ls in range(len(linespl)):
+                try:
+                    input_dict[keys[ls]].append(fmts[ls](linespl[ls]))
+                except:
                     input_dict[keys[ls]].append(linespl[ls])
     
     infile.close()
@@ -81,8 +89,9 @@ def read_guesses_file(guesses_file, row_index_to_run):
     ##We only care about the row that is given as the command line argument
     thisrow = [input_dict[key][row_index_to_run] for key in keys]
     
-    ##Return the array as separate values, not as an array
-    return thisrow
+    ##Return this row and also everything
+    ##  That way, if we want to use this function elsewhere, we can
+    return thisrow, input_dict
 
 
 
@@ -125,15 +134,46 @@ def run_mcmc_wotta(args):
     row_index = int(args.row) - 1
     
     ##Read the input file and get the desired row
-    ok_to_run, \
+    [ok_to_run, \
         sightline, \
         args.met, \
         args.dens, \
         args.carbalpha, \
         carbalpha_use, \
-        args.logUconstraint, \
+        logUconstraint_use, \
         args.UVB, \
-        notes = read_guesses_file(args.guessesfile, row_index)
+        comment_out, \
+        notes], all_guesses = read_guesses_file(args.guessesfile, row_index)
+    
+    if (str(args.met).lower() == "false") or (str(args.dens).lower() == "false"):
+        ##The important one
+        args.optim=False
+        ##Set these just in case it makes a difference
+        args.met=False
+        args.dens=False
+
+
+    ##Take care of logU guess
+    ##If the guesses_file says either "True" or "False", then:
+    ##  (1) just keep the default logUmean and logUsigma
+    ##  (2) set the use_logUconstraint? option to be equal to the value in the file
+    ##Else, convert the guess to logUmean and logUsigma values to OVERRIDE the default
+    ##  and set use_logUconstraint? option to True
+    if logUconstraint_use.lower() == 'true' or logUconstraint_use.lower() == 'false':
+        args.logUconstraint = str(logUconstraint_use)
+    else:
+        try:
+            lum, lus = logUconstraint_use.split(',')
+            args.logUconstraint = 'True'
+            args.logUmean=float(lum)
+            args.logUsigma=float(lus)
+        except:
+            print("")
+            print("ERROR!! There was a problem determining if you wanted to use the")
+            print("    logUconstraint based on the guesses file. Assuming you do NOT.")
+            print("")
+            args.logUconstraint = 'False'
+
 
 
     args.fileinput=input_file_dir+"/mcmc."+sightline+".in"        
@@ -146,10 +186,12 @@ def run_mcmc_wotta(args):
     
     if str(carbalpha_use).lower() == 'false':
         ##Do NOT use the carbalpha parameter
-        args.grid = os.getcwd()+'/../Cloudy_grids_'+args.UVB+'/'+args.grid+'.pkl'
+        ca_text = ""
     else:
         ##Use the carbalpha parameter
-        args.grid = os.getcwd()+'/../Cloudy_grids_'+args.UVB+'/'+args.grid+'_carbalpha.pkl'
+        ca_text = "_carbalpha"
+    
+    args.grid = "{}_{}{}.pkl".format(args.grid, args.UVB, ca_text)
 
 
 
@@ -166,6 +208,14 @@ def run_mcmc_wotta(args):
     
     
     args.sightline=data['name'][HI_rows[0]].strip()
+    
+    ##Add our own info to the saved information
+    obsinfo = {}
+    obsinfo['UVB'] = args.UVB
+    obsinfo['carbalpha'] = carbalpha_use
+    obsinfo['logUconstraint'] = args.logUconstraint
+    obsinfo['logUmean'] = args.logUmean
+    obsinfo['logUsigma'] = args.logUsigma
 
 
 
@@ -187,7 +237,7 @@ def run_mcmc_wotta(args):
     ##Always run it. It would stink to sit in the CRC queue and
     ##  then fail as soon as it starts because the user forgot
     ##  to change the stinking "Run me?" column.
-    run_mcmc(args)
+    run_mcmc(args, obsinfo)
     
     return
 
@@ -196,7 +246,7 @@ def run_mcmc_wotta(args):
 ################################################
 
 
-def run_mcmc(args):
+def run_mcmc(args, obsinfo=None):
 
     """ 
     (1) Read observational column density data and
@@ -217,11 +267,17 @@ def run_mcmc(args):
     
     #now loop over ions for this system and initialise the tuples
     observ=[]
+    if not obsinfo:
+        obsinfo = {}
     for ii in range(len(sets)):
         if(data['ion'][sets[ii]] == 'HI'):
             #isolate hydrogen and info
-            obsinfo={'NHI':data['logn'][sets[ii]],'eNHI':data['elogn'][sets[ii]],'hiflag':data['flag'][sets[ii]],
-                     'z':data['zabs'][sets[ii]],'errz':data['ezabs'][sets[ii]],'name':sightline}
+            obsinfo['NHI']=data['logn'][sets[ii]]
+            obsinfo['eNHI'] = data['elogn'][sets[ii]]
+            obsinfo['hiflag'] = data['flag'][sets[ii]]
+            obsinfo['z'] = data['zabs'][sets[ii]]
+            obsinfo['errz'] = data['ezabs'][sets[ii]]
+            obsinfo['name'] = sightline
         else:
             #append ion value to list
             observ.append((data['ion'][sets[ii]],data['logn'][sets[ii]],data['elogn'][sets[ii]],data['flag'][sets[ii]]))
@@ -265,20 +321,20 @@ def main(args=None):
     parser.add_argument('-sightline', type=str, help='Name of the System to analyze')
     parser.add_argument('-fileinput')
     parser.add_argument('-outsave')
-    parser.add_argument('-grid', type=str, help='Which Cloudy grid to use. If using with -carbalpha (i.e., --wotta), only give the stub (grid_minimal) not (grid_minimal_carbalpha).')
-    parser.add_argument('-logUconstraint', type=str, help='Should we use logU constraint on density')
-    parser.add_argument('-logUmean', type=str, help='If we use logUconstraint, what is the mean for the Gaussian?')
-    parser.add_argument('-logUsigma', type=str, help='If we use logUconstraint, what is the sigma for the Gaussian?')
+    parser.add_argument('-grid', type=str, help='Full path+basename to Cloudy grid. E.g., "/afs/crc.nd.edu/group/CGMND/Cloudy_grids/grid_cgm_extensive" (this is the default). Do NOT include UVB, carbalpha, or .pkl extension; you specify these with the other options, on a per-absorber basis.')
+    parser.add_argument('-logUconstraint', type=str, help='Should we use logU constraint on density? Can be: "True", "False", or comma-separated values for logUmean and logUsigma (e.g., "-3.1,0.2"), which assumes "True". Note: This final (CSV) format overrides -logUmean and -logUsigma options!')
+    parser.add_argument('-logUmean', type=str, help='If we use logUconstraint, what is the mean for the Gaussian? Note: This may be overridden by -logUconstraint option!')
+    parser.add_argument('-logUsigma', type=str, help='If we use logUconstraint, what is the sigma for the Gaussian? Note: This may be overridden by -logUconstraint option!')
     parser.add_argument('-UVB', type=str, help='The UVB to use when we are using the logU constraint on density')
     parser.add_argument('-nthread', type=int, help='Number of threads')
     parser.add_argument('-nwalkers', type=int, help='Number of walkers')
     parser.add_argument('-nsamp', type=int, help='Number of samples')
     parser.add_argument('-optim', type=str, help='Optimization method')
-    parser.add_argument('-dens', type=float, help='Guess at density (optim=guess)')
-    parser.add_argument('-met', type=float, help='Guess at metallicity (optim=guess)')
-    parser.add_argument('-carbalpha', type=float, help='Guess at carbalpha (optim=guess)')
+    parser.add_argument('-dens', type=float, help='Guess at density (optim=guess); if "False", then optim=False')
+    parser.add_argument('-met', type=float, help='Guess at metallicity (optim=guess); if "False", then optim=False')
+    parser.add_argument('-carbalpha', type=float, help='Guess at carbalpha; if "True", uses carbalpha grid; if "False", does not use carbalpha grid')
     parser.add_argument("--testing", help="Set to test (over-rides minimum nwalkers)", action="store_true")
-    parser.add_argument("--wotta", help="Read in files using Wotta's file format (there is a guesses file, and each sightline has separate input file). If specified, the guesses file contains: 'run now?' column; the sightline name; metallicity initial guess; density initial guess; carbon/alpha ratio (carbalpha) initial guess; whether or not to allow carbalpha to vary; whether to use the Wotta+16 logUconstraint as a prior on the density; the UVB to use; and any notes (these are not used). Then, all that needs to be specified here is: -guessesfile=__; -row=__ (in the guessesfile); -nthread=__; -nwalkers=__; and -nsamp=__.", action="store_true")
+    parser.add_argument("--wotta", help="If used, reads in files using Wotta's file format (there is a guesses file, and each sightline has separate input file). If specified, the guesses file contains: dummy column at the front (not used here); the sightline name; metallicity initial guess; density initial guess; carbon/alpha ratio (carbalpha) initial guess (required, even if you don't want to use carbalpha); whether or not to allow carbalpha to vary; whether to use the Wotta+16 logUconstraint as a prior on the density; the UVB to use; ions to comment out (not used here);  and any additional notes (not used here). Then, all that needs to be specified here is: -guessesfile=__; -row=__ (in the guessesfile, usually automatically done by the supercomputer submission script); -nthread=__ (also done by the submission script); -nwalkers=__; and -nsamp=__.", action="store_true")
     parser.add_argument('-guessesfile')
     parser.add_argument("-row", type=str, help="Row (sightline) in the guesses file to run, one-indexed (not zero-indexed)")
     pargs = parser.parse_args()

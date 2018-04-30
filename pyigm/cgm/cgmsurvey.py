@@ -8,6 +8,8 @@ import warnings
 import pdb
 import json, io
 
+from pkg_resources import resource_filename
+
 from astropy.table import Table, Column
 from astropy.coordinates import SkyCoord
 from astropy import  units as u
@@ -52,7 +54,7 @@ class CGMAbsSurvey(object):
         # Load
         tar = tarfile.open(tfile)
         for kk, member in enumerate(tar.getmembers()):
-            if '.' not in member.name:
+            if '.json' not in member.name:
                 print('Skipping a likely folder: {:s}'.format(member.name))
                 continue
             # Debug
@@ -60,7 +62,11 @@ class CGMAbsSurvey(object):
                 break
             # Extract
             f = tar.extractfile(member)
-            tdict = json.load(f)
+            try:
+                tdict = json.load(f)
+            except:
+                print('Unable to load {}'.format(member))
+                continue
             # Generate
             cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, chk_data=False,
                                          use_coord=True, use_angrho=True,
@@ -89,6 +95,34 @@ class CGMAbsSurvey(object):
         slf.cgm_abs.extend(cgmlist)
         return slf
 
+    @classmethod
+    def load_B16(cls,select_method='rvir'):
+        """ Load the Burchett+16 z<0.015 samples
+
+        Parameters
+        ----------
+        select_method : str, optional
+            Selection scheme to associate galaxies with absorbers.  By default,
+            the sample of galaxies with smallest impact parameters relative
+            to their Rvir is loaded.  Otherwise, the closest in proper distance.
+
+        """
+        if select_method=='rvir':
+            b16_tarfile = resource_filename('pyigm', '/data/CGM/z0/B16_vir_sys.tar')
+        else:
+            b16_tarfile = resource_filename('pyigm', '/data/CGM/z0/B16_kpc_sys.tar')
+        print('Loading Burchett+16 using {:s} selection method'.format(select_method))
+        # Load
+        b16 = CGMAbsSurvey.from_tarball(b16_tarfile, chk_lowz=True, chk_z=False)
+        return b16
+
+    @classmethod
+    def load_J15(cls):
+        """ Load the Johnson+15 sample
+        """
+        j15_tarfile = resource_filename('pyigm', '/data/CGM/z0/J15_sys.tar')
+        j15 = CGMAbsSurvey.from_tarball(j15_tarfile, chk_lowz=False, chk_z=False)
+        return j15
 
     def __init__(self, survey='', ref='', **kwargs):
         """
@@ -135,15 +169,17 @@ class CGMAbsSurvey(object):
 
         # Loop on systems
         for cgm_abs in self.cgm_abs:
-            # Dict
-            cdict = cgm_abs.to_dict()
+            # Dict from copy
+            cabscopy = cgm_abs.copy()
+            cdict = cabscopy.to_dict()
+
             # Temporary JSON file
-            json_fil = tmpdir+'/'+cgm_abs.name+'.json'
+            json_fil = tmpdir+'/'+cabscopy.name+'.json'
             jfiles.append(json_fil)
             with io.open(json_fil, 'w', encoding='utf-8') as f:
                 #try:
-                f.write(unicode(json.dumps(cdict, sort_keys=True, indent=4,
-                                           separators=(',', ': '))))
+                f.write(json.dumps(cdict, sort_keys=True, indent=4,
+                                           separators=(',', ': ')))
         # Tar
         warnings.warn("Modify to write directly to tar file")
         subprocess.call(['tar', '-czf', outfil, tmpdir])
@@ -154,7 +190,7 @@ class CGMAbsSurvey(object):
             os.remove(jfile)
         os.rmdir(tmpdir)
 
-    def ion_tbl(self, Zion, fill_ion=True):
+    def ion_tbl(self, Zion, fill_ion=True, vrange=None,**kwargs):
         """ Generate a Table of Ionic column densities for an input ion
 
         Parameters
@@ -162,21 +198,25 @@ class CGMAbsSurvey(object):
         Zion : tuple or str
         fill_ion : bool, optional
           Fill each ionN table in the survey (a bit slow)
+        vrange : Quantity, optional
+          Velocity range of components to sum column densities
 
         Returns
         -------
         tbl : astropy.Table
+           Returns None if there are no matches to input Zion
         """
         from linetools.abund.ions import name_to_ion
         if isinstance(Zion, basestring):
             Zion = name_to_ion(Zion)
+
         # Generate dummy IGMSurvey
         dumb = GenericIGMSurvey()
         names = []
         rhos = []
         for cgmabs in self.cgm_abs:
             if fill_ion:
-                cgmabs.igm_sys.fill_ionN()
+                cgmabs.igm_sys.fill_ionN(vrange=vrange,summed_ion=True)
             if cgmabs.igm_sys._ionN is not None:
                 dumb._abs_sys.append(cgmabs.igm_sys)
                 # Names
@@ -184,13 +224,49 @@ class CGMAbsSurvey(object):
                 # Impact parameters
                 rhos.append(cgmabs.rho.to(u.kpc).value)
         # Run ions
-        tbl = dumb.ions(Zion)
-        # Add CGM name
+        tbl = dumb.ions(Zion,skip_null=False,**kwargs)
+        if tbl is None:
+            return None
         tbl.add_column(Column(names, name='cgm_name'))
         # Add impact parameter
         tbl.add_column(Column(rhos*u.kpc, name='rho_impact'))
         # Return
         return tbl
+
+    def component_tbl(self, Zion):
+        """ Generate a Table of line measurements for an input ion broken
+        down by component.
+
+        Parameters
+        ----------
+        Zion : tuple or str
+            E.g., (8,6) or 'OVI'
+
+        Returns
+        -------
+        tbl : astropy.Table
+        """
+        from linetools.abund.ions import name_to_ion
+        from linetools.isgm import utils as ltiu
+        from astropy.table import Table, vstack, Column
+
+        if isinstance(Zion, basestring):
+            Zion = name_to_ion(Zion)
+        newcomptab = Table()
+        rhos = []
+        names = []
+        for i,isys in enumerate(self.cgm_abs):
+            isys.igm_sys.update_component_vel()
+            comptab = ltiu.table_from_complist(isys.igm_sys._components)
+            comptab = comptab[(comptab['Z']==Zion[0]) & (comptab['ion']==Zion[1])]
+            if len(comptab)==0:
+                continue
+            newcomptab = vstack([newcomptab,comptab])
+            rhos.extend([isys.rho.value] * len(comptab))
+            names.extend([isys.name] * len(comptab))
+        newcomptab.add_column(Column(names, name='cgm_name'))
+        newcomptab.add_column(Column(rhos*u.kpc, name='rho_impact'))
+        return newcomptab
 
     def trans_tbl(self, inp, fill_ion=True):
         """ Generate a Table of Data on a given transition, e.g. SiIII 1206

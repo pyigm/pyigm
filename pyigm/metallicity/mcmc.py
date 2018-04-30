@@ -61,7 +61,7 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import matplotlib as mpl
 
 #The next line works on queue systems for DISPLAY issues
-mpl.use('Agg')
+# mpl.use('Agg')    #  Commented out by X to avoid test failures
 
 import warnings
 import pdb
@@ -108,25 +108,22 @@ from astropy import constants as const
 from scipy import integrate 
 from scipy.interpolate import interp1d
 
-def logU_to_dens(logU, redshift, UVB="HM05logU"):
+
+
+def integrate_uvb(redshift, UVB="HM05logU"):
     """
-    Convert logU to n_H (total H number density) using the given UVB.
+    Integrates the UVB spectrum, useful for computing logU.
     The only two UVBs for this are HM05 and HM12 because that's all I have packaged up.
     
     Parameters
     ----------
-    logU : float
-        The single value of logU that you wish to convert to density (n_H)
-    redshift : float
-        The redshift at which you'd like to convert logU --> density (n_H)
     UVB : str
         Which UVB to use. Currently, "HM05" and "HM12" are supported
     
     Returns
     ----------
-    dens : float
-        The single value of density (n_H) that corresponds to
-        the input logU and redshift, using the input UVB
+    phi,err : float np.array
+        The integrated UVB spectrum and corresponding error in the integration
     """
     ##This was taken almost directly from "getionisation.py" from Michele Fumagalli
     
@@ -165,6 +162,39 @@ def logU_to_dens(logU, redshift, UVB="HM05logU"):
     fint = interp1d(lognu,integrand)
     phi,err = integrate.quad(fint,ionnu,maxnu)
     
+    return phi,err
+
+
+
+def logU_to_dens(logU, redshift, UVB="HM05logU", spectrum=None):
+    """
+    Convert logU to n_H (total H number density) using the given UVB.
+    The only two UVBs for this are HM05 and HM12 because that's all I have packaged up.
+    
+    Parameters
+    ----------
+    logU : float
+        The single value of logU that you wish to convert to density (n_H)
+    redshift : float
+        The redshift at which you'd like to convert logU --> density (n_H)
+    spectrum : float np.array
+        The phi spectrum (from integrate_uvb). This way, we don't have to
+        re-integrate the spectrum EVERY time this function is called.
+    UVB : str
+        Which UVB to use. Currently, "HM05" and "HM12" are supported
+    
+    Returns
+    ----------
+    dens : float
+        The single value of density (n_H) that corresponds to
+        the input logU and redshift, using the input UVB
+    """
+    
+    if not spectrum:
+        phi,err = integrate_uvb(redshift, UVB)
+    else:
+        phi = spectrum
+    
     #now compute the ionization parameter
     # den=result['tags'].index('dens')
     # Uparam=np.log10(phi)-result['pdfs'][:,den]-np.log10(const.c.to('cm/s').value)
@@ -174,7 +204,7 @@ def logU_to_dens(logU, redshift, UVB="HM05logU"):
     
 
 
-def dens_to_logU(dens, redshift, UVB='HM05logU'):
+def dens_to_logU(dens, redshift, UVB='HM05logU', spectrum=None):
     
     """
     This converts density (n_H) to logU.
@@ -212,7 +242,7 @@ def dens_to_logU(dens, redshift, UVB='HM05logU'):
     testDens = -999
     while abs(testDens - dens) > tolerance_dens:
         logU = logUarray[i]
-        testDens = logU_to_dens(logU, redshift, UVB=UVB)
+        testDens = logU_to_dens(logU, redshift, spectrum=spectrum, UVB=UVB)
         ##If it gets to this point, the tolerance has NOT been met
         
         ##If it's greater (i.e., positive), then
@@ -224,7 +254,7 @@ def dens_to_logU(dens, redshift, UVB='HM05logU'):
         
         ##Go halfway between the highest "low" and
         ##  the lowest "high" i's
-        i = int(math.floor((high_i - low_i)/2. + low_i))
+        i = int(np.floor((high_i - low_i)/2. + low_i))
     
     
     return logU
@@ -300,11 +330,12 @@ class Emceebones(object):
         try:
             ##Python3
             fil=open(model,'br')
+            modl=pickle.load(fil,encoding='latin1')
         except:
             ##Python2
             fil=open(model,'r')
+            modl=pickle.load(fil)
 
-        modl=pickle.load(fil)
         fil.close()
 
         #unpack axis tag, axis value, grid column, grid ions
@@ -424,10 +455,40 @@ class Emceebones(object):
                     out_group[out_key] = self.final[out_key]
         except:
             pass
-                    
+        
+        ############
+        ##Plot
+        ############
+        
+        ######Setup
+        if self.ndim < 4:
+            title_xpos = 0.45
+            title_ypos = 0.80
+            title_fontsize = 12
+        else:
+            title_xpos = 0.35
+            title_ypos = 0.85
+            title_fontsize = 14
+        
+        
+        if self.logUconstraint.lower() == 'true':
+            lutext = "{} +/- {}".format(self.logUmean, self.logUsigma)
+        else:
+            lutext = "False"
+        
+        plot_title = "{}\nUVB={}, log U prior={}".format(self.info['name'], self.UVB, lutext)
+        # plot_title = "{}".format(self.info['name'])
+
+        
+        ######
+        ##Chains Plot
+        ######
+        
         #Start by plotting the chains with initial guess and final values
+        xaxislabels = None
         fig=plt.figure()
         xaxis=np.arange(0,self.nsamp,1)
+        fig.subplots_adjust(hspace=0.10)
 
         #Loop over each parameter and plot chain
         for ii in range(self.ndim):
@@ -438,7 +499,17 @@ class Emceebones(object):
             for jj in range(self.nwalkers):
                 ax.plot(xaxis,thischain[jj,:],color='grey',alpha=0.5)
             ax.set_ylabel(self.mod_axistag[ii])
-
+            ##Remove x-axis labels, and put ticks inside
+            if xaxislabels is None:
+                xaxislabels = plt.xticks()[0]
+            
+            ax.set_xticklabels("")
+            ax.tick_params(axis='both', direction='in', top=True)
+            
+            ##If it's the first (top) one, add a title
+            if ii == 0:
+                plt.title(plot_title,fontsize=10)
+            
             #overplot burnt in cut
             ax.axvline(x=self.burn,color='red',linewidth=3)
             #overplot median
@@ -447,19 +518,29 @@ class Emceebones(object):
             ax.axhline(y=self.paramguess[ii],color='black',linewidth=3)
 
         #Last plot
+        ax.set_xticklabels(xaxislabels)
+        ax.tick_params(axis='both', direction='in', top=True)
         ax.set_xlabel('Steps')
-        # fig.text(0.1,0.93,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='left',fontsize=10)
-        plt.title(self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),fontsize=10)
+        # fig.text(0.5,0.93,plot_title,horizontalalignment='center',fontsize=10)
         fig.savefig(self.outsave+'/'+self.info['name']+'_chains.pdf')
-
-        #now do a corner plot
-        samples = sampler.chain[:,self.burn:, :].reshape((-1,self.ndim))
-        cfig = corner.corner(samples, labels=self.mod_axistag, quantiles=[0.05,0.5,0.95],verbose=False)
-        cfig.text(0.33,0.90,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='left',fontsize=10)
-        cfig.savefig(self.outsave+'/'+self.info['name']+'_corner.pdf')
         plt.close(fig)
+
+
+        ######
+        ##Corner Plot
+        ######
         
-        #now plot the residuals
+        samples = sampler.chain[:,self.burn:, :].reshape((-1,self.ndim))
+        cfig = corner.corner(samples, labels=self.mod_axistag, label_kwargs = {"fontsize": 16}, quantiles=[0.05,0.5,0.95],verbose=False)
+        cfig.text(title_xpos,title_ypos,plot_title,horizontalalignment='left',fontsize=title_fontsize)
+        cfig.savefig(self.outsave+'/'+self.info['name']+'_corner.pdf')
+        plt.close(cfig)
+        
+        
+        ######
+        ##Residuals Plot
+        ######
+        
         rfig=plt.figure()
         
         #plot values
@@ -484,12 +565,14 @@ class Emceebones(object):
 
         plt.xticks(xaxis,axlab,rotation='vertical')
         plt.ylabel('Log Column')
-        plt.title(self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),fontsize=10)
-        # fig.text(0.1,0.93,self.info['name']+", UVB="+self.UVB+", logUconstraint="+str(self.logUconstraint),horizontalalignment='left',fontsize=12)
+        plt.title(plot_title,fontsize=10)
         rfig.savefig(self.outsave+'/'+self.info['name']+'_residual.pdf')
         plt.close(rfig)
-
+        
+        ############
+        
         print('All done with system {}!'.format(self.info['name']))
+
 
     def setup_emc(self):
         """ As named
@@ -523,9 +606,9 @@ class Emceebones(object):
 
         ##calculate the density Gaussian based on the logU Gaussian
         ##NOTE: here we assume that it is symmetric
-        emc.densGaussMean=logU_to_dens(self.logUmean, self.info['z'], self.UVB)
-        # densGaussSigPos=logU_to_dens(logUmean+logUsigma, self.info['z'], self.UVB) - densGaussMean
-        # densGaussSigNeg=densGaussMean - logU_to_dens(logUmean-logUsigma, self.info['z'], self.UVB)
+        emc.densGaussMean=logU_to_dens(self.logUmean, self.info['z'], UVB=self.UVB)
+        # densGaussSigPos=logU_to_dens(logUmean+logUsigma, self.info['z'], UVB=self.UVB) - densGaussMean
+        # densGaussSigNeg=densGaussMean - logU_to_dens(logUmean-logUsigma, self.info['z'], UVB=self.UVB)
         # densGaussSig=max([densGaussSigPos,densGaussSigNeg])
         emc.densGaussSig=self.logUsigma
         ##CBW end

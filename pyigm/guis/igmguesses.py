@@ -45,6 +45,7 @@ from linetools.spectra.xspectrum1d import XSpectrum1D
 from linetools.spectralline import AbsLine
 from linetools.isgm.abscomponent import AbsComponent
 from linetools.isgm import utils as ltiu
+from linetools.isgm import io as ltiio
 from linetools.guis import utils as ltgu
 from linetools.guis import line_widgets as ltgl
 from linetools.guis import simple_widgets as ltgsm
@@ -486,13 +487,23 @@ E         : toggle displaying/hiding the external absorption model
             self.velplot_widg.current_comp.name = key
             # Set N,b,z
             self.velplot_widg.current_comp.attrib['z'] = igmg_dict['cmps'][key]['zfit']
-            self.velplot_widg.current_comp.attrib['b'] = igmg_dict['cmps'][key]['bfit']*u.km/u.s
+            try:
+                self.velplot_widg.current_comp.attrib['b'] = igmg_dict['cmps'][key]['bfit']['value'] * u.km/u.s
+            except: # backwards compatibility
+                self.velplot_widg.current_comp.attrib['b'] = igmg_dict['cmps'][key]['bfit'] * u.km/u.s
+
             self.velplot_widg.current_comp.attrib['logN'] = igmg_dict['cmps'][key]['Nfit']
-            try: # This should me removed in the future
-                self.velplot_widg.current_comp.reliability = igmg_dict['cmps'][key]['Reliability']
-            except:
-                self.velplot_widg.current_comp.reliability = igmg_dict['cmps'][key]['Quality']  # old version compatibility
-            self.velplot_widg.current_comp.comment = igmg_dict['cmps'][key]['Comment']
+            try:
+                self.velplot_widg.current_comp.reliability = igmg_dict['cmps'][key]['reliability']
+            except:  # bkwrds compatibility; This should me removed in the future
+                try:
+                    self.velplot_widg.current_comp.reliability = igmg_dict['cmps'][key]['Reliability']  # old version compatibi
+                except:
+                    self.velplot_widg.current_comp.reliability = igmg_dict['cmps'][key]['Quality']  # old version compatibility
+            try:
+                self.velplot_widg.current_comp.comment = igmg_dict['cmps'][key]['comment']
+            except:  # bkwrds compatibility;
+                self.velplot_widg.current_comp.comment = igmg_dict['cmps'][key]['Comment']
             # Sync
             sync_comp_lines(self.velplot_widg.current_comp)
             mask_comp_lines(self.velplot_widg.current_comp, min_ew=self.min_ew)
@@ -521,12 +532,16 @@ E         : toggle displaying/hiding the external absorption model
         # We need a deep copy here because ._abslines will be modified before writting
         # but we want to keep the original ._abslines list in case column density
         # increases and the lines that were masked out because of EW should reappear.
-        comps_aux = copy.deepcopy(self.comps_widg.all_comp)
+        comps_aux = [cp.copy() for cp in self.comps_widg.all_comp]
+        # comps_aux = copy.deepcopy(self.comps_widg.all_comp)
+
         for kk, comp in enumerate(comps_aux):
             # get rid of masked abslines for writting out to hard drive
             abslines_aux = []
             mask_abslines_aux = []
             for ii, line in enumerate(comp._abslines):
+                line.setz(comp.zcomp)  # impose abslines to have the same z as zcomp
+                line.limits.set(comp.vlim)  # impose abslines to have the same vlim as component before writing
                 if comp.mask_abslines[ii] != 0:
                     abslines_aux += [line]
                     mask_abslines_aux += [comp.mask_abslines[ii]]
@@ -534,15 +549,18 @@ E         : toggle displaying/hiding the external absorption model
             comp.mask_abslines = np.array(mask_abslines_aux)
 
             key = comp.name
+            # QtCore.pyqtRemoveInputHook()
+            # pdb.set_trace()
+            # QtCore.pyqtRestoreInputHook()
             out_dict['cmps'][key] = comp.to_dict()
             out_dict['cmps'][key]['zcomp'] = comp.zcomp
             out_dict['cmps'][key]['zfit'] = comp.attrib['z']
             out_dict['cmps'][key]['Nfit'] = comp.attrib['logN']
-            out_dict['cmps'][key]['bfit'] = comp.attrib['b'].value
+            out_dict['cmps'][key]['bfit'] = comp.attrib['b'] # this is already a dict because of comp.to_dict() method above
             out_dict['cmps'][key]['wrest'] = comp.init_wrest.value
             out_dict['cmps'][key]['vlim'] = list(comp.vlim.value)
-            out_dict['cmps'][key]['Reliability'] = comp.reliability
-            out_dict['cmps'][key]['Comment'] = comp.comment
+            out_dict['cmps'][key]['reliability'] = comp.reliability
+            out_dict['cmps'][key]['comment'] = comp.comment
             out_dict['cmps'][key]['mask_abslines'] = comp.mask_abslines
         # Write bad/good pixels out
         # good_pixels = np.where(self.velplot_widg.spec.good_pixels == 1)[0]
@@ -761,6 +779,7 @@ class IGGVelPlotWidget(QWidget):
                 wobs = absline.wrest * (1 + absline.z)
                 if (wobs > self.spec.wvmin) and (wobs < self.spec.wvmax):
                     new_abslines += [absline]
+
             inp._abslines = new_abslines
             new_comp = inp
 
@@ -833,6 +852,9 @@ class IGGVelPlotWidget(QWidget):
         self.current_comp = new_comp
         if update_model:
             self.update_model()
+        # QtCore.pyqtRemoveInputHook()
+        # pdb.set_trace()
+        # QtCore.pyqtRestoreInputHook()
 
     def fit_component(self, component):
         '''Fit the component and save values'''
@@ -862,9 +884,7 @@ class IGGVelPlotWidget(QWidget):
 
         # Fit
         fitter = fitting.LevMarLSQFitter()
-        #QtCore.pyqtRemoveInputHook()
-        #pdb.set_trace()
-        #QtCore.pyqtRestoreInputHook()
+
         parm = fitter(fitvoigt,self.spec.wavelength[fit_line.analy['pix']].value, self.spec.flux[fit_line.analy['pix']].value)
 
         # Save and sync
@@ -875,6 +895,9 @@ class IGGVelPlotWidget(QWidget):
         #component.sync_lines()
         sync_comp_lines(component)
         mask_comp_lines(component, min_ew=self.parent.min_ew)
+        # QtCore.pyqtRemoveInputHook()
+        # pdb.set_trace()
+        # QtCore.pyqtRestoreInputHook()
 
     def out_of_bounds(self,coord):
         '''Check for out of bounds
@@ -1819,7 +1842,7 @@ def comp_init_attrib(comp):
                'logN': 0., 'sig_logN': 0.,
                'b': 0.*u.km/u.s, 'bsig': 0.*u.km/u.s,  # Doppler
                'z': comp.zcomp, 'zsig': 0.,
-               'Reliability': 'none'}
+               'reliability': 'none'}
 
 
 def sync_comp_lines(comp, only_lims=False):
@@ -1918,7 +1941,8 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s, min_ew=0.005*u.AA
     print('IGMGuesses: computing blends between components, it may take a while...\n')
 
     # create a copy of component list that has a minimum vlim incorporated
-    comps_copy = copy.deepcopy(components)
+    # comps_copy = copy.deepcopy(components)
+    comps_copy = [cp.copy() for cp in components]
 
     # first keep only lines with ew >= min_ew
     for comp in comps_copy:
@@ -1949,9 +1973,9 @@ def blending_info(components, specfile, min_vlim=100*u.km/u.s, min_ew=0.005*u.AA
         else:
             grouped += [group]
     # write to .joenvp output
-    ltiu.joebvp_from_components(isolated, specfile, 'isolated.joebvp')
+    ltiio.write_joebvp_from_components(isolated, specfile, 'isolated.joebvp')
     for ii, group in enumerate(grouped):
-        ltiu.joebvp_from_components(group, specfile, 'group_{}.joebvp'.format(ii+1))
+        ltiio.write_joebvp_from_components(group, specfile, 'group_{}.joebvp'.format(ii+1))
 
     grouped = [isolated] + grouped
     for ii, group in enumerate(grouped):
@@ -1998,7 +2022,7 @@ def from_igmguesses_to_joebvp(infile, outfile):
         comp = AbsComponent.from_dict(igmg_dict['cmps'][key], chk_sep=False, chk_data=False, chk_vel=False)
         comp_list += [comp]
 
-    ltiu.joebvp_from_components(comp_list, igmg_dict['spec_file'], outfile)
+    ltiio.joebvp_from_components(comp_list, igmg_dict['spec_file'], outfile)
 
 def init_meta():
     """Creates a general meta dictionary

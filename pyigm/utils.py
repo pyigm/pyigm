@@ -382,3 +382,108 @@ def velcorr_mould(galaxy,cosmo=None):
                        distmod=distmod, flag=flag, scale=scale.to(u.kpc/u.arcsec))
 
     return velcorrdict
+
+def get_components(obj,ion,zrange=None):
+    """Return list of components from AbsSystem or IGMSightline for given ion
+
+    Parameters
+    ----------
+    obj : AbsSystem or IGMSightline
+        Object that has attribute 'Zion'
+    ion : tuple or str, optional
+        Zion tuple or ion name; e.g., (8,6) for OVI
+    zrange : tuple, optional
+        Range in redshift over which to look for components
+
+    Returns
+    -------
+    complist : list
+        List of components with given ion
+    """
+    if isinstance(ion,str):
+        from linetools.abund.ions import name_to_ion
+        Zion = name_to_ion(ion)
+    else:
+        Zion = ion
+    if zrange is None:
+        complist = [comp for comp in obj._components if comp.Zion==Zion]
+    else:
+        complist = [comp for comp in obj._components if
+                 ((comp.Zion==Zion)&(comp.zcomp>zrange[0])&(comp.zcomp<zrange))]
+    return complist
+
+def confintervals(hits,totals,sig=1,confidence=None):
+    """Wrapper for confinterval() function to accept arrays of hits and totals
+    
+    Parameters
+    ----------
+    hits : list or array
+        Numbers of instances
+    totals : list or array
+        Total numbers of instances possible
+    sig : int,optional
+        Confidence level in multiples of sigma
+    confidence : float, optional
+        Actual confidence level, e.g., 0.997; if provided, sig is ignored
+
+    Returns
+    -------
+    fracs : list of floats
+        Fractions of hits/totals
+    lolims : list of floats 
+        Lower bounds of confidence interval
+    uplims : list of floats
+        Upper bounds of confidence interval
+    """
+    fracs=np.zeros(len(hits)) ; uplims=np.zeros(len(hits)) ; lolims=np.zeros(len(hits))
+    for i,tt in enumerate(totals):
+        fracs[i],lolims[i],uplims[i]=confinterval(hits[i],totals[i],sig,confidence)
+    return fracs,lolims,uplims
+
+def confinterval(hits,total,sig=1,confidence=None):
+    """ Calculate Wilson confidence intervals
+    Parameters
+    ----------
+    hits : int
+        Number of instances
+    total : int
+        Total number of instances possible
+    sig : int,optional
+        Confidence level in multiples of sigma
+    confidence : float, optional
+        Actual confidence level, e.g., 0.997; if provided, sig is ignored
+
+    Returns
+    -------
+    frac : floats
+        Fraction of hits
+    lolim : list of floats
+        Lower bound of confidence interval
+    uplim : list of floats
+        Upper bound of confidence interval
+    """
+    from astropy.stats.funcs import binom_conf_interval as conf
+
+    # Get confidence level
+    if confidence is None:
+        cl = conflevel(sig)
+    else:
+        cl = confidence
+
+    # Calculate
+    lowlim,uplim=conf(hits,total,conf=cl)
+    frac = float(hits)/total
+
+    return frac,lowlim,uplim
+
+def conflevel(sigma):
+    """Return confidence level assuming Gaussian distribution
+
+    Parameters
+    ----------
+    sigma: float
+        Number of standard deviations from mean within which to calculate confidence level
+    """
+    from scipy.stats import norm
+    cl = norm.cdf(sigma)
+    return cl
