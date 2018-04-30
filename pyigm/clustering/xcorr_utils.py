@@ -222,3 +222,104 @@ def clean_matrix(W,n=-99):
     W = np.where(np.isnan(W),n,W)
     W = np.where(np.isinf(W),n,W)
     return W
+
+
+def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.):
+    """
+    Prefered random galaxy generator. For a given galaxy with a
+    given magnitude (and other properties), it calculates the redshift
+    sensitivity function from galaxies in a magnitude band around the
+    selected one (i.e., including slightly brighter and fainter
+    galaxies), and places Nrand new galaxies at a random redshift given
+    by a smoothed version of the observed sensitivity function. For
+    extremely bright or faint galaxies (rare) the sensitivity function
+    is calculated from at least Nmin (=20) galaxies (i.e. the magnitude
+    band is increased).
+
+    Parameters
+    ----------
+    galreal
+    Nrand
+    Nmin : int, optional
+    DZ : float, optional
+      delta z for the histogram for getting the
+    smooth_scale : float, optional
+       smoothing scale for the histogram (in number of bins, so depends on DZ)
+
+    Returns
+    -------
+    """
+    from pyntejos.sampledist import RanDist
+    from pyntejos.fit import InterpCubicSpline
+    from scipy.ndimage import gaussian_filter as gf
+
+    debug = 0
+    Ckms = 299792.458
+    Nmin = int(Nmin)  # minimum number of galaxys for the fit
+    zmin = np.max([np.min(galreal.ZGAL[galreal.ZGAL > 0]), 1e-9])
+    zmax = np.max(galreal.ZGAL)
+    # spline in z
+    galreal.sort(order='MAG')  # np.recarray.sort()
+    galrand = galreal.repeat(Nrand)
+    delta_mag = 0.5
+
+    bins = np.append(np.linspace(0, zmin, 20), np.arange(zmin + DZ, zmax + 10 * DZ, DZ))
+    # bins = np.arange(0, zmax+DZ, DZ)
+
+    # Make subhistograms depending on magnitude. Use dictionary.
+    VALS = dict()
+    SPL = dict()
+    aux_hist, _ = np.histogram(galreal.ZGAL, bins)
+    VALS['all'] = gf(aux_hist.astype(float), smooth_scale)  # smooth the histogram
+    SPL['all'] = InterpCubicSpline(0.5 * (bins[:-1] + bins[1:]), VALS['all'].astype(float))
+
+    delta_mag2 = delta_mag
+    magbins = np.arange(17, 26, delta_mag2)
+    # magbins = [15,19,21,22,26]
+    rvals = np.linspace(0, zmax, 1e4)
+    for mag in magbins:
+        q = 0
+        while True:
+            cond = (galreal.MAG <= mag + delta_mag2 * 0.5) & (galreal.MAG > mag - delta_mag2 * 0.5)
+            if np.sum(cond) >= Nmin:
+                break
+            else:
+                delta_mag2 += 0.25
+            q += 1
+            assert q < 1000, 'Something wrong with the redshift distribution'
+
+        aux_hist, _ = np.histogram(galreal.ZGAL[cond], bins)
+        VALS['{}'.format(mag)] = gf(aux_hist.astype(float), smooth_scale)  # smooth the histogram
+        SPL['{}'.format(mag)] = InterpCubicSpline(0.5 * (bins[:-1] + bins[1:]), VALS['{}'.format(mag)].astype(float))
+        vals = VALS['{}'.format(mag)]
+        spl = SPL['{}'.format(mag)]
+        rand_z = RanDist(rvals, spl(rvals))
+        if debug:
+            pl.plot(bins, spl(bins), '-', label='{}'.format(mag))
+            pl.plot(bins[:-1], aux_hist, drawstyle='steps-mid')
+            pl.xlim(0, 2)
+            pl.legend()
+            pl.show()
+    if debug:
+        pl.legend()
+        pl.show()
+
+    for i in xrange(len(galreal)):
+        if (galreal.MAG[i] > 90) or (galreal.MAG[i] < -90):  # no magnitude, use the whole distribution
+            vals = VALS['all']
+            spl = SPL['all']
+        else:
+            ind_mag = np.where(np.fabs(galreal.MAG[i] - magbins) == np.min(np.fabs(galreal.MAG[i] - magbins)))[0][0]
+            mag = magbins[ind_mag]
+            vals = VALS['{}'.format(mag)]
+            spl = SPL['{}'.format(mag)]
+        if i % 1000 == 0:
+            print
+            '{}/{}'.format(i + 1, len(galreal))
+
+        dist = np.array(spl(rvals))
+        dist = np.where((rvals < zmin) | (rvals > zmax), 0, dist)  # get rid of redshifts beyond observed
+        rand_z = RanDist(rvals, dist)
+        zrand = rand_z.random(Nrand)
+        galrand.ZGAL[i * Nrand:(i + 1) * Nrand] = zrand
+    return galrand
