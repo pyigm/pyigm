@@ -13,7 +13,15 @@ class Survey2D2PCF(object):
     IgmGalaxyField objects together. It internally calculates the total numbers
     of cross- and auto-pairs of real data and produce randoms. It calculates
     the 2D2PCF using the Landy & Szalay estimator (or others), and it estimates
-    the uncertainty with a bootstrap, jacknife or Landy & Szalay approximation."""
+    the uncertainty with a bootstrap, jacknife or Landy & Szalay approximation.
+
+    Parameters
+    ----------
+    field : ClusteringField object
+      The field which initializes sets the binning.  It also
+      sets whether galaxy-galaxy, absorber-absorber, and galaxy-absorber analysis is on
+      So, load a good one first!
+    """
 
     def __init__(self, field):
         #f = copy.deepcopy(field)
@@ -55,6 +63,17 @@ class Survey2D2PCF(object):
         self.tdiff  = self.tbinedges[1:] - self.tbinedges[:-1]
 
     def addField(self, new_field):
+        """ Add a new field
+
+        Parameters
+        ----------
+        new_field : ClusterField
+
+        Returns
+        -------
+        All internal appends
+
+        """
         # Check edges
         if not np.isclose(new_field.rbinedges, self.rbinedges):
             raise IOError("rbinedges of new field does not match Survey!!")
@@ -83,10 +102,31 @@ class Survey2D2PCF(object):
                 self.RaRg += new_field.RaRg
 
     def calc_xi_gg(self, sigma=0, error=None):
+        """ Calculate xi_gg with the Landy-Szalay estimator (W3)
+
+        Parameters
+        ----------
+        sigma : float, optional
+          Smoothing of the counts
+        error : str, optional
+          Type of error analysis
+          'jk' -- jackknife
+          'bs' -- bootstrap
+
+        Returns
+        -------
+        Wgg : ndarray
+        err_W : ndarray
+        xi_gg and xi_gg_err_ls are also set intenarlly
+
+        """
 
         s = sigma
         Wgg, err_W = W3(gf(self.DgDg, s), gf(self.RgRg, s), gf(self.DgRg, s), gf(self.DgRg, s), Ndd=self.nDgDg,
                         Nrr=self.nRgRg, Ndr=self.nDgRg, Nrd=self.nDgRg)
+        #
+        self.xi_gg = Wgg
+        self.xi_gg_err_ls = err_W
 
         # jacknife error
         if error == 'jk':
@@ -140,12 +180,26 @@ class Survey2D2PCF(object):
             err_W = err_Wbt
 
         # Set
-        self.xi_gg = Wgg
-        self.xi_gg_err_ls = err_W  # Not sure this is a good idea
         # Return
         return Wgg, err_W
 
     def calc_xi_gg_transverse(self, s, nbins=None):
+        """  Calculate xi_gg in the transverse dimension
+        Estimated with Landay-Szalay  (W3)
+
+        Parameters
+        ----------
+        s : float
+          Smoothing parameter
+        nbins : int, optional
+
+        Returns
+        -------
+        xi_gg_T
+        xi_gg_T_err
+          Also save in the object
+
+        """
 
         # Transverse pairs (may wish to make this a method)
         self.DgDg_T = collapse_along_LOS(self.DgDg,nbins,s=s)
@@ -159,6 +213,19 @@ class Survey2D2PCF(object):
 
 
     def set_normalization(self, norm, Ngal_rand=None, Nabs_rand=None):
+        """ Set normalization for the pair counts
+
+        Parameters
+        ----------
+        norm : bool
+          False -- Internal normalization will be performed by the estimator
+        Ngal_rand : int, optional
+        Nabs_rand : int, optional
+
+        Returns
+        -------
+        Attributes like nDgDg, nRgRg are set internally
+        """
 
         # normalization factors
         if norm:

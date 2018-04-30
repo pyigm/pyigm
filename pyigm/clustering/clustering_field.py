@@ -12,10 +12,12 @@ from pyigm.clustering.xcorr_utils import random_gal, auto_pairs_rt, cross_pairs_
 class ClusteringField(IgmGalaxyField):
     """The Field class is meant to contain information from a given
     galaxy field (with one or more QSO sightlines containing IGM
-    information).
+    information).  It sub-classes on IGMGalaxyField which is expected
+    to hold *all* of the galaxies for the field of interest.
 
     Input parameters:
     ---
+    radec : coordinate
     absreal:   catalog of real absorption lines (numpy rec array). It has to have
                dtype.names RA,DEC,ZABS,LOGN,B
     galreal:   catalog of real galaxies (numpy rec array). It has to have
@@ -64,7 +66,7 @@ class ClusteringField(IgmGalaxyField):
 
         self.galreal = None # Filled with addGal
 
-    def addGal(self, gal_idx):
+    def addGal(self, gal_idx, mag_clm='MAG', z_clm='ZGAL'):
         """ Adds a set of galaxies for clustering analysis from the main astropy Table
 
         A random sample is also generated
@@ -73,6 +75,10 @@ class ClusteringField(IgmGalaxyField):
         ----------
         gal_idx : ndarray (int or bool)
           Indices of self.galaxy to add to the clustering analysis
+        mag_clm : str, optional
+          Name of the column for the galaxy magnitudes
+        z_clm : str, optional
+          Name of the column for the galaxy redshifts
 
         Returns
         -------
@@ -83,8 +89,8 @@ class ClusteringField(IgmGalaxyField):
         sub_gal = self.galaxies[gal_idx]
 
         # Rename any columns here
-        sub_gal.rename_column('mag','MAG')
-        sub_gal.rename_column('Z','ZGAL')
+        sub_gal.rename_column(mag_clm,'MAG')
+        sub_gal.rename_column(z_clm,'ZGAL')
 
         # Strip down to important columns only here, as desired
 
@@ -104,7 +110,21 @@ class ClusteringField(IgmGalaxyField):
             self.galrand = np.rec.array(self.galrand)
 
     def compute_pairs(self, tbinedges, rbinedges):
-        """Computes relevant pairs"""
+        """Computes relevant pairs dependent on what has been loaded
+        into the object (i.e. galaxies, absorbers, galaxy-absorbers)
+
+        Parameters
+        ----------
+        tbinedges : ndarray
+          Defines the transverse bins in comoving Mpc
+        rbinedges
+          Defines the radial bins in comoving Mpc
+
+        Returns
+        -------
+        Internal updates only, e.g. DgDg, RgRg
+
+        """
 
         self.tbinedges = tbinedges
         self.rbinedges = rbinedges
@@ -144,7 +164,13 @@ class ClusteringField(IgmGalaxyField):
             '''
 
     def XYZ_gal(self):
-        """Goes from (RA,DEC,Z) to (X,Y,Z) coordinates"""
+        """Calculates X,Y,Z coordinates for the galaxies, real and random
+        from (RA,DEC,Z).
+
+        Internals filled only:
+        xg,yg,zg
+        xgr,ygr,zgr
+        """
         from pyigm.clustering.coord_utils import radec_to_xyz
 
         # randomize order
@@ -170,7 +196,13 @@ class ClusteringField(IgmGalaxyField):
         self.zgr = xyz[2]
 
     def XYZ_abs(self):
-        """Goes from (RA,DEC,Z) to (X,Y,Z) coordinates"""
+        """Calculates X,Y,Z coordinates for the galaxies, real and random
+        from (RA,DEC,Z).
+
+        Internals filled only:
+        xg,yg,zg
+        xgr,ygr,zgr
+        """
         from pyigm.clustering.coord_utils import radec_to_xyz
 
         # randomize order

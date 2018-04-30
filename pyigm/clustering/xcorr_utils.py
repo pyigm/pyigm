@@ -1,4 +1,6 @@
 """Utilities for xcorr calculations"""
+from __future__ import print_function, absolute_import, division, unicode_literals
+
 import time
 import numpy as np
 from scipy.ndimage import gaussian_filter as gf
@@ -253,7 +255,6 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.):
       Copy of galreal, Nrand times
     """
     from pyigm.clustering.randist import RanDist
-    #from pyntejos.fit import InterpCubicSpline
     from scipy.interpolate import CubicSpline
     from scipy.ndimage import gaussian_filter as gf
 
@@ -334,9 +335,26 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.):
 def collapse_along_LOS(DD, nbins=None, s=0):
     """Sums pair counts over the first nbins along the sightline
     dimension. Returns an array with the values for transverse bins. If
-    nbins is None then collapses the whole array."""
+    nbins is None then collapses the whole array.
+
+    Parameters
+    ----------
+    DD : ndarray
+      Pair counts to sum
+    nbins :  int, optional
+    s : float, optional
+      For Gaussian filtering
+
+    Returns
+    -------
+    DD_1D : ndarray
+      Collapsed pair counts
+    """
+    # Gaussian filter
     DD = gf(DD, s)
     if nbins is None:
         nbins = len(DD[0].T)
+    # Avoidable loop?
     DD_1D = np.array([np.sum(DD.T[i][:nbins]) for i in range(len(DD[0]))])
+    # Return
     return DD_1D
