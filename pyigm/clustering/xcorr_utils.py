@@ -5,6 +5,8 @@ import time
 import numpy as np
 from scipy.ndimage import gaussian_filter as gf
 
+Ckms = 299792.458  # speed of light in km/s
+
 def auto_pairs_rt(X, Y, Z, rbinedges, tbinedges, wrap=True, track_time=False):
     """
     [NT: give a nice description]
@@ -227,7 +229,8 @@ def clean_matrix(W,n=-99):
     return W
 
 
-def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.):
+def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.,
+               magmin=17., magmax=26., delta_mag=0.5):
     """
     Prefered random galaxy generator. For a given galaxy with a
     given magnitude (and other properties), it calculates the redshift
@@ -248,6 +251,12 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.):
       delta z for the histogram for getting the
     smooth_scale : float, optional
        smoothing scale for the histogram (in number of bins, so depends on DZ)
+    magmin : float, optional
+       Minimum magnitude for the binning (bright end)
+    magmax : float, optional
+       Maximum magnitude for the binning (faint end)
+    delta_mag : float, optional
+       Step size for magnitude binning
 
     Returns
     -------
@@ -259,14 +268,12 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.):
     from scipy.ndimage import gaussian_filter as gf
 
     debug = 0
-    Ckms = 299792.458
     Nmin = int(Nmin)  # minimum number of galaxys for the fit
     zmin = np.max([np.min(galreal.ZGAL[galreal.ZGAL > 0]), 1e-9])
     zmax = np.max(galreal.ZGAL)
     # spline in z
     galreal.sort(order='MAG')  # np.recarray.sort()
     galrand = galreal.repeat(Nrand)
-    delta_mag = 0.5
 
     bins = np.append(np.linspace(0, zmin, 20), np.arange(zmin + DZ, zmax + 10 * DZ, DZ))
     # bins = np.arange(0, zmax+DZ, DZ)
@@ -279,8 +286,9 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.):
     #SPL['all'] = InterpCubicSpline(0.5 * (bins[:-1] + bins[1:]), VALS['all'].astype(float))
     SPL['all'] = CubicSpline(0.5 * (bins[:-1] + bins[1:]), VALS['all'].astype(float))
 
+    # Generate magnitude bins
     delta_mag2 = delta_mag
-    magbins = np.arange(17, 26, delta_mag2)
+    magbins = np.arange(magmin, magmax, delta_mag2)
     # magbins = [15,19,21,22,26]
     rvals = np.linspace(0, zmax, 1e4)
     for mag in magbins:
@@ -312,6 +320,7 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.):
         pl.legend()
         pl.show()
 
+    # TODO -- Use better masking than +/- 90 mag
     for i in range(len(galreal)):
         if (galreal.MAG[i] > 90) or (galreal.MAG[i] < -90):  # no magnitude, use the whole distribution
             vals = VALS['all']

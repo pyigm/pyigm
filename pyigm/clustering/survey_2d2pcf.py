@@ -4,6 +4,9 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import numpy as np
 from scipy.ndimage import gaussian_filter as gf
 
+from astropy.coordinates import SkyCoord
+from astropy import units as u
+
 from pyigm.clustering.xcorr_utils import random_gal, auto_pairs_rt, cross_pairs_rt, W3, collapse_along_LOS
 
 class Survey2D2PCF(object):
@@ -67,7 +70,7 @@ class Survey2D2PCF(object):
 
         Parameters
         ----------
-        new_field : ClusterField
+        new_field : ClusteringField
 
         Returns
         -------
@@ -79,6 +82,12 @@ class Survey2D2PCF(object):
             raise IOError("rbinedges of new field does not match Survey!!")
         if not np.isclose(new_field.tbinedges, self.tbinedges):
             raise IOError("tbinedges of new field does not match Survey!!")
+        # Check coordiantes (this is not a perfect check..)
+        fcoord = SkyCoord(ra=[field.ra.value for field in self.fields],
+                          dec=[field.dec.value for field in self.fields], unit='deg')
+        if np.absmin(new_field.coord.separation(fcoord) < 10*u.arcsec):
+            raise IOError('New field is within 10" of an already input field!  We assume a mistake was made')
+
 
         #f = copy.deepcopy(field)
         self.fields.append(new_field)
@@ -107,7 +116,8 @@ class Survey2D2PCF(object):
         Parameters
         ----------
         sigma : float, optional
-          Smoothing of the counts
+          Gaussian standard deviation smoothing;
+          defined in units of the spatial grid.
         error : str, optional
           Type of error analysis
           'jk' -- jackknife
