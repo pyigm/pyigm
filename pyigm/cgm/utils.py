@@ -330,7 +330,8 @@ def covering_fraction(iontable,colthresh,rhobins=None,returncounts=False,**kwarg
     # Impose threshold if it exists
     if colthresh != None:
         dets = np.where(((flag == 1) | (flag == 2))&(col > colthresh))[0]
-        nondets = np.where((flag == 3) & (col <= colthresh))[0]
+        nondets = np.where(((flag == 3) & (col <= colthresh)) |
+                            ((flag == 1) & (col <= colthresh)) )[0]
     else:
         dets = np.where((flag == 1) | (flag == 2))[0]
         nondets = np.where((flag == 3))[0]
