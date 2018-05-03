@@ -253,6 +253,9 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.):
     -------
     galrand : np rec array
       Copy of galreal, Nrand times
+    VALS : dict
+    SPL : dict
+      CubicSplines
     """
     from pyigm.clustering.randist import RanDist
     from scipy.interpolate import CubicSpline
@@ -329,7 +332,7 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.):
         rand_z = RanDist(rvals, dist)
         zrand = rand_z.random(Nrand)
         galrand.ZGAL[i * Nrand:(i + 1) * Nrand] = zrand
-    return galrand
+    return galrand, VALS, SPL
 
 
 def collapse_along_LOS(DD, nbins=None, s=0):
