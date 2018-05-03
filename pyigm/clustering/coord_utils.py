@@ -14,6 +14,7 @@ RAD_PER_DEG = np.pi / 180.             # radians per degree
 
 def radec_to_xyz(ra_deg, dec_deg):
     """ Convert RA and Dec to xyz positions on a unit sphere.
+    Warning:  This assumes small angle appoximations..
 
     Parameters
     ----------
@@ -24,6 +25,8 @@ def radec_to_xyz(ra_deg, dec_deg):
     -------
     ndarray of floats with shape (N, 3).
     """
+    # TODO -- Handle large angle separations properly
+
     ra  = np.asarray(ra_deg) * RAD_PER_DEG
     dec = np.asarray(dec_deg) * RAD_PER_DEG
     cosd = np.cos(dec)

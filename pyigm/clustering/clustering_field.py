@@ -30,6 +30,9 @@ class ClusteringField(IgmGalaxyField):
     Ngal_rand: number of random galaxies per real one that will be created.
     Nabs_rand: number of random absorbers per real one that will be created.
     proper:    calculates everything in physical Mpc rather than co-moving (Boolean).
+    wrapped : bool, optional
+      Whether to wrap the pair counts along the line of sight to increase counts
+        (if the signal is isotropic this is justified)
 
 
     Description of the Class:
@@ -166,6 +169,9 @@ class ClusteringField(IgmGalaxyField):
     def XYZ_gal(self):
         """Calculates X,Y,Z coordinates for the galaxies, real and random
         from (RA,DEC,Z).
+
+        Note: This assumes a small angle approximation which will not apply for
+          very large separations.
 
         Internals filled only:
         xg,yg,zg

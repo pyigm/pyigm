@@ -5,7 +5,7 @@ from astropy.table import Table
 
 
 def make_rand_gal(nrand=1000):
-    # Make a set of random galaxies
+    # Make a set of random, uniformly distributed galaxies
     RA = 200. + 1.0 * np.random.uniform(size=nrand)  # About 20Mpc at z~0.3
     DEC = 25. + 1.0 * np.random.uniform(size=nrand)
     Z = 0.3 + 0.2*np.random.uniform(size=nrand)
