@@ -265,6 +265,7 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.,
     VALS : dict
     SPL : dict
       CubicSplines
+    magbins : ndarray
     """
     from pyigm.clustering.randist import RanDist
     from scipy.interpolate import CubicSpline
@@ -308,9 +309,9 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.,
         aux_hist, _ = np.histogram(galreal.ZGAL[cond], bins)
         VALS['{}'.format(mag)] = gf(aux_hist.astype(float), smooth_scale)  # smooth the histogram
         SPL['{}'.format(mag)] = CubicSpline(0.5 * (bins[:-1] + bins[1:]), VALS['{}'.format(mag)].astype(float))
-        vals = VALS['{}'.format(mag)]
+        #vals = VALS['{}'.format(mag)]
         spl = SPL['{}'.format(mag)]
-        rand_z = RanDist(rvals, spl(rvals))
+        #rand_z = RanDist(rvals, spl(rvals))
         if debug:
             import matplotlib.pyplot as pl
             pl.plot(bins, spl(bins), '-', label='{}'.format(mag))
@@ -341,7 +342,7 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.,
         rand_z = RanDist(rvals, dist)
         zrand = rand_z.random(Nrand)
         galrand.ZGAL[i * Nrand:(i + 1) * Nrand] = zrand
-    return galrand, VALS, SPL
+    return galrand, magbins, VALS, SPL
 
 
 def collapse_along_LOS(DD, nbins=None, s=0):

@@ -103,12 +103,12 @@ class ClusteringField(IgmGalaxyField):
         # Load me up
         if self.galreal is None:
             self.galreal = galnew  # np rec array with galaxy properties
-            self.galrand = random_gal(self.galreal, self.Ngal_rand)
+            self.galrand, _, _, _ = random_gal(self.galreal, self.Ngal_rand)
         else:
             galnew = galnew.astype(self.galreal.dtype)
             self.galreal = np.append(self.galreal, galnew)
             self.galreal = np.rec.array(self.galreal)
-            aux = random_gal(galnew, self.Ngal_rand)
+            aux, _, _, _ = random_gal(galnew, self.Ngal_rand)
             self.galrand = np.append(self.galrand, aux)
             self.galrand = np.rec.array(self.galrand)
 
