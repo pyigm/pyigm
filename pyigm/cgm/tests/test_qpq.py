@@ -5,7 +5,7 @@ Module to run tests on pyigm.cgm.qpq
 
 import numpy as np
 from pyigm.cgm.qpq import QPQ5,QPQ6,QPQ7,QPQ8
-import pdb 
+import pdb
 
 def test_qpq():
     # Load classes
@@ -17,7 +17,6 @@ def test_qpq():
     assert len(qpq6.cgm_abs) == 646
     assert len(qpq7.cgm_abs) == 427
     assert len(qpq8.cgm_abs) == 14
-    assert len(qpq8.cgm_abs[0]._components) == 12
 
     # EW : QPQ6
     ew6 = qpq6.trans_tbl('HI 1215')['EW']
@@ -35,7 +34,7 @@ def test_qpq():
     i = np.where(flgs == 1)[0]
     assert len(i) == 20
 
-    ## EW : QPQ8              # need to modify trans_tbl in order to use this?
+    ## EW : QPQ8              # need to modify trans_tbl in order to use this
     #ew8 = qpq8.trans_tbl('AlII 1670')['EW']
     #i = np.where(ew8 > 0)[0]
     #assert len(i) == 19
