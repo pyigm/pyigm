@@ -308,7 +308,7 @@ class CGMAbsSurvey(object):
             # Dict from copy
             cdict = cgm_abs.to_dict()
             # Use galaxy name for key;  Should be unique
-            survey_dict[cgm_abs.galaxy.name] = cdict.copy()
+            survey_dict[cgm_abs.galaxy.name+'_'+cgm_abs.igm_sys.name] = cdict.copy()
 
         # JSON
         clean_dict = ltu.jsonify(survey_dict)
