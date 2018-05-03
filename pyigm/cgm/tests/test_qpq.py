@@ -34,7 +34,7 @@ def test_qpq():
     i = np.where(flgs == 1)[0]
     assert len(i) == 20
 
-    ## EW : QPQ8              # need to modify trans_tbl in order to use this
+    ## EW : QPQ8              # need to modify trans_tbl in order to use this 
     #ew8 = qpq8.trans_tbl('AlII 1670')['EW']
     #i = np.where(ew8 > 0)[0]
     #assert len(i) == 19
