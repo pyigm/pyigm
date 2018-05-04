@@ -127,7 +127,7 @@ class Survey2D2PCF(object):
         -------
         Wgg : ndarray
         err_W : ndarray
-        xi_gg and xi_gg_err_ls are also set intenarlly
+        xi_gg and xi_gg_err_ls are also set internally
 
         """
 
