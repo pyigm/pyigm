@@ -6,7 +6,7 @@ import numpy as np
 from scipy.ndimage import gaussian_filter as gf
 
 from pyigm.field.igmfield import IgmGalaxyField
-from pyigm.clustering.xcorr_utils import random_gal, auto_pairs_rt, cross_pairs_rt
+from pyigm.clustering.xcorr_utils import spline_sensitivity, random_gal, auto_pairs_rt, cross_pairs_rt
 
 
 class ClusteringField(IgmGalaxyField):
@@ -69,7 +69,8 @@ class ClusteringField(IgmGalaxyField):
 
         self.galreal = None # Filled with addGal
 
-    def addGal(self, gal_idx, mag_clm='MAG', z_clm='ZGAL'):
+    def addGal(self, gal_idx, mag_clm='MAG', z_clm='ZGAL', sens_galaxies=None,
+               magbins=None, SPL=None):
         """ Adds a set of galaxies for clustering analysis from the main astropy Table
 
         A random sample is also generated
@@ -82,6 +83,12 @@ class ClusteringField(IgmGalaxyField):
           Name of the column for the galaxy magnitudes
         z_clm : str, optional
           Name of the column for the galaxy redshifts
+        sens_galaxies : np.recarray
+          Use for generating sensitivity function instead of the added galaxies
+          Used when the subset is too small for an accurate sensitivity function
+        magbins : ndarray (optional)
+        SPL : dict (optional)
+          Contains the sensitivity function (CubicSpline's)
 
         Returns
         -------
@@ -100,16 +107,24 @@ class ClusteringField(IgmGalaxyField):
         # Convert to numpy rec array
         galnew = sub_gal.as_array().view(np.recarray)
 
+        # Calculate randoms
+        if sens_galaxies is None:
+            sens_galaxies = galnew
+        # Sensitivity function
+        if (SPL is None) or (magbins is None):
+            magbins, _, SPL = spline_sensitivity(sens_galaxies)
+        # Randoms
+        rgal = random_gal(galnew, self.Ngal_rand, magbins, SPL)
+
         # Load me up
         if self.galreal is None:
             self.galreal = galnew  # np rec array with galaxy properties
-            self.galrand, _, _, _ = random_gal(self.galreal, self.Ngal_rand)
+            self.galrand = rgal
         else:
             galnew = galnew.astype(self.galreal.dtype)
             self.galreal = np.append(self.galreal, galnew)
             self.galreal = np.rec.array(self.galreal)
-            aux, _, _, _ = random_gal(galnew, self.Ngal_rand)
-            self.galrand = np.append(self.galrand, aux)
+            self.galrand = np.append(self.galrand, rgal)
             self.galrand = np.rec.array(self.galrand)
 
     def compute_pairs(self, tbinedges, rbinedges):

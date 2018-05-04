@@ -83,9 +83,9 @@ class Survey2D2PCF(object):
         if not np.all(np.isclose(new_field.tbinedges, self.tbinedges)):
             raise IOError("tbinedges of new field does not match Survey!!")
         # Check coordiantes (this is not a perfect check..)
-        fcoord = SkyCoord(ra=[field.ra.value for field in self.fields],
-                          dec=[field.dec.value for field in self.fields], unit='deg')
-        if np.absmin(new_field.coord.separation(fcoord) < 10*u.arcsec):
+        fcoord = SkyCoord(ra=[field.CRA for field in self.fields],
+                          dec=[field.CDEC for field in self.fields], unit='deg')
+        if np.any(new_field.coord.separation(fcoord) < 10*u.arcsec):
             raise IOError('New field is within 10" of an already input field!  We assume a mistake was made')
 
 

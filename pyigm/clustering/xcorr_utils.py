@@ -230,8 +230,8 @@ def clean_matrix(W,n=-99):
     return W
 
 
-def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5,
-                       debug=False):
+def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, DZ=0.01,
+                       smooth_scale=10., debug=False):
     """
     For a given galaxy with a
     given magnitude (and other properties), it calculates the redshift
@@ -247,8 +247,16 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5,
     galreal : np.recarray
     Nmin : int, optional
       Minimum number of galaxies to include in a bin
-    magmin : float (optional)
-    magmax : float (optional)
+    DZ : float, optional
+      delta z for the histogram for getting the
+    smooth_scale : float, optional
+       smoothing scale for the histogram (in number of bins, so depends on DZ)
+    magmin : float, optional
+       Minimum magnitude for the binning (bright end)
+    magmax : float, optional
+       Maximum magnitude for the binning (faint end)
+    delta_mag : float, optional
+       Step size for magnitude binning
     delta_mag : float (optional)
     debug : bool (optional)
 
@@ -258,6 +266,7 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5,
     SPL : dict
       CubicSplines
     magbins : ndarray
+      Mag bins used in the generation of the Splines
     """
     Nmin = int(Nmin)  # minimum number of galaxys for the fit
     zmin = np.max([np.min(galreal.ZGAL[galreal.ZGAL > 0]), 1e-9])
@@ -267,7 +276,6 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5,
     galreal.sort(order='MAG')  # np.recarray.sort()
 
     bins = np.append(np.linspace(0, zmin, 20), np.arange(zmin + DZ, zmax + 10 * DZ, DZ))
-    # bins = np.arange(0, zmax+DZ, DZ)
 
     # Make subhistograms depending on magnitude. Use dictionary.
     VALS = dict()
@@ -309,7 +317,7 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5,
     return magbins, VALS, SPL
 
 
-def random_gal(galreal, Nrand, magbins, VALS, SPL):
+def random_gal(galreal, Nrand, magbins, SPL):
     """
     Preferred random galaxy generator.
 
@@ -320,16 +328,8 @@ def random_gal(galreal, Nrand, magbins, VALS, SPL):
     ----------
     galreal
     Nrand
-    DZ : float, optional
-      delta z for the histogram for getting the
-    smooth_scale : float, optional
-       smoothing scale for the histogram (in number of bins, so depends on DZ)
-    magmin : float, optional
-       Minimum magnitude for the binning (bright end)
-    magmax : float, optional
-       Maximum magnitude for the binning (faint end)
-    delta_mag : float, optional
-       Step size for magnitude binning
+    magbins
+    SPL : dict
 
     Returns
     -------
@@ -338,16 +338,21 @@ def random_gal(galreal, Nrand, magbins, VALS, SPL):
     """
     from pyigm.clustering.randist import RanDist
 
+    # Init
+    galrand = galreal.repeat(Nrand)
+    zmin = np.max([np.min(galreal.ZGAL[galreal.ZGAL > 0]), 1e-9])
+    zmax = np.max(galreal.ZGAL)
+    rvals = np.linspace(0, zmax, 1e4)
 
     # TODO -- Use better masking than +/- 90 mag
     for i in range(len(galreal)):
         if (galreal.MAG[i] > 90) or (galreal.MAG[i] < -90):  # no magnitude, use the whole distribution
-            vals = VALS['all']
+            #vals = VALS['all']
             spl = SPL['all']
         else:
             ind_mag = np.where(np.fabs(galreal.MAG[i] - magbins) == np.min(np.fabs(galreal.MAG[i] - magbins)))[0][0]
             mag = magbins[ind_mag]
-            vals = VALS['{}'.format(mag)]
+            #vals = VALS['{}'.format(mag)]
             spl = SPL['{}'.format(mag)]
         if i % 1000 == 0:
             print('{}/{}'.format(i + 1, len(galreal)))
@@ -357,7 +362,8 @@ def random_gal(galreal, Nrand, magbins, VALS, SPL):
         rand_z = RanDist(rvals, dist)
         zrand = rand_z.random(Nrand)
         galrand.ZGAL[i * Nrand:(i + 1) * Nrand] = zrand
-    return galrand, magbins, VALS, SPL
+    # Return
+    return galrand
 
 
 def collapse_along_LOS(DD, nbins=None, s=0):
