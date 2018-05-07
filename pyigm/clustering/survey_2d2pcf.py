@@ -306,6 +306,35 @@ class Survey2D2PCF(object):
 
         return self.xi_gg_T, self.xi_gg_T_err
 
+    def calc_xi_ag_transverse(self, s, nbins=None):
+        """  Calculate xi_ag in the transverse dimension
+        Estimated with Landay-Szalay  (W3)
+
+        Parameters
+        ----------
+        s : float
+          Smoothing parameter
+        nbins : int, optional
+
+        Returns
+        -------
+        xi_ag_T
+        xi_ag_T_err
+          Also save in the object
+
+        """
+
+        # Transverse pairs (may wish to make this a method)
+        self.DaDg_T = collapse_along_LOS(self.DaDg,nbins,s=s)
+        self.DaRg_T = collapse_along_LOS(self.DaRg,nbins,s=s)
+        self.RaDg_T = collapse_along_LOS(self.RaDg,nbins,s=s)
+        self.RaRg_T = collapse_along_LOS(self.RaRg,nbins,s=s)
+
+        # Calculate
+        self.xi_ag_T,self.xi_ag_T_err = W3(self.DaDg_T,self.RaRg_T,self.DaRg_T,self.RaDg_T,
+                                           Ndd=self.nDaDg,Nrr=self.nRaRg,Ndr=self.nDaRg,Nrd=self.nRaDg)
+
+        return self.xi_ag_T, self.xi_ag_T_err
 
     def set_normalization(self, norm, Ngal_rand=None, Nabs_rand=None):
         """ Set normalization for the pair counts
