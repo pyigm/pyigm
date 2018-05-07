@@ -5,6 +5,8 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import numpy as np
 from scipy.ndimage import gaussian_filter as gf
 
+from linetools import utils as ltu
+
 from pyigm.field.igmfield import IgmGalaxyField
 from pyigm.clustering.xcorr_utils import spline_sensitivity, random_gal, auto_pairs_rt, cross_pairs_rt
 
@@ -48,7 +50,7 @@ class ClusteringField(IgmGalaxyField):
     implemented plots that are useful.
 
     """
-    def __init__(self, radec, R=20000, Ngal_rand=10, Nabs_rand=100, proper=False, field_name='',
+    def __init__(self, radec, Ngal_rand=10, Nabs_rand=100, proper=False, field_name='',
                  wrapped=True, **kwargs):
 
         IgmGalaxyField.__init__(self, radec, **kwargs)
@@ -63,7 +65,10 @@ class ClusteringField(IgmGalaxyField):
         self.CRA = self.coord.ra.value #np.mean(self.absreal.RA)
         self.CDEC = self.coord.dec.value # np.mean(self.absreal.DEC)
 
-        self.name = field_name
+        if len(field_name) == 0:
+            self.name = ltu.name_from_coord(self.coord)
+        else:
+            self.name = field_name
         self.proper = proper
         self.wrapped = wrapped
 
@@ -260,3 +265,14 @@ class ClusteringField(IgmGalaxyField):
             self.za = self.za / (1. + self.absreal.ZABS)
             self.yar = self.yar / (1. + self.absrand.ZABS)
             self.zar = self.zar / (1. + self.absrand.ZABS)
+
+    # Output
+    def __repr__(self):
+        rstr = '<{:s}: field={:s} '.format(
+            self.__class__.__name__,
+            self.name)
+
+        if self.galreal is not None:
+            rstr += 'ngreal={:d} '.format(len(self.galreal))
+        rstr += '>'
+        return rstr

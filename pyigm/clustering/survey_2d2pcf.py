@@ -217,7 +217,8 @@ class Survey2D2PCF(object):
         self.RgRg_T = collapse_along_LOS(self.RgRg,nbins,s=s)
 
         # Calculate
-        self.xi_gg_T,self.xi_gg_T_err = W3(self.DgDg_T,self.RgRg_T,self.DgRg_T,self.DgRg_T,Ndd=self.nDgDg,Nrr=self.nRgRg,Ndr=self.nDgRg,Nrd=self.nDgRg)
+        self.xi_gg_T,self.xi_gg_T_err = W3(self.DgDg_T,self.RgRg_T,self.DgRg_T,self.DgRg_T,
+                                           Ndd=self.nDgDg,Nrr=self.nRgRg,Ndr=self.nDgRg,Nrd=self.nDgRg)
 
         return self.xi_gg_T, self.xi_gg_T_err
 

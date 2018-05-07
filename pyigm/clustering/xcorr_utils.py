@@ -3,6 +3,8 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 
 import time
 import numpy as np
+import pdb
+
 from scipy.ndimage import gaussian_filter as gf
 from scipy.interpolate import CubicSpline
 
@@ -285,10 +287,11 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, 
     SPL['all'] = CubicSpline(0.5 * (bins[:-1] + bins[1:]), VALS['all'].astype(float))
 
     # Generate magnitude bins
-    delta_mag2 = delta_mag
-    magbins = np.arange(magmin, magmax, delta_mag2)
+    magbins = np.arange(magmin, magmax, delta_mag)
     for mag in magbins:
+        delta_mag2 = delta_mag
         q = 0
+        # Insure there are Nmin galaxies in the bin by extending the magnitude bin if needed
         while True:
             cond = (galreal.MAG <= mag + delta_mag2 * 0.5) & (galreal.MAG > mag - delta_mag2 * 0.5)
             if np.sum(cond) >= Nmin:
@@ -309,6 +312,7 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, 
             pl.xlim(0, 2)
             pl.legend()
             pl.show()
+
     if debug:
         import matplotlib.pyplot as pl
         pl.legend()
@@ -327,8 +331,9 @@ def random_gal(galreal, Nrand, magbins, SPL):
     Parameters
     ----------
     galreal
-    Nrand
-    magbins
+    Nrand : int
+      Number of random galaxies generated per real galaxy
+    magbins : ndarray
     SPL : dict
 
     Returns
@@ -345,11 +350,13 @@ def random_gal(galreal, Nrand, magbins, SPL):
     rvals = np.linspace(0, zmax, 1e4)
 
     # TODO -- Use better masking than +/- 90 mag
+    # Awful for loop, but it appears to run fast
     for i in range(len(galreal)):
         if (galreal.MAG[i] > 90) or (galreal.MAG[i] < -90):  # no magnitude, use the whole distribution
             #vals = VALS['all']
             spl = SPL['all']
         else:
+            # And this is ugly expensive
             ind_mag = np.where(np.fabs(galreal.MAG[i] - magbins) == np.min(np.fabs(galreal.MAG[i] - magbins)))[0][0]
             mag = magbins[ind_mag]
             #vals = VALS['{}'.format(mag)]
