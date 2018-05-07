@@ -65,12 +65,15 @@ class Survey2D2PCF(object):
         self.rdiff  = self.rbinedges[1:] - self.rbinedges[:-1]
         self.tdiff  = self.tbinedges[1:] - self.tbinedges[:-1]
 
-    def addField(self, new_field):
+    def addField(self, new_field, SEP_TOL=0.5*u.deg):
         """ Add a new field
 
         Parameters
         ----------
         new_field : ClusteringField
+        SEP_TOL : Angle
+          Separation tolerance.  If the new field is within SEP_TOL
+          of any existing ones, the code will barf
 
         Returns
         -------
@@ -85,7 +88,7 @@ class Survey2D2PCF(object):
         # Check coordiantes (this is not a perfect check..)
         fcoord = SkyCoord(ra=[field.CRA for field in self.fields],
                           dec=[field.CDEC for field in self.fields], unit='deg')
-        if np.any(new_field.coord.separation(fcoord) < 10*u.arcsec):
+        if np.any(new_field.coord.separation(fcoord) < SEP_TOL):
             raise IOError('New field is within 10" of an already input field!  We assume a mistake was made')
 
 

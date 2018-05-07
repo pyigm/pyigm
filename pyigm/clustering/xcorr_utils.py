@@ -275,7 +275,7 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, 
     zmax = np.max(galreal.ZGAL)
 
     # spline in z
-    galreal.sort(order='MAG')  # np.recarray.sort()
+    galreal.sort(order=str('MAG'))  # np.recarray.sort()
 
     bins = np.append(np.linspace(0, zmin, 20), np.arange(zmin + DZ, zmax + 10 * DZ, DZ))
 
