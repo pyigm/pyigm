@@ -2,6 +2,7 @@
 from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
+import pdb
 from scipy.ndimage import gaussian_filter as gf
 
 from astropy.coordinates import SkyCoord
@@ -89,7 +90,7 @@ class Survey2D2PCF(object):
         fcoord = SkyCoord(ra=[field.CRA for field in self.fields],
                           dec=[field.CDEC for field in self.fields], unit='deg')
         if np.any(new_field.coord.separation(fcoord) < SEP_TOL):
-            raise IOError('New field is within 10" of an already input field!  We assume a mistake was made')
+            raise IOError('New field is within {} of an already input field!  We assume a mistake was made'.format(SEP_TOL))
 
 
         #f = copy.deepcopy(field)
@@ -113,11 +114,48 @@ class Survey2D2PCF(object):
                 self.RaDg += new_field.RaDg
                 self.RaRg += new_field.RaRg
 
-    def calc_xi_gg(self, sigma=0, error=None):
+    def calc_xi_gg(self, **kwargs):
+        """ Simple wrapper to calc_xi
+        Parameters
+        ----------
+        kwargs
+
+        Returns
+        -------
+
+        """
+        W, err_W = self.calc_xi('galaxy-galaxy', **kwargs)
+        # Set em
+        self.xi_gg = W
+        self.xi_gg_err_ls = err_W
+        # Return them too
+        return W, err_W
+
+    def calc_xi_ag(self, **kwargs):
+        """ Simple wrapper to calc_xi
+        Parameters
+        ----------
+        kwargs
+
+        Returns
+        -------
+
+        """
+        W, err_W = self.calc_xi('absorber-galaxy', **kwargs)
+        # Set em
+        self.xi_ag = W
+        self.xi_ag_err_ls = err_W
+        # Return them too
+        return W, err_W
+
+    def calc_xi(self, xi_type, sigma=0, error=None):
         """ Calculate xi_gg with the Landy-Szalay estimator (W3)
 
         Parameters
         ----------
+        xi_type : str
+          galaxy-galaxy
+
         sigma : float, optional
           Gaussian standard deviation smoothing;
           defined in units of the spatial grid.
@@ -133,13 +171,41 @@ class Survey2D2PCF(object):
         xi_gg and xi_gg_err_ls are also set internally
 
         """
+        if xi_type == 'galaxy-galaxy':
+            xa, xb = 'g', 'g'
+            auto = True
+        elif xi_type == 'absorber-galaxy':
+            xa, xb = 'a', 'g'
+            auto = False
+        else:
+            raise IOError("Not ready for xi_type={:s}".format(xi_type))
 
+        # Wrappers
+        def DD(obj):
+            return getattr(obj,'D{:s}D{:s}'.format(xa,xb))
+        def RR(obj):
+            return getattr(obj,'R{:s}R{:s}'.format(xa,xb))
+        def DR(obj):
+            return getattr(obj,'D{:s}R{:s}'.format(xa,xb))
+        def RD(obj):
+            if auto:
+                return DR(obj)
+            else:
+                return getattr(obj,'R{:s}D{:s}'.format(xa,xb))
+        # Number
+        nDD = getattr(self,'nD{:s}D{:s}'.format(xa,xb))
+        nRR = getattr(self,'nR{:s}R{:s}'.format(xa,xb))
+        nDR = getattr(self,'nD{:s}R{:s}'.format(xa,xb))
+        if auto:
+            nRD = nDR
+        else:
+            nRD = getattr(self,'nR{:s}D{:s}'.format(xa,xb))
+
+        # Calculate me
         s = sigma
-        Wgg, err_W = W3(gf(self.DgDg, s), gf(self.RgRg, s), gf(self.DgRg, s), gf(self.DgRg, s), Ndd=self.nDgDg,
-                        Nrr=self.nRgRg, Ndr=self.nDgRg, Nrd=self.nDgRg)
+        W, err_W = W3(gf(DD(self), s), gf(RR(self), s), gf(DR(self), s), gf(RD(self), s),
+                        Ndd=nDD, Nrr=nRR, Ndr=nDR, Nrd=nRD)
         #
-        self.xi_gg = Wgg
-        self.xi_gg_err_ls = err_W
 
         # jacknife error
         if error == 'jk':
@@ -147,20 +213,29 @@ class Survey2D2PCF(object):
             psd_val = np.zeros((len(self.rbinedges) - 1, len(self.tbinedges) - 1), float)
             N = len(self.fields)
             for field in self.fields:
-                DgDg_aux = self.DgDg - field.DgDg
-                RgRg_aux = self.RgRg - field.RgRg
-                DgRg_aux = self.DgRg - field.DgRg
-                Wgg_aux, _ = W3(gf(DgDg_aux, s), gf(RgRg_aux, s), gf(DgRg_aux, s), gf(DgRg_aux, s), Ndd=self.nDgDg,
-                                Nrr=self.nRgRg, Ndr=self.nDgRg, Nrd=self.nDgRg)
-                psd_val += N * Wgg - (N - 1) * Wgg_aux
+                DD_aux = DD(self) - DD(field) #self.DgDg - field.DgDg
+                RR_aux = RR(self) - RR(field) #self.RgRg - field.RgRg
+                DR_aux = DR(self) - DR(field) #self.DgRg - field.DgRg
+                if auto:
+                    RD_aux = DR_aux
+                else:
+                    RD_aux = RD(self) - RD(field) #self.DgRg - field.DgRg
+                W_aux, _ = W3(gf(DD_aux, s), gf(RR_aux, s), gf(DR_aux, s), gf(RD_aux, s),
+                                Ndd=nDD, Nrr=nRR, Ndr=nDR, Nrd=nRD)
+                                #Ndd=self.nDgDg, Nrr=self.nRgRg, Ndr=self.nDgRg, Nrd=self.nDgRg)
+                psd_val += N * W - (N - 1) * W_aux
             mean_psd = psd_val / N
             for field in self.fields:
-                DgDg_aux = self.DgDg - field.DgDg
-                RgRg_aux = self.RgRg - field.RgRg
-                DgRg_aux = self.DgRg - field.DgRg
-                Wgg_aux, _ = W3(gf(DgDg_aux, s), gf(RgRg_aux, s), gf(DgRg_aux, s), gf(DgRg_aux, s), Ndd=self.nDgDg,
-                                Nrr=self.nRgRg, Ndr=self.nDgRg, Nrd=self.nDgRg)
-                err_Wjk += (mean_psd - Wgg_aux) ** 2
+                DD_aux = DD(self) - DD(field) #self.DgDg - field.DgDg
+                RR_aux = RR(self) - RR(field) #self.RgRg - field.RgRg
+                DR_aux = DR(self) - DR(field) #self.DgRg - field.DgRg
+                if auto:
+                    RD_aux = DR_aux
+                else:
+                    RD_aux = RD(self) - RD(field) #self.DgRg - field.DgRg
+                W_aux, _ = W3(gf(DD_aux, s), gf(RR_aux, s), gf(DR_aux, s), gf(RD_aux, s),
+                                Ndd=nDD, Nrr=nRR, Ndr=nDR, Nrd=nRD)
+                err_Wjk += (mean_psd - W_aux) ** 2
 
             err_Wjk = err_Wjk / N / (N - 1)
             err_Wjk = np.sqrt(err_Wjk)
@@ -169,32 +244,38 @@ class Survey2D2PCF(object):
         if error == 'bs':
             Nf = len(self.fields)
             err_Wbt = np.zeros((len(self.rbinedges) - 1, len(self.tbinedges) - 1), float)
-            Wgg_sum = np.zeros((len(self.rbinedges) - 1, len(self.tbinedges) - 1), float)
-            Wgg_sum2 = np.zeros((len(self.rbinedges) - 1, len(self.tbinedges) - 1), float)
+            W_sum = np.zeros((len(self.rbinedges) - 1, len(self.tbinedges) - 1), float)
+            W_sum2 = np.zeros((len(self.rbinedges) - 1, len(self.tbinedges) - 1), float)
 
             N = self.Nbt
             for i in range(N):
                 inds = np.random.randint(0, Nf, Nf)
-                DgDg_aux = np.zeros((len(self.rbinedges) - 1, len(self.tbinedges) - 1), float)
-                RgRg_aux = np.zeros((len(self.rbinedges) - 1, len(self.tbinedges) - 1), float)
-                DgRg_aux = np.zeros((len(self.rbinedges) - 1, len(self.tbinedges) - 1), float)
+                DD_aux = np.zeros((len(self.rbinedges) - 1, len(self.tbinedges) - 1), float)
+                RR_aux = np.zeros((len(self.rbinedges) - 1, len(self.tbinedges) - 1), float)
+                DR_aux = np.zeros((len(self.rbinedges) - 1, len(self.tbinedges) - 1), float)
+                RD_aux = np.zeros((len(self.rbinedges) - 1, len(self.tbinedges) - 1), float)
                 for ind in inds:
                     auxfield = self.fields[ind]
-                    DgDg_aux += auxfield.DgDg
-                    RgRg_aux += auxfield.RgRg
-                    DgRg_aux += auxfield.DgRg
-                Wgg_aux, _ = W3(gf(DgDg_aux, s), gf(RgRg_aux, s), gf(DgRg_aux, s), gf(DgRg_aux, s), Ndd=self.nDgDg,
-                                Nrr=self.nRgRg, Ndr=self.nDgRg, Nrd=self.nDgRg)
-                Wgg_sum += Wgg_aux
-                Wgg_sum2 += Wgg_aux ** 2
-            Wgg_sum = Wgg_sum / N
-            Wgg_sum2 = Wgg_sum2 / N
-            err_Wbt = np.sqrt(Wgg_sum2 - Wgg_sum ** 2)
+                    DD_aux += DD(auxfield) #auxfield.DgDg
+                    RR_aux += RR(auxfield) #auxfield.RgRg
+                    DR_aux += DR(auxfield) #auxfield.DgRg
+                    if auto:
+                        RD_aux = DR_aux
+                    else:
+                        RD_aux += RD(auxfield) #auxfield.DgRg
+                W_aux, _ = W3(gf(DD_aux, s), gf(RR_aux, s), gf(DR_aux, s), gf(RD_aux, s),
+                                Ndd=nDD, Nrr=nRR, Ndr=nDR, Nrd=nRD)
+                                #Ndd=self.nDgDg, Nrr=self.nRgRg, Ndr=self.nDgRg, Nrd=self.nDgRg)
+                W_sum += W_aux
+                W_sum2 += W_aux ** 2
+            W_sum = W_sum / N
+            W_sum2 = W_sum2 / N
+            err_Wbt = np.sqrt(W_sum2 - W_sum ** 2)
             err_W = err_Wbt
 
         # Set
         # Return
-        return Wgg, err_W
+        return W, err_W
 
     def calc_xi_gg_transverse(self, s, nbins=None):
         """  Calculate xi_gg in the transverse dimension

@@ -323,6 +323,7 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, 
     # Return
     return magbins, VALS, SPL
 
+
 def random_abs_zmnx(absreal, Nrand, zmnx, wrest, dv_Galactic=100.):
     """From a real absorber catalog it creates a random catalog.
     Absorbers are simply placed randomly between redshift limits
@@ -347,11 +348,16 @@ def random_abs_zmnx(absreal, Nrand, zmnx, wrest, dv_Galactic=100.):
     galactic = mask_galactic()
     Galz = galactic/wrest - 1.
     z_Gal = np.outer(np.ones_like(randz), Galz)
-    pdb.set_trace()
-    diff = z_Gal - randz
-    mdiff = np.amin(np.abs(diff), axis=0)
-    gdz = mdiff < (dv_Galactic/Ckms) / (randz+1)
-    pdb.set_trace()
+    # Diff
+    diff = z_Gal - np.outer(randz, np.ones_like(Galz))
+    mdiff = np.amin(np.abs(diff), axis=1)
+    # Good ones
+    gdz = mdiff > (dv_Galactic/Ckms) / (randz+1)
+    gdi = np.where(gdz)[0]
+    absrand.ZABS = randz[gdi[0:len(absrand)]]
+    # Return
+    return absrand
+
 
 def random_abs_W(absreal, Nrand, wa, fl, er, sl=3., R=20000, FWHM=10., ion='HI'):
     """From a real absorber catalog it creates a random catalog.  For
@@ -435,18 +441,23 @@ def random_abs_W(absreal, Nrand, wa, fl, er, sl=3., R=20000, FWHM=10., ion='HI')
 def mask_galactic():
     # masked regions (potential Galactic absorption)
     galactic = np.array([1334.5323,  # CII
+                         1335.7077, # CII*
                          1238.821,  # NV
                          1242.804,  # NV
                          1302.1685,  # OI
-                         1304.8576,  # OI*
-                         1306.0286,  # OI**
+                         #1304.8576,  # OI*
+                         #1306.0286,  # OI**
                          1304.3702,  # SiII
                          1260.4221,  # SiII
+                         1526.707,  # SiII
+                         1548.204,  # CIV
+                         1550.781,  # CIV
                          1334.8132,  # PIII
                          1259.519,  # SII
                          1253.811,  # SII
                          1250.584,  # SII
-                         1260.533])  # FeII
+                         1670.7886, # AlII
+                         1608.4511])  # FeII
     return galactic
 
 

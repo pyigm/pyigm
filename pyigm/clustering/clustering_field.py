@@ -137,6 +137,7 @@ class ClusteringField(IgmGalaxyField):
             self.galrand = np.append(self.galrand, rgal)
             self.galrand = np.rec.array(self.galrand)
 
+
     def addAbs(self, abs_input, zmnx, wrest, z_clm='ZABS'):
         # Convert to rec array, if need be
         if isinstance(abs_input, Table):
@@ -153,6 +154,14 @@ class ClusteringField(IgmGalaxyField):
 
         if self.absreal is None:
             self.absreal = absnew  # np rec array with galaxy properties
+            self.absrand = absrand
+        else:
+            absnew = absnew.astype(self.absreal.dtype)
+            self.absreal = np.append(self.absreal, absnew)
+            self.absreal = np.rec.array(self.absreal)
+            self.absrand = np.append(self.absrand, absrand)
+            self.absrand = np.rec.array(self.absrand)
+
 
     def compute_pairs(self, tbinedges, rbinedges):
         """Computes relevant pairs dependent on what has been loaded
@@ -190,23 +199,22 @@ class ClusteringField(IgmGalaxyField):
             self.XYZ_abs()
             if self.proper:
                 self.XYZ_proper()
+            # Auto
             self.DaDa = auto_pairs_rt(self.xa, self.ya, self.za, rbinedges, tbinedges, wrap=self.wrapped)
             self.RaRa = auto_pairs_rt(self.xar, self.yar, self.zar, rbinedges, tbinedges, wrap=self.wrapped)
             self.DaRa = cross_pairs_rt(self.xa, self.ya, self.za, self.xar, self.yar, self.zar, rbinedges, tbinedges,
                                        wrapped=self.wrapped)
+            #
+            if self.galreal is not None:
+                self.DaDg = cross_pairs_rt(self.xa, self.ya, self.za, self.xg, self.yg, self.zg, rbinedges, tbinedges,
+                                           wrapped=self.wrapped)
 
-
-            '''
-            self.DaDg = cross_pairs_rt(self.xa, self.ya, self.za, self.xg, self.yg, self.zg, rbinedges, tbinedges,
-                                       wrapped=wrapped)
-
-            self.DaRg = cross_pairs_rt(self.xa, self.ya, self.za, self.xgr, self.ygr, self.zgr, rbinedges, tbinedges,
-                                       wrapped=wrapped)
-            self.RaRg = cross_pairs_rt(self.xar, self.yar, self.zar, self.xgr, self.ygr, self.zgr, rbinedges, tbinedges,
-                                       wrapped=wrapped)
-            self.RaDg = cross_pairs_rt(self.xar, self.yar, self.zar, self.xg, self.yg, self.zg, rbinedges, tbinedges,
-                                       wrapped=wrapped)
-            '''
+                self.DaRg = cross_pairs_rt(self.xa, self.ya, self.za, self.xgr, self.ygr, self.zgr, rbinedges, tbinedges,
+                                           wrapped=self.wrapped)
+                self.RaRg = cross_pairs_rt(self.xar, self.yar, self.zar, self.xgr, self.ygr, self.zgr, rbinedges, tbinedges,
+                                           wrapped=self.wrapped)
+                self.RaDg = cross_pairs_rt(self.xar, self.yar, self.zar, self.xg, self.yg, self.zg, rbinedges, tbinedges,
+                                           wrapped=self.wrapped)
 
     def XYZ_gal(self):
         """Calculates X,Y,Z coordinates for the galaxies, real and random
@@ -296,5 +304,8 @@ class ClusteringField(IgmGalaxyField):
 
         if self.galreal is not None:
             rstr += 'ngreal={:d} '.format(len(self.galreal))
+
+        if self.absreal is not None:
+            rstr += 'nareal={:d} '.format(len(self.absreal))
         rstr += '>'
         return rstr
