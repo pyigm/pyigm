@@ -146,7 +146,7 @@ class ClusteringField(IgmGalaxyField):
             absnew = abs_input.as_array().view(np.recarray)
         else:  # Assuming rec array (what else would it be?)
             absnew = abs_input
-        
+
         # Randoms
         absrand = random_abs_zmnx(absnew, self.Nabs_rand, zmnx, wrest)
 
