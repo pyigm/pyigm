@@ -5,10 +5,13 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import numpy as np
 from scipy.ndimage import gaussian_filter as gf
 
+from astropy.table import Table
+
 from linetools import utils as ltu
 
 from pyigm.field.igmfield import IgmGalaxyField
 from pyigm.clustering.xcorr_utils import spline_sensitivity, random_gal, auto_pairs_rt, cross_pairs_rt
+from pyigm.clustering.xcorr_utils import random_abs_zmnx
 
 
 class ClusteringField(IgmGalaxyField):
@@ -73,6 +76,8 @@ class ClusteringField(IgmGalaxyField):
         self.wrapped = wrapped
 
         self.galreal = None # Filled with addGal
+        self.absreal = None # Filled with addAbs
+        self.ion = None
 
     def addGal(self, gal_idx, mag_clm='MAG', z_clm='ZGAL', sens_galaxies=None,
                magbins=None, SPL=None):
@@ -131,6 +136,23 @@ class ClusteringField(IgmGalaxyField):
             self.galreal = np.rec.array(self.galreal)
             self.galrand = np.append(self.galrand, rgal)
             self.galrand = np.rec.array(self.galrand)
+
+    def addAbs(self, abs_input, zmnx, wrest, z_clm='ZABS'):
+        # Convert to rec array, if need be
+        if isinstance(abs_input, Table):
+            # Rename any columns here
+            abs_input.rename_column(z_clm,'ZABS')
+            # Rename any columns here
+            absnew = abs_input.as_array().view(np.recarray)
+        else:  # Assuming rec array (what else would it be?)
+            absnew = abs_input
+        
+        # Randoms
+        absrand = random_abs_zmnx(absnew, self.Nabs_rand, zmnx, wrest)
+
+
+        if self.absreal is None:
+            self.absreal = absnew  # np rec array with galaxy properties
 
     def compute_pairs(self, tbinedges, rbinedges):
         """Computes relevant pairs dependent on what has been loaded

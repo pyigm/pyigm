@@ -8,6 +8,9 @@ import pdb
 from scipy.ndimage import gaussian_filter as gf
 from scipy.interpolate import CubicSpline
 
+
+from pyigm.clustering.randist import RanDist
+
 Ckms = 299792.458  # speed of light in km/s
 
 def auto_pairs_rt(X, Y, Z, rbinedges, tbinedges, wrap=True, track_time=False):
@@ -320,6 +323,163 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, 
     # Return
     return magbins, VALS, SPL
 
+def random_abs_zmnx(absreal, Nrand, zmnx, wrest, dv_Galactic=100.):
+    """From a real absorber catalog it creates a random catalog.
+    Absorbers are simply placed randomly between redshift limits
+    zmnx[0] and zmnx[1]
+
+    Parameters
+    ----------
+    absreal
+    Nrand
+    zmnx
+
+    Returns
+    -------
+
+    """
+
+    absrand = absreal.repeat(Nrand)
+
+    randz = np.random.uniform(low=zmnx[0], high=zmnx[1], size=2*len(absrand))  # Buffer to reject Galaxy
+
+    # Avoid Galactic
+    galactic = mask_galactic()
+    Galz = galactic/wrest - 1.
+    z_Gal = np.outer(np.ones_like(randz), Galz)
+    pdb.set_trace()
+    diff = z_Gal - randz
+    mdiff = np.amin(np.abs(diff), axis=0)
+    gdz = mdiff < (dv_Galactic/Ckms) / (randz+1)
+    pdb.set_trace()
+
+def random_abs_W(absreal, Nrand, wa, fl, er, sl=3., R=20000, FWHM=10., ion='HI'):
+    """From a real absorber catalog it creates a random catalog.  For
+    a given real absorber with (z_obs,logN_obs,b_obs) it places it at
+    a new z_rand, defined by where the line could have been
+    observed.
+
+    Input parameters:
+    ---
+    absreal: numpy rec array with the absorber catalog.
+    Nrand:   number of random lines per real one generated (integer).
+    wa:      numpy array of wavelength covered by the spectrum.
+    fl:      numpy array of normalized flux.
+    er:      numpy array of error in the normalized flux of the spectrum for
+             a given wavelength.
+    sl:      significance level for the detection of the absorption line.
+    R:       resolution of the spectrograph, assumed constant
+    FWHM:    Full-width at half maximum in pixels (assumed constant). This
+             parameter defines the smoothing scale for Wmin.
+    ion:     Name of the ion. Function only valid for HI so far.
+
+    From the error we calculate the Wmin = sl * wa * er / (1+z) / R,
+    where z = wa/w0 - 1 (w0 is the rest frame wavelenght of the
+    transition) and R is the resolution of the spectrograph. We then
+    smooth Wmin with a boxcar along FWHM pixels.
+
+    For the given absorber we transform (logN_obs,b_obs) to a W_obs assuming
+    linear part of the curve-of-growth.
+
+    We then compute the redshifts where W_obs could have been observed
+    according to the given Wmin, and place Nrand new absorbers with
+    the same properties as the given one accordingly.
+    """
+    from linetools.analysis.absline import Wr_from_N_b_transition
+    from linetools.lists.linelist import LineList
+    ism = LineList('ISM')
+
+    Nrand = int(Nrand)
+    absrand = absreal.repeat(Nrand)
+
+    zmin = np.min(absreal.ZABS)
+    zmax = np.max(absreal.ZABS)
+
+    if ion == 'HI':
+        z_Lya, Wmin_Lya = compute_Wmin(wa, fl, er, sl=sl, R=R, FWHM=FWHM, ion='HI')
+        z_Lyb, Wmin_Lyb = compute_Wmin(wa, fl, er, sl=sl, R=R, FWHM=FWHM, ion='HILyb')
+
+    for i in range(len(absreal)):
+
+        if absreal.ZABS[i] > np.max(z_Lya):  # lines that were observed through Lyb
+            Wr = Wr_from_N_b_transition(absreal.LOGN[i], absreal.B[i], 'HI 1025', linelist=ism)
+            #Wr = logN_b_to_Wr(absreal.LOGN[i], absreal.B[i], ion='HILyb')
+            z = z_Lyb
+            z = np.where(z <= z_Lya, -1., z)  # mask out region with Lya coverage
+            Wmin = Wmin_Lyb
+        else:  # lines that were observed through Lya only
+            Wr = Wr_from_N_b_transition(absreal.LOGN[i], absreal.B[i], 'HI 1215', linelist=ism)
+            #Wr = logN_b_to_Wr(absreal.LOGN[i], absreal.B[i], ion='HI')
+            z = z_Lya
+            Wmin = Wmin_Lya
+
+        zgood = (Wr > Wmin) & (z >= zmin) & (z < zmax)
+
+        if np.sum(zgood) == 0:
+            from matplotlib import pyplot as plt
+            plt.plot(z, Wmin, drawstyle='steps-mid')
+            plt.axis([z[0], z[-1], 0, 0.1])
+            plt.show()
+            print(Wmin)
+        assert np.sum(zgood) > 0, \
+            'There are not regions in the spectrum with Wmin<{} A. The minimum is {}. Adjust significance.'.format(
+                Wr, np.min(Wmin))
+
+        # Random time
+        rand_z = RanDist(z, zgood * 1.)
+        zrand = rand_z.random(Nrand)
+        absrand.ZABS[i * Nrand:(i + 1) * Nrand] = zrand
+
+    return absrand
+
+def mask_galactic():
+    # masked regions (potential Galactic absorption)
+    galactic = np.array([1334.5323,  # CII
+                         1238.821,  # NV
+                         1242.804,  # NV
+                         1302.1685,  # OI
+                         1304.8576,  # OI*
+                         1306.0286,  # OI**
+                         1304.3702,  # SiII
+                         1260.4221,  # SiII
+                         1334.8132,  # PIII
+                         1259.519,  # SII
+                         1253.811,  # SII
+                         1250.584,  # SII
+                         1260.533])  # FeII
+    return galactic
+
+
+def compute_Wmin(wa, fl, er, sl=3., R=20000, FWHM=10, ion='HI', dv_mask=200.):
+    """For a given spectrum and transition, it computes the minimun
+    rest-frame equivalent width for that transition to be observed. It
+    return a tuple of redshift and Wmin (z,Wmin)"""
+    from scipy.ndimage import uniform_filter as uf
+    #
+    if ion == 'HI':
+        w0 = 1215.67  # HI Lya w0 in angstroms
+    if ion == 'HILyb':
+        w0 = 1025.72  # HI Lyb w0 in angstroms
+    # Mask galactic
+    galactic = mask_galactic()
+    zgal = galactic / w0 - 1.
+    dzgal = (zgal + 1) * dv_mask / Ckms
+
+    wa = np.array(wa)
+    fl = np.array(fl)
+    er = np.array(er)
+
+    z = wa / w0 - 1.  # spectrum in z coordinates
+
+    Wmin = sl * w0 * er / R / fl  # sl*wa / (1. + z) / R / (S/N)
+    Wmin = np.where(Wmin <= 0, 1e10, Wmin)
+    Wmin = np.where(np.isnan(Wmin), 1e10, Wmin)
+    Wmin = np.where(np.isinf(Wmin), 1e10, Wmin)
+    Wmin = uf(Wmin.astype(float), FWHM)  # smoothed version (uniform preferred over gaussian)
+    for zi, dzi in zip(zgal, dzgal):
+        cond = (z > zi - dzi) & (z < zi + dzi)
+        Wmin = np.where(cond, 1e10, Wmin)
+    return z, Wmin
 
 def random_gal(galreal, Nrand, magbins, SPL):
     """
@@ -341,7 +501,6 @@ def random_gal(galreal, Nrand, magbins, SPL):
     galrand : np rec array
       Copy of galreal, Nrand times
     """
-    from pyigm.clustering.randist import RanDist
 
     # Init
     galrand = galreal.repeat(Nrand)
