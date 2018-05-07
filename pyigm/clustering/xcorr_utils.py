@@ -272,7 +272,7 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.,
     zmin = np.max([np.min(galreal.ZGAL[galreal.ZGAL > 0]), 1e-9])
     zmax = np.max(galreal.ZGAL)
     # spline in z
-    galreal.sort(order='MAG')  # np.recarray.sort()
+    galreal.sort(order=str('MAG'))  # np.recarray.sort()
     galrand = galreal.repeat(Nrand)
 
     bins = np.append(np.linspace(0, zmin, 20), np.arange(zmin + DZ, zmax + 10 * DZ, DZ))
