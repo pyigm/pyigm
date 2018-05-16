@@ -554,6 +554,8 @@ def collapse_along_LOS(DD, nbins=None, s=0):
     DD : ndarray
       Pair counts to sum
     nbins :  int, optional
+      Number of bins in the radial dimension to collapse along
+      If None, take them all
     s : float, optional
       For Gaussian filtering
 
@@ -563,10 +565,13 @@ def collapse_along_LOS(DD, nbins=None, s=0):
       Collapsed pair counts
     """
     # Gaussian filter
-    DD = gf(DD, s)
+    if s > 0:
+        sDD = gf(DD, s)
+    else:
+        sDD = DD
     if nbins is None:
-        nbins = len(DD[0].T)
+        nbins = sDD.shape[0]
     # Avoidable loop?
-    DD_1D = np.array([np.sum(DD.T[i][:nbins]) for i in range(len(DD[0]))])
+    DD_1D = np.array([np.sum(sDD.T[i][:nbins]) for i in range(sDD.shape[1])])
     # Return
     return DD_1D
