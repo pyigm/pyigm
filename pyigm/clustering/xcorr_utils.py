@@ -268,6 +268,7 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, 
     Returns
     -------
     VALS : dict
+       dict containing the redshift histograms used in the CubicSpline analysis
     SPL : dict
       CubicSplines
     magbins : ndarray
