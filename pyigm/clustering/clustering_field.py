@@ -89,8 +89,9 @@ class ClusteringField(IgmGalaxyField):
         z_clm : str, optional
           Name of the column for the galaxy redshifts
         sens_galaxies : np.recarray
-          Use for generating sensitivity function instead of the added galaxies
-          Used when the subset is too small for an accurate sensitivity function
+          array containing the shape of the sensitivity function of the galaxies being added
+          Used for generating sensitivity function instead of the added galaxies
+          Important to use when the subset is too small for an accurate sensitivity function
         magbins : ndarray (optional)
         SPL : dict (optional)
           Contains the sensitivity function (CubicSpline's)
