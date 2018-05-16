@@ -5,8 +5,10 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import numpy as np
 from scipy.ndimage import gaussian_filter as gf
 
+from linetools import utils as ltu
+
 from pyigm.field.igmfield import IgmGalaxyField
-from pyigm.clustering.xcorr_utils import random_gal, auto_pairs_rt, cross_pairs_rt
+from pyigm.clustering.xcorr_utils import spline_sensitivity, random_gal, auto_pairs_rt, cross_pairs_rt
 
 
 class ClusteringField(IgmGalaxyField):
@@ -48,7 +50,7 @@ class ClusteringField(IgmGalaxyField):
     implemented plots that are useful.
 
     """
-    def __init__(self, radec, R=20000, Ngal_rand=10, Nabs_rand=100, proper=False, field_name='',
+    def __init__(self, radec, Ngal_rand=10, Nabs_rand=100, proper=False, field_name='',
                  wrapped=True, **kwargs):
 
         IgmGalaxyField.__init__(self, radec, **kwargs)
@@ -63,13 +65,17 @@ class ClusteringField(IgmGalaxyField):
         self.CRA = self.coord.ra.value #np.mean(self.absreal.RA)
         self.CDEC = self.coord.dec.value # np.mean(self.absreal.DEC)
 
-        self.name = field_name
+        if len(field_name) == 0:
+            self.name = ltu.name_from_coord(self.coord)
+        else:
+            self.name = field_name
         self.proper = proper
         self.wrapped = wrapped
 
         self.galreal = None # Filled with addGal
 
-    def addGal(self, gal_idx, mag_clm='MAG', z_clm='ZGAL'):
+    def addGal(self, gal_idx, mag_clm='MAG', z_clm='ZGAL', sens_galaxies=None,
+               magbins=None, SPL=None):
         """ Adds a set of galaxies for clustering analysis from the main astropy Table
 
         A random sample is also generated
@@ -82,6 +88,13 @@ class ClusteringField(IgmGalaxyField):
           Name of the column for the galaxy magnitudes
         z_clm : str, optional
           Name of the column for the galaxy redshifts
+        sens_galaxies : np.recarray
+          array containing the shape of the sensitivity function of the galaxies being added
+          Used for generating sensitivity function instead of the added galaxies
+          Important to use when the subset is too small for an accurate sensitivity function
+        magbins : ndarray (optional)
+        SPL : dict (optional)
+          Contains the sensitivity function (CubicSpline's)
 
         Returns
         -------
@@ -100,16 +113,24 @@ class ClusteringField(IgmGalaxyField):
         # Convert to numpy rec array
         galnew = sub_gal.as_array().view(np.recarray)
 
+        # Calculate randoms
+        if sens_galaxies is None:
+            sens_galaxies = galnew
+        # Sensitivity function
+        if (SPL is None) or (magbins is None):
+            magbins, _, SPL = spline_sensitivity(sens_galaxies)
+        # Randoms
+        rgal = random_gal(galnew, self.Ngal_rand, magbins, SPL)
+
         # Load me up
         if self.galreal is None:
             self.galreal = galnew  # np rec array with galaxy properties
-            self.galrand = random_gal(self.galreal, self.Ngal_rand)
+            self.galrand = rgal
         else:
             galnew = galnew.astype(self.galreal.dtype)
             self.galreal = np.append(self.galreal, galnew)
             self.galreal = np.rec.array(self.galreal)
-            aux = random_gal(galnew, self.Ngal_rand)
-            self.galrand = np.append(self.galrand, aux)
+            self.galrand = np.append(self.galrand, rgal)
             self.galrand = np.rec.array(self.galrand)
 
     def compute_pairs(self, tbinedges, rbinedges):
@@ -245,3 +266,14 @@ class ClusteringField(IgmGalaxyField):
             self.za = self.za / (1. + self.absreal.ZABS)
             self.yar = self.yar / (1. + self.absrand.ZABS)
             self.zar = self.zar / (1. + self.absrand.ZABS)
+
+    # Output
+    def __repr__(self):
+        rstr = '<{:s}: field={:s} '.format(
+            self.__class__.__name__,
+            self.name)
+
+        if self.galreal is not None:
+            rstr += 'ngreal={:d} '.format(len(self.galreal))
+        rstr += '>'
+        return rstr

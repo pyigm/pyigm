@@ -3,7 +3,10 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 
 import time
 import numpy as np
+import pdb
+
 from scipy.ndimage import gaussian_filter as gf
+from scipy.interpolate import CubicSpline
 
 Ckms = 299792.458  # speed of light in km/s
 
@@ -229,24 +232,23 @@ def clean_matrix(W,n=-99):
     return W
 
 
-def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.,
-               magmin=17., magmax=26., delta_mag=0.5):
+def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, DZ=0.01,
+                       smooth_scale=10., debug=False):
     """
-    Prefered random galaxy generator. For a given galaxy with a
+    For a given galaxy with a
     given magnitude (and other properties), it calculates the redshift
     sensitivity function from galaxies in a magnitude band around the
     selected one (i.e., including slightly brighter and fainter
-    galaxies), and places Nrand new galaxies at a random redshift given
-    by a smoothed version of the observed sensitivity function. For
-    extremely bright or faint galaxies (rare) the sensitivity function
+    galaxies),
+    For extremely bright or faint galaxies (rare) the sensitivity function
     is calculated from at least Nmin (=20) galaxies (i.e. the magnitude
     band is increased).
 
     Parameters
     ----------
-    galreal
-    Nrand
+    galreal : np.recarray
     Nmin : int, optional
+      Minimum number of galaxies to include in a bin
     DZ : float, optional
       delta z for the histogram for getting the
     smooth_scale : float, optional
@@ -257,42 +259,40 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.,
        Maximum magnitude for the binning (faint end)
     delta_mag : float, optional
        Step size for magnitude binning
+    delta_mag : float (optional)
+    debug : bool (optional)
 
     Returns
     -------
-    galrand : np rec array
-      Copy of galreal, Nrand times
+    VALS : dict
+       dict containing the redshift histograms used in the CubicSpline analysis
+    SPL : dict
+      CubicSplines
+    magbins : ndarray
+      Mag bins used in the generation of the Splines
     """
-    from pyigm.clustering.randist import RanDist
-    from scipy.interpolate import CubicSpline
-    from scipy.ndimage import gaussian_filter as gf
-
-    debug = 0
     Nmin = int(Nmin)  # minimum number of galaxys for the fit
     zmin = np.max([np.min(galreal.ZGAL[galreal.ZGAL > 0]), 1e-9])
     zmax = np.max(galreal.ZGAL)
+
     # spline in z
     galreal.sort(order=str('MAG'))  # np.recarray.sort()
-    galrand = galreal.repeat(Nrand)
 
     bins = np.append(np.linspace(0, zmin, 20), np.arange(zmin + DZ, zmax + 10 * DZ, DZ))
-    # bins = np.arange(0, zmax+DZ, DZ)
 
     # Make subhistograms depending on magnitude. Use dictionary.
     VALS = dict()
     SPL = dict()
     aux_hist, _ = np.histogram(galreal.ZGAL, bins)
     VALS['all'] = gf(aux_hist.astype(float), smooth_scale)  # smooth the histogram
-    #SPL['all'] = InterpCubicSpline(0.5 * (bins[:-1] + bins[1:]), VALS['all'].astype(float))
     SPL['all'] = CubicSpline(0.5 * (bins[:-1] + bins[1:]), VALS['all'].astype(float))
 
     # Generate magnitude bins
-    delta_mag2 = delta_mag
-    magbins = np.arange(magmin, magmax, delta_mag2)
-    # magbins = [15,19,21,22,26]
-    rvals = np.linspace(0, zmax, 1e4)
+    magbins = np.arange(magmin, magmax, delta_mag)
     for mag in magbins:
+        delta_mag2 = delta_mag
         q = 0
+        # Insure there are Nmin galaxies in the bin by extending the magnitude bin if needed
         while True:
             cond = (galreal.MAG <= mag + delta_mag2 * 0.5) & (galreal.MAG > mag - delta_mag2 * 0.5)
             if np.sum(cond) >= Nmin:
@@ -305,9 +305,7 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.,
         aux_hist, _ = np.histogram(galreal.ZGAL[cond], bins)
         VALS['{}'.format(mag)] = gf(aux_hist.astype(float), smooth_scale)  # smooth the histogram
         SPL['{}'.format(mag)] = CubicSpline(0.5 * (bins[:-1] + bins[1:]), VALS['{}'.format(mag)].astype(float))
-        vals = VALS['{}'.format(mag)]
         spl = SPL['{}'.format(mag)]
-        rand_z = RanDist(rvals, spl(rvals))
         if debug:
             import matplotlib.pyplot as pl
             pl.plot(bins, spl(bins), '-', label='{}'.format(mag))
@@ -315,20 +313,54 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.,
             pl.xlim(0, 2)
             pl.legend()
             pl.show()
+
     if debug:
         import matplotlib.pyplot as pl
         pl.legend()
         pl.show()
+    # Return
+    return magbins, VALS, SPL
+
+
+def random_gal(galreal, Nrand, magbins, SPL):
+    """
+    Preferred random galaxy generator.
+
+    Places Nrand new galaxies at a random redshift given
+    by a smoothed version of the observed sensitivity function.
+
+    Parameters
+    ----------
+    galreal
+    Nrand : int
+      Number of random galaxies generated per real galaxy
+    magbins : ndarray
+    SPL : dict
+
+    Returns
+    -------
+    galrand : np rec array
+      Copy of galreal, Nrand times
+    """
+    from pyigm.clustering.randist import RanDist
+
+    # Init
+    galrand = galreal.repeat(Nrand)
+    zmin = np.max([np.min(galreal.ZGAL[galreal.ZGAL > 0]), 1e-9])
+    zmax = np.max(galreal.ZGAL)
+    rvals = np.linspace(0, zmax, 1e4)
 
     # TODO -- Use better masking than +/- 90 mag
+    # Awful for loop, but it appears to run fast
     for i in range(len(galreal)):
         if (galreal.MAG[i] > 90) or (galreal.MAG[i] < -90):  # no magnitude, use the whole distribution
-            vals = VALS['all']
+            #vals = VALS['all']
             spl = SPL['all']
         else:
+            # And this is ugly expensive
             ind_mag = np.where(np.fabs(galreal.MAG[i] - magbins) == np.min(np.fabs(galreal.MAG[i] - magbins)))[0][0]
             mag = magbins[ind_mag]
-            vals = VALS['{}'.format(mag)]
+            #vals = VALS['{}'.format(mag)]
             spl = SPL['{}'.format(mag)]
         if i % 1000 == 0:
             print('{}/{}'.format(i + 1, len(galreal)))
@@ -338,6 +370,7 @@ def random_gal(galreal, Nrand, Nmin=20, DZ=0.01, smooth_scale=10.,
         rand_z = RanDist(rvals, dist)
         zrand = rand_z.random(Nrand)
         galrand.ZGAL[i * Nrand:(i + 1) * Nrand] = zrand
+    # Return
     return galrand
 
 
