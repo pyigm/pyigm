@@ -3,7 +3,7 @@
 from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
-from scipy.ndimage import gaussian_filter as gf
+import pdb
 
 from astropy.table import Table
 
@@ -194,6 +194,7 @@ class ClusteringField(IgmGalaxyField):
             self.RgRg = auto_pairs_rt(self.xgr, self.ygr, self.zgr, rbinedges, tbinedges, wrap=self.wrapped)
             self.DgRg = cross_pairs_rt(self.xg, self.yg, self.zg, self.xgr, self.ygr, self.zgr, rbinedges, tbinedges,
                                        wrapped=self.wrapped)
+            pdb.set_trace()
 
         # Abs-abs only
         if self.absreal is not None:

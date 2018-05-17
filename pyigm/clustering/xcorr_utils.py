@@ -4,6 +4,7 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import time
 import numpy as np
 import pdb
+import numba as nb
 
 from scipy.ndimage import gaussian_filter as gf
 from scipy.interpolate import CubicSpline
@@ -13,7 +14,79 @@ from pyigm.clustering.randist import RanDist
 
 Ckms = 299792.458  # speed of light in km/s
 
-def auto_pairs_rt(X, Y, Z, rbinedges, tbinedges, wrap=True, track_time=False):
+@nb.jit(nopython=True, cache=True)
+def nb_auto_pairs_rt(x, y, z, rbinedges, tbinedges, wrap=True, track_time=False,
+                  original=True):
+    """
+    [NT: give a nice description]
+
+    Find the number of pairs in 2d and 3d for galaxies with
+    coordinate x, y, z.
+
+    x,y,z: comoving coordinates in Mpc.  x is (roughly) the redshift
+           direction.
+
+    rbinedges and tbinedges correspond to the arrays defining the bins
+    edges """
+
+    #start=time.clock()
+    #x = np.array(X)
+    #y = np.array(Y)
+    #z = np.array(Z)
+    #rbinedges = np.array(rbinedges)
+    #tbinedges = np.array(tbinedges)
+
+    npair_rt = np.zeros((len(rbinedges) - 1, len(tbinedges) - 1), dtype=nb.types.float64)#float)
+    vals = np.zeros((len(rbinedges) - 1, len(tbinedges) - 1), dtype=nb.types.float64)#float)
+    #npair_rt = np.zeros((len(rbinedges) - 1, len(tbinedges) - 1), float)
+    #vals = np.zeros((len(rbinedges) - 1, len(tbinedges) - 1), float)
+
+    # Ugly for loop
+    for i in range(len(x) - 1):
+        if i % 1000 == 0:
+            print(i)
+        # radial separation
+        if wrap:
+            rsep = np.abs(x[i+1:] - x[i])
+        else:
+            rsep = x[i+1:] - x[i]
+        # transverse separation
+        tsep = np.hypot(y[i+1:] - y[i], z[i+1:] - z[i])
+
+        # Histogram me
+        #vals, _ = np.histogramdd((rsep, tsep), (rbinedges, tbinedges),
+        #                      range=None, normed=False, weights=None)
+        # Loop me
+        vals[:] = 0.
+        #r_logic = []
+
+        # Cut down to within the box!
+        ok_sep = (rsep < rbinedges[-1]) & (tsep < tbinedges[-1])
+        rsep = rsep[ok_sep]
+        tsep = tsep[ok_sep]
+        #
+        r_logic = np.zeros((len(rsep), len(rbinedges) - 1), dtype=nb.types.boolean)#float)
+        #r_logic = np.zeros((len(rsep), len(rbinedges) - 1), dtype=bool)
+        for jj in range(len(rbinedges)-1):
+            r_logic[:,jj]  = (rsep > rbinedges[jj]) & (rsep <= rbinedges[jj+1])
+        #t_logic = np.zeros((len(tsep), len(tbinedges) - 1), dtype=bool)
+        t_logic = np.zeros((len(tsep), len(tbinedges) - 1), dtype=nb.types.boolean)
+        for jj in range(len(tbinedges)-1):
+            t_logic[:,jj]  = (tsep > tbinedges[jj]) & (tsep <= tbinedges[jj+1])
+        # Finish
+        for jj in range(len(rbinedges)-1):
+            for kk in range(len(tbinedges)-1):
+                vals[jj,kk] = np.sum(r_logic[:,jj] & t_logic[:,kk])
+        #pdb.set_trace()
+        npair_rt += vals
+        #npair_rt += vals2
+
+    #end=time.clock()
+    #print('\t Time elapsed = {} seconds.'.format(end-start))
+    return npair_rt
+
+def auto_pairs_rt(X, Y, Z, rbinedges, tbinedges, wrap=True, track_time=False,
+                  original=True):
     """
     [NT: give a nice description]
 
@@ -35,6 +108,8 @@ def auto_pairs_rt(X, Y, Z, rbinedges, tbinedges, wrap=True, track_time=False):
 
     npair_rt = np.zeros((len(rbinedges) - 1, len(tbinedges) - 1), float)
 
+    # Ugly for loop
+    #   Could use map here..
     for i in range(len(x) - 1):
         # radial separation
         if wrap:
@@ -44,6 +119,12 @@ def auto_pairs_rt(X, Y, Z, rbinedges, tbinedges, wrap=True, track_time=False):
         # transverse separation
         tsep = np.hypot(y[i+1:] - y[i], z[i+1:] - z[i])
 
+        # Cut me (3x speed-up)
+        ok_sep = (rsep <= rbinedges[-1]) & (tsep <= tbinedges[-1])
+        rsep = rsep[ok_sep]
+        tsep = tsep[ok_sep]
+
+        # Histogram me (most expensive step, but faster than numba!)
         vals, _ = np.histogramdd((rsep, tsep), (rbinedges, tbinedges),
                               range=None, normed=False, weights=None)
         npair_rt += vals
@@ -51,6 +132,7 @@ def auto_pairs_rt(X, Y, Z, rbinedges, tbinedges, wrap=True, track_time=False):
     end=time.clock()
     print('\t Time elapsed = {} seconds.'.format(end-start))
     return npair_rt
+
 
 
 def cross_pairs_rt(x1, y1, z1, x2, y2, z2, rbinedges, tbinedges,wrapped=True):
@@ -83,6 +165,7 @@ def cross_pairs_rt(x1, y1, z1, x2, y2, z2, rbinedges, tbinedges,wrapped=True):
         y2=auxy
         z2=auxz
 
+    # Ugly for loop
     for i in range(len(x1) - 1):
         # radial separation
         if wrapped:
@@ -92,6 +175,12 @@ def cross_pairs_rt(x1, y1, z1, x2, y2, z2, rbinedges, tbinedges,wrapped=True):
         # transverse separation
         tsep = np.hypot(y1[i]-y2, z1[i]-z2)
 
+        # Cut me (3x speed-up)
+        ok_sep = (rsep <= rbinedges[-1]) & (tsep <= tbinedges[-1])
+        rsep = rsep[ok_sep]
+        tsep = tsep[ok_sep]
+
+        # Histogram
         vals, _ = np.histogramdd((rsep, tsep), (rbinedges, tbinedges),
                               range=None, normed=False, weights=None)
         npair_rt += vals
@@ -192,6 +281,8 @@ def W3(DD,RR,DR,RD,Ndd=None,Nrr=None,Ndr=None,Nrd=None):
     RR = RR / Nrr
     DR = DR / Ndr
     RD = RD / Nrd
+
+    pdb.set_trace()
 
     RR = np.where(RR==0,1e-20,RR)
     W3 = DD/RR  - DR/RR - RD/RR + 1.
@@ -572,6 +663,7 @@ def collapse_along_LOS(DD, nbins=None, s=0):
     if nbins is None:
         nbins = sDD.shape[0]
     # Avoidable loop?
-    DD_1D = np.array([np.sum(sDD.T[i][:nbins]) for i in range(sDD.shape[1])])
+    #old_DD_1D = np.array([np.sum(sDD.T[i][:nbins]) for i in range(sDD.shape[1])])
+    DD_1D = np.sum(sDD[:,:nbins], axis=0)
     # Return
     return DD_1D

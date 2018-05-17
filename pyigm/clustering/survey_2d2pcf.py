@@ -66,6 +66,7 @@ class Survey2D2PCF(object):
         self.rdiff  = self.rbinedges[1:] - self.rbinedges[:-1]
         self.tdiff  = self.tbinedges[1:] - self.tbinedges[:-1]
 
+
     def addField(self, new_field, SEP_TOL=0.5*u.deg):
         """ Add a new field
 
@@ -302,9 +303,15 @@ class Survey2D2PCF(object):
 
 
         # Calculate
-        self.xi_gg_T,self.xi_gg_T_err = W3(self.DgDg_T,self.RgRg_T,self.DgRg_T,self.DgRg_T,
+        self.xi_gg_rperp,self.xi_gg_rperp_err = W3(self.DgDg_T,self.RgRg_T,self.DgRg_T,self.DgRg_T,
                                            Ndd=self.nDgDg,Nrr=self.nRgRg,Ndr=self.nDgRg,Nrd=self.nDgRg)
-        pdb.set_trace()
+        # Finish
+        if nbins is None:
+            self.xi_gg_T = self.xi_gg_rperp * 2 * self.tbinedges[-1]
+            self.xi_gg_T_err = self.xi_gg_rperp_err * 2 * self.tbinedges[-1]
+        else:
+            self.xi_gg_T = self.xi_gg_rperp * 2 * self.tbinedges[nbins-1]
+            self.xi_gg_T_err = self.xi_gg_rperp_err * 2 * self.tbinedges[nbins-1]
 
         return self.xi_gg_T, self.xi_gg_T_err
 
@@ -333,9 +340,17 @@ class Survey2D2PCF(object):
         self.RaRg_T = collapse_along_LOS(self.RaRg,nbins,s=s)
 
         # Calculate
-        self.xi_ag_T,self.xi_ag_T_err = W3(self.DaDg_T,self.RaRg_T,self.DaRg_T,self.RaDg_T,
+        self.xi_ag_rperp, self.xi_ag_rperp_err = W3(self.DaDg_T,self.RaRg_T,self.DaRg_T,self.RaDg_T,
                                            Ndd=self.nDaDg,Nrr=self.nRaRg,Ndr=self.nDaRg,Nrd=self.nRaDg)
 
+        # Finish
+        if nbins is None:
+            self.xi_ag_T = self.xi_ag_rperp * 2 * self.tbinedges[-1]
+            self.xi_ag_T_err = self.xi_ag_rperp_err * 2 * self.tbinedges[-1]
+        else:
+            self.xi_ag_T = self.xi_ag_rperp * 2 * self.tbinedges[nbins-1]
+            self.xi_ag_T_err = self.xi_ag_rperp_err * 2 * self.tbinedges[nbins-1]
+        #
         return self.xi_ag_T, self.xi_ag_T_err
 
     def set_normalization(self, norm, Ngal_rand=None, Nabs_rand=None):
