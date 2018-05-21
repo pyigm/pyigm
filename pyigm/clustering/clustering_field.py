@@ -32,8 +32,8 @@ class ClusteringField(IgmGalaxyField):
     er:        numpy array with the QSO spectrum error (it can be normalized
                or not, but has to be consistent with fl)
     R:         resolution of the QSO spectrum spectrograph
-    Ngal_rand: number of random galaxies per real one that will be created.
-    Nabs_rand: number of random absorbers per real one that will be created.
+    igal_rand: number of random galaxies per real one that will be created.
+    iabs_rand: number of random absorbers per real one that will be created.
     proper:    calculates everything in physical Mpc rather than co-moving (Boolean).
     wrapped : bool, optional
       Whether to wrap the pair counts along the line of sight to increase counts
@@ -53,16 +53,16 @@ class ClusteringField(IgmGalaxyField):
     implemented plots that are useful.
 
     """
-    def __init__(self, radec, Ngal_rand=10, Nabs_rand=100, proper=False, field_name='',
+    def __init__(self, radec, igal_rand=10, iabs_rand=100, proper=False, field_name='',
                  wrapped=True, **kwargs):
 
         IgmGalaxyField.__init__(self, radec, **kwargs)
 
-        self.Ngal_rand = Ngal_rand  # Ngal_rand x len(galreal) = NRANDOM (Gal)
-        self.Nabs_rand = Nabs_rand  # Nabs_rand x len(absreal) = NRANDOM (Abs)
+        self.igal_rand = igal_rand
+        self.iabs_rand = iabs_rand
 
         self.absreal = None # absreal  # np rec array with absorber properties (single ion)
-        #self.absrand = random_abs(self.absreal, self.Nabs_rand, wa, fl, er, R=R)
+        self.absrand = None
 
         # Central coordiantes
         self.CRA = self.coord.ra.value #np.mean(self.absreal.RA)
@@ -78,6 +78,34 @@ class ClusteringField(IgmGalaxyField):
         self.galreal = None # Filled with addGal
         self.absreal = None # Filled with addAbs
         self.ion = None
+
+    @property
+    def Ngal(self):
+        if self.galreal is None:
+            return 0
+        else:
+            return len(self.galreal)
+
+    @property
+    def Ngal_rand(self):
+        if self.galrand is None:
+            return 0
+        else:
+            return len(self.galrand)
+
+    @property
+    def Nabs(self):
+        if self.absreal is None:
+            return 0
+        else:
+            return len(self.absreal)
+
+    @property
+    def Nabs_rand(self):
+        if self.absrand is None:
+            return 0
+        else:
+            return len(self.absrand)
 
     def addGal(self, gal_idx, mag_clm='MAG', z_clm='ZGAL', sens_galaxies=None,
                magbins=None, SPL=None):
@@ -125,7 +153,7 @@ class ClusteringField(IgmGalaxyField):
         if (SPL is None) or (magbins is None):
             magbins, _, SPL = spline_sensitivity(sens_galaxies)
         # Randoms
-        rgal = random_gal(galnew, self.Ngal_rand, magbins, SPL)
+        rgal = random_gal(galnew, self.igal_rand, magbins, SPL)
 
         # Load me up
         if self.galreal is None:
@@ -150,7 +178,7 @@ class ClusteringField(IgmGalaxyField):
             absnew = abs_input
 
         # Randoms
-        absrand = random_abs_zmnx(absnew, self.Nabs_rand, zmnx, wrest)
+        absrand = random_abs_zmnx(absnew, self.iabs_rand, zmnx, wrest)
 
 
         if self.absreal is None:
@@ -194,7 +222,6 @@ class ClusteringField(IgmGalaxyField):
             self.RgRg = auto_pairs_rt(self.xgr, self.ygr, self.zgr, rbinedges, tbinedges, wrap=self.wrapped)
             self.DgRg = cross_pairs_rt(self.xg, self.yg, self.zg, self.xgr, self.ygr, self.zgr, rbinedges, tbinedges,
                                        wrapped=self.wrapped)
-            pdb.set_trace()
 
         # Abs-abs only
         if self.absreal is not None:
@@ -304,8 +331,7 @@ class ClusteringField(IgmGalaxyField):
             self.__class__.__name__,
             self.name)
 
-        if self.galreal is not None:
-            rstr += 'ngreal={:d} '.format(len(self.galreal))
+        rstr += 'ngreal={:d} '.format(self.Ngal)
 
         if self.absreal is not None:
             rstr += 'nareal={:d} '.format(len(self.absreal))

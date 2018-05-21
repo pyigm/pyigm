@@ -260,29 +260,34 @@ def W3b(DD,RR,DR,RD,Ndd=None,Nrr=None,Ndr=None,Nrd=None):
 
     return W3,err_W3
 
-def W3(DD,RR,DR,RD,Ndd=None,Nrr=None,Ndr=None,Nrd=None):
-    """Returns the Landy & Scalay estimator for the cross-correlation
-    and its error. The pair counts DD, RR, DR, RD are not required to
-    be normalized normalized. Ndd,Nrr,Ndr,Nrd are the normalizations
-    factors for each pair count (if None, the normalizations are taken
-    from the sum over the whole array."""
 
-    if Ndd is None:
-        Ndd = np.sum(DD)
-    if Nrr is None:
-        Nrr = np.sum(RR)
-    if Ndr is None:
-        Ndr = np.sum(DR)
-    if Nrd is None:
-        Nrd = np.sum(RD)
+def W3(DD,RR,DR,RD,Ndd,Nrr,Ndr,Nrd):
+    """Returns the Landy & Scalay estimator for the cross-correlation
+        and its error. The pair counts DD, RR, DR, RD are not required to
+    be normalized normalized. Ndd,Nrr,Ndr,Nrd are the normalizations
+    factors for each pair count
+
+    Parameters
+    ----------
+    DD : ndarray
+    RR : ndarray
+    DR : ndarray
+    RD : ndarray
+    Ndd : int
+    Nrr : int
+    Ndr : int
+    Nrd : int
+
+    Returns
+    -------
+
+    """
 
     #normalize counts
     DD = DD / Ndd
     RR = RR / Nrr
     DR = DR / Ndr
     RD = RD / Nrd
-
-    pdb.set_trace()
 
     RR = np.where(RR==0,1e-20,RR)
     W3 = DD/RR  - DR/RR - RD/RR + 1.

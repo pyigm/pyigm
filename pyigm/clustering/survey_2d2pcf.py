@@ -2,13 +2,14 @@
 from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
+import warnings
 import pdb
 from scipy.ndimage import gaussian_filter as gf
 
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 
-from pyigm.clustering.xcorr_utils import random_gal, auto_pairs_rt, cross_pairs_rt, W3, collapse_along_LOS
+from pyigm.clustering.xcorr_utils import W3, collapse_along_LOS
 
 class Survey2D2PCF(object):
     """
@@ -35,7 +36,8 @@ class Survey2D2PCF(object):
             self.DgDg = field.DgDg
             self.DgRg = field.DgRg
             self.RgRg = field.RgRg
-            self.Ngal = len(field.galreal)
+            self.Ngal = field.Ngal
+            self.Ngal_rand = field.Ngal_rand
             self.gal_anly = True
         else:
             self.gal_anly = False
@@ -44,7 +46,9 @@ class Survey2D2PCF(object):
             self.DaDa = field.DaDa
             self.DaRa = field.DaRa
             self.RaRa = field.RaRa
-            self.Nabs = len(field.absreal)
+            self.Nabs = field.Nabs
+            self.Nabs_rand = field.Nabs_rand
+            self.Nabs = field.Nabs
             self.abs_anly = True
             # Both!
             if field.galreal is not None:
@@ -101,13 +105,15 @@ class Survey2D2PCF(object):
             self.DgDg += new_field.DgDg
             self.DgRg += new_field.DgRg
             self.RgRg += new_field.RgRg
-            self.Ngal += len(new_field.galreal)
+            self.Ngal += new_field.Ngal
+            self.Ngal_rand += new_field.Ngal_rand
 
         if new_field.absreal is not None:
             self.DaDa += new_field.DaDa
             self.DaRa += new_field.DaRa
             self.RaRa += new_field.RaRa
-            self.Nabs += len(new_field.absreal)
+            self.Nabs += new_field.Nabs
+            self.Nabs_rand += new_field.Nabs_rand
             # Both?
             if new_field.galreal is not None:
                 self.DaDg += new_field.DaDg
@@ -205,7 +211,7 @@ class Survey2D2PCF(object):
         # Calculate me
         s = sigma
         W, err_W = W3(gf(DD(self), s), gf(RR(self), s), gf(DR(self), s), gf(RD(self), s),
-                        Ndd=nDD, Nrr=nRR, Ndr=nDR, Nrd=nRD)
+                        nDD, nRR, nDR, nRD)
         #
 
         # jacknife error
@@ -304,7 +310,7 @@ class Survey2D2PCF(object):
 
         # Calculate
         self.xi_gg_rperp,self.xi_gg_rperp_err = W3(self.DgDg_T,self.RgRg_T,self.DgRg_T,self.DgRg_T,
-                                           Ndd=self.nDgDg,Nrr=self.nRgRg,Ndr=self.nDgRg,Nrd=self.nDgRg)
+                                           self.nDgDg,self.nRgRg,self.nDgRg,self.nDgRg)
         # Finish
         if nbins is None:
             self.xi_gg_T = self.xi_gg_rperp * 2 * self.tbinedges[-1]
@@ -341,7 +347,7 @@ class Survey2D2PCF(object):
 
         # Calculate
         self.xi_ag_rperp, self.xi_ag_rperp_err = W3(self.DaDg_T,self.RaRg_T,self.DaRg_T,self.RaDg_T,
-                                           Ndd=self.nDaDg,Nrr=self.nRaRg,Ndr=self.nDaRg,Nrd=self.nRaDg)
+                                           self.nDaDg,self.nRaRg,self.nDaRg,self.nRaDg)
 
         # Finish
         if nbins is None:
@@ -353,15 +359,13 @@ class Survey2D2PCF(object):
         #
         return self.xi_ag_T, self.xi_ag_T_err
 
-    def set_normalization(self, norm, Ngal_rand=None, Nabs_rand=None):
+    def set_normalization(self, norm=True):
         """ Set normalization for the pair counts
 
         Parameters
         ----------
-        norm : bool
+        norm : bool, optional
           False -- Internal normalization will be performed by the estimator
-        Ngal_rand : int, optional
-        Nabs_rand : int, optional
 
         Returns
         -------
@@ -372,20 +376,23 @@ class Survey2D2PCF(object):
         if norm:
             if self.gal_anly:
                 self.nDgDg = self.Ngal * (self.Ngal - 1) / 2.
-                self.nDgRg = self.Ngal * self.Ngal * Ngal_rand
-                self.nRgRg = self.Ngal * Ngal_rand * (self.Ngal * Ngal_rand - 1) / 2.
+                #self.nDgRg = self.Ngal * self.Ngal * self.Ngal_rand
+                self.nDgRg = self.Ngal * self.Ngal_rand
+                #self.nRgRg = self.Ngal * self.Ngal_rand * (self.Ngal * self.Ngal_rand - 1) / 2.
+                self.nRgRg = self.Ngal_rand * (self.Ngal_rand - 1) / 2.
 
             if self.abs_anly:
                 self.nDaDa = self.Nabs * (self.Nabs - 1) / 2.
-                self.nDaRa = self.Nabs * self.Nabs * Nabs_rand
-                self.nRaRa = self.Nabs * Nabs_rand * (self.Nabs * Nabs_rand - 1) / 2.
+                self.nDaRa = self.Nabs * self.Nabs_rand
+                self.nRaRa = self.Nabs_rand * (self.Nabs_rand - 1) / 2.
 
             if self.gal_anly & self.abs_anly:
-                self.nRaDg = self.Nabs * self.Ngal * Nabs_rand
-                self.nRaRg = self.Nabs * self.Ngal * Nabs_rand * Ngal_rand
+                self.nRaDg = self.Nabs_rand * self.Ngal
+                self.nRaRg = self.Nabs_rand * self.Ngal_rand # * Nabs_rand * Ngal_rand
                 self.nDaDg = self.Nabs * self.Ngal
-                self.nDaRg = self.Nabs * self.Ngal * Ngal_rand
+                self.nDaRg = self.Nabs * self.Ngal_rand
         else:
+            warnings.warn("This is only recommended if you are not done building up the object")
             self.nDgDg = None
             self.nDaDa = None
             self.nDaDg = None

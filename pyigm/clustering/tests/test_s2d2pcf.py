@@ -47,7 +47,7 @@ def test_init_survey():
 
     # Normalize
     #csurvey.set_normalization(True, Ngal_rand=csurvey.RgRg.size)
-    csurvey.set_normalization(False)
+    csurvey.set_normalization()
 
     # Wgg
     Wgg, err_Wgg = csurvey.calc_xi_gg()
