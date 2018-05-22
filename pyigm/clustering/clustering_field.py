@@ -6,6 +6,8 @@ import numpy as np
 import pdb
 
 from astropy.table import Table
+from astropy.coordinates import SkyCoord
+from astropy.cosmology import Planck15
 
 from linetools import utils as ltu
 
@@ -54,7 +56,7 @@ class ClusteringField(IgmGalaxyField):
 
     """
     def __init__(self, radec, igal_rand=10, iabs_rand=100, proper=False, field_name='',
-                 wrapped=True, **kwargs):
+                 wrapped=True, cosmo=None, **kwargs):
 
         IgmGalaxyField.__init__(self, radec, **kwargs)
 
@@ -63,6 +65,11 @@ class ClusteringField(IgmGalaxyField):
 
         self.absreal = None # absreal  # np rec array with absorber properties (single ion)
         self.absrand = None
+
+        # Cosmology
+        if cosmo is None:
+            cosmo = Planck15
+        self.cosmo = cosmo
 
         # Central coordiantes
         self.CRA = self.coord.ra.value #np.mean(self.absreal.RA)
@@ -108,7 +115,7 @@ class ClusteringField(IgmGalaxyField):
             return len(self.absrand)
 
     def addGal(self, gal_idx, mag_clm='MAG', z_clm='ZGAL', sens_galaxies=None,
-               magbins=None, SPL=None):
+               magbins=None, SPL=None, Rcom_max=None):
         """ Adds a set of galaxies for clustering analysis from the main astropy Table
 
         A random sample is also generated
@@ -128,6 +135,8 @@ class ClusteringField(IgmGalaxyField):
         magbins : ndarray (optional)
         SPL : dict (optional)
           Contains the sensitivity function (CubicSpline's)
+        Rcom_max : float, optional
+          Maximum comoving separation of the survey in Mpc
 
         Returns
         -------
@@ -154,6 +163,16 @@ class ClusteringField(IgmGalaxyField):
             magbins, _, SPL = spline_sensitivity(sens_galaxies)
         # Randoms
         rgal = random_gal(galnew, self.igal_rand, magbins, SPL)
+
+        # Cut on Rcom_max?
+        if Rcom_max is not None:
+            rcoord = SkyCoord(ra=rgal.RA, dec=rgal.DEC, unit='deg')
+            angsep = self.coord.separation(rcoord)
+            # R comoving
+            Rcom = self.cosmo.kpc_comoving_per_arcmin(rgal.ZGAL) * angsep.to('arcmin') / 1000. # Mpc
+            # Cut
+            goodr = Rcom.value < Rcom_max
+            rgal = rgal[goodr]
 
         # Load me up
         if self.galreal is None:
