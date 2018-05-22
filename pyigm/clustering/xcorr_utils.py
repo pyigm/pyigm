@@ -332,7 +332,7 @@ def clean_matrix(W,n=-99):
 
 
 def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, DZ=0.01,
-                       smooth_scale=10., debug=False):
+                       smooth_scale=10., debug=False, magbins=None):
     """
     For a given galaxy with a
     given magnitude (and other properties), it calculates the redshift
@@ -350,8 +350,9 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, 
       Minimum number of galaxies to include in a bin
     DZ : float, optional
       delta z for the histogram for getting the
-    smooth_scale : float, optional
+    smooth_scale : float or ndarray, optional
        smoothing scale for the histogram (in number of bins, so depends on DZ)
+       if ndarray, it needs to match the size of magbins
     magmin : float, optional
        Minimum magnitude for the binning (bright end)
     magmax : float, optional
@@ -383,12 +384,16 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, 
     VALS = dict()
     SPL = dict()
     aux_hist, _ = np.histogram(galreal.ZGAL, bins)
-    VALS['all'] = gf(aux_hist.astype(float), smooth_scale)  # smooth the histogram
+    if isinstance(smooth_scale, np.ndarray):
+        VALS['all'] = gf(aux_hist.astype(float), smooth_scale[0])  # smooth the histogram
+    else:
+        VALS['all'] = gf(aux_hist.astype(float), smooth_scale)  # smooth the histogram
     SPL['all'] = CubicSpline(0.5 * (bins[:-1] + bins[1:]), VALS['all'].astype(float))
 
     # Generate magnitude bins
-    magbins = np.arange(magmin, magmax, delta_mag)
-    for mag in magbins:
+    if magbins is None:
+        magbins = np.arange(magmin, magmax, delta_mag)
+    for tt,mag in enumerate(magbins):
         delta_mag2 = delta_mag
         q = 0
         # Insure there are Nmin galaxies in the bin by extending the magnitude bin if needed
@@ -402,7 +407,10 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, 
             assert q < 1000, 'Something wrong with the redshift distribution'
 
         aux_hist, _ = np.histogram(galreal.ZGAL[cond], bins)
-        VALS['{}'.format(mag)] = gf(aux_hist.astype(float), smooth_scale)  # smooth the histogram
+        if isinstance(smooth_scale, np.ndarray):
+            VALS['{}'.format(mag)] = gf(aux_hist.astype(float), smooth_scale[tt])  # smooth the histogram
+        else:
+            VALS['{}'.format(mag)] = gf(aux_hist.astype(float), smooth_scale)  # smooth the histogram
         SPL['{}'.format(mag)] = CubicSpline(0.5 * (bins[:-1] + bins[1:]), VALS['{}'.format(mag)].astype(float))
         spl = SPL['{}'.format(mag)]
         if debug:

@@ -115,7 +115,7 @@ class ClusteringField(IgmGalaxyField):
             return len(self.absrand)
 
     def addGal(self, gal_idx, mag_clm='MAG', z_clm='ZGAL', sens_galaxies=None,
-               magbins=None, SPL=None, Rcom_max=None):
+               magbins=None, SPL=None, Rcom_max=None, debug=False, tbinedges=None):
         """ Adds a set of galaxies for clustering analysis from the main astropy Table
 
         A random sample is also generated
@@ -173,6 +173,42 @@ class ClusteringField(IgmGalaxyField):
             # Cut
             goodr = Rcom.value < Rcom_max
             rgal = rgal[goodr]
+        if debug:
+            gcoord = SkyCoord(ra=galnew.RA, dec=galnew.DEC, unit='deg')
+            gangsep = self.coord.separation(gcoord)
+            gRcom = self.cosmo.kpc_comoving_per_arcmin(galnew.ZGAL) * gangsep.to('arcmin') / 1000. # Mpc
+            faintR = rgal.MAG > 19.
+            faintg = galnew.MAG > 19.
+            #
+            from matplotlib import pyplot as plt
+            import matplotlib.gridspec as gridspec
+            plt.clf()
+            if True:
+                gs = gridspec.GridSpec(2,1)
+                ax = plt.subplot(gs[0])
+                ax.hist(gRcom[~faintg], color='k', bins=tbinedges, normed=1, label='DD', fill=False)
+                ax.hist(Rcom[goodr][~faintR], edgecolor='red', bins=tbinedges, normed=1, label='RR', fill=False)
+                # Faint
+                ax = plt.subplot(gs[1])
+                ax.hist(gRcom[faintg], color='k', bins=tbinedges, normed=1, label='DD', fill=False)
+                ax.hist(Rcom[goodr][faintR], edgecolor='red', bins=tbinedges, normed=1, label='RR', fill=False)
+                ax.set_ylabel('Faint')
+                ax.set_xlabel('Rcom (Mpc)')
+            else:
+                ax = plt.gca()
+                zbins = np.arange(0., 0.8, 0.025)
+                ax.hist(galnew.ZGAL[faintg], color='k', bins=zbins, normed=1, label='DD', fill=False)
+                ax.hist(rgal.ZGAL[faintR], edgecolor='red', bins=zbins, normed=1, label='RR', fill=False)
+                ax.set_xlabel('zGAL')
+                #Magbins = np.arange(15., 22., 0.5)
+                #ax.hist(galnew.MAG, color='k', bins=Magbins, normed=1, label='DD', fill=False)
+                #ax.hist(rgal.MAG, edgecolor='red', bins=Magbins, normed=1, label='RR', fill=False)
+                #ax.set_xlabel('MAG')
+                #angbins = np.arange(0., 30, 1.)
+                #ax.hist(gangsep.to('arcmin').value, color='k', bins=angbins, normed=1, label='DD', fill=False)
+                #ax.hist(angsep[goodr].to('arcmin').value, edgecolor='red', bins=angbins, normed=1, label='RR', fill=False)
+                #ax.set_xlabel('ang sep (arcmin)')
+            plt.show()
 
         # Load me up
         if self.galreal is None:
