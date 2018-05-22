@@ -669,6 +669,6 @@ def collapse_along_LOS(DD, nbins=None, s=0):
         nbins = sDD.shape[0]
     # Avoidable loop?
     #old_DD_1D = np.array([np.sum(sDD.T[i][:nbins]) for i in range(sDD.shape[1])])
-    DD_1D = np.sum(sDD[:,:nbins], axis=0)
+    DD_1D = np.sum(sDD[:nbins,:], axis=0)
     # Return
     return DD_1D
