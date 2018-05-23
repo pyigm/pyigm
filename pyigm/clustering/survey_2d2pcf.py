@@ -284,8 +284,8 @@ class Survey2D2PCF(object):
         # Return
         return W, err_W
 
-    def calc_xi_gg_transverse(self, s, nbins=None):
-        """  Calculate xi_gg in the transverse dimension
+    def calc_W_gg_transverse(self, s, nbins=None):
+        """  Calculate W_gg in the transverse dimension
         Estimated with Landay-Szalay  (W3)
 
         Parameters
@@ -296,9 +296,9 @@ class Survey2D2PCF(object):
 
         Returns
         -------
-        xi_gg_T
-        xi_gg_T_err
-          Also save in the object
+        W_gg_T
+        W_gg_T_err
+          Also saved in the object with xi_gg_rperp, xi_gg_rperp_err
 
         """
 
@@ -313,16 +313,16 @@ class Survey2D2PCF(object):
                                            self.nDgDg,self.nRgRg,self.nDgRg,self.nDgRg)
         # Finish
         if nbins is None:
-            self.xi_gg_T = self.xi_gg_rperp * 2 * self.tbinedges[-1]
-            self.xi_gg_T_err = self.xi_gg_rperp_err * 2 * self.tbinedges[-1]
+            self.W_gg_T = self.xi_gg_rperp * 2 * self.tbinedges[-1]
+            self.W_gg_T_err = self.xi_gg_rperp_err * 2 * self.tbinedges[-1]
         else:
-            self.xi_gg_T = self.xi_gg_rperp * 2 * self.tbinedges[nbins-1]
-            self.xi_gg_T_err = self.xi_gg_rperp_err * 2 * self.tbinedges[nbins-1]
+            self.W_gg_T = self.xi_gg_rperp * 2 * self.tbinedges[nbins-1]
+            self.W_gg_T_err = self.xi_gg_rperp_err * 2 * self.tbinedges[nbins-1]
 
-        return self.xi_gg_T, self.xi_gg_T_err
+        return self.W_gg_T, self.W_gg_T_err
 
-    def calc_xi_ag_transverse(self, s, nbins=None):
-        """  Calculate xi_ag in the transverse dimension
+    def calc_W_ag_transverse(self, s, nbins=None):
+        """  Calculate W_ag in the transverse dimension
         Estimated with Landay-Szalay  (W3)
 
         Parameters
@@ -333,8 +333,8 @@ class Survey2D2PCF(object):
 
         Returns
         -------
-        xi_ag_T
-        xi_ag_T_err
+        W_ag_T
+        W_ag_T_err
           Also save in the object
 
         """
@@ -351,13 +351,13 @@ class Survey2D2PCF(object):
 
         # Finish
         if nbins is None:
-            self.xi_ag_T = self.xi_ag_rperp * 2 * self.tbinedges[-1]
-            self.xi_ag_T_err = self.xi_ag_rperp_err * 2 * self.tbinedges[-1]
+            self.W_ag_T = self.xi_ag_rperp * 2 * self.tbinedges[-1]
+            self.W_ag_T_err = self.xi_ag_rperp_err * 2 * self.tbinedges[-1]
         else:
-            self.xi_ag_T = self.xi_ag_rperp * 2 * self.tbinedges[nbins-1]
-            self.xi_ag_T_err = self.xi_ag_rperp_err * 2 * self.tbinedges[nbins-1]
+            self.W_ag_T = self.xi_ag_rperp * 2 * self.tbinedges[nbins-1]
+            self.W_ag_T_err = self.xi_ag_rperp_err * 2 * self.tbinedges[nbins-1]
         #
-        return self.xi_ag_T, self.xi_ag_T_err
+        return self.W_ag_T, self.W_ag_T_err
 
     def set_normalization(self, norm=True):
         """ Set normalization for the pair counts
