@@ -247,7 +247,7 @@ class ClusteringField(IgmGalaxyField):
             self.absrand = np.rec.array(self.absrand)
 
 
-    def compute_pairs(self, tbinedges, rbinedges):
+    def compute_pairs(self, tbinedges, rbinedges, debug=False):
         """Computes relevant pairs dependent on what has been loaded
         into the object (i.e. galaxies, absorbers, galaxy-absorbers)
 
@@ -291,7 +291,7 @@ class ClusteringField(IgmGalaxyField):
             #
             if self.galreal is not None:
                 self.DaDg = cross_pairs_rt(self.xa, self.ya, self.za, self.xg, self.yg, self.zg, rbinedges, tbinedges,
-                                           wrapped=self.wrapped)
+                                           wrapped=self.wrapped, debug=debug)
 
                 self.DaRg = cross_pairs_rt(self.xa, self.ya, self.za, self.xgr, self.ygr, self.zgr, rbinedges, tbinedges,
                                            wrapped=self.wrapped)

@@ -135,7 +135,8 @@ def auto_pairs_rt(X, Y, Z, rbinedges, tbinedges, wrap=True, track_time=False,
 
 
 
-def cross_pairs_rt(x1, y1, z1, x2, y2, z2, rbinedges, tbinedges,wrapped=True):
+def cross_pairs_rt(x1, y1, z1, x2, y2, z2, rbinedges, tbinedges,wrapped=True,
+                   debug=False):
     """ Find the number of pairs in 2d and 3d for galaxies with
     coordinate (x1, y1, z1) and (x2,y2,z2).
 
@@ -166,7 +167,7 @@ def cross_pairs_rt(x1, y1, z1, x2, y2, z2, rbinedges, tbinedges,wrapped=True):
         z2=auxz
 
     # Ugly for loop
-    for i in range(len(x1) - 1):
+    for i in range(len(x1)):# - 1):  JXP Bug fix?!
         # radial separation
         if wrapped:
             rsep = np.abs(x1[i] - x2)
@@ -183,6 +184,8 @@ def cross_pairs_rt(x1, y1, z1, x2, y2, z2, rbinedges, tbinedges,wrapped=True):
         # Histogram
         vals, _ = np.histogramdd((rsep, tsep), (rbinedges, tbinedges),
                               range=None, normed=False, weights=None)
+        if debug:
+            pdb.set_trace()
         npair_rt += vals
 
     end=time.clock()
