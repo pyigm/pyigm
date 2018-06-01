@@ -639,8 +639,8 @@ def random_gal(galreal, Nrand, magbins, SPL):
             mag = magbins[ind_mag]
             #vals = VALS['{}'.format(mag)]
             spl = SPL['{}'.format(mag)]
-        if i % 1000 == 0:
-            print('{}/{}'.format(i + 1, len(galreal)))
+        #if i % 1000 == 0:
+        #    print('{}/{}'.format(i + 1, len(galreal)))
 
         dist = np.array(spl(rvals))
         dist = np.where((rvals < zmin) | (rvals > zmax), 0, dist)  # get rid of redshifts beyond observed
