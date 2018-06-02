@@ -183,7 +183,7 @@ class ClusteringField(IgmGalaxyField):
             from matplotlib import pyplot as plt
             import matplotlib.gridspec as gridspec
             plt.clf()
-            if False:
+            if True:
                 gs = gridspec.GridSpec(2,1)
                 ax = plt.subplot(gs[0])
                 ax.hist(gRcom[~faintg], color='k', bins=tbinedges, normed=1, label='DD', fill=False)

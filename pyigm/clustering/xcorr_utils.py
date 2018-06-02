@@ -335,7 +335,7 @@ def clean_matrix(W,n=-99):
 
 
 def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, DZ=0.01,
-                       smooth_scale=10., debug=False, magbins=None):
+                       smooth_scale=10., debug=False, magbins=None, cut_z0=False):
     """
     For a given galaxy with a
     given magnitude (and other properties), it calculates the redshift
@@ -381,7 +381,10 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, 
     # spline in z
     galreal.sort(order=str('MAG'))  # np.recarray.sort()
 
-    bins = np.append(np.linspace(0, zmin, 20), np.arange(zmin + DZ, zmax + 10 * DZ, DZ))
+    if cut_z0:
+        bins = np.arange(zmin + DZ, zmax + 10 * DZ, DZ)
+    else:
+        bins = np.append(np.linspace(0, zmin, 20), np.arange(zmin + DZ, zmax + 10 * DZ, DZ))
 
     # Make subhistograms depending on magnitude. Use dictionary.
     VALS = dict()
@@ -396,15 +399,28 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, 
     # Generate magnitude bins
     if magbins is None:
         magbins = np.arange(magmin, magmax, delta_mag)
+        flag_mag = True
+    else:
+        flag_mag = False
     for tt,mag in enumerate(magbins):
         delta_mag2 = delta_mag
         q = 0
         # Insure there are Nmin galaxies in the bin by extending the magnitude bin if needed
         while True:
-            cond = (galreal.MAG <= mag + delta_mag2 * 0.5) & (galreal.MAG > mag - delta_mag2 * 0.5)
+            # Internal or external bins?
+            if flag_mag:
+                cond = (galreal.MAG <= mag + delta_mag2 * 0.5) & (galreal.MAG > mag - delta_mag2 * 0.5)
+            else:
+                if tt == len(magbins)-1:
+                    magmax = 99.
+                else:
+                    magmax = magbins[tt+1]
+                cond = (galreal.MAG <= magmax) & (galreal.MAG > mag)
             if np.sum(cond) >= Nmin:
                 break
             else:
+                if not flag_mag:
+                    pdb.set_trace()
                 delta_mag2 += 0.25
             q += 1
             assert q < 1000, 'Something wrong with the redshift distribution'
@@ -414,15 +430,23 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, 
             VALS['{}'.format(mag)] = gf(aux_hist.astype(float), smooth_scale[tt])  # smooth the histogram
         else:
             VALS['{}'.format(mag)] = gf(aux_hist.astype(float), smooth_scale)  # smooth the histogram
+        # HACK
+        #if mag < 20.:
+        #    hiz = bins > 0.4
+        #    #VALS['{}'.format(mag)][hiz]] = aux_hist[]
+        #    pdb.set_trace()
         SPL['{}'.format(mag)] = CubicSpline(0.5 * (bins[:-1] + bins[1:]), VALS['{}'.format(mag)].astype(float))
         spl = SPL['{}'.format(mag)]
+        #if (tt == len(magbins)-1) and debug:
         if debug:
             import matplotlib.pyplot as pl
             pl.plot(bins, spl(bins), '-', label='{}'.format(mag))
             pl.plot(bins[:-1], aux_hist, drawstyle='steps-mid')
-            pl.xlim(0, 2)
+            pl.xlim(0, 0.8)
             pl.legend()
             pl.show()
+        #if (tt == len(magbins)-1) and debug:
+        #    pdb.set_trace()
 
     if debug:
         import matplotlib.pyplot as pl
@@ -646,6 +670,7 @@ def random_gal(galreal, Nrand, magbins, SPL):
         dist = np.where((rvals < zmin) | (rvals > zmax), 0, dist)  # get rid of redshifts beyond observed
         rand_z = RanDist(rvals, dist)
         zrand = rand_z.random(Nrand)
+        #pdb.set_trace()
         galrand.ZGAL[i * Nrand:(i + 1) * Nrand] = zrand
     # Return
     return galrand
