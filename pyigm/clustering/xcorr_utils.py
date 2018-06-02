@@ -408,14 +408,12 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, 
         # Insure there are Nmin galaxies in the bin by extending the magnitude bin if needed
         while True:
             # Internal or external bins?
-            if flag_mag:
-                cond = (galreal.MAG <= mag + delta_mag2 * 0.5) & (galreal.MAG > mag - delta_mag2 * 0.5)
+            #cond = (galreal.MAG <= mag + delta_mag2 * 0.5) & (galreal.MAG > mag - delta_mag2 * 0.5)
+            if tt == len(magbins)-1:
+                magmax = 99.
             else:
-                if tt == len(magbins)-1:
-                    magmax = 99.
-                else:
-                    magmax = magbins[tt+1]
-                cond = (galreal.MAG <= magmax) & (galreal.MAG > mag)
+                magmax = magbins[tt+1]
+            cond = (galreal.MAG <= magmax) & (galreal.MAG > mag)
             if np.sum(cond) >= Nmin:
                 break
             else:
@@ -442,11 +440,19 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, 
             import matplotlib.pyplot as pl
             pl.plot(bins, spl(bins), '-', label='{}'.format(mag))
             pl.plot(bins[:-1], aux_hist, drawstyle='steps-mid')
+            # Randoms
+            if tt > 0:
+                rdebug = False
+            else:
+                rdebug = False
+            galrand = random_gal(galreal[cond], 1, magbins, SPL, debug=rdebug)
+            ran_hist, _ = np.histogram(galrand.ZGAL, bins)
+            pl.plot(bins[:-1], ran_hist, drawstyle='steps-mid', color='green')
+
             pl.xlim(0, 0.8)
             pl.legend()
             pl.show()
-        #if (tt == len(magbins)-1) and debug:
-        #    pdb.set_trace()
+            #pdb.set_trace()
 
     if debug:
         import matplotlib.pyplot as pl
@@ -624,7 +630,7 @@ def compute_Wmin(wa, fl, er, sl=3., R=20000, FWHM=10, ion='HI', dv_mask=200.):
         Wmin = np.where(cond, 1e10, Wmin)
     return z, Wmin
 
-def random_gal(galreal, Nrand, magbins, SPL):
+def random_gal(galreal, Nrand, magbins, SPL, debug=False):
     """
     Preferred random galaxy generator.
 
@@ -653,14 +659,28 @@ def random_gal(galreal, Nrand, magbins, SPL):
 
     # TODO -- Use better masking than +/- 90 mag
     # Awful for loop, but it appears to run fast
+    minmag = np.min(magbins)
+    maxmag = np.max(magbins)
     for i in range(len(galreal)):
         if (galreal.MAG[i] > 90) or (galreal.MAG[i] < -90):  # no magnitude, use the whole distribution
             #vals = VALS['all']
             spl = SPL['all']
+        elif galreal.MAG[i] > maxmag:
+            spl = SPL['{}'.format(maxmag)]
+        elif galreal.MAG[i] < minmag:
+            spl = SPL['{}'.format(minmag)]
         else:
             # And this is ugly expensive
-            ind_mag = np.where(np.fabs(galreal.MAG[i] - magbins) == np.min(np.fabs(galreal.MAG[i] - magbins)))[0][0]
+            #ind_mag = np.where(np.fabs(galreal.MAG[i] - magbins) == np.min(np.fabs(galreal.MAG[i] - magbins)))[0][0]
+            try:
+                ind_mag = np.where((galreal.MAG[i] > magbins) & (galreal.MAG[i] < np.roll(magbins,-1)))[0][0]
+            except:
+                pdb.set_trace()
             mag = magbins[ind_mag]
+            #if i % 50 == 0:
+            #    print(mag)
+            if debug:
+                pdb.set_trace()
             #vals = VALS['{}'.format(mag)]
             spl = SPL['{}'.format(mag)]
         #if i % 1000 == 0:
