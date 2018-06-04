@@ -285,7 +285,8 @@ class CGMAbsSys(object):
         # Finish
         print("Wrote {:s} system to {:s} file".format(self.name, outfil))
 
-    def stack_plot(self,to_plot,pvlim=None,maxtrans=3,return_fig=True,**kwargs):
+    def stack_plot(self,to_plot,pvlim=None,maxtrans=3,return_fig=True,
+                   add_missing_lines=False,spec=None,**kwargs):
         '''Show a stack plot of the CGM absorption system
 
         Parameters
@@ -299,6 +300,11 @@ class CGMAbsSys(object):
            Override system vlim for plotting
         maxtrans : int, optional
            Maximum number of lines per transition to plot
+        add_missing_lines : bool, optional
+           If True, plot transitions that do not have associated AbsLine objects
+        spec : XSpectrum1D, optional
+           Spectrum to plot in regions of requested lines; required if assoc.
+           AbsLine objects do not have their analy['specfile'] attributes set
 
         Returns
         -------
@@ -311,6 +317,7 @@ class CGMAbsSys(object):
         from linetools.isgm.abscomponent import AbsComponent
         from linetools.spectra.io import readspec
         from linetools.lists.linelist import LineList
+        from linetools.abund import ions as ltai
         from pyigm import utils as pu
 
         ilist = LineList('ISM')
@@ -323,10 +330,26 @@ class CGMAbsSys(object):
                 else: # Pick components in system closest to z_cgm
                     thesecomps = pu.get_components(self,tp)
                     if len(thesecomps)==0:
-                        continue
-                    # Find component with redshift closest to systemic
-                    compvels = np.array([np.median(tc.vlim.value) for tc in thesecomps])
-                    comp = thesecomps[np.argmin(np.abs(compvels))]
+                        if add_missing_lines is True:
+                            if isinstance(tp,str):
+                                tup = ltai.name_to_ion(tp)
+                            else:
+                                tup = tp
+                            comp = AbsComponent(self.coord,tup,zcomp=self.z,
+                                                vlim=[-100.,100.]*u.km/u.s)
+                            comp.add_abslines_from_linelist()
+                            if spec is not None:
+                                comp._abslines[0].analy['spec'] = spec
+                            else:
+                                raise ValueError('spec must be provided if '
+                                                 'requesting species without'
+                                                 ' existing components.')
+                        else:
+                            continue
+                    else:
+                        # Find component with redshift closest to systemic
+                        compvels = np.array([np.median(tc.vlim.value) for tc in thesecomps])
+                        comp = thesecomps[np.argmin(np.abs(compvels))]
 
                     ### Get strongest transitions covered
                     wmins = []
@@ -335,35 +358,49 @@ class CGMAbsSys(object):
                         # Load spectrum if not already loaded
                         if al.analy['spec'] is None:
                             try:
-                              al.analy['spec'] = readspec(al.analy['spec_file'])
+                                al.analy['spec'] = readspec(al.analy['spec_file'])
                             except:
-                              raise LookupError("analy['specfile'] must be "
-                                                "declared for AbsLines")
+                                raise LookupError("analy['specfile'] must be "
+                                                  "declared for AbsLines")
                         # Get wavelength limits to know where to look
                         wmins.append(al.analy['spec'].wvmin.value)
                         wmaxs.append(al.analy['spec'].wvmax.value)
                     wlims= (np.min(np.array(wmins)),np.max(np.array(wmaxs)))*u.Angstrom
                     # ID the strong transitions
                     strong = ilist.strongest_transitions(
-                                tp,wvlims=wlims/(1.+comp.zcomp),n_max=maxtrans)
+                        tp,wvlims=wlims/(1.+comp.zcomp),n_max=maxtrans)
                     if strong is None: #  No lines covered in the spectra
                         warnings.warn('No lines for {} are covered by the spectra'
                                       'provided.'.format(tp))
                         continue
                     # Grab the AbsLines from this AbsComponent and their names
                     complines = comp._abslines
+                    complines = np.array(complines) # For the indexing
                     compnames = np.array([ll.name for ll in complines])
                     ### Add the lines found to the master list
                     if isinstance(strong,dict):  # Only one line covered
-                        lines2plot.append(complines[compnames == strong['name']])
+                        lines2plot.append(complines[compnames == strong['name']][0])
                     else:  # Multiple lines covered
-                        complines = np.array(complines) # For the indexing
-                        try:
-                            tokeep = [complines[compnames == sn][0] for sn in strong['name']]
-                            lines2plot.extend(tokeep)
-                        except:
-                            warnings.warn('{} covered by spectra but not in'
-                                          'components list'.format(sn))
+                        for i,sn in enumerate(strong['name']):
+                            if sn in compnames:
+                                tokeep = [complines[compnames == sn][0]]
+                                lines2plot.extend(tokeep)
+                            elif add_missing_lines is True:
+                                # Add line to the existing comp to preserve z, etc.
+                                compcopy = comp.copy()
+                                obswave = strong['wrest'][i]*(1.+compcopy.zcomp)
+                                wvrange = [obswave-0.1,
+                                           obswave+0.1] * u.Angstrom
+                                compcopy.add_abslines_from_linelist(wvlim=wvrange)
+                                al = compcopy._abslines[-1]
+                                try:
+                                    al.analy['spec'] = comp._abslines[0].analy['spec']
+                                except:
+                                    al.analy['spec'] = spec
+                                lines2plot.append(al)
+                            else:
+                                warnings.warn('{} covered by spectra but not in'
+                                              'components list'.format(sn))
         else:
             lines2plot = to_plot
 
