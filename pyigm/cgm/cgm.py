@@ -358,9 +358,13 @@ class CGMAbsSys(object):
                         # Load spectrum if not already loaded
                         if al.analy['spec'] is None:
                             try:
-                                al.analy['spec'] = readspec(al.analy['spec_file'])
+                                if spec is not None:
+                                    al.analy['spec'] = spec
+                                else:
+                                    al.analy['spec'] = readspec(al.analy['spec_file'])
                             except:
-                                raise LookupError("analy['specfile'] must be "
+                                raise LookupError("spec must be defined or "
+                                                  "analy['specfile'] must be "
                                                   "declared for AbsLines")
                         # Get wavelength limits to know where to look
                         wmins.append(al.analy['spec'].wvmin.value)
