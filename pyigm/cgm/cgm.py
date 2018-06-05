@@ -331,6 +331,7 @@ class CGMAbsSys(object):
                     thesecomps = pu.get_components(self,tp)
                     if len(thesecomps)==0:
                         if add_missing_lines is True:
+                            # Add components
                             if isinstance(tp,str):
                                 tup = ltai.name_to_ion(tp)
                             else:
@@ -339,7 +340,8 @@ class CGMAbsSys(object):
                                                 vlim=[-100.,100.]*u.km/u.s)
                             comp.add_abslines_from_linelist()
                             if spec is not None:
-                                comp._abslines[0].analy['spec'] = spec
+                                for al in comp._abslines:
+                                    al.analy['spec'] = spec
                             else:
                                 raise ValueError('spec must be provided if '
                                                  'requesting species without'
@@ -386,21 +388,27 @@ class CGMAbsSys(object):
                         lines2plot.append(complines[compnames == strong['name']][0])
                     else:  # Multiple lines covered
                         for i,sn in enumerate(strong['name']):
+                            # Handle case where relevant components are defined
                             if sn in compnames:
                                 tokeep = [complines[compnames == sn][0]]
                                 lines2plot.extend(tokeep)
+                            # Now case where components were not attached to sys
                             elif add_missing_lines is True:
                                 # Add line to the existing comp to preserve z, etc.
-                                compcopy = comp.copy()
+                                compcopy = comp.copy() #Copy to add dummy lines
+                                # Set up observed wavelength range
                                 obswave = strong['wrest'][i]*(1.+compcopy.zcomp)
                                 wvrange = [obswave-0.1,
                                            obswave+0.1] * u.Angstrom
+                                # Add this line to the component
                                 compcopy.add_abslines_from_linelist(wvlim=wvrange)
                                 al = compcopy._abslines[-1]
-                                try:
-                                    al.analy['spec'] = comp._abslines[0].analy['spec']
-                                except:
+                                # Set the spectrum
+                                if spec is not None:
                                     al.analy['spec'] = spec
+                                else:
+                                    al.analy['spec'] = comp._abslines[0].analy['spec']
+                                # Add the line 
                                 lines2plot.append(al)
                             else:
                                 warnings.warn('{} covered by spectra but not in'
