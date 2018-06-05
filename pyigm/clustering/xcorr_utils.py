@@ -14,77 +14,6 @@ from pyigm.clustering.randist import RanDist
 
 Ckms = 299792.458  # speed of light in km/s
 
-@nb.jit(nopython=True, cache=True)
-def nb_auto_pairs_rt(x, y, z, rbinedges, tbinedges, wrap=True, track_time=False,
-                  original=True):
-    """
-    [NT: give a nice description]
-
-    Find the number of pairs in 2d and 3d for galaxies with
-    coordinate x, y, z.
-
-    x,y,z: comoving coordinates in Mpc.  x is (roughly) the redshift
-           direction.
-
-    rbinedges and tbinedges correspond to the arrays defining the bins
-    edges """
-
-    #start=time.clock()
-    #x = np.array(X)
-    #y = np.array(Y)
-    #z = np.array(Z)
-    #rbinedges = np.array(rbinedges)
-    #tbinedges = np.array(tbinedges)
-
-    npair_rt = np.zeros((len(rbinedges) - 1, len(tbinedges) - 1), dtype=nb.types.float64)#float)
-    vals = np.zeros((len(rbinedges) - 1, len(tbinedges) - 1), dtype=nb.types.float64)#float)
-    #npair_rt = np.zeros((len(rbinedges) - 1, len(tbinedges) - 1), float)
-    #vals = np.zeros((len(rbinedges) - 1, len(tbinedges) - 1), float)
-
-    # Ugly for loop
-    for i in range(len(x) - 1):
-        if i % 1000 == 0:
-            print(i)
-        # radial separation
-        if wrap:
-            rsep = np.abs(x[i+1:] - x[i])
-        else:
-            rsep = x[i+1:] - x[i]
-        # transverse separation
-        tsep = np.hypot(y[i+1:] - y[i], z[i+1:] - z[i])
-
-        # Histogram me
-        #vals, _ = np.histogramdd((rsep, tsep), (rbinedges, tbinedges),
-        #                      range=None, normed=False, weights=None)
-        # Loop me
-        vals[:] = 0.
-        #r_logic = []
-
-        # Cut down to within the box!
-        ok_sep = (rsep < rbinedges[-1]) & (tsep < tbinedges[-1])
-        rsep = rsep[ok_sep]
-        tsep = tsep[ok_sep]
-        #
-        r_logic = np.zeros((len(rsep), len(rbinedges) - 1), dtype=nb.types.boolean)#float)
-        #r_logic = np.zeros((len(rsep), len(rbinedges) - 1), dtype=bool)
-        for jj in range(len(rbinedges)-1):
-            r_logic[:,jj]  = (rsep > rbinedges[jj]) & (rsep <= rbinedges[jj+1])
-        #t_logic = np.zeros((len(tsep), len(tbinedges) - 1), dtype=bool)
-        t_logic = np.zeros((len(tsep), len(tbinedges) - 1), dtype=nb.types.boolean)
-        for jj in range(len(tbinedges)-1):
-            t_logic[:,jj]  = (tsep > tbinedges[jj]) & (tsep <= tbinedges[jj+1])
-        # Finish
-        for jj in range(len(rbinedges)-1):
-            for kk in range(len(tbinedges)-1):
-                vals[jj,kk] = np.sum(r_logic[:,jj] & t_logic[:,kk])
-        #pdb.set_trace()
-        npair_rt += vals
-        #npair_rt += vals2
-
-    #end=time.clock()
-    #print('\t Time elapsed = {} seconds.'.format(end-start))
-    return npair_rt
-
 def auto_pairs_rt(X, Y, Z, rbinedges, tbinedges, wrap=True, track_time=False,
                   original=True):
     """
@@ -428,11 +357,6 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, 
             VALS['{}'.format(mag)] = gf(aux_hist.astype(float), smooth_scale[tt])  # smooth the histogram
         else:
             VALS['{}'.format(mag)] = gf(aux_hist.astype(float), smooth_scale)  # smooth the histogram
-        # HACK
-        #if mag < 20.:
-        #    hiz = bins > 0.4
-        #    #VALS['{}'.format(mag)][hiz]] = aux_hist[]
-        #    pdb.set_trace()
         SPL['{}'.format(mag)] = CubicSpline(0.5 * (bins[:-1] + bins[1:]), VALS['{}'.format(mag)].astype(float))
         spl = SPL['{}'.format(mag)]
         #if (tt == len(magbins)-1) and debug:
