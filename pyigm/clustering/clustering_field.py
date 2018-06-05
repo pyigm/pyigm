@@ -137,6 +137,8 @@ class ClusteringField(IgmGalaxyField):
           Contains the sensitivity function (CubicSpline's)
         Rcom_max : float, optional
           Maximum comoving separation of the survey in Mpc
+        tbinedges : ndarray
+          Only used for debug=True
 
         Returns
         -------
@@ -200,14 +202,6 @@ class ClusteringField(IgmGalaxyField):
                 ax.hist(galnew.ZGAL[faintg], color='k', bins=zbins, normed=1, label='DD', fill=False)
                 ax.hist(rgal.ZGAL[faintR], edgecolor='red', bins=zbins, normed=1, label='RR', fill=False)
                 ax.set_xlabel('zGAL')
-                #Magbins = np.arange(15., 22., 0.5)
-                #ax.hist(galnew.MAG, color='k', bins=Magbins, normed=1, label='DD', fill=False)
-                #ax.hist(rgal.MAG, edgecolor='red', bins=Magbins, normed=1, label='RR', fill=False)
-                #ax.set_xlabel('MAG')
-                #angbins = np.arange(0., 30, 1.)
-                #ax.hist(gangsep.to('arcmin').value, color='k', bins=angbins, normed=1, label='DD', fill=False)
-                #ax.hist(angsep[goodr].to('arcmin').value, edgecolor='red', bins=angbins, normed=1, label='RR', fill=False)
-                #ax.set_xlabel('ang sep (arcmin)')
             plt.show()
 
         # Load me up
