@@ -341,8 +341,20 @@ class LLSSurvey(IGMSurvey):
         lowz_q = qsos['ZEM'] < zem_min
         qsos['ZT2'][lowz_q] = 99.99
 
+        # Survey path
+        #   Using tau=2
+        lls_survey.sightlines['Z_START'] = np.maximum(qsos['ZT2'], qsos['ZLLS'])
+        # Trim bad ones
+        bad_s = np.any([lls_survey.sightlines['Z_START'] <= 0.,
+                        lls_survey.sightlines['FLG_QSO'] != 0],axis=0)
+        lls_survey.sightlines['Z_START'][bad_s] = 99.99
+        # zend
+        zend = ltu.z_from_dv(-3000*u.km/u.s*np.ones(len(qsos)),
+                             lls_survey.sightlines['ZEM'])
+        lls_survey.sightlines['Z_END'] = zend
+
         # Generate mask
-        print('SDSS-DR7: Performing stats (~60s)')
+        print('SDSS-DR7: Performing stats')
         mask = lls_stat(lls_survey, qsos)
         if sample == 'stat':
             lls_survey.mask = mask

@@ -20,6 +20,7 @@ from astropy.coordinates import SkyCoord
 
 from linetools.spectra import io as lsio
 from linetools.isgm import utils as ltiu
+from linetools import utils as ltu
 
 from pyigm.abssys.igmsys import IGMSystem
 from pyigm.abssys.utils import class_by_type
@@ -340,7 +341,7 @@ class IGMSurvey(object):
         # Return too
         return abssys
 
-    def calculate_gz(self, zstep=1e-4, zmin=None, zmax=None):
+    def calculate_gz(self, zstep=1e-4, zmin=None, zmax=None, key_ZS='Z_START'):
         """ Uses sightlines table to generate a g(z) array
 
         Parameters
@@ -361,16 +362,17 @@ class IGMSurvey(object):
         """
         if self.sightlines is None:
             raise IOError("calculate_gz: Need to set sightlines table")
+
         # zeval
         if zmin is None:
-            zmin = np.min(self.sightlines['Z_START'])
+            zmin = np.min(self.sightlines[key_ZS])
         if zmax is None:
             zmax = np.max(self.sightlines['Z_END'])
         zeval = np.arange(zmin, zmax, step=zstep)
         gz = np.zeros_like(zeval).astype(int)
         # Evaluate
         for row in self.sightlines:
-            gd = (zeval >= row['Z_START']) & (zeval <= row['Z_END'])
+            gd = (zeval >= row[key_ZS]) & (zeval <= row['Z_END'])
             gz[gd] += 1
         # Return
         return zeval, gz
