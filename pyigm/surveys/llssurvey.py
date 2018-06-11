@@ -334,6 +334,10 @@ class LLSSurvey(IGMSurvey):
         return lls_survey
 
     @classmethod
+    def load_ribaudo(cls, sample='stat'):
+        pass
+
+    @classmethod
     def load_SDSS_DR7(cls, sample='stat'):
         """ Load the LLS from the SDSS-DR7 survey (Prochaska+10, ApJ, 718, 391)
 
