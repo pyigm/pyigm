@@ -14,9 +14,10 @@ from collections import OrderedDict
 from astropy import coordinates as coords
 from astropy.io import ascii
 from astropy import units as u
-from astropy.table import QTable, Column, Table, vstack
+from astropy.table import Column, Table, vstack
 from astropy.units.quantity import Quantity
 from astropy.coordinates import SkyCoord
+from astropy.stats import poisson_conf_interval as aspci
 
 from linetools.spectra import io as lsio
 from linetools.isgm import utils as ltiu
@@ -94,7 +95,7 @@ class IGMSurvey(object):
 
         Parameters
         ----------
-        summ_fits : str or Table or QTable
+        summ_fits : str or Table
           Summary FITS file
         coords : SkyCoord array
           Contains all the coords for all the systems
@@ -243,6 +244,105 @@ class IGMSurvey(object):
 
         # Append
         self._abs_sys.append(abs_sys)
+
+    def binned_loz(self, zbins, NHI_mnx=(20.3, 23.00)):
+        """ Calculate l(z) empirically in zbins for an interval in NHI
+        Wrapper on lox
+
+        Parameters
+        ----------
+        zbins : list
+          Defines redshift intervals
+          e.g.  [2., 2.5, 3., 4.]
+        NHI_mnx : tuple, optional
+          min/max of NHI for evaluation
+
+        Returns
+        -------
+        lz, sig_lz_lower, sig_lz_upper : ndarray
+        """
+        return self.binned_lox(zbins, NHI_mnx=NHI_mnx, use_Dz=True)
+
+    def binned_lox(self, zbins, NHI_mnx=(20.3, 23.00), use_Dz=False):
+        """ Calculate l(X) in zbins for an interval in NHI
+        Parameters
+        ----------
+        zbins : list
+          Defines redshift intervals
+          e.g.  [2., 2.5, 3., 4.]
+        NHI_mnx : tuple, optional
+          min/max of NHI for evaluation
+        use_gz : bool, optional
+          Use gz instead of gX.
+          This forces the calculation of l(z) instead of l(X)
+
+        Returns
+        -------
+        lX, sig_lX_lower, sig_lX_upper : ndarray
+        """
+        # assign the nhbins
+        nhbins = np.array(NHI_mnx)
+
+        # generate the fN components
+        fncomp = self.__generate_fncomp__(nhbins, zbins)
+
+        # get the absorption path length
+        dXtot = self.__find_dXtot__(zbins, calc_Dz=use_Dz)
+
+        # total number of absorbers + poisson uncertainty
+        Ntot = fncomp.sum(axis=0)
+        Nunc = aspci(Ntot, interval='frequentist-confidence')
+
+        # l(X)
+        lX = Ntot / dXtot
+        lX_lo = Nunc[0, :] / dXtot
+        lX_hi = Nunc[1, :] / dXtot
+
+        return lX, lX - lX_lo, lX_hi - lX
+
+    def binned_fn(self, nhbins, zbins, log=False):
+        """ Calculate f(N,X) empirically in bins of NHI and z
+
+        Parameters
+        ----------
+        nhbins : list
+        zbins : list
+        log : bool, optional
+          Report log10 values?
+
+        Returns
+        -------
+        fn : ndarray
+          log10 f(N,X)
+        fn_lo : ndarray
+          error in fn (low side)
+        fn_hi : ndarray
+          error in fn (high side)
+
+        """
+
+        # generate the fN components
+        fncomp = self.__generate_fncomp__(nhbins, zbins)
+
+        # calculate the uncertainty on the bins
+        fnunc = aspci(fncomp, interval='frequentist-confidence')
+
+        # get the absorption path length
+        dXtot = self.__find_dXtot__(zbins)
+
+        # find the nhi bin size
+        dNHI = np.power(10, nhbins[1:]) - np.power(10, nhbins[:-1])
+
+        # calculate the fN values
+        fn = np.transpose(np.transpose(fncomp / dXtot) / dNHI)
+        fn_lo = np.transpose(np.transpose(fnunc[0] / dXtot) / dNHI)
+        fn_hi = np.transpose(np.transpose(fnunc[1] / dXtot) / dNHI)
+
+        if log:
+            return np.log10(fn), np.log10(fn) - np.log10(fn_lo), np.log10(fn_hi) - np.log10(fn)
+        else:
+            return fn, fn - fn_lo, fn_hi - fn
+
 
     def build_all_abs_sys(self, linelist=None, **kwargs):
 
@@ -701,6 +801,63 @@ class IGMSurvey(object):
             except OSError:  # Likely a duplicate.  This can happen
                 pass
         os.rmdir(tmpdir)
+
+    def __generate_fncomp__(self, nhbins, zbins):
+        """  Generate binned evaluation of f(NHI,X)
+
+        Parameters
+        ----------
+        nhbins : list
+          Defines NHI bins for f(NHI,X) evaluation, e.g.
+            [20.3, 20.6, 21.0, 21.5, 23.]
+        zbins : list
+
+        Returns
+        -------
+        fncomp : ndarray
+          f(NHI,X)
+
+        """
+        # calculate the total absorption path length g(X) from g(z)
+        #z, gX = self.__calculate_gX__()
+
+        # create the fn array
+        zabs = self.__getattr__('zabs')
+        nhi = self.__getattr__('NHI')
+        fncomp = np.histogram2d(nhi, zabs, bins=[nhbins, zbins])[0]
+
+        return fncomp
+
+    def __find_dXtot__(self, zbins, calc_Dz=False):
+        """ Calculate DX in zbins
+        Parameters
+        ----------
+        zbins : list
+        calc_Dz : bool, optional
+          Return Dztot instead of DXtot
+
+        Returns
+        -------
+        dXtot : ndarray
+          dX for the full survey
+
+        """
+        # get z, g(z)
+        z, gz = self.calculate_gz()
+        dz = z[1] - z[0]
+        #
+        if not calc_Dz:
+            dXdz = pyigmu.cosm_xz(z, cosmo=self.cosmo, flg_return=1)
+        else:
+            dXdz = 1.
+
+        dXtot = np.zeros(len(zbins) - 1)
+        for kk in range(len(zbins) - 1):
+            # the indices of values within the redshift range
+            idx = np.where((z >= zbins[kk]) & (z < zbins[kk + 1]))
+            dXtot[kk] = np.sum((gz*dz*dXdz)[idx])
+
+        return dXtot
 
     def __getattr__(self, k):
         """ Generate an array of attribute 'k' from the IGMSystems

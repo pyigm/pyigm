@@ -343,6 +343,8 @@ class LLSSurvey(IGMSurvey):
             qsos['Z_START'] = qsos['R2_ZMIN']
             qsos['Z_END'] = qsos['R2_ZMAX']
             cut = 'R2'
+        else:
+            pdb.set_trace()
 
         # Load LLS
         all_lls = Table.read(resource_filename('pyigm', 'data/LLS/Literature/ribaudo11_table4.txt'),
@@ -352,7 +354,7 @@ class LLSSurvey(IGMSurvey):
         # Stat me
         if sample == 'stat':
             for kk,row in enumerate(all_lls):
-                if cut in row:
+                if cut in row['SAMPLE']:
                     msk[kk] = True
             lls = all_lls[msk]
         else:

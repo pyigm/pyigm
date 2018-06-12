@@ -3,15 +3,17 @@
 # TEST_UNICODE_LITERALS
 
 import numpy as np
-import glob, os, imp, pdb
+import glob, os, pdb
 import pytest
+
+from pkg_resources import resource_filename
 
 from pyigm.surveys.llssurvey import LLSSurvey
 from pyigm.surveys.lls_literature import load_lls_lit
 
 remote_data = pytest.mark.remote_data
 
-lt_path = imp.find_module('linetools')[1]
+lt_path = resource_filename('linetools', './')
 
 '''
 def data_path(filename):
@@ -39,6 +41,12 @@ def test_load_ribaudo13():
     z, gz = ribaudo13.calculate_gz()
     assert gz[0] == 1
     assert gz[-1] == 3
+    assert ribaudo13.nsys == 50
+    # Stats
+    lz, sig_lz_low, sig_lz_up = ribaudo13.binned_loz(
+        [0.242, 1.078, 1.544, 1.947], NHI_mnx=(17.49,23.))
+    pytest.set_trace()
+
 
 
 def test_dat_list():
