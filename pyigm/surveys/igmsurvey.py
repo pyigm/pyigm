@@ -110,11 +110,11 @@ class IGMSurvey(object):
             systems = Table.read(summ_fits)
         nsys = len(systems)
         # Special keys
-        kdict = dict(NHI=['NHI', 'logNHI'],
+        kdict = dict(NHI=['NHI', 'logNHI', 'LOG_NHI'],
                      sig_NHI=['sig(logNHI)', 'SIGNHI', 'NHI_ERR'],
                      name=['Name'], vlim=['vlim'],
                      zabs=['Z_LLS', 'ZABS', 'zabs'],
-                     zem=['Z_QSO', 'QSO_ZEM', 'ZEM'],
+                     zem=['Z_QSO', 'QSO_ZEM', 'ZEM', 'Z_EM'],
                      RA=['RA'], DEC=['DEC', 'Dec'])
         # Parse the Table to make uniform the keys used
         for key in kdict.keys():

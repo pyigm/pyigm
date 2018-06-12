@@ -34,6 +34,13 @@ def test_read_hdlls_dr1():   # This might actually be local now..
     assert len(gdCII) == 103
 
 
+def test_load_ribaudo13():
+    ribaudo13 = LLSSurvey.load_ribaudo()
+    z, gz = ribaudo13.calculate_gz()
+    assert gz[0] == 1
+    assert gz[-1] == 3
+
+
 def test_dat_list():
     """JXP format :: Likely to be Deprecated
     """
@@ -56,7 +63,7 @@ def test_sdss():
     assert sdss_dr7_all.nsys == 1935
     # Stat
     sdss_dr7_stat = LLSSurvey.load_SDSS_DR7()
-    assert len(sdss_dr7_stat.NHI) == 254
+    assert len(sdss_dr7_stat.NHI) == 218
 
 
 def test_hst():
@@ -64,15 +71,17 @@ def test_hst():
     """
     # ACS
     acs = LLSSurvey.load_HST_ACS()
-    assert acs.nsys == 34
+    assert acs.nsys == 9
     assert len(acs.sightlines) == 18
     # WFC3
     wfc3 = LLSSurvey.load_HST_WFC3()
-    assert wfc3.nsys == 91
+    #assert wfc3.nsys == 91
+    assert wfc3.nsys == 30
     assert len(wfc3.sightlines) == 53
     # Combined
     HST_LLS = wfc3 + acs
-    assert HST_LLS.nsys == 125
+    #assert HST_LLS.nsys == 125
+    assert HST_LLS.nsys == 39
     assert len(HST_LLS.sightlines) == 71
 
 

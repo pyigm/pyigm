@@ -6,12 +6,13 @@ import numpy as np
 import imp, glob
 import pdb
 import h5py
-import json
+
 try:
     from urllib2 import urlopen # Python 2.7
 except ImportError:
     from urllib.request import urlopen
 
+from pkg_resources import resource_filename
 
 from astropy.table import Column, Table
 from astropy import units as u
@@ -334,8 +335,40 @@ class LLSSurvey(IGMSurvey):
         return lls_survey
 
     @classmethod
-    def load_ribaudo(cls, sample='stat'):
-        pass
+    def load_ribaudo(cls, tau_LL=2, sample='stat'):
+        # Load sightlines
+        qsos = Table.read(resource_filename('pyigm', 'data/LLS/Literature/ribaudo11_table3.txt'),
+                                            format='ascii')
+        if tau_LL == 2:
+            qsos['Z_START'] = qsos['R2_ZMIN']
+            qsos['Z_END'] = qsos['R2_ZMAX']
+            cut = 'R2'
+
+        # Load LLS
+        all_lls = Table.read(resource_filename('pyigm', 'data/LLS/Literature/ribaudo11_table4.txt'),
+                          format='ascii')
+        msk = np.zeros_like(all_lls, dtype=bool)
+
+        # Stat me
+        if sample == 'stat':
+            for kk,row in enumerate(all_lls):
+                if cut in row:
+                    msk[kk] = True
+            lls = all_lls[msk]
+        else:
+            lls = all_lls
+
+        # Dummy coords for now
+        lls['RA'] = np.arange(len(lls))
+        lls['DEC'] = np.arange(len(lls))
+        coords = SkyCoord(ra=lls['RA'], dec=lls['DEC'], unit='deg')
+
+        lls_survey = cls.from_sfits(lls, coords=coords)
+        lls_survey.ref = 'Ribaudo+13'
+        lls_survey.sightlines = qsos
+
+        # Finish
+        return lls_survey
 
     @classmethod
     def load_SDSS_DR7(cls, sample='stat'):
