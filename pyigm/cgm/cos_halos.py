@@ -384,6 +384,21 @@ class COSHalos(CGMAbsSurvey):
                 self.load_werk14()
 
     def load_NH_pdfs(self, sys_err=0.15, verbose=False):
+        """
+        Load up the NH PDFs
+          Requires several downloads into pyigm
+
+        Parameters
+        ----------
+        sys_err : float, optional
+          Systematic error to add in to the statistical
+        verbose : bool, optional
+
+        Returns
+        -------
+        Nothing;  all internal
+
+        """
 
         # Check for Cloudy files
         cldy_path = resource_filename('pyigm', 'data/CGM/COS_Halos/Cloudy/')
