@@ -8,9 +8,11 @@ import numpy as np
 import os
 import pdb
 
+from pkg_resources import resource_filename
+
 
 def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpol=False,
-                test=False, ret_flags=['NH'], debug=False, min_NHI=None):
+                test=False, ret_flags=['NH'], debug=False, min_NHI=15.):
     """ Use the outputs from a MCMC chain output file to generate an  array of log10 N_H values
     Can also return NO assuming 8.69
 
@@ -49,7 +51,13 @@ def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpo
 
     # Read the model grid
     if (modl is None) and (NH_interpol is None):
-        model_file = os.getenv('DROPBOX_DIR')+'/cosout/grid_minextended.pkl'
+        model_file = resource_filename('pyigm', 'data/Cloudy/grid_minextsupz.pkl')
+        if not os.path.isfile(model_file):
+            print("You need to download the Cloudy grid before using this routine")
+            print("See the README.md file in {:s} for details".format(
+                resource_filename('pyigm', 'data/Cloudy')))
+            return
+        # Load
         with open(model_file, 'rb') as f:
             modl=pickle.load(f, encoding='latin1')
 
@@ -72,7 +80,8 @@ def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpo
 
         # Generate an Interpolation Grid
         NH_interpol = interpolate.RegularGridInterpolator(mod_axisval,NHgrid,
-                                                           method='linear',bounds_error=False,fill_value=-np.inf)
+                                                           method='linear', bounds_error=False,
+                                                          fill_value=-np.inf)
         if init_interpol:
             return NH_interpol
 
@@ -104,9 +113,9 @@ def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpo
             pdfs[:,0] += off
 
     # Here we go!
+    NH_values = NH_interpol(pdfs)
     if debug:
         pdb.set_trace()
-    NH_values = NH_interpol(pdfs)
 
     # Offset back?
     if off is not None:
