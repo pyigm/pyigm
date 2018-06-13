@@ -81,6 +81,13 @@ def powerlaw_loxz(lls, z_gz, gz, guess, zpivot, rnga=(-0.5,0.5), rngl=(-0.2,0.1)
     maxL = np.max(lik)
     nrm_lik = lik - maxL
 
+    # Write to disk
+    if True:
+        from astropy.io import fits
+        hdu = fits.PrimaryHDU(nrm_lik)
+        hdul = fits.HDUList([hdu])
+        hdul.writeto('nrm_lik.fits', overwrite=True)
+
     # Unravel
     ilmx, iamx = np.unravel_index(nrm_lik.argmax(), nrm_lik.shape)
     print('Max: (l,a) = ', lvec[ilmx], avec[iamx])

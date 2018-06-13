@@ -36,6 +36,37 @@ def test_read_hdlls_dr1():   # This might actually be local now..
     assert len(gdCII) == 103
 
 
+def test_sdss():
+    """ Test SDSS DR7 -- This is very slow..
+    """
+    # All
+    sdss_dr7_all = LLSSurvey.load_SDSS_DR7(sample='all')
+    assert sdss_dr7_all.nsys == 1935
+    # Stat
+    sdss_dr7_stat = LLSSurvey.load_SDSS_DR7()
+    assert len(sdss_dr7_stat.NHI) == 191
+    #
+    z_bins = np.array([3.5, 3.65, 3.9, 4.1, 4.4])
+    lz, sig_lz_low, sig_lz_up = sdss_dr7_stat.binned_loz(
+        z_bins, NHI_mnx=(17.49,23.))
+
+def test_z3mage():
+    """ Test z~3 MagE
+    """
+    # All
+    z3mage = LLSSurvey.load_mage_z3()
+    assert z3mage.nsys == 60
+    assert len(z3mage.sightlines) == 105
+    # Non-Color
+    z3mage_NC = LLSSurvey.load_mage_z3(sample='non-color')
+    assert z3mage_NC.nsys == 32
+    assert len(z3mage_NC.sightlines) == 61
+    # Stats
+    lz, sig_lz_low, sig_lz_up = z3mage_NC.binned_loz(
+        [2.6, 3.], NHI_mnx=(17.49,23.))
+    assert np.isclose(lz[0], 1.39551406)
+
+
 def test_load_ribaudo13():
     ribaudo13 = LLSSurvey.load_ribaudo()
     z, gz = ribaudo13.calculate_gz()
@@ -45,7 +76,6 @@ def test_load_ribaudo13():
     # Stats
     lz, sig_lz_low, sig_lz_up = ribaudo13.binned_loz(
         [0.242, 1.078, 1.544, 1.947], NHI_mnx=(17.49,23.))
-
 
 
 def test_dat_list():
@@ -62,15 +92,6 @@ def test_dat_list():
     assert lls.nsys == 164
 
 
-def test_sdss():
-    """ Test SDSS DR7 -- This is very slow..
-    """
-    # All
-    sdss_dr7_all = LLSSurvey.load_SDSS_DR7(sample='all')
-    assert sdss_dr7_all.nsys == 1935
-    # Stat
-    sdss_dr7_stat = LLSSurvey.load_SDSS_DR7()
-    assert len(sdss_dr7_stat.NHI) == 218
 
 
 def test_hst():
@@ -83,26 +104,14 @@ def test_hst():
     # WFC3
     wfc3 = LLSSurvey.load_HST_WFC3()
     #assert wfc3.nsys == 91
-    assert wfc3.nsys == 30
+    assert wfc3.nsys == 32  # Was 30.  I think the NHI = 17.49 mattered
     assert len(wfc3.sightlines) == 53
     # Combined
     HST_LLS = wfc3 + acs
     #assert HST_LLS.nsys == 125
-    assert HST_LLS.nsys == 39
+    assert HST_LLS.nsys == 41 # Was 39
     assert len(HST_LLS.sightlines) == 71
 
-
-def test_z3mage():
-    """ Test z~3 MagE
-    """
-    # All
-    z3mage = LLSSurvey.load_mage_z3()
-    assert z3mage.nsys == 60
-    assert len(z3mage.sightlines) == 105
-    # Non-Color
-    z3mage_NC = LLSSurvey.load_mage_z3(sample='non-color')
-    assert z3mage_NC.nsys == 32
-    assert len(z3mage_NC.sightlines) == 61
 
 
 @remote_data

@@ -245,7 +245,7 @@ class IGMSurvey(object):
         # Append
         self._abs_sys.append(abs_sys)
 
-    def binned_loz(self, zbins, NHI_mnx=(20.3, 23.00)):
+    def binned_loz(self, zbins, NHI_mnx=(20.3, 23.00), debug=False):
         """ Calculate l(z) empirically in zbins for an interval in NHI
         Wrapper on lox
 
@@ -261,9 +261,9 @@ class IGMSurvey(object):
         -------
         lz, sig_lz_lower, sig_lz_upper : ndarray
         """
-        return self.binned_lox(zbins, NHI_mnx=NHI_mnx, use_Dz=True)
+        return self.binned_lox(zbins, NHI_mnx=NHI_mnx, use_Dz=True, debug=debug)
 
-    def binned_lox(self, zbins, NHI_mnx=(20.3, 23.00), use_Dz=False):
+    def binned_lox(self, zbins, NHI_mnx=(20.3, 23.00), use_Dz=False, debug=False):
         """ Calculate l(X) in zbins for an interval in NHI
         Parameters
         ----------
@@ -294,6 +294,8 @@ class IGMSurvey(object):
         Nunc = aspci(Ntot, interval='frequentist-confidence')
 
         # l(X)
+        if debug:
+            pdb.set_trace()
         lX = Ntot / dXtot
         lX_lo = Nunc[0, :] / dXtot
         lX_hi = Nunc[1, :] / dXtot

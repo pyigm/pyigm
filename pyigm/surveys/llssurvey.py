@@ -438,16 +438,18 @@ class LLSSurvey(IGMSurvey):
         if sample == 'all':
             return lls_survey
 
-
         # Stat
         # z_em cut
         zem_min = 3.6
         lowz_q = qsos['ZEM'] < zem_min
         qsos['ZT2'][lowz_q] = 99.99
+        dz_start = 0.4
 
         # Survey path
         #   Using tau=2
         lls_survey.sightlines['Z_START'] = np.maximum(qsos['ZT2'], qsos['ZLLS'])
+        # Maximum search
+        lls_survey.sightlines['Z_START'] = np.maximum(qsos['Z_START'], qsos['ZEM']-dz_start)
         # Trim bad ones
         bad_s = np.any([lls_survey.sightlines['Z_START'] <= 0.,
                         lls_survey.sightlines['FLG_QSO'] != 0],axis=0)
