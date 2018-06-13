@@ -19,12 +19,11 @@ from astropy.units.quantity import Quantity
 from astropy.coordinates import SkyCoord
 from astropy.stats import poisson_conf_interval as aspci
 
-from linetools.spectra import io as lsio
 from linetools.isgm import utils as ltiu
-from linetools import utils as ltu
 
 from pyigm.abssys.igmsys import IGMSystem
 from pyigm.abssys.utils import class_by_type
+from pyigm import utils as pyigmu
 
 try:
     unic = unicode
