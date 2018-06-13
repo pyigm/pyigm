@@ -934,34 +934,45 @@ class IGMSurvey(object):
         else:
             combined.red = None
 
-        # Check for unique systems
-        other_coord =other.coord
+        # Check for unique systems, including masked ones
+        other_coord = other.coord
         for abssys in self._abs_sys:
             if np.sum((abssys.coord.separation(other_coord) < toler) & (
                         np.abs(abssys.zabs-other.zabs) < (1000*(1+abssys.zabs)/3e5))) > 0:
-                raise NotImplementedError("Need to deal with this")
+                raise NotImplementedError("Need ready to deal with this")
+
         # Combine systems
         combined._abs_sys = self._abs_sys + other._abs_sys
         if self.mask is not None:
             combined.mask = np.concatenate((self.mask, other.mask)).flatten()
         else:
             combined.mask = None
+        combined._data = vstack([self._data, other._data])
 
         # Sightlines?
         if self.sightlines is not None:
-            slf_scoord = SkyCoord(ra=self.sightlines['RA']*u.deg,
-                                  dec=self.sightlines['DEC']*u.deg)
-            oth_scoord = SkyCoord(ra=other.sightlines['RA']*u.deg,
-                                  dec=other.sightlines['DEC']*u.deg)
+            slf_scoord = SkyCoord(ra=self.sightlines['RA'],
+                                  dec=self.sightlines['DEC'], unit='deg')
+            oth_scoord = SkyCoord(ra=other.sightlines['RA'],
+                                  dec=other.sightlines['DEC'], unit='deg')
             idx, d2d, d3d = coords.match_coordinates_sky(slf_scoord,
                                                          oth_scoord, nthneighbor=1)
             mt = d2d < toler
             if np.sum(mt) > 0:
-                raise NotImplementedError("Need to deal with this")
+                # Take sightlines from the first survey
+                warnings.warn("Overlapping sightlines.  Am using those in your first entry")
+                msk = np.array([True]*len(other.sightlines))
+                msk[idx[mt]] = False
+                combined.sightlines = vstack([self.sightlines, other.sightlines[msk]])
+                print("You should probably regenerate the system mask!")
             else:
                 # Combine systems
                 combined.sightlines = vstack([self.sightlines,
                                               other.sightlines])
+        # Coords
+        combined.coords = SkyCoord(ra=combined._data['RA'],
+                                   dec=combined._data['DEC'], unit='deg')
+
         # Return
         return combined
 

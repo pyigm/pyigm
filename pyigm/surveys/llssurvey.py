@@ -46,17 +46,18 @@ class LLSSurvey(IGMSurvey):
         -------
         lls_survey : IGMSurvey
         """
+        if tau_LL == 2:
+            NHI_cut = 17.49
         # LLS File
         lls_fil = pyigm_path+'/data/LLS/HST/lls_acs_stat_LLS.fits.gz'
         lls = Table.read(lls_fil)
 
-        # Rename some columns?
-        lls.rename_column('QSO_RA', 'RA')
-        lls.rename_column('QSO_DEC', 'DEC')
 
         # Generate coords
-        scoords = [lls['RA'][ii]+' '+lls['DEC'][ii] for ii in range(len(lls))]
+        scoords = [lls['QSO_RA'][ii]+' '+lls['QSO_DEC'][ii] for ii in range(len(lls))]
         coords = SkyCoord(scoords, unit=(u.hourangle, u.deg))
+        lls['RA'] = coords.ra.value
+        lls['DEC'] = coords.dec.value
 
         # Read
         lls_survey = cls.from_sfits(lls, coords=coords)
@@ -79,7 +80,7 @@ class LLSSurvey(IGMSurvey):
         lls_survey.sightlines['Z_END'] = zend
 
         # Stat me
-        mask = lls_stat(lls_survey)
+        mask = lls_stat(lls_survey, NHI_cut=NHI_cut)
         if sample == 'stat':
             lls_survey.mask = mask
         else:
@@ -105,17 +106,17 @@ class LLSSurvey(IGMSurvey):
         -------
         lls_survey : IGMSurvey
         """
+        if tau_LL == 2:
+            NHI_cut = 17.49
         # LLS File
         lls_fil = pyigm_path+'/data/LLS/HST/lls_wfc3_stat_LLS.fits.gz'
         lls = Table.read(lls_fil)
 
-        # Rename some columns?
-        lls.rename_column('QSO_RA', 'RA')
-        lls.rename_column('QSO_DEC', 'DEC')
-
         # Generate coords
-        scoords = [lls['RA'][ii]+' '+lls['DEC'][ii] for ii in range(len(lls))]
+        scoords = [lls['QSO_RA'][ii]+' '+lls['QSO_DEC'][ii] for ii in range(len(lls))]
         coords = SkyCoord(scoords, unit=(u.hourangle, u.deg))
+        lls['RA'] = coords.ra.value
+        lls['DEC'] = coords.dec.value
 
         # Read
         lls_survey = cls.from_sfits(lls, coords=coords)
@@ -138,7 +139,7 @@ class LLSSurvey(IGMSurvey):
         lls_survey.sightlines['Z_END'] = zend
 
         # Stat me
-        mask = lls_stat(lls_survey)
+        mask = lls_stat(lls_survey, NHI_cut=NHI_cut)
         if sample == 'stat':
             lls_survey.mask = mask
         else:
@@ -336,16 +337,31 @@ class LLSSurvey(IGMSurvey):
 
     @classmethod
     def load_ribaudo(cls, tau_LL=2, sample='stat'):
+        """
+
+        Parameters
+        ----------
+        tau_LL : int, optional
+          Optical depth of the LLS
+        sample : str, optional
+
+        Returns
+        -------
+
+        """
         # Load sightlines
         qsos = Table.read(resource_filename('pyigm', 'data/LLS/Literature/ribaudo11_table3.txt'),
                                             format='ascii')
+        qsos.rename_column('QSO_RA', 'RA')
+        qsos.rename_column('QSO_DEC', 'DEC')
+        qsos.rename_column('Z_EM', 'ZEM')
         if tau_LL == 2:
             qsos['Z_START'] = qsos['R2_ZMIN']
             qsos['Z_END'] = qsos['R2_ZMAX']
             cut = 'R2'
         else:
             pdb.set_trace()
-
+        assert len(np.unique(qsos['QSO_ID'])) == len(qsos)
         # Load LLS
         all_lls = Table.read(resource_filename('pyigm', 'data/LLS/Literature/ribaudo11_table4.txt'),
                           format='ascii')
@@ -360,10 +376,17 @@ class LLSSurvey(IGMSurvey):
         else:
             lls = all_lls
 
-        # Dummy coords for now
-        lls['RA'] = np.arange(len(lls))
-        lls['DEC'] = np.arange(len(lls))
-        coords = SkyCoord(ra=lls['RA'], dec=lls['DEC'], unit='deg')
+        # Grab coords
+        qso_dict = {}
+        for row in qsos:
+            qso_dict[row['QSO_ID']] = (row['RA'], row['DEC'])
+        ra, dec = [], []
+        for row in lls:
+            ra.append(qso_dict[row['QSO_ID']][0])
+            dec.append(qso_dict[row['QSO_ID']][1])
+        coords = SkyCoord(ra=ra, dec=dec, unit='deg')
+        lls['RA'] = ra
+        lls['DEC'] = dec
 
         lls_survey = cls.from_sfits(lls, coords=coords)
         lls_survey.ref = 'Ribaudo+13'
@@ -598,7 +621,10 @@ def lls_stat(LLSs, maxdz=99.99, zem_min=0., NHI_cut=17.5,
             continue
 
         # Match to QSO RA, DEC
-        assert np.abs(qsos['ZEM'][idx]-zem) < 0.03
+        try:
+            assert np.abs(qsos['ZEM'][idx]-zem) < 0.03
+        except:
+            pdb.set_trace()
 
         # Query redshift
         if (zabs > max(qsos['Z_START'][idx], qsos['Z_END'][idx] - maxdz) - 1e-4) & (

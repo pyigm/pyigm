@@ -45,7 +45,6 @@ def test_load_ribaudo13():
     # Stats
     lz, sig_lz_low, sig_lz_up = ribaudo13.binned_loz(
         [0.242, 1.078, 1.544, 1.947], NHI_mnx=(17.49,23.))
-    pytest.set_trace()
 
 
 
