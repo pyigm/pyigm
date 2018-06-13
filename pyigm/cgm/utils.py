@@ -246,6 +246,20 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
 
     # Rules
     match = np.where((rho<rho_max) & (np.abs(dv) < dv_max))[0]
+
+    ### If none, see if some system has a component that's actually within dv_max
+    if (len(match) == 0)&(rho[0] < rho_max):
+        zcomps = []
+        sysidxs = []
+        for i, csys in enumerate(igmsystems):
+            thesezs = [comp.zcomp for comp in csys._components]
+            sysidxs.extend([i] * len(thesezs))
+            zcomps.extend(thesezs)
+        zcomps = np.array(zcomps)
+        sysidxs = np.array(sysidxs)
+        dv_comps = ltu.dv_from_z(zcomps,galaxy.z)
+        match = np.unique(sysidxs[np.where(np.abs(dv_comps)<dv_max)[0]])
+
     if len(match) == 0:
         if dummysys is False:
             print("No IGMSystem paired to this galaxy. CGM object not created.")
@@ -285,9 +299,10 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
     # Return
     return cgm_list
 
-def covering_fraction(iontable,colthresh,rhobins=None,returncounts=False,**kwargs):
+def covering_fraction(iontable,colthresh,sys_attr='rho_impact',bins=None,
+                      returncounts=False,**kwargs):
     """Given some detection threshold, calculate the ion covering fraction
-    within impact parameter bins
+    within bins of some quantity (impact parameter by default)
 
     Parameters
     ----------
@@ -296,8 +311,10 @@ def covering_fraction(iontable,colthresh,rhobins=None,returncounts=False,**kwarg
     colthresh : float or None
         Detection threshold in log column density; if None, impose no threshold
         Nondetections with upper limits above this threshold are ignored
-    rhobins,optional : list of ints or floats
-        Bins in impact parameter (units of kpc).  If None,
+    sys_attr : str, optional
+        Column name in iontable corresponding to given bins 
+    bins,optional : list of ints or floats
+        Bins in impact parameter (units of kpc) or other quantity
     returncounts : bool, optional
         If True, return numbers of hits and total systems within each bin
 
@@ -319,13 +336,15 @@ def covering_fraction(iontable,colthresh,rhobins=None,returncounts=False,**kwarg
 
     # Clean up table to remove nulls if they exist
     itab = iontable.copy()
-    itab = itab[itab['flag_N']>0]
+    goodones = np.where(itab['flag_N']>0)[0]
+    itab = itab[goodones]
+
     flag = itab['flag_N']
     col = itab['logN']
-    rho = itab['rho_impact']
+    rho = itab[sys_attr]
 
-    if rhobins is None:
-        rhobins = [0,np.max(rho)]
+    if bins is None:
+        bins = [0,np.max(rho)]
 
     # Impose threshold if it exists
     if colthresh != None:
@@ -337,8 +356,8 @@ def covering_fraction(iontable,colthresh,rhobins=None,returncounts=False,**kwarg
         nondets = np.where((flag == 3))[0]
 
     # Set up and sort bins
-    dethist, bins = np.histogram(rho[dets], bins=rhobins)
-    nondethist, bins = np.histogram(rho[nondets], bins=rhobins)
+    dethist, histbins = np.histogram(rho[dets], bins=bins)
+    nondethist, histbins = np.histogram(rho[nondets], bins=bins)
 
     # Get the stats
     tothist = nondethist + dethist
