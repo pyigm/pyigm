@@ -23,6 +23,7 @@ from linetools.analysis import abskin as laak
 from linetools.isgm.abscomponent import AbsComponent
 
 from pyigm.metallicity.pdf import MetallicityPDF, DensityPDF, GenericPDF
+from pyigm.metallicity import utils as pym_utils
 from pyigm.cgm.cgmsurvey import CGMAbsSurvey
 from pyigm.field.galaxy import Galaxy
 from .cgm import CGMAbsSys
@@ -71,6 +72,8 @@ class COSHalos(CGMAbsSurvey):
         # Init?
         if load:
             self.load_sys(**kwargs)
+        # Metallicity flag
+        self.flag_mtlpdf = False
 
     def load_single_fits(self, inp, skip_ions=False, verbose=True, **kwargs):
         """ Load a single COS-Halos sightline
@@ -380,7 +383,67 @@ class COSHalos(CGMAbsSurvey):
         if ('Halos' in self.fits_path) and (self.werk14_cldy is not None):
                 self.load_werk14()
 
-    def load_mtl_pdfs(self, ZH_fil=None, keep_all=False):
+    def load_NH_pdfs(self, sys_err=0.15, verbose=False):
+        """
+        Load up the NH PDFs
+          Requires several downloads into pyigm
+
+        Parameters
+        ----------
+        sys_err : float, optional
+          Systematic error to add in to the statistical
+        verbose : bool, optional
+
+        Returns
+        -------
+        Nothing;  all internal
+
+        """
+
+        # Check for Cloudy files
+        cldy_path = resource_filename('pyigm', 'data/CGM/COS_Halos/Cloudy/')
+        if not os.path.isdir(cldy_path):
+            print("You need to download the Cloudy output files from the Google Drive and install in pyigm")
+            print("See the README.md file in {:s} for details".format(resource_filename('pyigm', 'data/CGM/COS_Halos')))
+            return
+        # mtl_pdfs need to have been loaded first
+        if not self.flag_mtlpdf:
+            if verbose:
+                print("Loading the metallicity PDFs first..")
+            self.load_mtl_pdfs(verbose=verbose)
+        # Initialize a few things more
+        NH_interp = pym_utils.calc_logNH('dum', init_interpol=True)
+        NH_bins = np.arange(13., 24.+0.1, 0.1)
+        # Loop
+        for cgm_abs in self.cgm_abs:
+            # Init
+            cgm_abs.igm_sys.NH_PDF = None
+            cgm_abs.igm_sys.NH_chain = None
+            # Cut on quality
+            if mtl_quality(cgm_abs, verbose=verbose) <= 0:
+                continue
+            # Proceed
+            hdf5_fil = cldy_path+'{:s}_emcee.hd5'.format(cgm_abs.name)
+            NH_values = pym_utils.calc_logNH(hdf5_fil, NH_interpol=NH_interp,
+                                           sys_error=sys_err, ret_flags=['NH'])[0]
+            # Keep the finite ones
+            finite = np.isfinite(NH_values)
+            if np.sum(~finite) > 5000:
+                pdb.set_trace()
+            elif np.sum(~finite) > 0:
+                warnings.warn("One or more NH_values were not finite.  Be careful..")
+            # Tack em on
+            cgm_abs.igm_sys.NH_chain = NH_values[finite]
+            # Histogram
+            try:
+                hist, edges = np.histogram(NH_values[finite], bins=NH_bins)
+            except:
+                pdb.set_trace()
+            x = (edges + np.roll(edges, 1)) / 2.
+            x = x[1:]
+            cgm_abs.igm_sys.NH_PDF = GenericPDF(x, hist.astype(float))
+
+    def load_mtl_pdfs(self, ZH_fil=None, keep_all=False, verbose=True):
         """ Load the metallicity PDFs from an input file (usually hdf5)
 
         Parameters
@@ -411,14 +474,16 @@ class COSHalos(CGMAbsSurvey):
             init_as_none(cgm_abs)
             # Truncating
             if '0943+0531_227_19' in cgm_abs.name:
-                print('Not including 0943+0531_227_19'.format(cgm_abs.name))
-                print('See Prochaska+17 for details')
+                if verbose:
+                    print('Not including 0943+0531_227_19'.format(cgm_abs.name))
+                    print('See Prochaska+17 for details')
                 continue
             # Match?
             mt = np.where(mkeys == cgm_abs.name)[0]
             if len(mt) == 0:
-                print('No metallicity info for {:s}'.format(cgm_abs.name))
-                print('Skipping..')
+                if verbose:
+                    print('No metallicity info for {:s}'.format(cgm_abs.name))
+                    print('Skipping..')
                 continue
             # Z/H
             cgm_abs.igm_sys.metallicity = MetallicityPDF(fh5['met']['left_edge_bins']+
@@ -430,7 +495,7 @@ class COSHalos(CGMAbsSurvey):
                 cgm_abs.igm_sys.metallicity.inputs[key] = fh5['inputs'][cgm_abs.name][key].value
 
             # Check mtl quality
-            qual = mtl_quality(cgm_abs)
+            qual = mtl_quality(cgm_abs, verbose=verbose)
             if qual <= 0:
                 # Back to None
                 init_as_none(cgm_abs)
@@ -444,6 +509,8 @@ class COSHalos(CGMAbsSurvey):
             cgm_abs.igm_sys.density = DensityPDF(fh5['dens']['left_edge_bins']+
                                                          fh5['dens']['left_edge_bins'].attrs['BINSIZE']/2.,
                                                          fh5['dens'][mkeys[mt][0]])
+        # Loaded flag
+        self.flag_mtlpdf = True
 
     
     ########################## ##########################
@@ -941,7 +1008,7 @@ def mtl_quality(cgm_abs, verbose=True):
     """
     try:
         flgs = cgm_abs.igm_sys.metallicity.inputs['data'][:, 3].astype(int)
-    except IndexError:
+    except (IndexError, AttributeError):
         if verbose:
             print('No constraint for {:s}'.format(cgm_abs.name))
             print('Skipping')
