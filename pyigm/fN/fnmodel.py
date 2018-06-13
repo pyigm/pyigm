@@ -40,7 +40,7 @@ class FNModel(object):
     zpivot : float, optional
           Pivot for redshift evolution (2.4)
     gamma : float, optional
-          Power law for dN/dX, not dN/dz (1.5)
+          Power law dependence for dN/dX, not dN/dz (1.5)
     """
     @classmethod
     def default_model(cls, use_mcmc=False, cosmo=None):
@@ -397,7 +397,7 @@ class FNModel(object):
                                         np.log10(1+z_val)))  #; (1+z)^gamma
                 z_grid2 = np.outer( np.ones(lenfX)*((1./(1+self.zpivot))**self.gamma), 
                             np.ones(len(z_val)))
-                log_fNX = lgNHI_grid + np.log10(z_grid1*z_grid2) 
+                log_fNX = lgNHI_grid + np.log10(z_grid1*z_grid2)
 
         # Gamma function (e.g. Inoue+14)
         elif self.mtype == 'Gamma':
@@ -477,7 +477,7 @@ class FNModel(object):
         else:
             return log_fNX
 
-    def mfp(self, zem, neval=5000, cosmo=None, zmin=0.6):
+    def mfp(self, zem, neval=5000, nzeval=300, cosmo=None, zmin=0.6):
         """ Calculate mean free path
 
         Parameters
@@ -487,7 +487,7 @@ class FNModel(object):
         cosmo : astropy.cosmology, optional
           Cosmological model to adopt (as needed)
         neval : int, optional
-          Discretization parameter (5000)
+          Discretization parameter for NHI (5000)
         zmin: float, optional
           Minimum redshift in the calculation (0.5)
 
@@ -505,7 +505,7 @@ class FNModel(object):
             cosmo = cosmology.core.FlatLambdaCDM(70., 0.3)
 
         # Calculate teff
-        zval, teff_LL = pyteff.lyman_limit(self, zmin, zem, N_eval=neval, cosmo=cosmo)
+        zval, teff_LL = pyteff.lyman_limit(self, zmin, zem, N_eval=neval, N_zeval=nzeval, cosmo=cosmo)
 
         # Find tau=1
         zt_interp = scii.interp1d(teff_LL, zval)
@@ -521,7 +521,8 @@ class FNModel(object):
     ##
     # Output
     def __repr__(self):
-        return ('<{:s}: {:s} zmnx=({:g},{:g})>'.format(
-                self.__class__.__name__, self.mtype, self.zmnx[0], self.zmnx[1]))
+        return ('<{:s}: {:s} zmnx=({:g},{:g}) zpivot={:g}, gamma={:g}>'.format(
+                self.__class__.__name__, self.mtype, self.zmnx[0], self.zmnx[1],
+                self.zpivot, self.gamma))
 
 

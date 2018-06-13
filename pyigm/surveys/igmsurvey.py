@@ -16,8 +16,8 @@ from astropy.io import ascii
 from astropy import units as u
 from astropy.table import Column, Table, vstack
 from astropy.units.quantity import Quantity
-from astropy.coordinates import SkyCoord
 from astropy.stats import poisson_conf_interval as aspci
+from astropy.coordinates import SkyCoord, match_coordinates_sky
 
 from linetools.isgm import utils as ltiu
 
@@ -83,6 +83,8 @@ class IGMSurvey(object):
             slf._abs_sys.append(class_by_type(slf.abs_type).from_datfile(dat_file, tree=slf.tree))
         print('Read {:d} files from {:s} in the tree {:s}'.format(
             slf.nsys, slf.flist, slf.tree))
+        # Mask
+        slf.init_mask()
 
         return slf
 
@@ -948,6 +950,7 @@ class IGMSurvey(object):
             combined.mask = np.concatenate((self.mask, other.mask)).flatten()
         else:
             combined.mask = None
+            combined.init_mask()
         combined._data = vstack([self._data, other._data])
 
         # Sightlines?

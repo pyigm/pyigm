@@ -7,11 +7,10 @@ import numpy as np
 import imp
 import pdb
 
+from pkg_resources import resource_filename
+
 from astropy.io import fits
 from astropy import cosmology
-
-# Path for pyigm
-pyigm_path = imp.find_module('pyigm')[1]
 
 
 class FNConstraint(object):
@@ -34,6 +33,7 @@ class FNConstraint(object):
            'fN' -- Standard f(N) evaluation
            'MFP' -- MFP
            'LLS' -- LLS incidence 
+           'DLA' -- DLA incidence
            'teff' -- tau effective
            'beta' -- slope constraint
     flavor : str
@@ -47,6 +47,9 @@ class FNConstraint(object):
         Redshift where the constraint is evaluated
     data : dict
         Dictionary containing the constraints
+        'MFP' -- MFP, SIG_MFP  (pMpc)
+        'LLS' -- LX, SIG_LX
+        'DLA' -- LX, SIG_LX
     """
 
     @classmethod
@@ -150,23 +153,39 @@ class FNConstraint(object):
         all_fN_cs : list
           list of FNConstraint objects
         """
-        fn_file = pyigm_path+'/data/fN/fN_constraints_z2.5_vanilla.fits'
-        k13r13_file = pyigm_path+'/data/fN/fN_constraints_K13R13_vanilla.fits'
-        n12_file = pyigm_path+'/data/fN/fN_constraints_N12_vanilla.fits'
+        fn_file = resource_filename('pyigm', '/data/fN/fN_constraints_z2.5_vanilla.fits')
+        k13r13_file = resource_filename('pyigm', '/data/fN/fN_constraints_K13R13_vanilla.fits')
+        n12_file = resource_filename('pyigm', '/data/fN/fN_constraints_N12_vanilla.fits')
         # Load
         all_fN_cs = cls.from_fitsfile([fn_file,k13r13_file, n12_file])
         # Return
         return all_fN_cs
 
     # Initialize with type
-    def __init__(self, fN_dtype, zeval=0., ref='', flavor='', cosmo=None):
-        if fN_dtype not in ['fN', 'MFP', 'LLS', 'teff', 'beta']:
+    def __init__(self, fN_dtype, zeval=0., ref='', flavor='', cosmo=None,
+                 data=None):
+        """
+        Parameters
+        ----------
+        fN_dtype : str
+        zeval : float, optional
+        ref : str, optional
+        flavor : str, optional
+        cosmo : astropy.cosmology
+        data : dict, optional
+
+        """
+        if fN_dtype not in ['fN', 'MFP', 'LLS', 'DLA', 'teff', 'beta']:
             raise IOError('Bad f(N) constraint')
         self.fN_dtype = fN_dtype
         self.zeval = zeval
         self.ref = ref
         self.flavor = flavor
         self.cosmo = cosmo
+        if data is None:
+            self.data = {}
+        else:
+            self.data = data
 
 
     def __repr__(self):

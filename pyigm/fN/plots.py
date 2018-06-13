@@ -79,7 +79,7 @@ def tst_fn_data(fN_model=None, model_two=None, data_list=None, outfil=None):
         main.plot(xplt,yplt,'-',color='gray')
 
     # Extras
-    #mpl.rcParams['lines.capthick'] = 2
+    #mpl.r['lines.capthick'] = 2
 
     inset = fig.add_axes( [0.55, 0.6, 0.25, 0.25] ) # xypos, xy-size
     inset.set_ylabel('Value') # LHS
