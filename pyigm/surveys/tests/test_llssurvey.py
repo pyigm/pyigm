@@ -59,12 +59,12 @@ def test_z3mage():
     assert len(z3mage.sightlines) == 105
     # Non-Color
     z3mage_NC = LLSSurvey.load_mage_z3(sample='non-color')
-    assert z3mage_NC.nsys == 32
+    assert z3mage_NC.nsys == 27
     assert len(z3mage_NC.sightlines) == 61
     # Stats
     lz, sig_lz_low, sig_lz_up = z3mage_NC.binned_loz(
         [2.6, 3.], NHI_mnx=(17.49,23.))
-    assert np.isclose(lz[0], 1.39551406)
+    assert np.isclose(lz[0], 1.20521669)
 
 
 def test_load_ribaudo13():

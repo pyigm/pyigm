@@ -500,7 +500,7 @@ class LLSSurvey(IGMSurvey):
         tab['RA'].unit = u.deg
         tab.rename_column('DEJ2000', 'DEC')
         tab['DEC'].unit = u.deg
-        tab.rename_column('zqso', 'Z_QSO')
+        tab.rename_column('zqso', 'ZEM')
         tab.rename_column('zlls', 'ZLLS')
         tab.rename_column('zend', 'Z_START')  # F13 was opposite of POW10
         tab.rename_column('zstart', 'Z_END')  # F13 was opposite of POW10
@@ -525,9 +525,16 @@ class LLSSurvey(IGMSurvey):
         lls_tab.rename_column('ZLLS', 'Z_LLS')
 
         # Generate survey
-        lls_survey = cls.from_sfits(lls_tab)
+        coords = SkyCoord(ra=lls_tab['RA'], dec=lls_tab['DEC'], unit='deg')
+        lls_survey = cls.from_sfits(lls_tab, coords=coords)
         lls_survey.ref = 'z3_MagE'
         lls_survey.sightlines = tab
+
+        if sample == 'all':
+            mask = np.ones(nlls, dtype=bool)
+        else:
+            mask = lls_stat(lls_survey, NHI_cut=17.49)
+        lls_survey.mask = mask
 
         return lls_survey
 

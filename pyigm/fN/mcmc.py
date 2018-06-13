@@ -127,9 +127,6 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1.):
         fN_MFPc = FNConstraint('MFP', 5.16, ref='Worseck+14', flavor='\\lmfp', data=dict(MFP=10.3,SIG_MFP=1.6, COSM='VANILLA'))
         fN_MFP = [fN_MFPa, fN_MFPb, fN_MFPc]
         # LLS (Crighton+17)
-        #fN_LLSa = FNConstraint('LLS', np.mean([3.75,4.40]), ref='Crighton+16', flavor='\\tlox', data=dict(LX=0.628,SIG_LX=0.095, TAU_LIM=2., COSM='VANILLA'))
-        #fN_LLSb = FNConstraint('LLS', np.mean([4.40,4.70]), ref='Crighton+16', flavor='\\tlox', data=dict(LX=0.601,SIG_LX=0.102, TAU_LIM=2., COSM='VANILLA'))
-        #fN_LLSc = FNConstraint('LLS', np.mean([4.70, 5.40]), ref='Crighton+16', flavor='\\tlox', data=dict(LX=0.928,SIG_LX=0.151, TAU_LIM=2., COSM='VANILLA'))
         fN_LLSa = FNConstraint('LLS', np.mean([3.75,4.40]), ref='Crighton+17', flavor='\\tlox', data=dict(LX=0.529,SIG_LX=0.073, TAU_LIM=2., COSM='VANILLA'))
         fN_LLSb = FNConstraint('LLS', np.mean([4.40,4.70]), ref='Crighton+17', flavor='\\tlox', data=dict(LX=0.576,SIG_LX=0.090, TAU_LIM=2., COSM='VANILLA'))
         fN_LLSc = FNConstraint('LLS', np.mean([4.70, 5.40]), ref='Crighton+17', flavor='\\tlox', data=dict(LX=0.637,SIG_LX=0.089, TAU_LIM=2., COSM='VANILLA'))
