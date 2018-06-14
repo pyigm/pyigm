@@ -244,6 +244,7 @@ class IGMSurvey(object):
         self._abs_sys.append(abs_sys)
 
     def build_all_abs_sys(self, linelist=None, **kwargs):
+
         """ Build all of the AbsSystem objects from the _dict
         or _data if the _dict does not exist!
         In that order
@@ -307,6 +308,7 @@ class IGMSurvey(object):
         return abssys
 
     def build_abs_sys_from_dict(self, abssys_name, **kwargs):
+
         """ Build an AbsSystem from the _dict
         The item in self._abs_sys is filled and
         the systems is also returned
@@ -316,6 +318,7 @@ class IGMSurvey(object):
         abssys_name : str
           Needs to match a key in the dict
         **kwargs
+
           Passed to components_from_dict()
 
         Returns
@@ -325,6 +328,7 @@ class IGMSurvey(object):
         """
         # Index
         idx = self.sys_idx(abssys_name)
+
         # Instantiate
         abssys = class_by_type(self.abs_type).from_dict(self._dict[abssys_name],
                                                         coord=self.coords[idx],
@@ -463,6 +467,7 @@ class IGMSurvey(object):
             raise ValueError("Not sure how to load the ions")
 
     # Get ions
+
     def ions(self, Zion, Ej=0., skip_null=True, pad_with_nulls=False):
         """ Generate a Table of columns and so on
         Restrict to those systems where flg_clm > 0

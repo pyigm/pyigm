@@ -90,6 +90,7 @@ class GalaxyCGM(CGM):
                 except ValueError:
                     pdb.set_trace()
                 aline.attrib['coord'] = icoord
+
                 # Skip EW=0 lines
                 if r17_a2['e_W'][idx] == 0:
                     continue
@@ -97,12 +98,14 @@ class GalaxyCGM(CGM):
                 z = 0.
                 aline.setz(z)
                 vlim = np.array([r17_a2['vmin'][idx], r17_a2['vmax'][idx]]) * u.km / u.s
+
                 aline.limits.set(vlim)  # These are v_LSR
                 # EW
                 aline.attrib['flag_EW'] = 1
                 aline.attrib['EW'] = r17_a2['W'][idx] / 1e3 * u.AA
                 aline.attrib['sig_EW'] = r17_a2['e_W'][idx] / 1e3 * u.AA
                 # Column
+
                 if np.isnan(r17_a2['logN'][idx]):  # Odd that some lines had an error but no value
                     aline.attrib['flag_N'] = 0
                 elif r17_a2['l_logN'][idx] == '>':
