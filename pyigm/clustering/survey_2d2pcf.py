@@ -38,6 +38,7 @@ class Survey2D2PCF(object):
             self.RgRg = field.RgRg
             self.Ngal = field.Ngal
             self.Ngal_rand = field.Ngal_rand
+            # Flag specifying galaxy analysis may proceed
             self.gal_anly = True
         else:
             self.gal_anly = False
@@ -49,6 +50,7 @@ class Survey2D2PCF(object):
             self.Nabs = field.Nabs
             self.Nabs_rand = field.Nabs_rand
             self.Nabs = field.Nabs
+            # Flag specifying abs analysis may proceed
             self.abs_anly = True
             # Both!
             if field.galreal is not None:
@@ -95,7 +97,7 @@ class Survey2D2PCF(object):
         fcoord = SkyCoord(ra=[field.CRA for field in self.fields],
                           dec=[field.CDEC for field in self.fields], unit='deg')
         if np.any(new_field.coord.separation(fcoord) < SEP_TOL):
-            raise IOError('New field is within {} of an already input field!  We assume a mistake was made'.format(SEP_TOL))
+            raise IOError('New field is within {} of an already input field!  We assume a mistake was made because fields are intended to be independent.'.format(SEP_TOL))
 
 
         #f = copy.deepcopy(field)
@@ -184,6 +186,9 @@ class Survey2D2PCF(object):
         elif xi_type == 'absorber-galaxy':
             xa, xb = 'a', 'g'
             auto = False
+        elif xi_type == 'absorber-absorber':
+            xa, xb = 'a', 'a'
+            auto = False
         else:
             raise IOError("Not ready for xi_type={:s}".format(xi_type))
 
@@ -227,8 +232,9 @@ class Survey2D2PCF(object):
                     RD_aux = DR_aux
                 else:
                     RD_aux = RD(self) - RD(field) #self.DgRg - field.DgRg
+                pdb.set_trace()  # THIS STILL NEEDS TO BE DEVELOPED, i.e re-calculate nDD
                 W_aux, _ = W3(gf(DD_aux, s), gf(RR_aux, s), gf(DR_aux, s), gf(RD_aux, s),
-                                Ndd=nDD, Nrr=nRR, Ndr=nDR, Nrd=nRD)
+                                nDD, nRR, nDR, nRD)
                                 #Ndd=self.nDgDg, Nrr=self.nRgRg, Ndr=self.nDgRg, Nrd=self.nDgRg)
                 psd_val += N * W - (N - 1) * W_aux
             mean_psd = psd_val / N
@@ -240,6 +246,7 @@ class Survey2D2PCF(object):
                     RD_aux = DR_aux
                 else:
                     RD_aux = RD(self) - RD(field) #self.DgRg - field.DgRg
+                pdb.set_trace()  # THIS STILL NEEDS TO BE DEVELOPED
                 W_aux, _ = W3(gf(DD_aux, s), gf(RR_aux, s), gf(DR_aux, s), gf(RD_aux, s),
                                 Ndd=nDD, Nrr=nRR, Ndr=nDR, Nrd=nRD)
                 err_Wjk += (mean_psd - W_aux) ** 2
@@ -254,7 +261,7 @@ class Survey2D2PCF(object):
             W_sum = np.zeros((len(self.rbinedges) - 1, len(self.tbinedges) - 1), float)
             W_sum2 = np.zeros((len(self.rbinedges) - 1, len(self.tbinedges) - 1), float)
 
-            N = self.Nbt
+            N = self.Nbs
             for i in range(N):
                 inds = np.random.randint(0, Nf, Nf)
                 DD_aux = np.zeros((len(self.rbinedges) - 1, len(self.tbinedges) - 1), float)

@@ -167,7 +167,7 @@ def cross_pairs_rt(x1, y1, z1, x2, y2, z2, rbinedges, tbinedges,wrapped=True,
         z2=auxz
 
     # Ugly for loop
-    for i in range(len(x1)):# - 1):  JXP Bug fix?!
+    for i in range(len(x1)):
         # radial separation
         if wrapped:
             rsep = np.abs(x1[i] - x2)

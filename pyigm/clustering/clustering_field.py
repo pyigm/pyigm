@@ -25,6 +25,7 @@ class ClusteringField(IgmGalaxyField):
     Input parameters:
     ---
     radec : coordinate
+      Sets self.coord (in IgmGalaxyfield)
     absreal:   catalog of real absorption lines (numpy rec array). It has to have
                dtype.names RA,DEC,ZABS,LOGN,B
     galreal:   catalog of real galaxies (numpy rec array). It has to have
@@ -162,22 +163,22 @@ class ClusteringField(IgmGalaxyField):
         if (SPL is None) or (magbins is None):
             magbins, _, SPL = spline_sensitivity(sens_galaxies)
         # Randoms
-        rgal = random_gal(galnew, self.igal_rand, magbins, SPL)
+        galnewrand = random_gal(galnew, self.igal_rand, magbins, SPL)
 
         # Cut on Rcom_max?
         if Rcom_max is not None:
-            rcoord = SkyCoord(ra=rgal.RA, dec=rgal.DEC, unit='deg')
+            rcoord = SkyCoord(ra=galnewrand.RA, dec=galnewrand.DEC, unit='deg')
             angsep = self.coord.separation(rcoord)
             # R comoving
-            Rcom = self.cosmo.kpc_comoving_per_arcmin(rgal.ZGAL) * angsep.to('arcmin') / 1000. # Mpc
+            Rcom = self.cosmo.kpc_comoving_per_arcmin(galnewrand.ZGAL) * angsep.to('arcmin')
             # Cut
-            goodr = Rcom.value < Rcom_max
-            rgal = rgal[goodr]
+            goodr = Rcom.to('Mpc').value < Rcom_max
+            galnewrand = galnewrand[goodr]
         if debug:
             gcoord = SkyCoord(ra=galnew.RA, dec=galnew.DEC, unit='deg')
             gangsep = self.coord.separation(gcoord)
-            gRcom = self.cosmo.kpc_comoving_per_arcmin(galnew.ZGAL) * gangsep.to('arcmin') / 1000. # Mpc
-            faintR = rgal.MAG > 19.
+            gRcom = self.cosmo.kpc_comoving_per_arcmin(galnew.ZGAL) * gangsep.to('arcmin')
+            faintR = galnewrand.MAG > 19.
             faintg = galnew.MAG > 19.
             #
             from matplotlib import pyplot as plt
@@ -198,27 +199,19 @@ class ClusteringField(IgmGalaxyField):
                 ax = plt.gca()
                 zbins = np.arange(0., 0.8, 0.025)
                 ax.hist(galnew.ZGAL[faintg], color='k', bins=zbins, normed=1, label='DD', fill=False)
-                ax.hist(rgal.ZGAL[faintR], edgecolor='red', bins=zbins, normed=1, label='RR', fill=False)
+                ax.hist(galnewrand.ZGAL[faintR], edgecolor='red', bins=zbins, normed=1, label='RR', fill=False)
                 ax.set_xlabel('zGAL')
-                #Magbins = np.arange(15., 22., 0.5)
-                #ax.hist(galnew.MAG, color='k', bins=Magbins, normed=1, label='DD', fill=False)
-                #ax.hist(rgal.MAG, edgecolor='red', bins=Magbins, normed=1, label='RR', fill=False)
-                #ax.set_xlabel('MAG')
-                #angbins = np.arange(0., 30, 1.)
-                #ax.hist(gangsep.to('arcmin').value, color='k', bins=angbins, normed=1, label='DD', fill=False)
-                #ax.hist(angsep[goodr].to('arcmin').value, edgecolor='red', bins=angbins, normed=1, label='RR', fill=False)
-                #ax.set_xlabel('ang sep (arcmin)')
             plt.show()
 
         # Load me up
         if self.galreal is None:
             self.galreal = galnew  # np rec array with galaxy properties
-            self.galrand = rgal
+            self.galrand = galnewrand
         else:
             galnew = galnew.astype(self.galreal.dtype)
             self.galreal = np.append(self.galreal, galnew)
             self.galreal = np.rec.array(self.galreal)
-            self.galrand = np.append(self.galrand, rgal)
+            self.galrand = np.append(self.galrand, galnewrand)
             self.galrand = np.rec.array(self.galrand)
 
 
@@ -227,7 +220,6 @@ class ClusteringField(IgmGalaxyField):
         if isinstance(abs_input, Table):
             # Rename any columns here
             abs_input.rename_column(z_clm,'ZABS')
-            # Rename any columns here
             absnew = abs_input.as_array().view(np.recarray)
         else:  # Assuming rec array (what else would it be?)
             absnew = abs_input
