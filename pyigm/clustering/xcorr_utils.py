@@ -50,6 +50,8 @@ def auto_pairs_rt(X, Y, Z, rbinedges, tbinedges, wrap=True, track_time=False,
 
         # Cut me (3x speed-up)
         ok_sep = (rsep <= rbinedges[-1]) & (tsep <= tbinedges[-1])
+        if wrap is False:
+            ok_sep &= (rsep >= rbinedges[0])
         rsep = rsep[ok_sep]
         tsep = tsep[ok_sep]
 
@@ -107,6 +109,8 @@ def cross_pairs_rt(x1, y1, z1, x2, y2, z2, rbinedges, tbinedges,wrapped=True,
 
         # Cut me (3x speed-up)
         ok_sep = (rsep <= rbinedges[-1]) & (tsep <= tbinedges[-1])
+        if wrapped is False:
+            ok_sep &= (rsep >= rbinedges[0])
         rsep = rsep[ok_sep]
         tsep = tsep[ok_sep]
 
@@ -196,7 +200,7 @@ def W3b(DD,RR,DR,RD,Ndd=None,Nrr=None,Ndr=None,Nrd=None):
 def W3(DD,RR,DR,RD,Ndd,Nrr,Ndr,Nrd):
     """Returns the Landy & Scalay estimator for the cross-correlation
         and its error. The pair counts DD, RR, DR, RD are not required to
-    be normalized normalized. Ndd,Nrr,Ndr,Nrd are the normalizations
+    be normalized. Ndd,Nrr,Ndr,Nrd are the normalizations
     factors for each pair count
 
     Parameters
@@ -293,6 +297,10 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, 
        Step size for magnitude binning
     delta_mag : float (optional)
     debug : bool (optional)
+    cut_z0 : bool (optional)
+      if True, begin bins at zmin not z=0.
+    magbins : ndarray (optional)
+      User-supplied magnnitude bins for analysis
 
     Returns
     -------
@@ -399,6 +407,9 @@ def random_abs_zmnx(absreal, Nrand, zmnx, wrest, dv_Galactic=100.):
 
     Returns
     -------
+    absrand : numpy recarray
+      Random absorbers matched to input absreal
+      but with ZABS now set
 
     """
 
@@ -407,7 +418,7 @@ def random_abs_zmnx(absreal, Nrand, zmnx, wrest, dv_Galactic=100.):
     randz = np.random.uniform(low=zmnx[0], high=zmnx[1], size=2*len(absrand))  # Buffer to reject Galaxy
 
     # Avoid Galactic
-    galactic = mask_galactic()
+    galactic = get_galactic()
     Galz = galactic/wrest - 1.
     z_Gal = np.outer(np.ones_like(randz), Galz)
     # Diff
@@ -421,11 +432,11 @@ def random_abs_zmnx(absreal, Nrand, zmnx, wrest, dv_Galactic=100.):
     return absrand
 
 
-def random_abs_W(absreal, Nrand, wa, fl, er, sl=3., R=20000, FWHM=10., ion='HI'):
+def random_abs_Wr(absreal, Nrand, wa, fl, er, sl=3., R=20000, FWHM=10., ion='HI'):
     """From a real absorber catalog it creates a random catalog.  For
     a given real absorber with (z_obs,logN_obs,b_obs) it places it at
     a new z_rand, defined by where the line could have been
-    observed.
+    observed based on the observed rest-frame equivalent width Wr.
 
     Input parameters:
     ---
@@ -446,12 +457,19 @@ def random_abs_W(absreal, Nrand, wa, fl, er, sl=3., R=20000, FWHM=10., ion='HI')
     transition) and R is the resolution of the spectrograph. We then
     smooth Wmin with a boxcar along FWHM pixels.
 
+    Regions of Galactic absorption are also avoided for the randoms.
+
     For the given absorber we transform (logN_obs,b_obs) to a W_obs assuming
     linear part of the curve-of-growth.
 
     We then compute the redshifts where W_obs could have been observed
     according to the given Wmin, and place Nrand new absorbers with
     the same properties as the given one accordingly.
+
+    Returns
+    -------
+    absrand -- recarray
+      Random absorbers
     """
     from linetools.analysis.absline import Wr_from_N_b_transition
     from linetools.lists.linelist import LineList
@@ -500,7 +518,7 @@ def random_abs_W(absreal, Nrand, wa, fl, er, sl=3., R=20000, FWHM=10., ion='HI')
 
     return absrand
 
-def mask_galactic():
+def get_galactic():
     # masked regions (potential Galactic absorption)
     galactic = np.array([1334.5323,  # CII
                          1335.7077, # CII*
@@ -526,7 +544,8 @@ def mask_galactic():
 def compute_Wmin(wa, fl, er, sl=3., R=20000, FWHM=10, ion='HI', dv_mask=200.):
     """For a given spectrum and transition, it computes the minimun
     rest-frame equivalent width for that transition to be observed. It
-    return a tuple of redshift and Wmin (z,Wmin)"""
+    return a tuple of redshift and Wmin (z,Wmin) where both are arrays,
+    spectrum like."""
     from scipy.ndimage import uniform_filter as uf
     #
     if ion == 'HI':
@@ -534,7 +553,7 @@ def compute_Wmin(wa, fl, er, sl=3., R=20000, FWHM=10, ion='HI', dv_mask=200.):
     if ion == 'HILyb':
         w0 = 1025.72  # HI Lyb w0 in angstroms
     # Mask galactic
-    galactic = mask_galactic()
+    galactic = get_galactic()
     zgal = galactic / w0 - 1.
     dzgal = (zgal + 1) * dv_mask / Ckms
 
@@ -567,7 +586,9 @@ def random_gal(galreal, Nrand, magbins, SPL, debug=False):
     Nrand : int
       Number of random galaxies generated per real galaxy
     magbins : ndarray
+      Magnitude bins for constructing the randoms from the SPL
     SPL : dict
+      Sensitivity splines
 
     Returns
     -------
@@ -598,7 +619,7 @@ def random_gal(galreal, Nrand, magbins, SPL, debug=False):
             #ind_mag = np.where(np.fabs(galreal.MAG[i] - magbins) == np.min(np.fabs(galreal.MAG[i] - magbins)))[0][0]
             try:
                 ind_mag = np.where((galreal.MAG[i] > magbins) & (galreal.MAG[i] < np.roll(magbins,-1)))[0][0]
-            except:
+            except:  # We get here if there are *none* in the set
                 pdb.set_trace()
             mag = magbins[ind_mag]
             #if i % 50 == 0:
