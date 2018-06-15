@@ -146,9 +146,10 @@ def cgmabssys_from_sightline_field(field,sightline,rho_max=300.*u.kpc,minz=0.001
     for i,gal in enumerate(closegals):
         #print('i={:d}'.format(i))
         galobj = Galaxy((gal['RA'],gal['DEC']),z=gal['Z'])
-        if np.abs(gal['RA']-177.880583333) < 1e-6:
-            pdb.set_trace()
-        cgmobj = cgm_from_galaxy_igmsystems(galobj,sightline._abssystems, dv_max=dv_max, dummysys=dummysys, dummyspec=dummyspec, rho_max=rho_max, linelist=linelist,**kwargs)
+        cgmobj = cgm_from_galaxy_igmsystems(galobj,sightline._abssystems,
+                                            dv_max=dv_max, dummysys=dummysys,
+                                            dummyspec=dummyspec, rho_max=rho_max,
+                                            linelist=linelist,**kwargs)
         cgmabslist.extend(cgmobj)
     return cgmabslist
 

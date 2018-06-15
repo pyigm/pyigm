@@ -138,6 +138,8 @@ class ClusteringField(IgmGalaxyField):
           Contains the sensitivity function (CubicSpline's)
         Rcom_max : float, optional
           Maximum comoving separation of the survey in Mpc
+        tbinedges : ndarray
+          Only used for debug=True
 
         Returns
         -------
