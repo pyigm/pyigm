@@ -188,7 +188,7 @@ class Survey2D2PCF(object):
             auto = False
         elif xi_type == 'absorber-absorber':
             xa, xb = 'a', 'a'
-            auto = False
+            auto = True
         else:
             raise IOError("Not ready for xi_type={:s}".format(xi_type))
 
@@ -320,11 +320,11 @@ class Survey2D2PCF(object):
                                            self.nDgDg,self.nRgRg,self.nDgRg,self.nDgRg)
         # Finish
         if nbins is None:
-            self.W_gg_T = self.xi_gg_rperp * 2 * self.tbinedges[-1]
-            self.W_gg_T_err = self.xi_gg_rperp_err * 2 * self.tbinedges[-1]
+            self.W_gg_T = self.xi_gg_rperp * 2 * self.rbinedges[-1]
+            self.W_gg_T_err = self.xi_gg_rperp_err * 2 * self.rbinedges[-1]
         else:
-            self.W_gg_T = self.xi_gg_rperp * 2 * self.tbinedges[nbins-1]
-            self.W_gg_T_err = self.xi_gg_rperp_err * 2 * self.tbinedges[nbins-1]
+            self.W_gg_T = self.xi_gg_rperp * 2 * self.rbinedges[nbins-1]
+            self.W_gg_T_err = self.xi_gg_rperp_err * 2 * self.rbinedges[nbins-1]
 
         return self.W_gg_T, self.W_gg_T_err
 
@@ -358,11 +358,11 @@ class Survey2D2PCF(object):
 
         # Finish
         if nbins is None:
-            self.W_ag_T = self.xi_ag_rperp * 2 * self.tbinedges[-1]
-            self.W_ag_T_err = self.xi_ag_rperp_err * 2 * self.tbinedges[-1]
+            self.W_ag_T = self.xi_ag_rperp * 2 * self.rbinedges[-1]
+            self.W_ag_T_err = self.xi_ag_rperp_err * 2 * self.rbinedges[-1]
         else:
-            self.W_ag_T = self.xi_ag_rperp * 2 * self.tbinedges[nbins-1]
-            self.W_ag_T_err = self.xi_ag_rperp_err * 2 * self.tbinedges[nbins-1]
+            self.W_ag_T = self.xi_ag_rperp * 2 * self.rbinedges[nbins-1]
+            self.W_ag_T_err = self.xi_ag_rperp_err * 2 * self.rbinedges[nbins-1]
         #
         return self.W_ag_T, self.W_ag_T_err
 

@@ -300,7 +300,7 @@ def spline_sensitivity(galreal, Nmin=20, magmin=17., magmax=26., delta_mag=0.5, 
     cut_z0 : bool (optional)
       if True, begin bins at zmin not z=0.
     magbins : ndarray (optional)
-      User-supplied magnnitude bins for analysis
+      User-supplied magnitude bins for analysis
 
     Returns
     -------
