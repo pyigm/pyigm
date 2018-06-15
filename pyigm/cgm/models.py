@@ -113,12 +113,13 @@ class ModifiedNFW(CGMPhase):
       concentration of the halo
     f_hot : float, optional
       Fraction of the baryons in this hot phase
+      Will likely use this for all diffuse gas
     alpha : float, optional
       Parameter to modify NFW profile power-law
     y0 : float, optional
       Parameter to modify NFW profile position
     """
-    def __init__(self, log_Mhalo=12.2, c=7.67, f_hot=0.9, alpha=0., y0=1., **kwargs):
+    def __init__(self, log_Mhalo=12.2, c=7.67, f_hot=0.75, alpha=0., y0=1., **kwargs):
         # Init
         CGMPhase.__init__(self, 'hot')
         # Param
@@ -214,7 +215,7 @@ class ModifiedNFW(CGMPhase):
           Density in cm**-3
 
         """
-        nH = self.rho_b(xyz).value / self.mu / m_p
+        nH = (self.rho_b(xyz) / self.mu / m_p).cgs.value
         # Return
         return nH
 
@@ -275,3 +276,47 @@ class ModifiedNFW(CGMPhase):
 
         # Return
         return Ne * u.pc / u.cm**3
+
+class MB04(ModifiedNFW):
+    def __init__(self, Rc=167*u.kpc, log_Mhalo=12.2, c=7.67, f_hot=0.75, **kwargs):
+
+        # Init ModifiedNFW
+        ModifiedNFW.__init__(self, log_Mhalo=log_Mhalo, c=c, f_hot=f_hot, **kwargs)
+
+        # Setup
+        self.Rs = self.r200/self.c
+        self.Rc = Rc
+        self.Cc = (self.Rc/self.Rs).decompose().value
+        self.rhoV = 1. * const.m_p/u.cm**3  # Will be renormalized
+
+        # For development
+        self.debug=False
+
+        # Normalize
+        self.norm_rhoV()
+
+    def norm_rhoV(self):
+        # Set rhoV to match expected baryon mass
+        r = np.linspace(1., self.r200.to('kpc').value, 1000)  # kpc
+        # Set xyz
+        xyz = np.zeros((3,r.size))
+        xyz[2, :] = r
+        #
+        dr = r[1] - r[0]
+        Mass_unnorm = 4 * np.pi * np.sum(r**2 * self.rho_b(xyz)) * dr * u.kpc**3 # g * kpc**3 / cm**3
+        # Ratio
+        rtio = (Mass_unnorm/self.M_b).decompose().value
+        self.rhoV = self.rhoV.cgs/rtio
+        #
+        print("rhoV normalized to {} to give M_b={}".format((self.rhoV/const.m_p).cgs,
+                                                            self.M_b.to('Msun')))
+
+    def rho_b(self, xyz):
+        radius = np.sqrt(rad3d2(xyz))
+        x = radius/self.Rs.to('kpc').value
+        #
+        rho = self.rhoV * (1+ (3.7/x)*np.log(1+x) - (3.7/self.Cc) * np.log(1+self.Cc))**(3/2)
+        if self.debug:
+            pdb.set_trace()
+        #
+        return rho

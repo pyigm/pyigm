@@ -9,8 +9,16 @@ import numpy as np
 from numpy.random import rand
 
 from astropy import units as u
+from astropy import constants
 
 from ..models import ModifiedNFW
+from ..models import MB04
+
+
+def test_MB04():
+    mb04 = MB04()
+    #mb04.debug=True
+    ne = mb04.ne((0.,0.,20.))
 
 
 def test_modified_NFW():
@@ -19,7 +27,7 @@ def test_modified_NFW():
     # xyz
     xyz = (1-2*rand(3, 100)) * 100
     # rho
-    rho = mNFW.rho(xyz)
+    rho = mNFW.rho_b(xyz)
     assert rho.size == 100
     assert rho.unit == u.g/u.cm**3
     # nH
@@ -27,7 +35,7 @@ def test_modified_NFW():
     assert rho.size == 100
     xyz0 = [100., 0., 0.]
     nH0 = mNFW.nH(xyz0)
-    assert np.isclose(nH0, 0.00025117200064614744, rtol=1e-3)
+    assert np.isclose(nH0, 0.000279, rtol=1e-3)
     # ne
     ne = mNFW.ne(xyz)
     assert np.all(ne > nH)
