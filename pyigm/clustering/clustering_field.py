@@ -3,12 +3,17 @@
 from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
-from scipy.ndimage import gaussian_filter as gf
+import pdb
+
+from astropy.table import Table
+from astropy.coordinates import SkyCoord
+from astropy.cosmology import Planck15
 
 from linetools import utils as ltu
 
 from pyigm.field.igmfield import IgmGalaxyField
 from pyigm.clustering.xcorr_utils import spline_sensitivity, random_gal, auto_pairs_rt, cross_pairs_rt
+from pyigm.clustering.xcorr_utils import random_abs_zmnx
 
 
 class ClusteringField(IgmGalaxyField):
@@ -20,6 +25,7 @@ class ClusteringField(IgmGalaxyField):
     Input parameters:
     ---
     radec : coordinate
+      Sets self.coord (in IgmGalaxyfield)
     absreal:   catalog of real absorption lines (numpy rec array). It has to have
                dtype.names RA,DEC,ZABS,LOGN,B
     galreal:   catalog of real galaxies (numpy rec array). It has to have
@@ -29,8 +35,8 @@ class ClusteringField(IgmGalaxyField):
     er:        numpy array with the QSO spectrum error (it can be normalized
                or not, but has to be consistent with fl)
     R:         resolution of the QSO spectrum spectrograph
-    Ngal_rand: number of random galaxies per real one that will be created.
-    Nabs_rand: number of random absorbers per real one that will be created.
+    igal_rand: number of random galaxies per real one that will be created.
+    iabs_rand: number of random absorbers per real one that will be created.
     proper:    calculates everything in physical Mpc rather than co-moving (Boolean).
     wrapped : bool, optional
       Whether to wrap the pair counts along the line of sight to increase counts
@@ -50,16 +56,21 @@ class ClusteringField(IgmGalaxyField):
     implemented plots that are useful.
 
     """
-    def __init__(self, radec, Ngal_rand=10, Nabs_rand=100, proper=False, field_name='',
-                 wrapped=True, **kwargs):
+    def __init__(self, radec, igal_rand=10, iabs_rand=100, proper=False, field_name='',
+                 wrapped=True, cosmo=None, **kwargs):
 
         IgmGalaxyField.__init__(self, radec, **kwargs)
 
-        self.Ngal_rand = Ngal_rand  # Ngal_rand x len(galreal) = NRANDOM (Gal)
-        self.Nabs_rand = Nabs_rand  # Nabs_rand x len(absreal) = NRANDOM (Abs)
+        self.igal_rand = igal_rand
+        self.iabs_rand = iabs_rand
 
         self.absreal = None # absreal  # np rec array with absorber properties (single ion)
-        #self.absrand = random_abs(self.absreal, self.Nabs_rand, wa, fl, er, R=R)
+        self.absrand = None
+
+        # Cosmology
+        if cosmo is None:
+            cosmo = Planck15
+        self.cosmo = cosmo
 
         # Central coordiantes
         self.CRA = self.coord.ra.value #np.mean(self.absreal.RA)
@@ -73,9 +84,39 @@ class ClusteringField(IgmGalaxyField):
         self.wrapped = wrapped
 
         self.galreal = None # Filled with addGal
+        self.absreal = None # Filled with addAbs
+        self.ion = None
+
+    @property
+    def Ngal(self):
+        if self.galreal is None:
+            return 0
+        else:
+            return len(self.galreal)
+
+    @property
+    def Ngal_rand(self):
+        if self.galrand is None:
+            return 0
+        else:
+            return len(self.galrand)
+
+    @property
+    def Nabs(self):
+        if self.absreal is None:
+            return 0
+        else:
+            return len(self.absreal)
+
+    @property
+    def Nabs_rand(self):
+        if self.absrand is None:
+            return 0
+        else:
+            return len(self.absrand)
 
     def addGal(self, gal_idx, mag_clm='MAG', z_clm='ZGAL', sens_galaxies=None,
-               magbins=None, SPL=None):
+               magbins=None, SPL=None, Rcom_max=None, debug=False, tbinedges=None):
         """ Adds a set of galaxies for clustering analysis from the main astropy Table
 
         A random sample is also generated
@@ -95,6 +136,10 @@ class ClusteringField(IgmGalaxyField):
         magbins : ndarray (optional)
         SPL : dict (optional)
           Contains the sensitivity function (CubicSpline's)
+        Rcom_max : float, optional
+          Maximum comoving separation of the survey in Mpc
+        tbinedges : ndarray
+          Only used for debug=True
 
         Returns
         -------
@@ -120,20 +165,83 @@ class ClusteringField(IgmGalaxyField):
         if (SPL is None) or (magbins is None):
             magbins, _, SPL = spline_sensitivity(sens_galaxies)
         # Randoms
-        rgal = random_gal(galnew, self.Ngal_rand, magbins, SPL)
+        galnewrand = random_gal(galnew, self.igal_rand, magbins, SPL)
+
+        # Cut on Rcom_max?
+        if Rcom_max is not None:
+            rcoord = SkyCoord(ra=galnewrand.RA, dec=galnewrand.DEC, unit='deg')
+            angsep = self.coord.separation(rcoord)
+            # R comoving
+            Rcom = self.cosmo.kpc_comoving_per_arcmin(galnewrand.ZGAL) * angsep.to('arcmin')
+            # Cut
+            goodr = Rcom.to('Mpc').value < Rcom_max
+            galnewrand = galnewrand[goodr]
+        if debug:
+            gcoord = SkyCoord(ra=galnew.RA, dec=galnew.DEC, unit='deg')
+            gangsep = self.coord.separation(gcoord)
+            gRcom = self.cosmo.kpc_comoving_per_arcmin(galnew.ZGAL) * gangsep.to('arcmin')
+            faintR = galnewrand.MAG > 19.
+            faintg = galnew.MAG > 19.
+            #
+            from matplotlib import pyplot as plt
+            import matplotlib.gridspec as gridspec
+            plt.clf()
+            if True:
+                gs = gridspec.GridSpec(2,1)
+                ax = plt.subplot(gs[0])
+                ax.hist(gRcom[~faintg], color='k', bins=tbinedges, normed=1, label='DD', fill=False)
+                ax.hist(Rcom[goodr][~faintR], edgecolor='red', bins=tbinedges, normed=1, label='RR', fill=False)
+                # Faint
+                ax = plt.subplot(gs[1])
+                ax.hist(gRcom[faintg], color='k', bins=tbinedges, normed=1, label='DD', fill=False)
+                ax.hist(Rcom[goodr][faintR], edgecolor='red', bins=tbinedges, normed=1, label='RR', fill=False)
+                ax.set_ylabel('Faint')
+                ax.set_xlabel('Rcom (Mpc)')
+            else:
+                ax = plt.gca()
+                zbins = np.arange(0., 0.8, 0.025)
+                ax.hist(galnew.ZGAL[faintg], color='k', bins=zbins, normed=1, label='DD', fill=False)
+                ax.hist(galnewrand.ZGAL[faintR], edgecolor='red', bins=zbins, normed=1, label='RR', fill=False)
+                ax.set_xlabel('zGAL')
+            plt.show()
 
         # Load me up
         if self.galreal is None:
             self.galreal = galnew  # np rec array with galaxy properties
-            self.galrand = rgal
+            self.galrand = galnewrand
         else:
             galnew = galnew.astype(self.galreal.dtype)
             self.galreal = np.append(self.galreal, galnew)
             self.galreal = np.rec.array(self.galreal)
-            self.galrand = np.append(self.galrand, rgal)
+            self.galrand = np.append(self.galrand, galnewrand)
             self.galrand = np.rec.array(self.galrand)
 
-    def compute_pairs(self, tbinedges, rbinedges):
+
+    def addAbs(self, abs_input, zmnx, wrest, z_clm='ZABS'):
+        # Convert to rec array, if need be
+        if isinstance(abs_input, Table):
+            # Rename any columns here
+            abs_input.rename_column(z_clm,'ZABS')
+            absnew = abs_input.as_array().view(np.recarray)
+        else:  # Assuming rec array (what else would it be?)
+            absnew = abs_input
+
+        # Randoms
+        absrand = random_abs_zmnx(absnew, self.iabs_rand, zmnx, wrest)
+
+
+        if self.absreal is None:
+            self.absreal = absnew  # np rec array with galaxy properties
+            self.absrand = absrand
+        else:
+            absnew = absnew.astype(self.absreal.dtype)
+            self.absreal = np.append(self.absreal, absnew)
+            self.absreal = np.rec.array(self.absreal)
+            self.absrand = np.append(self.absrand, absrand)
+            self.absrand = np.rec.array(self.absrand)
+
+
+    def compute_pairs(self, tbinedges, rbinedges, debug=False):
         """Computes relevant pairs dependent on what has been loaded
         into the object (i.e. galaxies, absorbers, galaxy-absorbers)
 
@@ -169,23 +277,22 @@ class ClusteringField(IgmGalaxyField):
             self.XYZ_abs()
             if self.proper:
                 self.XYZ_proper()
+            # Auto
             self.DaDa = auto_pairs_rt(self.xa, self.ya, self.za, rbinedges, tbinedges, wrap=self.wrapped)
             self.RaRa = auto_pairs_rt(self.xar, self.yar, self.zar, rbinedges, tbinedges, wrap=self.wrapped)
             self.DaRa = cross_pairs_rt(self.xa, self.ya, self.za, self.xar, self.yar, self.zar, rbinedges, tbinedges,
                                        wrapped=self.wrapped)
+            #
+            if self.galreal is not None:
+                self.DaDg = cross_pairs_rt(self.xa, self.ya, self.za, self.xg, self.yg, self.zg, rbinedges, tbinedges,
+                                           wrapped=self.wrapped, debug=debug)
 
-
-            '''
-            self.DaDg = cross_pairs_rt(self.xa, self.ya, self.za, self.xg, self.yg, self.zg, rbinedges, tbinedges,
-                                       wrapped=wrapped)
-
-            self.DaRg = cross_pairs_rt(self.xa, self.ya, self.za, self.xgr, self.ygr, self.zgr, rbinedges, tbinedges,
-                                       wrapped=wrapped)
-            self.RaRg = cross_pairs_rt(self.xar, self.yar, self.zar, self.xgr, self.ygr, self.zgr, rbinedges, tbinedges,
-                                       wrapped=wrapped)
-            self.RaDg = cross_pairs_rt(self.xar, self.yar, self.zar, self.xg, self.yg, self.zg, rbinedges, tbinedges,
-                                       wrapped=wrapped)
-            '''
+                self.DaRg = cross_pairs_rt(self.xa, self.ya, self.za, self.xgr, self.ygr, self.zgr, rbinedges, tbinedges,
+                                           wrapped=self.wrapped)
+                self.RaRg = cross_pairs_rt(self.xar, self.yar, self.zar, self.xgr, self.ygr, self.zgr, rbinedges, tbinedges,
+                                           wrapped=self.wrapped)
+                self.RaDg = cross_pairs_rt(self.xar, self.yar, self.zar, self.xg, self.yg, self.zg, rbinedges, tbinedges,
+                                           wrapped=self.wrapped)
 
     def XYZ_gal(self):
         """Calculates X,Y,Z coordinates for the galaxies, real and random
@@ -273,7 +380,9 @@ class ClusteringField(IgmGalaxyField):
             self.__class__.__name__,
             self.name)
 
-        if self.galreal is not None:
-            rstr += 'ngreal={:d} '.format(len(self.galreal))
+        rstr += 'ngreal={:d} '.format(self.Ngal)
+
+        if self.absreal is not None:
+            rstr += 'nareal={:d} '.format(len(self.absreal))
         rstr += '>'
         return rstr
