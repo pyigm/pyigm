@@ -5,10 +5,15 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 
 import numpy as np
 import pdb
+
 from scipy.special import hyp2f1
+from scipy.interpolate import interp1d
+
+from pkg_resources import resource_filename
 
 from astropy import units as u
 from astropy import constants as const
+from astropy.table import Table
 
 try:
     basestring
@@ -316,6 +321,53 @@ class MB04(ModifiedNFW):
         x = radius/self.Rs.to('kpc').value
         #
         rho = self.rhoV * (1+ (3.7/x)*np.log(1+x) - (3.7/self.Cc) * np.log(1+self.Cc))**(3/2)
+        if self.debug:
+            pdb.set_trace()
+        #
+        return rho
+
+
+class YF17(ModifiedNFW):
+    def __init__(self, log_Mhalo=12.2, c=7.67, f_hot=0.75, **kwargs):
+
+        # Init ModifiedNFW
+        ModifiedNFW.__init__(self, log_Mhalo=log_Mhalo, c=c, f_hot=f_hot, **kwargs)
+
+        # Read
+        faerman_file = resource_filename('pyigm', '/data/CGM/Models/Faerman_2017_ApJ_835_52-density-full.txt')
+        self.yf17 = Table.read(faerman_file, format='ascii.cds')
+        self.yf17['nH'] = self.yf17['nHhot'] + self.yf17['nHwarm']
+
+        # For development
+        self.debug=False
+
+        # Setup
+        self.rhoN = const.m_p/u.cm**3
+        self.setup()
+
+    def setup(self):
+        # Setup Interpolation
+        self.yf17_interp = interp1d(self.yf17['Radius'], self.yf17['nH'], kind='cubic', bounds_error=False, fill_value=0.)
+
+        # Set rhoN to match expected baryon mass
+        r = np.linspace(1., self.r200.to('kpc').value, 1000)  # kpc
+        # Set xyz
+        xyz = np.zeros((3,r.size))
+        xyz[2, :] = r
+        #
+        dr = r[1] - r[0]
+        Mass_unnorm = 4 * np.pi * np.sum(r**2 * self.rho_b(xyz)) * dr * u.kpc**3 # g * kpc**3 / cm**3
+        # Ratio
+        rtio = (Mass_unnorm/self.M_b).decompose().value
+        self.rhoN = self.rhoN.cgs/rtio
+        #
+        print("rhoN normalized to {} to give M_b={}".format((self.rhoN/const.m_p).cgs,
+                                                            self.M_b.to('Msun')))
+
+    def rho_b(self, xyz):
+        radius = np.sqrt(rad3d2(xyz))
+        #
+        rho = self.rhoN * self.yf17_interp(radius)
         if self.debug:
             pdb.set_trace()
         #

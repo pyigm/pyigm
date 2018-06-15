@@ -13,11 +13,15 @@ from astropy import constants
 
 from ..models import ModifiedNFW
 from ..models import MB04
+from ..models import YF17
 
+
+def test_YF17():
+    yf17 = YF17()
+    ne = yf17.ne((0.,0.,20.))
 
 def test_MB04():
     mb04 = MB04()
-    #mb04.debug=True
     ne = mb04.ne((0.,0.,20.))
 
 
