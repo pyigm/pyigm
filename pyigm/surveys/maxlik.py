@@ -6,8 +6,11 @@ import pdb
 
 import numpy as np
 
+from scipy.interpolate import interp1d
+from scipy.stats import kstest
 
-def powerlaw_loxz(lls, z_gz, gz, guess, zpivot, rnga=(-0.5,0.5), rngl=(-0.2,0.1), ngrid=100):
+
+def powerlaw_loxz(lls_zabs, z_gz, gz, guess, zpivot, rnga=(-0.5,0.5), rngl=(-0.2,0.1), ngrid=100):
     """
 
     Ported from SDSS LLS paper
@@ -15,7 +18,7 @@ def powerlaw_loxz(lls, z_gz, gz, guess, zpivot, rnga=(-0.5,0.5), rngl=(-0.2,0.1)
 
     Parameters
     ----------
-    lls
+    lls_zabs
     z_gz
     gz
     guess
@@ -26,6 +29,12 @@ def powerlaw_loxz(lls, z_gz, gz, guess, zpivot, rnga=(-0.5,0.5), rngl=(-0.2,0.1)
 
     Returns
     -------
+    lik : ndarray
+     Normmalized likelihood function
+    lvec : ndarray
+     l* values for the grid
+    avec : ndarray
+     alpha values for the grid
 
     """
 
@@ -38,14 +47,14 @@ def powerlaw_loxz(lls, z_gz, gz, guess, zpivot, rnga=(-0.5,0.5), rngl=(-0.2,0.1)
     #;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
     #;; Evaluate z_i and sum
-    zi_nrm = (1+lls['zabs'])/(1+zpivot)
+    zi_nrm = (1+lls_zabs)/(1+zpivot)
     sum_lnzi = np.sum(np.log(zi_nrm))
 
     #;; Weight by alpha
     asum_zi = avec * sum_lnzi
 
     #;; lvec sum is trivial
-    nLLS = len(lls)
+    nLLS = len(lls_zabs)
     lterm = nLLS * np.log(lvec)
 
     #;; Make the grids and add
@@ -94,5 +103,84 @@ def powerlaw_loxz(lls, z_gz, gz, guess, zpivot, rnga=(-0.5,0.5), rngl=(-0.2,0.1)
     
     # Return
     return lik, lvec, avec
+
+
+def cl_indices(lnL, cl, sigma=False):
+    """ Find the indices of a log-Likelihood grid encompassing a
+    given confidence interval
+
+    Parameters:
+      lnL: np.array
+        log-Likelihood image
+      sigma: bool, optional
+        Return as sigma values [not implemented]
+
+    Returns:
+      indices: Tuple of np.where output
+    """
+    # Max
+    mxL = np.max(lnL)
+
+    # Noramlize and flatten
+    norm_img = lnL-mxL
+    flat_img = norm_img.flatten()
+
+    # Sort
+    srt = np.argsort(flat_img)
+    norm_lnL = flat_img[srt]
+
+    # Sum
+    cumulsum = np.cumsum(np.exp(np.maximum(norm_lnL,-15.)))
+    cumul = cumulsum/cumulsum[-1]
+
+    # Interpolation (smoothing a bit)
+    fsum = interp1d(norm_lnL, cumul)
+
+    # Finish
+    indices = np.where(fsum(norm_img) > (1-cl))
+
+    # Return
+    return indices
+
+def powerlaw_ks(lls_zabs, z_gz, gz, lstar, alpha, zpivot):
+    """
+    Perform a KS test on the LLS zabs distribution vs. that
+    predicted from the l(z) power-law model
+
+    Parameters
+    ----------
+    lls_zabs
+    z_gz
+    gz
+    lstar
+    alpha
+    zpivot
+
+    Returns
+    -------
+    D : float
+    p_value : float
+
+    """
+    # Generate model zabs distribution
+    lz = lstar * ((1+z_gz)/(1+zpivot))**alpha
+
+    # Evaluate with g(z)
+    dz = z_gz[1]-z_gz[0]
+    nLLS_z = lz * gz * dz
+
+    # Build CDF
+    cdf = np.cumsum(nLLS_z)
+    cdf /= cdf[-1]
+    cdf_interp = interp1d(z_gz, cdf)
+    def wrap_cdf(z):
+        return cdf_interp(z)
+
+    # KS Test
+    D, p_value = kstest(lls_zabs, wrap_cdf)
+
+    # Return
+    return D, p_value
+
 
 
