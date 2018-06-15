@@ -126,9 +126,11 @@ def lyman_limit(fN_model, z912, zem, N_eval=5000, N_zeval=100, cosmo=None, debug
     return zval, teff_LL
 
 
-def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
+def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0,
+             N_eval=5000,
              bval=24., cosmo=None, debug=False, cumul=None,
-             verbose=False, EW_spline=None, wrest=None):
+             verbose=False, EW_spline=None, wrest=None,
+             speedup=False):
     """ tau effective from HI Lyman series absorption
 
     Parameters
@@ -171,11 +173,15 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
         else:
             cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
     # Lambda
-    if not isinstance(ilambda, float):
-        raise ValueError('tau_eff: ilambda must be a float for now')
-    Lambda = ilambda
-    if not isinstance(Lambda,u.quantity.Quantity):
-        Lambda = Lambda * u.AA # Ang
+    if not speedup:
+        if not isinstance(ilambda, float):
+            raise ValueError('tau_eff: ilambda must be a float for now')
+        Lambda = ilambda
+        if not isinstance(Lambda,u.quantity.Quantity):
+            Lambda = Lambda * u.AA # Ang
+    else:
+        Lambda = ilambda
+
 
     # Read in EW spline (if needed)
     if EW_spline is None:
@@ -189,10 +195,13 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
     # Lines
     if wrest is None:
         HI = LineList('HI')
-        wrest = u.Quantity(HI._data['wrest'])
+        wrest = u.Quantity(HI._data['wrest']).to('AA').value
 
     # Find the lines
-    gd_Lyman = wrest[(Lambda/(1+zem)) < wrest]
+    try:
+        gd_Lyman = wrest[(Lambda/(1+zem)) < wrest]
+    except:
+        pdb.set_trace()
     nlyman = len(gd_Lyman)
     if nlyman == 0:
         if verbose:
@@ -213,7 +222,7 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
     for qq, line in enumerate(gd_Lyman): # Would be great to do this in parallel...
                              # (Can pack together and should)
         # Redshift
-        zeval = ((Lambda / line) - 1).value
+        zeval = (Lambda / line) - 1
         if zeval < 0.:
             teff_lyman[qq] = 0.
             continue
@@ -221,13 +230,13 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0, N_eval=5000,
         dxdz = pyigmu.cosm_xz(zeval, cosmo=cosmo, flg_return=1)
 
         # Get EW values (could pack these all together)
-        idx = np.where(EW_spline['wrest']*u.AA == line)[0]
-        if len(idx) != 1:
-            raise ValueError('tau_eff: Line %g not included or over included?!' % line)
-        restEW = interpolate.splev(lgNval, EW_spline['tck'][idx[0]], der=0)
+        idx = EW_spline['index'][int(100*line)]
+        #if len(idx) != 1:
+        #    raise ValueError('tau_eff: Line %g not included or over included?!' % line)
+        restEW = interpolate.splev(lgNval, EW_spline['tck'][idx], der=0)
 
         # dz
-        dz = ((restEW*u.AA) * (1+zeval) / line).value
+        dz = (restEW) * (1+zeval) / line
 
         # Evaluate f(N,X) at zeval
         log_fnX = fN_model.evaluate(lgNval, zeval, cosmo=cosmo).flatten()
