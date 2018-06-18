@@ -244,16 +244,16 @@ class ModifiedNFW(CGMPhase):
         # Return
         return rho
 
-    def Ne_Rperp(self, Rperp, step_size=0.1*u.kpc, rmax=1., epsrel=1e-4,
-                 *arg, **kwargs):
+    def Ne_Rperp(self, Rperp, step_size=0.1*u.kpc, rmax=1.):
         """ Calculate N_H at an input impact parameter Rperp
+        Just a simple sum in steps of step_size
 
         Parameters
         ----------
         Rperp : Quantity
           Impact parameter, typically in kpc
         step_size : Quantity
-          Step size used for numerical integration
+          Step size used for numerical integration (sum)
         rmax : float
           Maximum radius for integration in units of r200
 
@@ -268,7 +268,7 @@ class ModifiedNFW(CGMPhase):
         if Rperp > rmax*self.r200:
             return 0. / u.cm**2
         # Generate a sightline to rvir
-        zmax = np.sqrt(self.r200 ** 2 - Rperp ** 2).to('kpc')
+        zmax = np.sqrt((rmax*self.r200) ** 2 - Rperp ** 2).to('kpc')
         zval = np.arange(-zmax.value, zmax.value+dz, dz)  # kpc
         # Set xyz
         xyz = np.zeros((3,zval.size))
