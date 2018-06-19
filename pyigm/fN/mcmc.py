@@ -122,7 +122,7 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1.):
             pdb.set_trace()
     elif flg == 5:
         if sources is None:
-            sources = ['Worseck+14', 'Crighton+15', 'Crighton+17', 'Becker+13']
+            sources = ['Worseck+14', 'Crighton+15', 'Crighton+18', 'Becker+13']
         chk_sources = sources[:]
 
         #all_fN_cs = FNConstraint.from_fitsfile([fn_file,k13r13_file,n12_file])
@@ -132,10 +132,10 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1.):
         fN_MFPb = FNConstraint('MFP', 4.86, ref='Worseck+14', flavor='\\lmfp', data=dict(MFP=15.1,SIG_MFP=1.8, COSM='VANILLA'))
         fN_MFPc = FNConstraint('MFP', 5.16, ref='Worseck+14', flavor='\\lmfp', data=dict(MFP=10.3,SIG_MFP=1.6, COSM='VANILLA'))
         fN_MFP = [fN_MFPa, fN_MFPb, fN_MFPc]
-        # LLS (Crighton+17)
-        fN_LLSa = FNConstraint('LLS', np.mean([3.75,4.40]), ref='Crighton+17', flavor='\\tlox', data=dict(LX=0.529,SIG_LX=0.073, TAU_LIM=2., COSM='VANILLA'))
-        fN_LLSb = FNConstraint('LLS', np.mean([4.40,4.70]), ref='Crighton+17', flavor='\\tlox', data=dict(LX=0.576,SIG_LX=0.090, TAU_LIM=2., COSM='VANILLA'))
-        fN_LLSc = FNConstraint('LLS', np.mean([4.70, 5.40]), ref='Crighton+17', flavor='\\tlox', data=dict(LX=0.637,SIG_LX=0.089, TAU_LIM=2., COSM='VANILLA'))
+        # LLS (Crighton+18)
+        fN_LLSa = FNConstraint('LLS', np.mean([3.75,4.40]), ref='Crighton+18', flavor='\\tlox', data=dict(LX=0.54,SIG_LX=0.10, TAU_LIM=2., COSM='VANILLA'))
+        fN_LLSb = FNConstraint('LLS', np.mean([4.40,4.70]), ref='Crighton+18', flavor='\\tlox', data=dict(LX=0.52,SIG_LX=0.11, TAU_LIM=2., COSM='VANILLA'))
+        fN_LLSc = FNConstraint('LLS', np.mean([4.70, 5.40]), ref='Crighton+18', flavor='\\tlox', data=dict(LX=0.67,SIG_LX=0.12, TAU_LIM=2., COSM='VANILLA'))
         fN_LLS = [fN_LLSa, fN_LLSb, fN_LLSc]
         # DLA (Crighton+15)
         tau_lim = 10.**(20.3-17.19)

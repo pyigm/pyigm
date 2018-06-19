@@ -177,8 +177,6 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0,
         if not isinstance(ilambda, float):
             raise ValueError('tau_eff: ilambda must be a float for now')
         Lambda = ilambda
-        if not isinstance(Lambda,u.quantity.Quantity):
-            Lambda = Lambda * u.AA # Ang
     else:
         Lambda = ilambda
 
@@ -191,6 +189,10 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0,
                 EW_spline = yaml.load(infile)  # dict from mk_ew_lyman_spline
         else:
             raise ValueError('tau_eff: Not ready for this bvalue %g' % bval)
+        # dict me for speed
+        EW_spline['index'] = {}
+        for kk,line in enumerate(EW_spline['wrest']):
+            EW_spline['index'][int(100*line)] = kk
 
     # Lines
     if wrest is None:
