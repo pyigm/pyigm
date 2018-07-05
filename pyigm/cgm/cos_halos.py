@@ -927,6 +927,8 @@ class COSDwarfs(COSHalos):
         if cdir is None:
             self.cdir = os.environ.get('COSHALOS_DATA')
             #self.cdir = os.environ.get('DROPBOX_DIR')+'/COS-Dwarfs/'
+        else:
+            self.cdir = cdir  ### need to define cdir
         if fits_path is None:
             self.fits_path = os.path.abspath(os.environ.get('DROPBOX_DIR')+'/COS-Dwarfs/Targets/FITS')
         else:
