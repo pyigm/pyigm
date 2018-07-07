@@ -6,16 +6,17 @@ import numpy as np
 import imp, glob
 import pdb
 import h5py
-import json
+
 try:
     from urllib2 import urlopen # Python 2.7
 except ImportError:
     from urllib.request import urlopen
 
+from pkg_resources import resource_filename
 
-from astropy.table import QTable, Column, Table
+from astropy.table import Column, Table
 from astropy import units as u
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import SkyCoord, match_coordinates_sky
 
 from linetools import utils as ltu
 
@@ -32,27 +33,31 @@ class LLSSurvey(IGMSurvey):
     """
 
     @classmethod
-    def load_HST_ACS(cls):
+    def load_HST_ACS(cls, tau_LL=2, sample='stat'):
         """ Load the LLS survey using HST/ACS by O'Meara et al. 2013, ApJ, 765, 137
 
         Parameters
         ----------
+        tau_LL : int, optional
+          Sets sample
+        sample : str, optional
 
         Returns
         -------
         lls_survey : IGMSurvey
         """
+        if tau_LL == 2:
+            NHI_cut = 17.49
         # LLS File
         lls_fil = pyigm_path+'/data/LLS/HST/lls_acs_stat_LLS.fits.gz'
-        lls = QTable.read(lls_fil)
+        lls = Table.read(lls_fil)
 
-        # Rename some columns?
-        lls.rename_column('QSO_RA', 'RA')
-        lls.rename_column('QSO_DEC', 'DEC')
 
         # Generate coords
-        scoords = [lls['RA'][ii]+' '+lls['DEC'][ii] for ii in range(len(lls))]
+        scoords = [lls['QSO_RA'][ii]+' '+lls['QSO_DEC'][ii] for ii in range(len(lls))]
         coords = SkyCoord(scoords, unit=(u.hourangle, u.deg))
+        lls['RA'] = coords.ra.value
+        lls['DEC'] = coords.dec.value
 
         # Read
         lls_survey = cls.from_sfits(lls, coords=coords)
@@ -60,46 +65,85 @@ class LLSSurvey(IGMSurvey):
 
         # QSOs file
         qsos_fil = pyigm_path+'/data/LLS/HST/lls_acs_qsos_sn1020.fits.gz'
-        qsos = QTable.read(qsos_fil)
+        qsos = Table.read(qsos_fil)
         lls_survey.sightlines = qsos
+
+        # Z_START, Z_END
+        #   Using tau=2
+        if tau_LL == 2:
+            lls_survey.sightlines['Z_START'] = np.maximum(qsos['ZT2'], qsos['ZLLS'][:,0])
+        else:
+            pdb.set_trace()
+        # zend
+        zend = ltu.z_from_dv(-3000*u.km/u.s*np.ones(len(qsos)),
+                             lls_survey.sightlines['ZEM'])
+        lls_survey.sightlines['Z_END'] = zend
+
+        # Stat me
+        mask = lls_stat(lls_survey, NHI_cut=NHI_cut)
+        if sample == 'stat':
+            lls_survey.mask = mask
+        else:
+            lls_survey.mask = ~mask
 
         # Return
         print('HST-ACS: Loaded')
         return lls_survey
 
     @classmethod
-    def load_HST_WFC3(cls):
+    def load_HST_WFC3(cls, tau_LL=2, sample='stat'):
         """ Load the LLS survey using HST/WFC3
 
         by O'Meara et al. 2013, ApJ, 765, 137
 
         Parameters
         ----------
+        tau_LL : int, optional
+          Sets sample
+        sample : str, optional
 
         Returns
         -------
         lls_survey : IGMSurvey
         """
+        if tau_LL == 2:
+            NHI_cut = 17.49
         # LLS File
         lls_fil = pyigm_path+'/data/LLS/HST/lls_wfc3_stat_LLS.fits.gz'
-        lls = QTable.read(lls_fil)
-
-        # Rename some columns?
-        lls.rename_column('QSO_RA', 'RA')
-        lls.rename_column('QSO_DEC', 'DEC')
+        lls = Table.read(lls_fil)
 
         # Generate coords
-        scoords = [lls['RA'][ii]+' '+lls['DEC'][ii] for ii in range(len(lls))]
+        scoords = [lls['QSO_RA'][ii]+' '+lls['QSO_DEC'][ii] for ii in range(len(lls))]
         coords = SkyCoord(scoords, unit=(u.hourangle, u.deg))
+        lls['RA'] = coords.ra.value
+        lls['DEC'] = coords.dec.value
 
         # Read
-        lls_survey = cls.from_sfits(lls)
+        lls_survey = cls.from_sfits(lls, coords=coords)
         lls_survey.ref = 'HST-WFC3'
 
         # QSOs file
         qsos_fil = pyigm_path+'/data/LLS/HST/lls_wfc3_qsos_sn1020.fits.gz'
-        qsos = QTable.read(qsos_fil)
+        qsos = Table.read(qsos_fil)
         lls_survey.sightlines = qsos
+
+        # Z_START, Z_END
+        #   Using tau=2
+        if tau_LL == 2:
+            lls_survey.sightlines['Z_START'] = np.maximum(qsos['ZT2'], qsos['ZLLS'][:,0])
+        else:
+            pdb.set_trace()
+        # zend
+        zend = ltu.z_from_dv(-3000*u.km/u.s*np.ones(len(qsos)),
+                             lls_survey.sightlines['ZEM'])
+        lls_survey.sightlines['Z_END'] = zend
+
+        # Stat me
+        mask = lls_stat(lls_survey, NHI_cut=NHI_cut)
+        if sample == 'stat':
+            lls_survey.mask = mask
+        else:
+            lls_survey.mask = ~mask
 
         # Return
         print('HST-WFC3: Loaded')
@@ -292,6 +336,66 @@ class LLSSurvey(IGMSurvey):
         return lls_survey
 
     @classmethod
+    def load_ribaudo(cls, tau_LL=2, sample='stat'):
+        """
+
+        Parameters
+        ----------
+        tau_LL : int, optional
+          Optical depth of the LLS
+        sample : str, optional
+
+        Returns
+        -------
+
+        """
+        # Load sightlines
+        qsos = Table.read(resource_filename('pyigm', 'data/LLS/Literature/ribaudo11_table3.txt'),
+                                            format='ascii')
+        qsos.rename_column('QSO_RA', 'RA')
+        qsos.rename_column('QSO_DEC', 'DEC')
+        qsos.rename_column('Z_EM', 'ZEM')
+        if tau_LL == 2:
+            qsos['Z_START'] = qsos['R2_ZMIN']
+            qsos['Z_END'] = qsos['R2_ZMAX']
+            cut = 'R2'
+        else:
+            pdb.set_trace()
+        assert len(np.unique(qsos['QSO_ID'])) == len(qsos)
+        # Load LLS
+        all_lls = Table.read(resource_filename('pyigm', 'data/LLS/Literature/ribaudo11_table4.txt'),
+                          format='ascii')
+        msk = np.zeros_like(all_lls, dtype=bool)
+
+        # Stat me
+        if sample == 'stat':
+            for kk,row in enumerate(all_lls):
+                if cut in row['SAMPLE']:
+                    msk[kk] = True
+            lls = all_lls[msk]
+        else:
+            lls = all_lls
+
+        # Grab coords
+        qso_dict = {}
+        for row in qsos:
+            qso_dict[row['QSO_ID']] = (row['RA'], row['DEC'])
+        ra, dec = [], []
+        for row in lls:
+            ra.append(qso_dict[row['QSO_ID']][0])
+            dec.append(qso_dict[row['QSO_ID']][1])
+        coords = SkyCoord(ra=ra, dec=dec, unit='deg')
+        lls['RA'] = ra
+        lls['DEC'] = dec
+
+        lls_survey = cls.from_sfits(lls, coords=coords)
+        lls_survey.ref = 'Ribaudo+11'
+        lls_survey.sightlines = qsos
+
+        # Finish
+        return lls_survey
+
+    @classmethod
     def load_SDSS_DR7(cls, sample='stat'):
         """ Load the LLS from the SDSS-DR7 survey (Prochaska+10, ApJ, 718, 391)
 
@@ -312,7 +416,7 @@ class LLSSurvey(IGMSurvey):
         # LLS File
         lls_fil = pyigm_path+'/data/LLS/SDSS/lls_dr7_stat_LLS.fits.gz'
         print('SDSS-DR7: Loading LLS file {:s}'.format(lls_fil))
-        lls = QTable.read(lls_fil)
+        lls = Table.read(lls_fil)
 
         # Rename some columns?
         lls.rename_column('QSO_RA', 'RA')
@@ -327,23 +431,37 @@ class LLSSurvey(IGMSurvey):
         # QSOs file
         qsos_fil = pyigm_path+'/data/LLS/SDSS/lls_dr7_qsos_sn2050.fits.gz'
         print('SDSS-DR7: Loading QSOs file {:s}'.format(qsos_fil))
-        qsos = QTable.read(qsos_fil)
+        qsos = Table.read(qsos_fil)
         lls_survey.sightlines = qsos
 
         # All?
         if sample == 'all':
             return lls_survey
 
-
         # Stat
         # z_em cut
         zem_min = 3.6
         lowz_q = qsos['ZEM'] < zem_min
         qsos['ZT2'][lowz_q] = 99.99
+        dz_start = 0.4
+
+        # Survey path
+        #   Using tau=2
+        lls_survey.sightlines['Z_START'] = np.maximum(qsos['ZT2'], qsos['ZLLS'])
+        # Maximum search
+        lls_survey.sightlines['Z_START'] = np.maximum(qsos['Z_START'], qsos['ZEM']-dz_start)
+        # Trim bad ones
+        bad_s = np.any([lls_survey.sightlines['Z_START'] <= 0.,
+                        lls_survey.sightlines['FLG_QSO'] != 0],axis=0)
+        lls_survey.sightlines['Z_START'][bad_s] = 99.99
+        # zend
+        zend = ltu.z_from_dv(-3000*u.km/u.s*np.ones(len(qsos)),
+                             lls_survey.sightlines['ZEM'])
+        lls_survey.sightlines['Z_END'] = zend
 
         # Generate mask
-        print('SDSS-DR7: Performing stats (~60s)')
-        mask = lls_stat(lls_survey, qsos)
+        print('SDSS-DR7: Performing stats')
+        mask = lls_stat(lls_survey)
         if sample == 'stat':
             lls_survey.mask = mask
         else:
@@ -382,8 +500,8 @@ class LLSSurvey(IGMSurvey):
         tab['RA'].unit = u.deg
         tab.rename_column('DEJ2000', 'DEC')
         tab['DEC'].unit = u.deg
-        tab.rename_column('zqso', 'Z_QSO')
-        tab.rename_column('zlls', 'Z_LLS')
+        tab.rename_column('zqso', 'ZEM')
+        tab.rename_column('zlls', 'ZLLS')
         tab.rename_column('zend', 'Z_START')  # F13 was opposite of POW10
         tab.rename_column('zstart', 'Z_END')  # F13 was opposite of POW10
 
@@ -398,17 +516,25 @@ class LLSSurvey(IGMSurvey):
             tab = tab[Clr]
 
         # Good LLS
-        lls = tab['Z_LLS'] >= tab['Z_START']
-        lls_tab = QTable(tab[lls])
-        nlls = np.sum(lls)
-        # Set NHI to 17.8 (tau>=2)
-        lls_tab.add_column(Column([17.8]*nlls, name='NHI'))
+        gdlls = tab['ZLLS'] >= tab['Z_START']
+        lls_tab = Table(tab[gdlls])
+        nlls = np.sum(gdlls)
+        # Set NHI to 17.5 (tau>=2)
+        lls_tab.add_column(Column([17.5]*nlls, name='NHI'))
         lls_tab.add_column(Column([99.9]*nlls, name='SIGNHI'))
+        lls_tab.rename_column('ZLLS', 'Z_LLS')
 
         # Generate survey
-        lls_survey = cls.from_sfits(lls_tab)
+        coords = SkyCoord(ra=lls_tab['RA'], dec=lls_tab['DEC'], unit='deg')
+        lls_survey = cls.from_sfits(lls_tab, coords=coords)
         lls_survey.ref = 'z3_MagE'
         lls_survey.sightlines = tab
+
+        if sample == 'all':
+            mask = np.ones(nlls, dtype=bool)
+        else:
+            mask = lls_stat(lls_survey, NHI_cut=17.49)
+        lls_survey.mask = mask
 
         return lls_survey
 
@@ -444,14 +570,13 @@ class LLSSurvey(IGMSurvey):
         return gdNHI, bdNHI
 
 
-def lls_stat(LLSs, qsos, vprox=3000.*u.km/u.s, maxdz=99.99,
-             zem_min=0., NHI_cut=17.5, flg_zsrch=0, dz_toler=0.04,
-             LLS_CUT=None, partial=False, prox=False):
+def lls_stat(LLSs, maxdz=99.99, zem_min=0., NHI_cut=17.5,
+             partial=False, prox=False):
     """ Identify the statistical LLS in a survey
 
     Parameters
     ----------
-    vprox
+    LLSs
     maxdz
     zem_min
     NHI_cut
@@ -467,58 +592,55 @@ def lls_stat(LLSs, qsos, vprox=3000.*u.km/u.s, maxdz=99.99,
     msk_smpl : bool array
       True = statistical
     """
+    qsos = LLSs.sightlines
 
     # Search redshift
-    if flg_zsrch == 0:
-        zsrch = qsos['ZT2']
-    elif flg_zsrch == 1:
-        zsrch = qsos['ZT1']
-    elif flg_zsrch == 2:
-        zsrch = qsos['ZT0']
     # Turn of LLS mask
     LLSs.mask = None
-    # Modify by LLS along QSO sightline as required
-    if LLS_CUT is not None:
-        pdb.set_trace()
-        #zsrch = zsrch > qsos.zlls[LLS_CUT]
 
     # LLS
     msk_smpl = LLSs.zem != LLSs.zem
-    zmax = ltu.z_from_dv(vprox*np.ones(len(qsos)), qsos['ZEM'].data)  # vprox must be array-like to be applied to each individual qsos['ZEM']
 
     # Make some lists
     lls_coord = LLSs.coords
-    lls_zem = LLSs.zem
-    lls_zabs = LLSs.zabs
-    qsos_coord = SkyCoord(ra=qsos['RA']*u.deg, dec=qsos['DEC']*u.deg)
+    qsos_coord = SkyCoord(ra=qsos['RA'], dec=qsos['DEC'], unit='deg')
 
-    for qq, zabs, zem, coord, NHI in zip(range(LLSs.nsys), LLSs.zabs, LLSs.zem, LLSs.coords, LLSs.NHI):
-        # Two LLS on one sightline?
+    # Match em
+    qidx, d2d, _ = match_coordinates_sky(lls_coord, qsos_coord, nthneighbor=1)
+    try:
+        assert np.min(d2d) < 3.6*u.arcsec  # Not sure why this value..
+    except:
+        pdb.set_trace()
+
+    for qq, zabs, zem, NHI in zip(range(LLSs.nsys), LLSs.zabs, LLSs.zem, LLSs.NHI):
+        idx = qidx[qq]
+
+        '''
         small_sep = coord.separation(lls_coord) < 3.6*u.arcsec
         close_zem = np.abs(zem-lls_zem) < 0.03
         close_zabs = np.abs(zabs-lls_zabs) < dz_toler
         if np.sum(small_sep & close_zem & close_zabs) != 1:
             raise ValueError("LLS are probably too close in z")
+        '''
 
         # Cut on NHI
         if partial & (NHI > NHI_cut):
             continue
-        if ~partial & (NHI <= NHI_cut):
+        if (~partial) & (NHI <= NHI_cut):
             continue
 
         # Match to QSO RA, DEC
-        idx = np.where( (coord.separation(qsos_coord) < 3.6*u.arcsec) &
-                        (np.abs(qsos['ZEM']-zem) < 0.03))[0]
-        if len(idx) != 1:
-            raise ValueError("Problem with matches")
+        try:
+            assert np.abs(qsos['ZEM'][idx]-zem) < 0.03
+        except:
+            pdb.set_trace()
 
         # Query redshift
-        if ((zsrch[idx] > 0.) &
-                (zabs > max(zsrch[idx], qsos['ZEM'][idx] - maxdz) - 1e-4) &
-                (qsos['ZEM'][idx] > zem_min)):
-            if (~prox) & (zabs < zmax[idx]):  #  Intervening
+        if (zabs > max(qsos['Z_START'][idx], qsos['Z_END'][idx] - maxdz) - 1e-4) & (
+                qsos['ZEM'][idx] > zem_min):
+            if (~prox) & (zabs < qsos['Z_END'][idx]):  #  Intervening
                 msk_smpl[qq] = True
-            if prox & (zabs >= zmax[idx]):  # Proximate
+            if prox & (zabs >= qsos['Z_END'][idx]):  # Proximate
                 msk_smpl[qq] = True
 
     # Return

@@ -3,15 +3,17 @@
 # TEST_UNICODE_LITERALS
 
 import numpy as np
-import glob, os, imp, pdb
+import glob, os, pdb
 import pytest
+
+from pkg_resources import resource_filename
 
 from pyigm.surveys.llssurvey import LLSSurvey
 from pyigm.surveys.lls_literature import load_lls_lit
 
 remote_data = pytest.mark.remote_data
 
-lt_path = imp.find_module('linetools')[1]
+lt_path = resource_filename('linetools', './')
 
 '''
 def data_path(filename):
@@ -34,6 +36,48 @@ def test_read_hdlls_dr1():   # This might actually be local now..
     assert len(gdCII) == 103
 
 
+def test_sdss():
+    """ Test SDSS DR7 -- This is very slow..
+    """
+    # All
+    sdss_dr7_all = LLSSurvey.load_SDSS_DR7(sample='all')
+    assert sdss_dr7_all.nsys == 1935
+    # Stat
+    sdss_dr7_stat = LLSSurvey.load_SDSS_DR7()
+    assert len(sdss_dr7_stat.NHI) == 191
+    #
+    z_bins = np.array([3.5, 3.65, 3.9, 4.1, 4.4])
+    lz, sig_lz_low, sig_lz_up = sdss_dr7_stat.binned_loz(
+        z_bins, NHI_mnx=(17.49,23.))
+
+def test_z3mage():
+    """ Test z~3 MagE
+    """
+    # All
+    z3mage = LLSSurvey.load_mage_z3()
+    assert z3mage.nsys == 60
+    assert len(z3mage.sightlines) == 105
+    # Non-Color
+    z3mage_NC = LLSSurvey.load_mage_z3(sample='non-color')
+    assert z3mage_NC.nsys == 27
+    assert len(z3mage_NC.sightlines) == 61
+    # Stats
+    lz, sig_lz_low, sig_lz_up = z3mage_NC.binned_loz(
+        [2.6, 3.], NHI_mnx=(17.49,23.))
+    assert np.isclose(lz[0], 1.20521669)
+
+
+def test_load_ribaudo11():
+    ribaudo11 = LLSSurvey.load_ribaudo()
+    z, gz = ribaudo13.calculate_gz()
+    assert gz[0] == 1
+    assert gz[-1] == 3
+    assert ribaudo11.nsys == 50
+    # Stats
+    lz, sig_lz_low, sig_lz_up = ribaudo11.binned_loz(
+        [0.242, 1.078, 1.544, 1.947], NHI_mnx=(17.49,23.))
+
+
 def test_dat_list():
     """JXP format :: Likely to be Deprecated
     """
@@ -48,15 +92,6 @@ def test_dat_list():
     assert lls.nsys == 164
 
 
-def test_sdss():
-    """ Test SDSS DR7 -- This is very slow..
-    """
-    # All
-    sdss_dr7_all = LLSSurvey.load_SDSS_DR7(sample='all')
-    assert sdss_dr7_all.nsys == 1935
-    # Stat
-    sdss_dr7_stat = LLSSurvey.load_SDSS_DR7()
-    assert len(sdss_dr7_stat.NHI) == 254
 
 
 def test_hst():
@@ -64,29 +99,19 @@ def test_hst():
     """
     # ACS
     acs = LLSSurvey.load_HST_ACS()
-    assert acs.nsys == 34
+    assert acs.nsys == 9
     assert len(acs.sightlines) == 18
     # WFC3
     wfc3 = LLSSurvey.load_HST_WFC3()
-    assert wfc3.nsys == 91
+    #assert wfc3.nsys == 91
+    assert wfc3.nsys == 32  # Was 30.  I think the NHI = 17.49 mattered
     assert len(wfc3.sightlines) == 53
     # Combined
     HST_LLS = wfc3 + acs
-    assert HST_LLS.nsys == 125
+    #assert HST_LLS.nsys == 125
+    assert HST_LLS.nsys == 41 # Was 39
     assert len(HST_LLS.sightlines) == 71
 
-
-def test_z3mage():
-    """ Test z~3 MagE
-    """
-    # All
-    z3mage = LLSSurvey.load_mage_z3()
-    assert z3mage.nsys == 60
-    assert len(z3mage.sightlines) == 105
-    # Non-Color
-    z3mage_NC = LLSSurvey.load_mage_z3(sample='non-color')
-    assert z3mage_NC.nsys == 32
-    assert len(z3mage_NC.sightlines) == 61
 
 
 @remote_data
