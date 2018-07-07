@@ -67,14 +67,14 @@ def test_z3mage():
     assert np.isclose(lz[0], 1.20521669)
 
 
-def test_load_ribaudo13():
-    ribaudo13 = LLSSurvey.load_ribaudo()
+def test_load_ribaudo11():
+    ribaudo11 = LLSSurvey.load_ribaudo()
     z, gz = ribaudo13.calculate_gz()
     assert gz[0] == 1
     assert gz[-1] == 3
-    assert ribaudo13.nsys == 50
+    assert ribaudo11.nsys == 50
     # Stats
-    lz, sig_lz_low, sig_lz_up = ribaudo13.binned_loz(
+    lz, sig_lz_low, sig_lz_up = ribaudo11.binned_loz(
         [0.242, 1.078, 1.544, 1.947], NHI_mnx=(17.49,23.))
 
 
