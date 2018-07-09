@@ -389,7 +389,7 @@ class LLSSurvey(IGMSurvey):
         lls['DEC'] = dec
 
         lls_survey = cls.from_sfits(lls, coords=coords)
-        lls_survey.ref = 'Ribaudo+13'
+        lls_survey.ref = 'Ribaudo+11'
         lls_survey.sightlines = qsos
 
         # Finish
