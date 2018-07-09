@@ -144,10 +144,12 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1., orig=False,
                 if source == 'F13':
                     fN_LLS = FNConstraint('LLS', 2.8, ref='Fumagalli+13', flavor='\\tlox',
                                           data=dict(LX=0.33,SIG_LX=0.08, TAU_LIM=2., COSM='VANILLA'))
+                    fN_cs.append(fN_LLS)
+                    #
                     fN_MFP = FNConstraint('MFP', 3.0, ref='Fumagalli+13', flavor='\\lmfp',
                                           data=dict(MFP=100.,SIG_MFP=29, COSM='VANILLA'))
-                    fN_cs.append(fN_LLS)
                     fN_cs.append(fN_MFP)
+                    #
                     add_source.append(source)
                 elif source == 'B13':
                     fN_teff = load_becker13([2., 3.]) # Redshift range is somewhat arbitrary
