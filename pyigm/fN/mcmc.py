@@ -86,7 +86,8 @@ def load_becker13(zmnx, sigteff_boost=1.):
     # Return
     return fN_teff
 
-def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1., orig=False):
+def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1., orig=False,
+                cosmo=None):
     """ Load up f(N) data
 
     Parameters
@@ -162,15 +163,20 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1., orig=False)
         for source in sources:
             if source == 'P10':
                 sdss = llssurvey.LLSSurvey.load_SDSS_DR7()
+                sdss.cosmo = cosmo
+                #
                 z_bins = np.array([3.5, 3.65, 3.9])
                 lX, sig_lX_low, sig_lX_up = sdss.binned_lox(z_bins, NHI_mnx=(17.49,23.))
-                pdb.set_trace()
-                fN_LLS = FNConstraint('LLS', 2.8, ref='Fumagalli+13', flavor='\\tlox',
-                                      data=dict(LX=0.33,SIG_LX=0.08, TAU_LIM=2., COSM='VANILLA'))
-                fN_cs.append(fN_LLS)
+                for ii in range(len(lX)):
+                    zeval = np.mean(z_bins[ii:ii+2])
+                    fN_LLS = FNConstraint('LLS', zeval, ref='Prochaska+10', flavor='\\tlox',
+                                      data=dict(LX=lX[ii],
+                                                SIG_LX=np.mean([sig_lX_low[ii],sig_lX_up[ii]]),
+                                                TAU_LIM=2., COSM='VANILLA'))
+                    fN_cs.append(fN_LLS)
                 add_source.append(source)
             elif source == 'B13':
-                fN_teff = load_becker13([2., 3.]) # Redshift range is somewhat arbitrary
+                fN_teff = load_becker13([3., 4.]) # Redshift range is somewhat arbitrary
                 fN_cs += fN_teff
                 add_source.append(source)
     elif flg == 5:
