@@ -8,12 +8,8 @@ import numpy as np
 import warnings
 import pdb
 
-import theano.tensor as tt
-from theano.compile.ops import as_op
-
 from matplotlib import pyplot as plt
 
-import pymc3 as pm
 #import MCMC_errors
 
 from pkg_resources import resource_filename
@@ -24,6 +20,7 @@ from pyigm.fN import plots
 from pyigm.fN.fnmodel import FNModel
 from pyigm.fN.constraints import FNConstraint
 from pyigm.fN import tau_eff
+from pyigm.surveys import llssurvey
 
 from time import gmtime, strftime
 
@@ -71,8 +68,25 @@ def set_fn_model(flg=0, use_p14=False):
     #
     return sfN_model
 
+def load_becker13(zmnx, sigteff_boost=1.):
+    # tau_eff (Becker+13)
+    b13_tab2 = Table.read(resource_filename('pyigm','/data/teff/becker13_tab2.dat'), format='ascii')
+    fN_teff = []
+    gdrow = (b13_tab2['z'] > zmnx[0]) & (b13_tab2['z'] < zmnx[1])
+    for row in b13_tab2[gdrow]:
+        # calculate
+        teff = -1*np.log(row['F'])
+        sigteff = row['s(F)']/row['F']*sigteff_boost
+        # Generate
+        fN = FNConstraint('teff', row['z'], ref='Becker+13', flavor='\\tlya',
+                          data=dict(Z_TEFF=row['z'], TEFF=teff, SIG_TEFF=sigteff,
+                                    COSM='N/A', NHI_MNX=[11.,22.]))
+        # Append
+        fN_teff.append(fN)
+    # Return
+    return fN_teff
 
-def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1.):
+def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1., orig=False):
     """ Load up f(N) data
 
     Parameters
@@ -85,6 +99,8 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1.):
     extra_fNc : list, optional
     sigteff_boost : float, optional
       Boost the error in teff by this factor (it can be *too* constraining)
+    orig : bool, optional
+      Use the original list of P14
 
     Returns
     -------
@@ -94,6 +110,9 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1.):
     if flg == 2:
         if sources is None:
             sources = ['OPB07', 'OPW12', 'OPW13', 'K05', 'K13R13', 'N12']
+            if not orig:
+                sources += ['F13', 'B13']
+
 
         fn_file = resource_filename('pyigm', '/data/fN/fN_constraints_z2.5_vanilla.fits')
         k13r13_file = resource_filename('pyigm', '/data/fN/fN_constraints_K13R13_vanilla.fits')
@@ -118,8 +137,42 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1.):
                 sources.pop(idx)
 
         # Check that all the desired sources were used
+        add_source = []
         if len(sources) > 0:
+            for source in sources:
+                if source == 'F13':
+                    fN_LLS = FNConstraint('LLS', 2.8, ref='Fumagalli+13', flavor='\\tlox',
+                                          data=dict(LX=0.33,SIG_LX=0.08, TAU_LIM=2., COSM='VANILLA'))
+                    fN_MFP = FNConstraint('MFP', 3.0, ref='Fumagalli+13', flavor='\\lmfp',
+                                          data=dict(MFP=100.,SIG_MFP=29, COSM='VANILLA'))
+                    fN_cs.append(fN_LLS)
+                    fN_cs.append(fN_MFP)
+                    add_source.append(source)
+                elif source == 'B13':
+                    fN_teff = load_becker13([2., 3.]) # Redshift range is somewhat arbitrary
+                    fN_cs += fN_teff
+                    add_source.append(source)
+
+        if len(sources) != len(add_source):
             pdb.set_trace()
+    elif flg == 4:
+        if sources is None:
+            sources = ['P10', 'B13']
+        add_source = []
+        for source in sources:
+            if source == 'P10':
+                sdss = llssurvey.LLSSurvey.load_SDSS_DR7()
+                z_bins = np.array([3.5, 3.65, 3.9])
+                lX, sig_lX_low, sig_lX_up = sdss.binned_lox(z_bins, NHI_mnx=(17.49,23.))
+                pdb.set_trace()
+                fN_LLS = FNConstraint('LLS', 2.8, ref='Fumagalli+13', flavor='\\tlox',
+                                      data=dict(LX=0.33,SIG_LX=0.08, TAU_LIM=2., COSM='VANILLA'))
+                fN_cs.append(fN_LLS)
+                add_source.append(source)
+            elif source == 'B13':
+                fN_teff = load_becker13([2., 3.]) # Redshift range is somewhat arbitrary
+                fN_cs += fN_teff
+                add_source.append(source)
     elif flg == 5:
         if sources is None:
             sources = ['Worseck+14', 'Crighton+15', 'Crighton+18', 'Becker+13']
@@ -152,21 +205,8 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1.):
                                                         [20.425,  20.675,  21.075,  21.30,  21.8]])))
 
         fN_DLA = [fN_DLAa, fN_DLAb, fN_DLAc]
-        # tau_eff (Becker+13)
-        b13_tab2 = Table.read(resource_filename('pyigm','/data/teff/becker13_tab2.dat'), format='ascii')
-        fN_teff = []
-        for row in b13_tab2:
-            if row['z'] < 4.:
-                continue
-            # calculate
-            teff = -1*np.log(row['F'])
-            sigteff = row['s(F)']/row['F']*sigteff_boost
-            # Generate
-            fN = FNConstraint('teff', row['z'], ref='Becker+13', flavor='\\tlya',
-                              data=dict(Z_TEFF=row['z'], TEFF=teff, SIG_TEFF=sigteff,
-                                        COSM='N/A', NHI_MNX=[11.,22.]))
-            # Append
-            fN_teff.append(fN)
+        # teff
+        fN_teff = load_becker13([4., 99.], sigteff_boost=sigteff_boost)
         # Collate
         all_fN_cs = fN_MFP + fN_DLA + fN_teff + fN_LLS
 
@@ -259,267 +299,6 @@ def set_pymc_var(fN_model,lim=2., tauv=0.025):
     # Return
     return iparm
 
-
-def run_pymc3(fN_cs, fN_model, debug=False, ntune=200, nsample=2000, nburn=400,
-             cores=2, outfile=None, **kwargs):
-    """ Run the MCMC with the new pymc3
-
-    Parameters
-    ----------
-    fN_cs
-    fN_model
-    parm : list
-       pymc3 Priors
-    debug : bool, optional
-    nsample : int, optional
-      Number of steps
-    nburn : int, optional
-      Number of steps to burn (these are lost)
-
-
-    Returns
-    -------
-
-    """
-    nparm = len(fN_model.param['sply'])
-    if outfile is not None:
-        ext = outfile.split('.')[-1]
-        if ext != 'hdf5':
-            raise IOError("Outfile must have an hdf5 extension")
-        # Set up keywords
-        mcmc_kwargs = {}
-        mcmc_kwargs['db'] = str('hdf5')
-        mcmc_kwargs['dbmode'] = str('w')
-        mcmc_kwargs['dbname'] = str(outfile)
-
-    # Parse data and combine as warranted
-    flg_fN = 0
-    all_NHI = []
-    all_fN = []
-    all_sigfN = []
-    all_z = []
-    flg_teff = 0
-    teff = []
-    teff_inputs = []
-    sig_teff = []
-    flg_lX = 0
-    lX_inputs = []
-    lX = []
-    sig_lX = []
-    flg_MFP = 0
-    MFP_inputs = []
-    MFP = []
-    sig_MFP = []
-    for fN_c in fN_cs:
-        # Standard f(N)
-        if fN_c.fN_dtype == 'fN':
-            flg_fN += 1
-            ip = range(fN_c.data['NPT'])
-            val = np.where(fN_c.data['FN'][ip] > -90)[0]  # Deal with limits later
-            ipv = np.array(ip)[val]
-            # Append the NHI
-            NHI = np.median(fN_c.data['BINS'][:, ipv], 0)
-            all_NHI += list(NHI)
-            # Append the f(N)
-            all_fN += list(fN_c.data['FN'][ipv])
-            # Append the Error
-            fNerror = np.median(fN_c.data['SIG_FN'][:, ipv], 0)
-            all_sigfN += list(fNerror)
-            # Append zeval
-            for ii in range(len(ipv)):
-                all_z.append(fN_c.zeval)
-        elif fN_c.fN_dtype == 'teff':  # teff_Lya
-            flg_teff += 1
-            teff.append(float(fN_c.data['TEFF']))
-            SIGDA_LIMIT = 0.1  # Allows for systemtics and b-value uncertainty
-            sig_teff.append(np.max([fN_c.data['SIG_TEFF'], (SIGDA_LIMIT * teff[-1])]))
-            teff_zeval = float(fN_c.data['Z_TEFF'])
-            # Save input for later usage
-            teff_inputs.append((teff_zeval, fN_c.data['NHI_MNX'][0], fN_c.data['NHI_MNX'][1]))
-        elif fN_c.fN_dtype in ['l(X)', 'LLS', 'DLA']:  # l(X)
-            flg_lX += 1
-            lX.append(fN_c.data['LX'])
-            sig_lX.append(fN_c.data['SIG_LX'])
-            # Save input for later usage
-            lX_inputs.append((fN_c.zeval, fN_c.data['TAU_LIM']))
-        elif fN_c.fN_dtype == 'MFP':
-            flg_MFP += 1
-            MFP.append(fN_c.data['MFP'])
-            sig_MFP.append(fN_c.data['SIG_MFP'])
-            MFP_inputs.append(fN_c.zeval)
-            # warnings.warn("Skipping MFP for now")
-        else:
-            raise IOError("Not ready for fNConstraint of type {:s}".format(fN_c.fN_dtype))
-
-    #
-    if flg_fN:
-        fN_input = (np.array(all_NHI), np.array(all_z))
-
-    """
-    Generate the Models
-    """
-    if flg_fN:
-        @as_op(itypes=[tt.dscalar]*nparm, otypes=[tt.dvector])
-        def pymc3_fn_model_(*parm):
-            # Define f(N) model for PyMC
-            # Set parameters
-            fN_model.update_parameters(parm)
-            #
-            log_fNX = fN_model.evaluate(fN_input, None)
-            #
-            return log_fNX
-
-    if flg_teff:
-        # Load for speed up
-        import yaml
-        from astropy import units as u
-        from linetools.lists.linelist import LineList
-        EW_FIL = resource_filename('pyigm', '/data/fN/EW_SPLINE_b24.yml')
-        with open(EW_FIL, 'r') as infile:
-            EW_spline = yaml.load(infile)  # dict from mk_ew_lyman_spline
-        # More
-        HI = LineList('HI')
-        wrest = u.Quantity(HI._data['wrest'])
-
-        # Define teff model for PyMC
-        @as_op(itypes=[tt.dscalar]*nparm, otypes=[tt.dvector])
-        def pymc3_teff_model_(*parm):
-            # Set parameters
-            fN_model.update_parameters(parm)
-            # Calculate teff
-            model_teff = []
-            for teff_input in teff_inputs:
-                model_teff.append(tau_eff.lyman_ew(1215.6701 * (1 + teff_input[0]), teff_input[0] + 0.1,
-                                                   fN_model, NHI_MIN=teff_input[1], NHI_MAX=teff_input[2],
-                                                   EW_spline=EW_spline, wrest=wrest))
-            return np.array(model_teff)
-
-    '''
-    if flg_lX:
-        # Define l(X) model for PyMC
-        @pymc.deterministic(plot=False)
-        def pymc_lX_model(parm=parm):
-            # Set parameters
-            aparm = np.array([parm[i] for i in range(parm.size)])
-            fN_model.update_parameters(aparm)
-            # Calculate l(X)
-            model_lX = []
-            for lX_input in lX_inputs:
-                model_lX.append(fN_model.calculate_lox(lX_input[0], 17.19 + np.log10(lX_input[1]), 22.))
-            return np.array(model_lX)
-
-        pymc_list.append(pymc_lX_model)
-
-    if flg_MFP:
-        # Define l(X) model for PyMC
-        @pymc.deterministic(plot=False)
-        def pymc_MFP_model(parm=parm):
-            # Set parameters
-            aparm = np.array([parm[i] for i in range(parm.size)])
-            fN_model.update_parameters(aparm)
-            # Calculate MFP
-            model_MFP = []
-            for MFP_input in MFP_inputs:
-                # neval=100 speeds things up 2500x
-                # zmin=MFP_input-1. will *break* at z<3
-                model_MFP.append(fN_model.mfp(MFP_input, neval=1000, nzeval=300, zmin=MFP_input - 0.5).to('Mpc').value)
-            return np.array(model_MFP)
-
-        pymc_list.append(pymc_MFP_model)
-    '''
-
-    """
-    Generate the model and run
-    """
-    with pm.Model() as model:
-
-        # Set variables
-        #parm = set_pymc3_var(fN_model, sd=0.5)
-        sd = 0.5
-        parm = []
-        for ii in range(nparm):
-            nm = str('p') + str(ii)
-            # doc = str('SplinePointNHI_')+str(fN_model.pivots[ii])
-            # iparm = np.append(iparm, pymc.Uniform(nm, lower=fN_model.param[ii]-lim,
-            #                                    upper=fN_model.param[ii]+lim, doc=doc))
-            # iparm = np.append(iparm, pymc.Normal(nm, mu=fN_model.param['sply'][ii]*(1+rand[ii]), tau=1./0.025, doc=doc))
-            parm.append(pm.Normal(nm, mu=fN_model.param['sply'][ii], sd=sd))
-
-        # Define f(N) data for PyMC
-        if flg_fN:
-            fNvalue = np.array(all_fN)
-            #pymc3_fn_model = pymc3_fn_model_(parm[0], parm[1], parm[2], parm[3], parm[4] parm[5], parm[6])
-            pymc3_fn_model = pymc3_fn_model_(*parm)
-            # Data likelihood
-            pymc_fN_data = pm.Normal(str('fNdata'),
-                                     mu=pymc3_fn_model,
-                                     sd=np.array(all_sigfN),
-                                     observed=fNvalue)
-
-        # Define teff data for PyMC
-        '''
-        if flg_teff:
-            pymc3_teff_model = pymc3_teff_model_(*parm)
-            pymc_teff_data = pm.Normal(str('teffdata'),
-                                       mu=pymc3_teff_model,
-                                       sd=np.array(sig_teff),
-                                       observed=np.array(teff))
-        '''
-
-        '''
-        # Define l(X) model for PyMC
-        if flg_lX:
-            pymc_lls_data = pymc.Normal(str('lXdata'), mu=pymc_lX_model, tau=1.0 / np.array(sig_lX) ** 2,
-                                        value=np.array(lX), observed=True)
-            pymc_list.append(pymc_lls_data)
-
-        # Define MFP model for PyMC
-        if flg_MFP:
-            pymc_MFP_data = pymc.Normal(str('MFPdata'), mu=pymc_MFP_model, tau=1.0 / np.array(sig_MFP) ** 2,
-                                        value=np.array(MFP), observed=True)
-            pymc_list.append(pymc_MFP_data)
-        '''
-        """
-        RUN THE MCMC
-        """
-
-        '''
-        if outfile is not None:
-            MC = pymc.MCMC(pymc_list, **mcmc_kwargs)
-            # db=str('hdf5'), dbname=str(outfile), dbmode=str('w')) -- These are set above
-        else:
-            MC = pymc.MCMC(pymc_list)  # ,verbose=2)
-        # Force step method to be Metropolis!
-        for ss in MC.stochastics - MC.observed_stochastics:
-            MC.use_step_method(pymc.Metropolis, ss, proposal_sd=0.025, proposal_distribution='Normal')
-
-        # Run a total of 40000 samples, but ignore the first 10000.
-        # Verbose just prints some details to screen.
-        MC.sample(nsample, nburn, verbose=2, **kwargs)
-        '''
-        tr = pm.sample(1000, tune=ntune, cores=cores)
-    # Plot
-    pm.traceplot(tr);
-    plt.show()
-    # Summary
-    pm.summary(tr)
-
-    pdb.set_trace()
-
-    if debug:
-        pdb.set_trace()
-        # xifd.tst_fn_data(fN_model=fN_model)
-        # xdb.xhist(MC.trace(str('p0'))[:])
-        # xdb.set_trace()
-
-    # Draw a contour plot with 1 & 2 sigma errors
-    # MCMC_errors.draw_contours(MC, 'p0', 'p1')
-
-    # Save the individual distributions to a file to check convergence
-    # pymc.Matplot.plot(MC)
-    # xdb.set_trace()
-
-    return MC
 
 def run_pymc(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
         outfile=None, **kwargs):
