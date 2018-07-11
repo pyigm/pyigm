@@ -330,12 +330,12 @@ class ClusteringField(IgmGalaxyField):
         self.zgr = xyz[2]
 
     def XYZ_abs(self):
-        """Calculates X,Y,Z coordinates for the galaxies, real and random
+        """Calculates X,Y,Z coordinates for the absorbers, real and random
         from (RA,DEC,Z).
 
         Internals filled only:
-        xg,yg,zg
-        xgr,ygr,zgr
+        xa,ya,za
+        xar,yar,zar
         """
         from pyigm.clustering.coord_utils import radec_to_xyz
 
