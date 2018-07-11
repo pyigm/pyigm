@@ -9,6 +9,7 @@ import numpy as np
 from astropy import units as u
 
 from linetools.isgm import utils as ltiu
+from linetools.isgm import abssystem
 
 from pyigm.abssys.igmsys import IGMSystem
 from pyigm.abssys import utils as igmau
@@ -101,6 +102,8 @@ class DLASystem(IGMSystem):
         slf = cls(SkyCoord(idict['RA'], idict['DEC'], unit='deg'),
                   idict['zabs'], idict['vlim']*u.km/u.s, idict['NHI'],
                   **kwargs)
+        # Other
+        abssystem.add_other_from_dict(slf, idict)
         # Components
         components = ltiu.build_components_from_dict(idict, **kwargs)
         for component in components:
