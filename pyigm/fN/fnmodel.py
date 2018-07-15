@@ -509,11 +509,14 @@ class FNModel(object):
 
         # Find tau=1
         zt_interp = scii.interp1d(teff_LL, zval)
-        ztau1 = zt_interp(1.)  # Will probably break if 1 is not covered
+        if max(teff_LL) < 1.:
+            ztau1 = 0.
+        else:
+            ztau1 = zt_interp(1.)  # Will probably break if 1 is not covered
 
         # MFP
         mfp = np.fabs(cosmo.lookback_distance(ztau1) -
-                        cosmo.lookback_distance(zem))  # Mpc
+                    cosmo.lookback_distance(zem))  # Mpc
         # Return
         return mfp
 
