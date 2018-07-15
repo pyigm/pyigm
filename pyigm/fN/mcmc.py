@@ -199,11 +199,12 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1., orig=False,
         fN_LLSc = FNConstraint('LLS', np.mean([4.70, 5.40]), ref='Crighton+18', flavor='\\tlox', data=dict(LX=0.67,SIG_LX=0.12, TAU_LIM=2., COSM='VANILLA'))
         fN_LLS = [fN_LLSa, fN_LLSb, fN_LLSc]
         # DLA (Crighton+15)
-        tau_lim = 10.**(20.3-17.19)
-        fN_DLAa = FNConstraint('DLA', np.mean([3.56,4.45]), ref='Crighton+15', flavor='\\tdlox',
-                               data=dict(LX=0.059, SIG_LX=0.018, COSM='VANILLA', TAU_LIM=tau_lim))
-        fN_DLAb = FNConstraint('DLA', np.mean([4.45,5.31]), ref='Crighton+15', flavor='\\tdlox',
-                               data=dict(LX=0.095, SIG_LX=0.022, COSM='VANILLA', TAU_LIM=tau_lim))
+        #  THE FOLLOWING TWO ARE REDUNDANT
+        #tau_lim = 10.**(20.3-17.19)
+        #fN_DLAa = FNConstraint('DLA', np.mean([3.56,4.45]), ref='Crighton+15', flavor='\\tdlox',
+        #                       data=dict(LX=0.059, SIG_LX=0.018, COSM='VANILLA', TAU_LIM=tau_lim))
+        #fN_DLAb = FNConstraint('DLA', np.mean([4.45,5.31]), ref='Crighton+15', flavor='\\tdlox',
+        #                       data=dict(LX=0.095, SIG_LX=0.022, COSM='VANILLA', TAU_LIM=tau_lim))
         fN_DLAc = FNConstraint('fN', np.mean([3.6,5.2]), ref='Crighton+15', flavor='f(N)',
                                data=dict(COSM='VANILLA', NPT=5,
                                          FN=np.array([-22.1247392 , -22.12588672, -22.51361414, -22.7732822 , -23.76709909]),
@@ -212,7 +213,8 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1., orig=False,
                                          BINS=np.array([[20.3,  20.425,  20.675,  21.075,  21.30],
                                                         [20.425,  20.675,  21.075,  21.30,  21.8]])))
 
-        fN_DLA = [fN_DLAa, fN_DLAb, fN_DLAc]
+        #fN_DLA = [fN_DLAa, fN_DLAb, fN_DLAc]
+        fN_DLA = [fN_DLAc]
         # teff
         fN_teff = load_becker13([4., 99.], sigteff_boost=sigteff_boost)
         # Collate
