@@ -63,8 +63,8 @@ Usage
 
 When the LLS gui launches, you should begin by left clicking
 in the plot window.  This will activate plotting and key strokes
-(see below for the help message).   You should then refine the
-continuum ("C", "1", "2").
+(see below for the help message). Then press "#" to specify the model spec and to add a continuum.
+You should then refine the continuum ("C", "1", "2").
 
 From there, navigate to the LLS of interest, add a model ("A" or "F"),
 refine it and the continuum, etc.
