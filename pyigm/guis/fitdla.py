@@ -136,7 +136,10 @@ Q         : Quit the GUI
             spec = ispec
             spec_fil = spec.filename
         else:
-            spec, spec_fil = ltgu.read_spec(ispec)
+            kwargs = {}
+            kwargs['rsp_kwargs'] = {}
+            kwargs['rsp_kwargs']['masking'] = 'edges'
+            spec, spec_fil = ltgu.read_spec(ispec, norm=norm, **kwargs)
         self.spec = spec
 
 
@@ -366,7 +369,8 @@ Q         : Quit the GUI
         # Angstroms
         # should really make this a constant velocity width array instead.
         if not self.skip_wveval:
-            wa1 = np.arange(wa[0].value, wa[-1].value, self.dw) * wa.unit
+            #wa1 = np.arange(wa[0].value, wa[-1].value, self.dw) * wa.unit
+            wa1 = np.arange(self.full_model.wvmin.value, self.full_model.wvmax.value, self.dw) * wa.unit
         else:
             wa1 = wa
         #all_tau_model = igmlls.tau_multi_lls(wa1,
