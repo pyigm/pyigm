@@ -40,7 +40,7 @@ Analyzing DLA
 Here is now my preferred approach to searching for DLA:
 
 1.  Load up the spectrum.  Fiddle with the continuum
-
+#
 '''
 
 # GUI for fitting DLA in a spectrum

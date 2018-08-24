@@ -87,7 +87,7 @@ class XFitLLSGUI(QMainWindow):
     """
     def __init__(self, ispec, zqso, parent=None, lls_fit_file=None,
         outfil=None, smooth=3., fN_gamma=None, template=None,
-        dw=0.1, skip_wveval=False, coord=None):
+        dw=0.1, skip_wveval=False, coord=None, **kwargs):
         QMainWindow.__init__(self, parent)
         '''
         ispec : Spectrum1D or specfil
@@ -144,7 +144,7 @@ class XFitLLSGUI(QMainWindow):
             spec_fil = spec.filename
         else:
             # this is broken
-            spec, spec_fil = ltgu.read_spec(ispec)
+            spec, spec_fil = ltgu.read_spec(ispec, **kwargs)
 
 
         # LineList
@@ -186,7 +186,7 @@ class XFitLLSGUI(QMainWindow):
             self.spec_widg.continuum = self.continuum
 
         if self.model_spec < 0:
-            print("NOTE: You must specific the spectrum for fitting the LLS with # before modeling will begin")
+            print("NOTE: You must specify the spectrum for fitting the LLS with # before modeling will begin")
 
         if self.smooth is None:
             self.smooth = smooth
@@ -524,9 +524,10 @@ class XFitLLSGUI(QMainWindow):
             if idx is None:
                 return
             if event.key == 'L': #LLS
-                self.abssys_widg.all_abssys[idx].zabs = event.xdata/911.7633 - 1.
+                self.abssys_widg.all_abssys[idx].limits._z = event.xdata/911.7633 - 1.
+                #self.abssys_widg.all_abssys[idx].zabs = event.xdata/911.7633 - 1.
             elif event.key == 'a': #Lya
-                self.abssys_widg.all_abssys[idx].zabs = event.xdata/1215.6700-1.
+                self.abssys_widg.all_abssys[idx].limits._z = event.xdata/1215.6700-1.
             elif event.key == 'U': # Simply update the model
                 self.update_model()
             elif event.key == 'g': # Move nearest Lyman line to cursor
@@ -534,7 +535,8 @@ class XFitLLSGUI(QMainWindow):
                 awrest = np.array([iline.wrest.value for iline in self.abssys_widg.all_abssys[idx].lls_lines])
                 imn = np.argmin(np.abs(wrest-awrest))
                 newz = event.xdata/awrest[imn]-1.
-                self.abssys_widg.all_abssys[idx].zabs = newz
+                self.abssys_widg.all_abssys[idx].limits._z = newz
+                #self.abssys_widg.all_abssys[idx].zabs = newz
             elif event.key == 'M': # Move nearest line in line list (typically metal) to cursor
                 wrest = event.xdata/(1+self.abssys_widg.all_abssys[idx].zabs)
                 awrest = self.llist[self.llist['List']].wrest.value
