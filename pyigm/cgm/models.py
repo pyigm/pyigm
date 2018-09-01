@@ -15,11 +15,6 @@ from astropy import units as u
 from astropy import constants as const
 from astropy.table import Table
 
-try:
-    basestring
-except NameError:  # For Python 3
-    basestring = str
-
 def rad3d2(xyz):
     """ Calculate radius to x,y,z inputted
     Assumes the origin is 0,0,0
@@ -60,7 +55,7 @@ class CGMModel(object):
 
         """
         # Check
-        if not isinstance(key, basestring):
+        if not isinstance(key, str):
             raise IOError("Item must be str")
         # Try to access the dict
         try:
