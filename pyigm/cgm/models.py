@@ -14,6 +14,7 @@ from pkg_resources import resource_filename
 from astropy import units as u
 from astropy import constants as const
 from astropy.table import Table
+from astropy.coordinates import SkyCoord
 
 def rad3d2(xyz):
     """ Calculate radius to x,y,z inputted
@@ -323,7 +324,11 @@ class MB04(ModifiedNFW):
 
 
 class YF17(ModifiedNFW):
-    def __init__(self, log_Mhalo=12.2, c=7.67, f_hot=0.75, **kwargs):
+    """
+    Y. Faermen (2017) model of the Milky Way
+
+    """
+    def __init__(self, log_Mhalo=12.18, c=7.67, f_hot=0.75, **kwargs):
 
         # Init ModifiedNFW
         ModifiedNFW.__init__(self, log_Mhalo=log_Mhalo, c=c, f_hot=f_hot, **kwargs)
@@ -367,3 +372,34 @@ class YF17(ModifiedNFW):
             pdb.set_trace()
         #
         return rho
+
+
+class MilkyWay(ModifiedNFW):
+    """
+    JXP preferred model for the Galaxy
+
+    """
+    def __init__(self, log_Mhalo=12.18, c=7.67, f_hot=0.75, alpha=2, y0=2, **kwargs):
+
+        # Init ModifiedNFW
+        ModifiedNFW.__init__(self, log_Mhalo=log_Mhalo, c=c, f_hot=f_hot,
+                             alpha=alpha, y0=y0, **kwargs)
+
+
+class M31(ModifiedNFW):
+    """
+    JXP preferred model for M31
+
+    Taking mass from van der Marel 2012
+
+    """
+    def __init__(self, log_Mhalo=12.18, c=7.67, f_hot=0.75, alpha=2, y0=2, **kwargs):
+
+        # Init ModifiedNFW
+        ModifiedNFW.__init__(self, log_Mhalo=log_Mhalo, c=c, f_hot=f_hot,
+                             alpha=alpha, y0=y0, **kwargs)
+        # Position from Sun
+        rad = (23.708750 * u.degree, 30.912500 * u.degree)
+        self.coord = SkyCoord(ra=rad[0], dec=rad[1])
+        self.distance = 752 * u.kpc # (Riess, A.G., Fliri, J., & Valls - Gabaud, D. 2012, ApJ, 745, 156)
+
