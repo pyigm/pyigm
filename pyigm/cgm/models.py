@@ -400,6 +400,7 @@ class M31(ModifiedNFW):
                              alpha=alpha, y0=y0, **kwargs)
         # Position from Sun
         rad = (23.708750 * u.degree, 30.912500 * u.degree)
-        self.coord = SkyCoord(ra=rad[0], dec=rad[1])
         self.distance = 752 * u.kpc # (Riess, A.G., Fliri, J., & Valls - Gabaud, D. 2012, ApJ, 745, 156)
+        self.coord = SkyCoord('J004244.3+411609', unit=(u.hourangle, u.deg),
+                              distance=self.distance)
 
