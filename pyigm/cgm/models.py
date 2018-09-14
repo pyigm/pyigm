@@ -15,6 +15,7 @@ from astropy import units as u
 from astropy import constants as const
 from astropy.table import Table
 from astropy.coordinates import SkyCoord
+from astropy.utils import isiterable
 
 def rad3d2(xyz):
     """ Calculate radius to x,y,z inputted
@@ -130,6 +131,8 @@ class ModifiedNFW(CGMPhase):
         self.alpha = alpha
         self.y0 = y0
         self.f_hot = f_hot
+        self.zero_inner_ne = 0. # kpc
+
         # Init more
         self.setup_param()
 
@@ -198,6 +201,12 @@ class ModifiedNFW(CGMPhase):
 
         """
         ne = self.nH(xyz) * 1.1667
+        if self.zero_inner_ne > 0.:
+            if np.sum(xyz**2) < self.zero_inner_ne**2:
+                if isiterable(ne):
+                    return np.zeros_like(ne)
+                else:
+                    return 0.
         # Return
         return ne
 
