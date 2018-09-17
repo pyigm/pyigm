@@ -408,8 +408,95 @@ class M31(ModifiedNFW):
         ModifiedNFW.__init__(self, log_Mhalo=log_Mhalo, c=c, f_hot=f_hot,
                              alpha=alpha, y0=y0, **kwargs)
         # Position from Sun
-        rad = (23.708750 * u.degree, 30.912500 * u.degree)
         self.distance = 752 * u.kpc # (Riess, A.G., Fliri, J., & Valls - Gabaud, D. 2012, ApJ, 745, 156)
         self.coord = SkyCoord('J004244.3+411609', unit=(u.hourangle, u.deg),
                               distance=self.distance)
 
+
+class LMC(ModifiedNFW):
+    """
+    Preferred model for LMC
+
+    Taking data from D'Onghia & Fox ARAA 2016
+
+    """
+    def __init__(self, log_Mhalo=np.log10(1.7e10), c=7.67, f_hot=0.75, alpha=2, y0=2, **kwargs):
+
+        # Init ModifiedNFW
+        ModifiedNFW.__init__(self, log_Mhalo=log_Mhalo, c=c, f_hot=f_hot,
+                             alpha=alpha, y0=y0, **kwargs)
+        # Position from Sun
+        self.distance = 50 * u.kpc
+        self.coord = SkyCoord('J052334.6-694522', unit=(u.hourangle, u.deg),
+                              distance=self.distance)
+
+class SMC(ModifiedNFW):
+    """
+    Preferred model for SMC
+
+    Taking data from D'Onghia & Fox ARAA 2016
+
+    """
+    def __init__(self, log_Mhalo=np.log10(2.4e9), c=7.67, f_hot=0.75, alpha=2, y0=2, **kwargs):
+
+        # Init ModifiedNFW
+        ModifiedNFW.__init__(self, log_Mhalo=log_Mhalo, c=c, f_hot=f_hot,
+                             alpha=alpha, y0=y0, **kwargs)
+        # Position from Sun
+        self.distance = 61 * u.kpc
+        self.coord = SkyCoord('J005238.0-724801', unit=(u.hourangle, u.deg),
+                              distance=self.distance)
+
+class ICM(ModifiedNFW):
+    """
+    ICM model following Vikhilnin et al. 2006
+
+    """
+    def __init__(self, log_Mhalo=np.log10(5e14), c=3.5, f_hot=0.75, **kwargs):
+        # Init ModifiedNFW
+        ModifiedNFW.__init__(self, log_Mhalo=log_Mhalo, c=c, f_hot=f_hot, **kwargs)
+
+        # Using their values for A907
+        self.n0 = 6.252e-3 / u.cm**3
+        self.rc = 136.9 #* u.kpc
+        self.rs = 1887.1 #* u.kpc
+        self.alpha = 1.556
+        self.beta = 0.594
+        self.epsilon = 4.998
+        self.n02 = 0.
+
+        # Fixed
+        self.gamma = 3
+
+    def ne(self, xyz):
+        """
+
+        Parameters
+        ----------
+        xyz : ndarray
+          Coordinate(s) in kpc
+
+        Returns
+        -------
+        n_e : float or ndarray
+          electron density in cm**-3
+
+        """
+        radius = np.sqrt(rad3d2(xyz))
+
+        # This ignores the n02 term
+        npne = self.n0**2 * (radius/self.rc)**(-self.alpha) / (
+                (1+(radius/self.rc)**2)**(3*self.beta - self.alpha/2.)) * (1 /
+            (1+(radius/self.rs)**self.gamma)**(self.epsilon/self.gamma))
+        if self.n02 > 0:
+            pdb.set_trace()  # I didn't code this yet
+
+        ne = self.nH(xyz) * 1.1667
+        if self.zero_inner_ne > 0.:
+            if np.sum(xyz**2) < self.zero_inner_ne**2:
+                if isiterable(ne):
+                    return np.zeros_like(ne)
+                else:
+                    return 0.
+        # Return
+        return ne
