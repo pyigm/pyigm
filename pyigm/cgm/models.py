@@ -457,7 +457,7 @@ class ICM(ModifiedNFW):
         ModifiedNFW.__init__(self, log_Mhalo=log_Mhalo, c=c, f_hot=f_hot, **kwargs)
 
         # Using their values for A907
-        self.n0 = 6.252e-3 / u.cm**3
+        self.n0 = 6.252e-3 #/ u.cm**3
         self.rc = 136.9 #* u.kpc
         self.rs = 1887.1 #* u.kpc
         self.alpha = 1.556
@@ -491,12 +491,6 @@ class ICM(ModifiedNFW):
         if self.n02 > 0:
             pdb.set_trace()  # I didn't code this yet
 
-        ne = self.nH(xyz) * 1.1667
-        if self.zero_inner_ne > 0.:
-            if np.sum(xyz**2) < self.zero_inner_ne**2:
-                if isiterable(ne):
-                    return np.zeros_like(ne)
-                else:
-                    return 0.
+        ne = np.sqrt(npne / 1.1667)
         # Return
         return ne
