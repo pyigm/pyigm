@@ -451,12 +451,14 @@ class ICM(ModifiedNFW):
     """
     ICM model following Vikhilnin et al. 2006
 
+
     """
     def __init__(self, log_Mhalo=np.log10(5e14), c=3.5, f_hot=0.75, **kwargs):
         # Init ModifiedNFW
         ModifiedNFW.__init__(self, log_Mhalo=log_Mhalo, c=c, f_hot=f_hot, **kwargs)
 
         # Using their values for A907
+        #   I chose A1413 previously
         self.n0 = 6.252e-3 #/ u.cm**3
         self.rc = 136.9 #* u.kpc
         self.rs = 1887.1 #* u.kpc
