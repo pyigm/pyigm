@@ -568,7 +568,7 @@ class CGMAbsSurvey(object):
         """
         from astropy.table import Table
 
-        # The folowing line will fial if the first system is not populated..
+        # The folowing line will fail if the first system is not populated..
         keys = list(self.cgm_abs[0].igm_sys.kin[lbl].keys())
         clms = []
         for ii in range(len(keys)):
