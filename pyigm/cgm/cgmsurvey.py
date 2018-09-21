@@ -10,9 +10,14 @@ import json, io
 
 from pkg_resources import resource_filename
 
+from collections import OrderedDict
+
 from astropy.table import Table, Column
 from astropy.coordinates import SkyCoord
 from astropy import  units as u
+
+from linetools.lists.linelist import LineList
+from linetools import utils as ltu
 
 from pyigm.utils import lst_to_array
 from pyigm.surveys.igmsurvey import GenericIGMSurvey
@@ -35,7 +40,26 @@ class CGMAbsSurvey(object):
     """
 
     @classmethod
-    def from_tarball(cls, tfile, debug=False, **kwargs):
+    def from_json(cls, jfile, **kwargs):
+        """ Instantiate from a single JSON file
+        Parameters
+        ----------
+        jfile : str
+        kwargs
+
+        Returns
+        -------
+        CGMAbsSurvey
+
+        """
+        llist = LineList('ISM')
+        #
+        slf = cls(**kwargs)
+        slf.load_json(jfile, llist=llist, **kwargs)
+        return slf
+
+    @classmethod
+    def from_tarball(cls, tfile, **kwargs):
         """ Load the COS-Halos survey from a tarball of JSON files
         Parameters
         ----------
@@ -45,34 +69,14 @@ class CGMAbsSurvey(object):
         -------
 
         """
-        import tarfile
-        import json
-        from linetools.lists.linelist import LineList
-        llist = LineList('ISM')
+        warnings.warn("This is being deprecated..  One will eventually only load/write JSON files.", DeprecationWarning)
 
         slf = cls(**kwargs)
-        # Load
-        tar = tarfile.open(tfile)
-        for kk, member in enumerate(tar.getmembers()):
-            if '.json' not in member.name:
-                print('Skipping a likely folder: {:s}'.format(member.name))
-                continue
-            # Debug
-            if debug and (kk == 5):
-                break
-            # Extract
-            f = tar.extractfile(member)
-            try:
-                tdict = json.load(f)
-            except:
-                print('Unable to load {}'.format(member))
-                continue
-            # Generate
-            cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, chk_data=False,
-                                         use_coord=True, use_angrho=True,
-                                         linelist=llist, **kwargs)
-            slf.cgm_abs.append(cgmsys)
-        tar.close()
+
+        # Dict
+        llist = LineList('ISM')
+        slf.load_tarball(tfile, llist=llist, **kwargs)
+
         # Return
         return slf
 
@@ -113,7 +117,7 @@ class CGMAbsSurvey(object):
             b16_tarfile = resource_filename('pyigm', '/data/CGM/z0/B16_kpc_sys.tar')
         print('Loading Burchett+16 using {:s} selection method'.format(select_method))
         # Load
-        b16 = CGMAbsSurvey.from_tarball(b16_tarfile, chk_lowz=True, chk_z=False)
+        b16 = CGMAbsSurvey.from_tarball(b16_tarfile, chk_lowz=True, chk_z=False, build_sys=True)
         return b16
 
     @classmethod
@@ -121,7 +125,7 @@ class CGMAbsSurvey(object):
         """ Load the Johnson+15 sample
         """
         j15_tarfile = resource_filename('pyigm', '/data/CGM/z0/J15_sys.tar')
-        j15 = CGMAbsSurvey.from_tarball(j15_tarfile, chk_lowz=False, chk_z=False)
+        j15 = CGMAbsSurvey.from_tarball(j15_tarfile, chk_lowz=False, chk_z=False, build_sys=True)
         return j15
 
     def __init__(self, survey='', ref='', **kwargs):
@@ -139,6 +143,9 @@ class CGMAbsSurvey(object):
         self.survey = survey
         self.ref = ref
 
+        # Several ways to hold the data
+        self._dict = OrderedDict()
+        self._data = Table()
         self.cgm_abs = []
         self.mask = None
 
@@ -149,7 +156,165 @@ class CGMAbsSurvey(object):
         -------
         nsys : int
         """
-        return len(self.cgm_abs)
+        if self.mask is not None:
+            return np.sum(self.mask)
+        elif len(self._data) > 0:
+            return len(self._data)
+        elif len(self._dict) > 0:
+            return len(self._dict)
+        else:
+            return len(self.cgm_abs)
+
+    def add_ion_to_data(self, inp_ion):
+        """ Add columns for ion info (column density)
+        to the Table
+
+        Parameters
+        ----------
+        inp_ion
+
+        Returns
+        -------
+
+        """
+        from linetools.analysis import absline as ltaa
+        ion = inp_ion.replace(' ','')
+        # Check for previous
+        if 'flag_N_{:s}'.format(ion) in self._data.keys():
+            print("Ion data is already in the _data table")
+            return
+        # Loop on the systems
+        flagNs, Ns, sigNs = [], [], []
+        for key in self._dict.keys():
+            igm_comp = self._dict[key]['igm_sys']['components']
+            comps = [] # Allow for more than one
+            for comp in igm_comp.keys():
+                sion = comp.split('_')[0]
+                if sion == ion:
+                    if 'attrib' in igm_comp[comp].keys():
+                        attrib = igm_comp[comp]['attrib']
+                        attrib['sig_logN'] = np.array(attrib['sig_logN'])
+                        comps.append(attrib.copy())
+                    else: # Deprecated
+                        comps.append(dict(logN=igm_comp[comp]['logN'],
+                                          flag_N=igm_comp[comp]['flag_N'],
+                                          sig_logN=np.array([igm_comp[comp]['sig_logN']]*2)))
+            # Now sum em up
+            if len(comps) == 0:
+                flagNs.append(0)
+                Ns.append(0.)
+                sigNs.append(np.array([0.]*2))
+                continue
+            obj = dict(flag_N=comps[0]['flag_N'], logN=comps[0]['logN'], sig_logN=comps[0]['sig_logN'])
+            for comp in comps[1:]:
+                if comp['flag_N'] != 0:
+                    obj['flag_N'], obj['logN'], obj['sig_logN'] = ltaa.sum_logN(obj, comp)
+            # Save
+            flagNs.append(obj['flag_N'])
+            Ns.append(obj['logN'])
+            sigNs.append(obj['sig_logN'])
+        # Add to Table
+        self._data.add_column(Column(flagNs, name='flag_N_{:s}'.format(ion)))
+        self._data.add_column(Column(Ns, name='logN_{:s}'.format(ion)))
+        self._data.add_column(Column(sigNs, name='sig_logN_{:s}'.format(ion)))
+
+    def build_sys_from_dict(self, sys_name, llist=None, **kwargs):
+        """ Build CGMAbsSys from the internal dict
+
+        Parameters
+        ----------
+        sys_name : str
+          Name of the system
+        llist : LineList, optional
+        kwargs : passed to CGMAbsSys.from_dict
+
+        Returns
+        -------
+        CGMAbsSys
+
+        """
+        tdict = self._dict[sys_name]
+        cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, chk_data=False,
+                                 use_coord=True, use_angrho=True,
+                                     linelist=llist, **kwargs)
+        # Return
+        return cgmsys
+
+    def build_systems_from_dict(self, **kwargs):
+        """ Build all of the CGMAbsSys objects from the interal _dict
+
+        Parameters
+        ----------
+        kwargs : passed to build_sys_from_dict
+
+        Returns
+        -------
+
+        """
+        # Check for LineList
+        if 'llist' not in kwargs.keys():
+            warnings.warn("It will likely speed things up greatly to pass a LineList in to build the systems")
+        #
+        for key in self._dict.keys():
+            cgmsys = self.build_sys_from_dict(key, **kwargs)
+            self.cgm_abs.append(cgmsys)
+        return
+
+    def build_data_from_dict(self):
+        """ Build the _data Table from the internal _dict
+        Columns are:  RA_IGM, DEC_IGM, RA, DEC, zabs, and likely a few others (e.g. rho)
+
+        Other methods add on Ion info, etc.
+        """
+        # Table columns
+        key0 = list(self._dict.keys())[0]
+        tab_clms = list(self._dict[key0].keys())
+        # Handle RA/DEC
+        IGM_RA = []
+        IGM_DEC = []
+        zabs = []
+        for key in self._dict.keys():
+            IGM_RA.append(self._dict[key]['igm_sys']['RA'])
+            IGM_DEC.append(self._dict[key]['igm_sys']['DEC'])
+            zabs.append(self._dict[key]['igm_sys']['zabs'])
+        self._data.add_column(Column(IGM_RA, name='RA_IGM'))
+        self._data.add_column(Column(IGM_DEC, name='DEC_IGM'))
+        self._data.add_column(Column(zabs, name='zabs'))
+        # Remove unwanted ones
+        rmv_keys = ['CreationDate', 'cosmo', 'ebv', 'user', 'Refs', 'igm_sys', 'galaxy']
+        for rkey in rmv_keys:
+            if rkey in tab_clms:
+                tab_clms.remove(rkey)
+        # Build it
+        for tclm in tab_clms:
+            values = []
+            for key in self._dict.keys():
+                values.append(self._dict[key][tclm])
+            # Add column
+            clm = Column(values, name=tclm)
+            self._data.add_column(clm)
+
+    def to_json(self, outfile, overwrite=True):
+        """ Generates a JSON file of the survey
+
+        Parameters
+        ----------
+        outfil : str
+
+        """
+        survey_dict = OrderedDict()
+        # Loop on systems
+        for cgm_abs in self.cgm_abs:
+            # Dict from copy
+            cdict = cgm_abs.to_dict()
+            # Use galaxy name for key;  Should be unique
+            survey_dict[cgm_abs.galaxy.name+'_'+cgm_abs.igm_sys.name] = cdict.copy()
+
+        # JSON
+        clean_dict = ltu.jsonify(survey_dict)
+        ltu.savejson(outfile, clean_dict, overwrite=overwrite)
+        print("Wrote: {:s}".format(outfile))
+        print("You may now wish to compress it..")
 
     def to_json_tarball(self, outfil):
         """ Generates a gzipped tarball of JSON files, one per system
@@ -160,6 +325,10 @@ class CGMAbsSurvey(object):
 
         """
         import subprocess
+        warnings.warn("This method is likely to be Deprecated", DeprecationWarning)
+        print("Continue at your own peril...")
+        pdb.set_trace()
+
         tmpdir = 'CGM_JSON'
         try:
             os.mkdir(tmpdir)
@@ -181,7 +350,6 @@ class CGMAbsSurvey(object):
                 f.write(json.dumps(cdict, sort_keys=True, indent=4,
                                            separators=(',', ': ')))
         # Tar
-        warnings.warn("Modify to write directly to tar file")
         subprocess.call(['tar', '-czf', outfil, tmpdir])
         print('Wrote: {:s}'.format(outfil))
 
@@ -189,6 +357,99 @@ class CGMAbsSurvey(object):
         for jfile in jfiles:
             os.remove(jfile)
         os.rmdir(tmpdir)
+
+    def load_json(self, jfile, build_data=True, build_sys=False, verbose=True, **kwargs):
+        """
+        Parameters
+        ----------
+        jfile : str
+        build_data : bool, optional
+          Generate the internal _data Table  [very fast and recommended]
+        build_sys : bool, optional
+          Generate the list of cgm_abs objects from the internal _dict [May be slow]
+        kwargs
+
+        Returns
+        -------
+
+        """
+        # Load
+        self._dict = ltu.loadjson(jfile)
+        # Generate
+        if build_sys:
+            self.build_systems_from_dict(**kwargs)
+
+        # Galaxy coords
+        ras = [self._dict[key]['RA'] for key in self._dict.keys()]
+        decs = [self._dict[key]['DEC'] for key in self._dict.keys()]
+        self.coords = SkyCoord(ra=ras, dec=decs, unit='deg')
+
+        # Sightline coords
+        ras = [self._dict[key]['igm_sys']['RA'] for key in self._dict.keys()]
+        decs = [self._dict[key]['igm_sys']['DEC'] for key in self._dict.keys()]
+        self.scoords = SkyCoord(ra=ras, dec=decs, unit='deg')
+
+        # Data table
+        if build_data:
+            self.build_data_from_dict()
+        # Return
+        return
+
+    def load_tarball(self, tfile, build_data=True, build_sys=False, llist=None, verbose=True, **kwargs):
+        """
+        Parameters
+        ----------
+        tfile
+        build_data
+        build_sys
+        llist
+        kwargs
+
+        Returns
+        -------
+
+        """
+        import tarfile
+        # Load
+        tar = tarfile.open(tfile)
+        for kk, member in enumerate(tar.getmembers()):
+            if '.json' not in member.name:
+                print('Skipping a likely folder: {:s}'.format(member.name))
+                continue
+            # Extract
+            f = tar.extractfile(member)
+            try:
+                tdict = json.load(f)
+            except:
+                if verbose:
+                    print('Unable to load {}'.format(member))
+                continue
+            # Build dict
+            self._dict[tdict['Name']] = tdict
+            # Generate
+            if build_sys:
+                cgmsys = CGMAbsSys.from_dict(tdict, chk_vel=False, chk_sep=False, chk_data=False,
+                                         use_coord=True, use_angrho=True,
+                                         linelist=llist, **kwargs)
+                self.cgm_abs.append(cgmsys)
+        tar.close()
+
+        # Galaxy coords
+        ras = [self._dict[key]['RA'] for key in self._dict.keys()]
+        decs = [self._dict[key]['DEC'] for key in self._dict.keys()]
+        self.coords = SkyCoord(ra=ras, dec=decs, unit='deg')
+
+        # Sightline coords
+        ras = [self._dict[key]['igm_sys']['RA'] for key in self._dict.keys()]
+        decs = [self._dict[key]['igm_sys']['DEC'] for key in self._dict.keys()]
+        self.scoords = SkyCoord(ra=ras, dec=decs, unit='deg')
+
+        # Data table
+        if build_data:
+            self.build_data_from_dict()
+        # Return
+        return
+
 
     def ion_tbl(self, Zion, fill_ion=True, vrange=None,**kwargs):
         """ Generate a Table of Ionic column densities for an input ion
@@ -382,8 +643,8 @@ class CGMAbsSurvey(object):
                     pdb.set_trace()
         # Special cases
         if k == 'coord':
-            ra = [coord.fk5.ra.value for coord in lst]
-            dec = [coord.fk5.dec.value for coord in lst]
+            ra = [coord.icrs.ra.value for coord in lst]
+            dec = [coord.icrs.dec.value for coord in lst]
             lst = SkyCoord(ra=ra, dec=dec, unit='deg')
             if self.mask is not None:
                 return lst[self.mask]
@@ -391,8 +652,8 @@ class CGMAbsSurvey(object):
                 return lst
         elif k == 'scoord':  # Sightline coordinates
             lst = [getattr(cgm_abs.igm_sys, 'coord') for cgm_abs in self.cgm_abs]
-            ra = [coord.fk5.ra.value for coord in lst]
-            dec = [coord.fk5.dec.value for coord in lst]
+            ra = [coord.icrs.ra.value for coord in lst]
+            dec = [coord.icrs.dec.value for coord in lst]
             lst = SkyCoord(ra=ra, dec=dec, unit='deg')
             if self.mask is not None:
                 return lst[self.mask]
@@ -403,6 +664,4 @@ class CGMAbsSurvey(object):
 
     def __repr__(self):
         str1 = '<CGM_Survey: {:s} nsys={:d}, ref={:s}>\n'.format(self.survey, self.nsys, self.ref)
-        for ii in range(self.nsys):
-            str1 = str1+self.cgm_abs[ii].igm_sys.__repr__()+'\n'
         return str1

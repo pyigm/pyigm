@@ -34,11 +34,12 @@ def parser(options=None):
     parser.add_argument("--conti_file", type=str, help="Input continuum spectrum")
     parser.add_argument("--zdla", type=float, help="Input DLA redshift")
     parser.add_argument("--NHI", type=float, help="Input DLA NHI")
+    parser.add_argument("--norm", help="Use normalized spectrum", action="store_true")
 
     if options is None:
         args = parser.parse_args()
     else:
-        args = parser.parse_args(options)
+        args = parser.parse_args(namespace=options)
     return args
 
 
@@ -53,7 +54,7 @@ def main(args=None):
     app = QApplication(sys.argv)
     gui = XFitDLAGUI(pargs.in_file,outfil=pargs.out_file,smooth=pargs.smooth,
         dla_fit_file=pargs.dla_fit_file, zqso=pargs.zqso, conti_file=pargs.conti_file,
-                     zdla=pargs.zdla, NHI=pargs.NHI)
+                     zdla=pargs.zdla, NHI=pargs.NHI, norm=args.norm)
     gui.show()
     app.exec_()
 

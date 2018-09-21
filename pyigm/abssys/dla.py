@@ -159,7 +159,7 @@ class DLASystem(IGMSystem):
           dict containing the IonClms info
         use_Nfile : bool, optional
           Parse ions from a .clm file (JXP historical)
-          NOTE: This ignores velocity constraints on components (i.e. skip_vel=True)
+          NOTE: This ignores velocity constraints on components (i.e. chk_vel=False)
         update_zvlim : bool, optional
           Update zvlim from lines in .clm (as applicable)
         linelist : LineList
@@ -168,7 +168,6 @@ class DLASystem(IGMSystem):
             clm_fil = self.tree+self._datdict['Abund file']
             # Read
             self._clmdict = igmau.read_clmfile(clm_fil, linelist=linelist)
-            #pdb.set_trace()
             # Build components
             components = ltiu.build_components_from_dict(self._clmdict,
                                                          coord=self.coord,
@@ -181,7 +180,7 @@ class DLASystem(IGMSystem):
             self.all_file=all_file  #MF: useful
             _ = igmau.read_all_file(all_file, components=components)
             # Build table
-            self._ionN = ltiu.iontable_from_components(components, ztbl=self.zabs)
+            self._ionN = ltiu.table_from_complist(components, ztbl=self.zabs)
             # Add to AbsSystem
             for comp in components:
                 self.add_component(comp)

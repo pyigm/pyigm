@@ -40,7 +40,7 @@ Analyzing DLA
 Here is now my preferred approach to searching for DLA:
 
 1.  Load up the spectrum.  Fiddle with the continuum
-
+#
 '''
 
 # GUI for fitting DLA in a spectrum
@@ -136,7 +136,10 @@ Q         : Quit the GUI
             spec = ispec
             spec_fil = spec.filename
         else:
-            spec, spec_fil = ltgu.read_spec(ispec)
+            kwargs = {}
+            kwargs['rsp_kwargs'] = {}
+            kwargs['rsp_kwargs']['masking'] = 'edges'
+            spec, spec_fil = ltgu.read_spec(ispec, norm=norm, **kwargs)
         self.spec = spec
 
 
@@ -291,10 +294,10 @@ Q         : Quit the GUI
             self.abssys_widg.all_abssys[idx].NHI = 20.
         # z
         try:
-            self.abssys_widg.all_abssys[idx].zabs = (
+            self.abssys_widg.all_abssys[idx].limits._z = (
                 float(self.zwidget.box.text()))
         except:
-            self.abssys_widg.all_abssys[idx].zabs = 2.
+            self.abssys_widg.all_abssys[idx].limits._z = 2.
         # b-value
         try:
             self.abssys_widg.all_abssys[idx].bval = (
@@ -366,7 +369,8 @@ Q         : Quit the GUI
         # Angstroms
         # should really make this a constant velocity width array instead.
         if not self.skip_wveval:
-            wa1 = np.arange(wa[0].value, wa[-1].value, self.dw) * wa.unit
+            #wa1 = np.arange(wa[0].value, wa[-1].value, self.dw) * wa.unit
+            wa1 = np.arange(self.full_model.wvmin.value, self.full_model.wvmax.value, self.dw) * wa.unit
         else:
             wa1 = wa
         #all_tau_model = igmlls.tau_multi_lls(wa1,
@@ -382,9 +386,7 @@ Q         : Quit the GUI
             QtCore.pyqtRemoveInputHook()
             import pdb; pdb.set_trace()
             QtCore.pyqtRestoreInputHook()
-        tau_Lyman = lav.voigt_from_abslines(wa1, all_lines,
-                                            ret='tau',
-                                            skip_wveval=self.skip_wveval)
+        tau_Lyman = lav.voigt_from_abslines(wa1, all_lines, ret='tau', skip_wveval=self.skip_wveval)
         all_tau_model = tau_Lyman
         # Loop on forest lines
         for forest in self.all_forest:
@@ -424,6 +426,9 @@ Q         : Quit the GUI
         self.dla_low *= self.conti_dict['co']
         self.dla_high *= self.conti_dict['co']
         # Over-absorbed
+        #QtCore.pyqtRemoveInputHook()
+        #import pdb; pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
         self.spec_widg.bad_model = np.where( (self.dla_model < 0.7) &
             (self.full_model.flux < (self.spec_widg.spec.flux-
                 self.spec_widg.spec.sig*1.5)))[0]
@@ -490,9 +495,9 @@ Q         : Quit the GUI
                 imn = np.argmin(np.abs(wrest-awrest))
                 self.abssys_widg.all_abssys[idx].zabs = event.xdata/awrest[imn]-1.
             elif event.key == 'Z': #Add to redshift
-                self.abssys_widg.all_abssys[idx].zabs += 0.0002
+                self.abssys_widg.all_abssys[idx].limits._z += 0.0002
             elif event.key == 'z': #Subtract from redshift
-                self.abssys_widg.all_abssys[idx].zabs -= 0.0002
+                self.abssys_widg.all_abssys[idx].limits._z -= 0.0002
             elif event.key == 'U': #Add to sig_NHI
                 self.sig_NHI += 0.05
                 print('sig_NHI={}'.format(self.sig_NHI))
@@ -632,10 +637,11 @@ Q         : Quit the GUI
             iline.attrib['sig_N'] = 1 / u.cm**2  # Avoid nan
             iline.attrib['b'] = bval
             iline.attrib['coord'] = SkyCoord(ra=0*u.deg,dec=0*u.deg)
+            iline.analy['do_analysis'] = 0  # Avoids plotting
             dla_lines.append(iline)
         # Generate system
         HIcomponent = ltiu.build_components_from_abslines(dla_lines)[0]
-        HIcomponent.synthesize_colm()
+        HIcomponent.synthesize_colm(overwrite=True)
         new_sys = DLASystem.from_components([HIcomponent]) #(0*u.deg,0*u.deg),z,None,NHI)
         new_sys.bval = bval # This is not standard, but for convenience
         new_sys.comment = comment

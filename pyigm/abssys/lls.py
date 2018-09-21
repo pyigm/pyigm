@@ -496,6 +496,7 @@ def tau_multi_lls(wave, all_lls, **kwargs):
       Optical depth values at input wavelengths
     """
     from linetools.analysis import voigt as lav
+    from PyQt5 import QtGui, QtCore
     #
     all_tau_model = np.zeros(len(wave))
     # Loop on LLS
@@ -505,8 +506,12 @@ def tau_multi_lls(wave, all_lls, **kwargs):
         energy = wv_rest.to(u.eV, equivalencies=u.spectral())
         # Get photo_cross and calculate tau
         tau_LL = (10.**lls.NHI / u.cm**2) * ltaa.photo_cross(1,1,energy)
+        tau_LL = tau_LL.decompose().value
 
         # Lyman
+        #QtCore.pyqtRemoveInputHook()
+        #pdb.set_trace()
+        #QtCore.pyqtRestoreInputHook()
         tau_Lyman = lav.voigt_from_abslines(wave, lls.lls_lines, ret='tau', **kwargs)
         tau_model = tau_LL + tau_Lyman
 

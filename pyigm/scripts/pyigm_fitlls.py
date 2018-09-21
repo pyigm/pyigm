@@ -33,11 +33,12 @@ def parser(options=None):
     parser.add_argument("--out_file", type=str, help="Output LLS Fit file")
     parser.add_argument("--smooth", type=float, default=3., help="Smoothing (pixels)")
     parser.add_argument("--lls_fit_file", type=str, help="Input LLS Fit file")
+    parser.add_argument("--norm", help="Use normalized spectrum", action="store_true")
 
     if options is None:
         args = parser.parse_args()
     else:
-        args = parser.parse_args(options)
+        args = parser.parse_args(namespace=options)
     return args
 
 def main(args=None):
@@ -50,7 +51,7 @@ def main(args=None):
     # Run
     app = QApplication(sys.argv)
     gui = XFitLLSGUI(pargs.in_file, pargs.zqso, outfil=pargs.out_file,smooth=pargs.smooth,
-                     lls_fit_file=pargs.lls_fit_file)
+                     lls_fit_file=pargs.lls_fit_file, norm=args.norm)
     gui.show()
     app.exec_()
 

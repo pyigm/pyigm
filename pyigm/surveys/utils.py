@@ -72,11 +72,14 @@ def load_sys_files(inp, type, ref=None, sys_path=False, build_abs_sys=False, **k
             # Add to list of dicts
             survey._dict[tdict['Name']] = tdict
         tar.close()
+    # Mask
+    survey.init_mask()
 
     # Set coordinates
     ras = [survey._dict[key]['RA'] for key in survey._dict.keys()]
     decs = [survey._dict[key]['DEC'] for key in survey._dict.keys()]
     survey.coords = SkyCoord(ra=ras, dec=decs, unit='deg')
+
 
     # Build AbsSystem objects?
     if build_abs_sys:

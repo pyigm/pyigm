@@ -14,15 +14,16 @@ from collections import OrderedDict
 from astropy import coordinates as coords
 from astropy.io import ascii
 from astropy import units as u
-from astropy.table import QTable, Column, Table, vstack
+from astropy.table import Column, Table, vstack
 from astropy.units.quantity import Quantity
-from astropy.coordinates import SkyCoord
+from astropy.stats import poisson_conf_interval as aspci
+from astropy.coordinates import SkyCoord, match_coordinates_sky
 
-from linetools.spectra import io as lsio
 from linetools.isgm import utils as ltiu
 
 from pyigm.abssys.igmsys import IGMSystem
 from pyigm.abssys.utils import class_by_type
+from pyigm import utils as pyigmu
 
 try:
     unic = unicode
@@ -82,6 +83,8 @@ class IGMSurvey(object):
             slf._abs_sys.append(class_by_type(slf.abs_type).from_datfile(dat_file, tree=slf.tree))
         print('Read {:d} files from {:s} in the tree {:s}'.format(
             slf.nsys, slf.flist, slf.tree))
+        # Mask
+        slf.init_mask()
 
         return slf
 
@@ -93,7 +96,7 @@ class IGMSurvey(object):
 
         Parameters
         ----------
-        summ_fits : str or Table or QTable
+        summ_fits : str or Table
           Summary FITS file
         coords : SkyCoord array
           Contains all the coords for all the systems
@@ -109,11 +112,11 @@ class IGMSurvey(object):
             systems = Table.read(summ_fits)
         nsys = len(systems)
         # Special keys
-        kdict = dict(NHI=['NHI', 'logNHI'],
+        kdict = dict(NHI=['NHI', 'logNHI', 'LOG_NHI'],
                      sig_NHI=['sig(logNHI)', 'SIGNHI', 'NHI_ERR'],
                      name=['Name'], vlim=['vlim'],
                      zabs=['Z_LLS', 'ZABS', 'zabs'],
-                     zem=['Z_QSO', 'QSO_ZEM', 'ZEM'],
+                     zem=['Z_QSO', 'QSO_ZEM', 'ZEM', 'Z_EM'],
                      RA=['RA'], DEC=['DEC', 'Dec'])
         # Parse the Table to make uniform the keys used
         for key in kdict.keys():
@@ -243,7 +246,109 @@ class IGMSurvey(object):
         # Append
         self._abs_sys.append(abs_sys)
 
+    def binned_loz(self, zbins, NHI_mnx=(20.3, 23.00), debug=False):
+        """ Calculate l(z) empirically in zbins for an interval in NHI
+        Wrapper on lox
+
+        Parameters
+        ----------
+        zbins : list
+          Defines redshift intervals
+          e.g.  [2., 2.5, 3., 4.]
+        NHI_mnx : tuple, optional
+          min/max of NHI for evaluation
+
+        Returns
+        -------
+        lz, sig_lz_lower, sig_lz_upper : ndarray
+        """
+        return self.binned_lox(zbins, NHI_mnx=NHI_mnx, use_Dz=True, debug=debug)
+
+    def binned_lox(self, zbins, NHI_mnx=(20.3, 23.00), use_Dz=False, debug=False):
+        """ Calculate l(X) in zbins for an interval in NHI
+        Parameters
+        ----------
+        zbins : list
+          Defines redshift intervals
+          e.g.  [2., 2.5, 3., 4.]
+        NHI_mnx : tuple, optional
+          min/max of NHI for evaluation
+        use_gz : bool, optional
+          Use gz instead of gX.
+          This forces the calculation of l(z) instead of l(X)
+
+        Returns
+        -------
+        lX, sig_lX_lower, sig_lX_upper : ndarray
+        """
+        # assign the nhbins
+        nhbins = np.array(NHI_mnx)
+
+        # generate the fN components
+        fncomp = self.__generate_fncomp__(nhbins, zbins)
+
+        # get the absorption path length
+        dXtot = self.__find_dXtot__(zbins, calc_Dz=use_Dz)
+
+        # total number of absorbers + poisson uncertainty
+        Ntot = fncomp.sum(axis=0)
+        Nunc = aspci(Ntot, interval='frequentist-confidence')
+
+        # l(X)
+        if debug:
+            pdb.set_trace()
+        lX = Ntot / dXtot
+        lX_lo = Nunc[0, :] / dXtot
+        lX_hi = Nunc[1, :] / dXtot
+
+        return lX, lX - lX_lo, lX_hi - lX
+
+    def binned_fn(self, nhbins, zbins, log=False):
+        """ Calculate f(N,X) empirically in bins of NHI and z
+
+        Parameters
+        ----------
+        nhbins : list
+        zbins : list
+        log : bool, optional
+          Report log10 values?
+
+        Returns
+        -------
+        fn : ndarray
+          log10 f(N,X)
+        fn_lo : ndarray
+          error in fn (low side)
+        fn_hi : ndarray
+          error in fn (high side)
+
+        """
+
+        # generate the fN components
+        fncomp = self.__generate_fncomp__(nhbins, zbins)
+
+        # calculate the uncertainty on the bins
+        fnunc = aspci(fncomp, interval='frequentist-confidence')
+
+        # get the absorption path length
+        dXtot = self.__find_dXtot__(zbins)
+
+        # find the nhi bin size
+        dNHI = np.power(10, nhbins[1:]) - np.power(10, nhbins[:-1])
+
+        # calculate the fN values
+        fn = np.transpose(np.transpose(fncomp / dXtot) / dNHI)
+        fn_lo = np.transpose(np.transpose(fnunc[0] / dXtot) / dNHI)
+        fn_hi = np.transpose(np.transpose(fnunc[1] / dXtot) / dNHI)
+
+        if log:
+            return np.log10(fn), np.log10(fn) - np.log10(fn_lo), np.log10(fn_hi) - np.log10(fn)
+        else:
+            return fn, fn - fn_lo, fn_hi - fn
+
+
     def build_all_abs_sys(self, linelist=None, **kwargs):
+
         """ Build all of the AbsSystem objects from the _dict
         or _data if the _dict does not exist!
         In that order
@@ -307,6 +412,7 @@ class IGMSurvey(object):
         return abssys
 
     def build_abs_sys_from_dict(self, abssys_name, **kwargs):
+
         """ Build an AbsSystem from the _dict
         The item in self._abs_sys is filled and
         the systems is also returned
@@ -316,6 +422,7 @@ class IGMSurvey(object):
         abssys_name : str
           Needs to match a key in the dict
         **kwargs
+
           Passed to components_from_dict()
 
         Returns
@@ -325,6 +432,7 @@ class IGMSurvey(object):
         """
         # Index
         idx = self.sys_idx(abssys_name)
+
         # Instantiate
         abssys = class_by_type(self.abs_type).from_dict(self._dict[abssys_name],
                                                         coord=self.coords[idx],
@@ -336,7 +444,7 @@ class IGMSurvey(object):
         # Return too
         return abssys
 
-    def calculate_gz(self, zstep=1e-4, zmin=None, zmax=None):
+    def calculate_gz(self, zstep=1e-4, zmin=None, zmax=None, key_ZS='Z_START'):
         """ Uses sightlines table to generate a g(z) array
 
         Parameters
@@ -357,16 +465,17 @@ class IGMSurvey(object):
         """
         if self.sightlines is None:
             raise IOError("calculate_gz: Need to set sightlines table")
+
         # zeval
         if zmin is None:
-            zmin = np.min(self.sightlines['Z_START'])
+            zmin = np.min(self.sightlines[key_ZS])
         if zmax is None:
             zmax = np.max(self.sightlines['Z_END'])
         zeval = np.arange(zmin, zmax, step=zstep)
         gz = np.zeros_like(zeval).astype(int)
         # Evaluate
         for row in self.sightlines:
-            gd = (zeval >= row['Z_START']) & (zeval <= row['Z_END'])
+            gd = (zeval >= row[key_ZS]) & (zeval <= row['Z_END'])
             gz[gd] += 1
         # Return
         return zeval, gz
@@ -463,6 +572,7 @@ class IGMSurvey(object):
             raise ValueError("Not sure how to load the ions")
 
     # Get ions
+
     def ions(self, Zion, Ej=0., skip_null=True, pad_with_nulls=False):
         """ Generate a Table of columns and so on
         Restrict to those systems where flg_clm > 0
@@ -695,6 +805,63 @@ class IGMSurvey(object):
                 pass
         os.rmdir(tmpdir)
 
+    def __generate_fncomp__(self, nhbins, zbins):
+        """  Generate binned evaluation of f(NHI,X)
+
+        Parameters
+        ----------
+        nhbins : list
+          Defines NHI bins for f(NHI,X) evaluation, e.g.
+            [20.3, 20.6, 21.0, 21.5, 23.]
+        zbins : list
+
+        Returns
+        -------
+        fncomp : ndarray
+          f(NHI,X)
+
+        """
+        # calculate the total absorption path length g(X) from g(z)
+        #z, gX = self.__calculate_gX__()
+
+        # create the fn array
+        zabs = self.__getattr__('zabs')
+        nhi = self.__getattr__('NHI')
+        fncomp = np.histogram2d(nhi, zabs, bins=[nhbins, zbins])[0]
+
+        return fncomp
+
+    def __find_dXtot__(self, zbins, calc_Dz=False):
+        """ Calculate DX in zbins
+        Parameters
+        ----------
+        zbins : list
+        calc_Dz : bool, optional
+          Return Dztot instead of DXtot
+
+        Returns
+        -------
+        dXtot : ndarray
+          dX for the full survey
+
+        """
+        # get z, g(z)
+        z, gz = self.calculate_gz()
+        dz = z[1] - z[0]
+        #
+        if not calc_Dz:
+            dXdz = pyigmu.cosm_xz(z, cosmo=self.cosmo, flg_return=1)
+        else:
+            dXdz = 1.
+
+        dXtot = np.zeros(len(zbins) - 1)
+        for kk in range(len(zbins) - 1):
+            # the indices of values within the redshift range
+            idx = np.where((z >= zbins[kk]) & (z < zbins[kk + 1]))
+            dXtot[kk] = np.sum((gz*dz*dXdz)[idx])
+
+        return dXtot
+
     def __getattr__(self, k):
         """ Generate an array of attribute 'k' from the IGMSystems
         NOTE: We only get here if the Class doesn't have this attribute set already
@@ -770,34 +937,46 @@ class IGMSurvey(object):
         else:
             combined.red = None
 
-        # Check for unique systems
-        other_coord =other.coord
+        # Check for unique systems, including masked ones
+        other_coord = other.coord
         for abssys in self._abs_sys:
             if np.sum((abssys.coord.separation(other_coord) < toler) & (
                         np.abs(abssys.zabs-other.zabs) < (1000*(1+abssys.zabs)/3e5))) > 0:
-                raise NotImplementedError("Need to deal with this")
+                raise NotImplementedError("Need ready to deal with this")
+
         # Combine systems
         combined._abs_sys = self._abs_sys + other._abs_sys
         if self.mask is not None:
             combined.mask = np.concatenate((self.mask, other.mask)).flatten()
         else:
             combined.mask = None
+            combined.init_mask()
+        combined._data = vstack([self._data, other._data])
 
         # Sightlines?
         if self.sightlines is not None:
-            slf_scoord = SkyCoord(ra=self.sightlines['RA']*u.deg,
-                                  dec=self.sightlines['DEC']*u.deg)
-            oth_scoord = SkyCoord(ra=other.sightlines['RA']*u.deg,
-                                  dec=other.sightlines['DEC']*u.deg)
+            slf_scoord = SkyCoord(ra=self.sightlines['RA'],
+                                  dec=self.sightlines['DEC'], unit='deg')
+            oth_scoord = SkyCoord(ra=other.sightlines['RA'],
+                                  dec=other.sightlines['DEC'], unit='deg')
             idx, d2d, d3d = coords.match_coordinates_sky(slf_scoord,
                                                          oth_scoord, nthneighbor=1)
             mt = d2d < toler
             if np.sum(mt) > 0:
-                raise NotImplementedError("Need to deal with this")
+                # Take sightlines from the first survey
+                warnings.warn("Overlapping sightlines.  Am using those in your first entry")
+                msk = np.array([True]*len(other.sightlines))
+                msk[idx[mt]] = False
+                combined.sightlines = vstack([self.sightlines, other.sightlines[msk]])
+                print("You should probably regenerate the system mask!")
             else:
                 # Combine systems
                 combined.sightlines = vstack([self.sightlines,
                                               other.sightlines])
+        # Coords
+        combined.coords = SkyCoord(ra=combined._data['RA'],
+                                   dec=combined._data['DEC'], unit='deg')
+
         # Return
         return combined
 

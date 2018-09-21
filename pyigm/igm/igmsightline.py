@@ -18,6 +18,7 @@ from linetools import utils as ltu
 class IGMSightline(AbsSightline):
     """Class for IGM Absorption Sightline
     """
+
     @classmethod
     def from_json(cls, jsonfile, **kwargs):
         """ Instantiate from a JSON file
@@ -134,21 +135,37 @@ class IGMSightline(AbsSightline):
         -------
 
         """
-        from linetools.lists.linelist import LineList
+        if 'linelist' not in kwargs.keys():
+            from linetools.lists.linelist import LineList
+            ism = LineList('ISM')
+            kwargs['linelist'] = ism
+        from pyigm.abssys.utils import class_by_type
         ism = LineList('ISM')
         kwargs['linelist'] = ism
         # Load ISM to speed things up
-        slf = cls(SkyCoord(ra=idict['RA'], dec=idict['DEC'], unit='deg'),
-                  zem=idict['zem'], name=idict['name'], **kwargs)
+        if 'meta' in idict.keys():
+            meta = idict['meta']
+        else:
+            meta = idict
+        # Components -- backwards compatability
+        if 'cmps' in idict.keys():
+            idict['components'] = idict['cmps'].copy()
+        # Instantiate
+        slf = cls(SkyCoord(ra=meta['RA'], dec=meta['DEC'], unit='deg'),
+                  zem=meta['zem'], name=meta['JNAME'], **kwargs)
         # Other
         for key in idict.keys():
-            if key in ['RA', 'DEC', 'zem', 'name', 'components']:
+            if key in ['RA', 'DEC', 'zem', 'name', 'components', 'meta', 'cmps']:
                 continue
             else:
                 setattr(slf, key, idict[key])
-        # Components
         add_comps_from_dict(slf, idict, **kwargs)
 
+        # Systems
+        if 'systems' in idict.keys():
+            for key in idict['systems'].keys():
+                asys = class_by_type(idict['systems'][key]['abs_type']).from_dict(idict['systems'][key], **kwargs)
+                slf._abssystems.append(asys)
         # Return
         return slf
 
@@ -176,6 +193,14 @@ class IGMSightline(AbsSightline):
         igm_sys = build_systems_from_components(self._components, systype=igmsystem, **kwargs)
         # Return
         return igm_sys
+
+    def write_to_json(self, outfile):
+        # Generate the dict
+        igms_dict = self.to_dict()
+        # Jsonify
+        clean_dict = ltu.jsonify(igms_dict)
+        # Write
+        ltu.savejson(outfile, clean_dict, overwrite=True)
 
     def write_to_igmguesses(self, outfile, fwhm=3., specfilename=None, creator=None,
                             instrument='unknown',
