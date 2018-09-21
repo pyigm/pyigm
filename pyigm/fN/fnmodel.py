@@ -368,15 +368,18 @@ class FNModel(object):
             z_val = z + (1+z) * vel_array/(const.c.to('km/s').value)
         else:
             z_val = z
+
         if isiterable(z_val):
             z_val = np.array(z_val)
         else:
             z_val = np.array([z_val])
         lenz = len(z_val)
+        z_val = np.maximum(z_val,0.)
 
         # Check on zmnx
         bad = np.where((z_val < self.zmnx[0]) | (z_val > self.zmnx[1]))[0]
         if len(bad) > 0:
+            pdb.set_trace()
             raise ValueError(
                 'fN.model.eval: z={:g} not within self.zmnx={:g},{:g}'.format(
                     z_val[bad[0]], *(self.zmnx)))
@@ -505,7 +508,7 @@ class FNModel(object):
             cosmo = cosmology.core.FlatLambdaCDM(70., 0.3)
 
         # Calculate teff
-        zval, teff_LL = pyteff.lyman_limit(self, zmin, zem, N_eval=neval, N_zeval=nzeval, cosmo=cosmo)
+        zval, teff_LL = pyteff.lyman_limit(self, max(zmin,0.), zem, N_eval=neval, N_zeval=nzeval, cosmo=cosmo)
 
         # Find tau=1
         zt_interp = scii.interp1d(teff_LL, zval)
