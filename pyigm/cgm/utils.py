@@ -322,9 +322,9 @@ def covering_fraction(iontable,colthresh,sys_attr='rho_impact',bins=None,
     -------
     fracs : list of floats
         Covering fraction for each bin
-    lolims : list of floats
+    lobars : list of floats
         Lower limits on covering fractions
-    uplims : list of floats
+    upbars : list of floats
         Upper limits on covering fractions
     dethist : list of ints, optional
         Number of detections in each bin
