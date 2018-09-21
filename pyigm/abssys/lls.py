@@ -499,6 +499,7 @@ def tau_multi_lls(wave, all_lls, **kwargs):
     from PyQt5 import QtGui, QtCore
     #
     all_tau_model = np.zeros(len(wave))
+    all_tau_model = list(np.zeros(len(wave)))  ## need list not array for python3 ?
     # Loop on LLS
     for lls in all_lls:
         # LL
