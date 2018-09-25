@@ -529,6 +529,8 @@ class COSHalos(CGMAbsSurvey):
         kin_file: str
           Name of kinematics output file [First made for John Forbes]
         """
+        from linetools.lists.linelist import LineList
+        ism = LineList('ISM')
     
         if flg == 0: # Load
             if kin_file is None:
@@ -546,7 +548,7 @@ class COSHalos(CGMAbsSurvey):
             # Read init file
             if kin_init_file is None:
                 kin_init_file = self.kin_init_file
-            kin_init = ascii.read(kin_init_file,guess=False)
+            kin_init = Table.read(kin_init_file, format='ascii')
     
             # Loop to my loop
             fgal = zip(self.field, self.gal_id)
@@ -568,10 +570,10 @@ class COSHalos(CGMAbsSurvey):
                     spec = self.load_bg_cos_spec(qq, wrest)
                     vmnx = (kin_init['L_vmn'][mt], kin_init['L_vmx'][mt])*u.km/u.s
                     # Process
-                    aline = AbsLine(wrest)
+                    aline = AbsLine(wrest, linelist=ism)
                     aline.analy['spec'] = spec
-                    aline.analy['vlim'] = vmnx
-                    aline.attrib['z'] = cgm_abs.igm_sys.zabs
+                    aline.setz(cgm_abs.igm_sys.zabs)
+                    aline.limits.set(vmnx)
                     fx, sig, cdict = aline.cut_spec()
                     # Kin
                     stau = laak.generate_stau(cdict['velo'], fx, sig)
@@ -592,10 +594,10 @@ class COSHalos(CGMAbsSurvey):
                         pdb.set_trace()
                     vmnx = (kin_init['HIvmn'][mt], kin_init['HIvmx'][mt])*u.km/u.s
                     # Process
-                    aline = AbsLine(wrest)
+                    aline = AbsLine(wrest, linelist=ism)
                     aline.analy['spec'] = spec
-                    aline.analy['vlim'] = vmnx
-                    aline.attrib['z'] = cgm_abs.igm_sys.zabs
+                    aline.setz(cgm_abs.igm_sys.zabs)
+                    aline.limits.set(vmnx)
                     fx, sig, cdict = aline.cut_spec()
                     # Kin
                     stau = laak.generate_stau(cdict['velo'], fx, sig)
@@ -925,6 +927,8 @@ class COSDwarfs(COSHalos):
         if cdir is None:
             self.cdir = os.environ.get('COSHALOS_DATA')
             #self.cdir = os.environ.get('DROPBOX_DIR')+'/COS-Dwarfs/'
+        else:
+            self.cdir = cdir  ### need to define cdir
         if fits_path is None:
             self.fits_path = os.path.abspath(os.environ.get('DROPBOX_DIR')+'/COS-Dwarfs/Targets/FITS')
         else:

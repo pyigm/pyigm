@@ -143,15 +143,22 @@ class IGMSightline(AbsSightline):
         ism = LineList('ISM')
         kwargs['linelist'] = ism
         # Load ISM to speed things up
-        slf = cls(SkyCoord(ra=idict['RA'], dec=idict['DEC'], unit='deg'),
-                  zem=idict['zem'], name=idict['name'], **kwargs)
+        if 'meta' in idict.keys():
+            meta = idict['meta']
+        else:
+            meta = idict
+        # Components -- backwards compatability
+        if 'cmps' in idict.keys():
+            idict['components'] = idict['cmps'].copy()
+        # Instantiate
+        slf = cls(SkyCoord(ra=meta['RA'], dec=meta['DEC'], unit='deg'),
+                  zem=meta['zem'], name=meta['JNAME'], **kwargs)
         # Other
         for key in idict.keys():
-            if key in ['RA', 'DEC', 'zem', 'name', 'components']:
+            if key in ['RA', 'DEC', 'zem', 'name', 'components', 'meta', 'cmps']:
                 continue
             else:
                 setattr(slf, key, idict[key])
-        # Components
         add_comps_from_dict(slf, idict, **kwargs)
 
         # Systems
