@@ -335,7 +335,6 @@ class MB04(ModifiedNFW):
 class YF17(ModifiedNFW):
     """
     Y. Faermen (2017) model of the Milky Way
-
     """
     def __init__(self, log_Mhalo=12.18, c=7.67, f_hot=0.75, **kwargs):
 
