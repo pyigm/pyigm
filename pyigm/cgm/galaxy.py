@@ -189,7 +189,9 @@ class GalaxyCGM(CGM):
                 # N_OVII
                 aline.attrib['flag_N'] = 1
                 aline.attrib['logN'] = row['logNO']
-                aline.attrib['sig_logN'] = np.array([row['e_logNO'], row['E_logNO']])
+                #aline.attrib['sig_logN'] = np.array([row['e_logNO'], row['E_logNO']])
+                # Not ready for 2-sided sig_logN yet
+                aline.attrib['sig_logN'] = np.mean([row['e_logNO'], row['E_logNO']])
                 # Fill linear
                 _,_ = linear_clm(aline.attrib)
             # OVII
@@ -197,6 +199,7 @@ class GalaxyCGM(CGM):
             # Generate component and add
             comp = AbsComponent.from_abslines([aline])
             if aline.attrib['flag_N'] == 0: # Hack to merge later
+                # Must be 2-sided
                 comp.attrib['sig_logN'] = np.array([0., 0.])
             else:
                 pass
