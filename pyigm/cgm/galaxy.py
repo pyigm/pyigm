@@ -65,7 +65,7 @@ class GalaxyCGM(CGM):
         r17_a2_file = resource_filename('pyigm','/data/CGM/Galaxy/richter17_A2.fits')
         r17_a2 = Table.read(r17_a2_file)
         # Coords
-        coords = SkyCoord(ra=r17_a1['_RAJ2000'], dec=r17_a1['_DEJ2000'], unit='deg')
+        coords = SkyCoord(ra=r17_a1['Simbad_RA(ICRS)'], dec=r17_a1['Simbad_DEC(ICRS)'], unit='deg')
         gc = coords.transform_to('galactic')
         ra = np.zeros((len(r17_a2)))
         dec = np.zeros((len(r17_a2)))
@@ -77,8 +77,8 @@ class GalaxyCGM(CGM):
             a2_idx = np.where(r17_a2['Name'] == row['Name'])[0]
             if len(a2_idx) == 0:
                 continue
-            ra[a2_idx] = row['_RAJ2000']
-            dec[a2_idx] = row['_DEJ2000']
+            ra[a2_idx] = row['Simbad_RA(ICRS)']
+            dec[a2_idx] = row['Simbad_DEC(ICRS)']
             # Generate the components
             icoord = gc[kk]
             alines = []
@@ -209,7 +209,8 @@ class GalaxyCGM(CGM):
                 idx = np.argmin(comp.coord.separation(scoord).to('arcsec'))
                 if self.verbose:
                     print("Adding OVII system to {}".format(self.abs.cgm_abs[idx].igm_sys))
-                self.abs.cgm_abs[idx].igm_sys.add_component(comp, chk_sep=False, debug=True)
+                self.abs.cgm_abs[idx].igm_sys.add_component(comp, chk_sep=False, chk_z=False)#debug=True)
+                self.abs.cgm_abs[idx].igm_sys.update_vlim()
             else: # Instantiate
                 abssys = IGMSystem(gc, z, vlim, name=row['Name']+'_z0', zem=row['z'])
                 abssys.add_component(comp, chk_sep=False)
