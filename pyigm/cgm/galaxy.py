@@ -194,6 +194,7 @@ class GalaxyCGM(CGM):
                 aline.attrib['sig_logN'] = np.mean([row['e_logNO'], row['E_logNO']])
                 # Fill linear
                 _,_ = linear_clm(aline.attrib)
+                
             # OVII
             aline.limits.set(vlim)
             # Generate component and add
