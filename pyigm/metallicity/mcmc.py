@@ -59,12 +59,12 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 #start with some general imports
 
 import matplotlib as mpl
+import pdb
 
 #The next line works on queue systems for DISPLAY issues
 # mpl.use('Agg')    #  Commented out by X to avoid test failures
 
 import warnings
-import pdb
 import copy
 
 #Here some general import
