@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import numpy as np
 import sys
 import os
+import pdb
 
 from pyigm.metallicity.mcmc import mcmc_ions
 from astropy.table import Table
@@ -298,12 +299,19 @@ def run_mcmc(args, obsinfo=None):
         optim = False
     
     #pick optimised values for 12 processors - cosma (proc*NN walkers, proc*YY samples)
-    mcmc=mcmc_ions(observ,obsinfo, args.grid, 
-                   logUconstraint=args.logUconstraint, logUmean=args.logUmean, logUsigma=args.logUsigma,
-                   UVB=args.UVB,
-                   nwalkers=(args.nwalkers),
-                   nsamp=(args.nsamp), optim=optim, threads=args.nthread,
-                   outsave=args.outsave, testing=args.testing)
+    kwargs = {}
+    for attr in ['logUmean', 'logUconstraint', 'logUsigma', 'UVB', 'nwalkers', 'nsamp', 'optim',
+                 'outsave', 'testing']:
+        if getattr(args,attr) is not None:
+            kwargs[attr] = getattr(args,attr)
+    if args.nthread is not None:
+        kwargs['threads'] = args.nthread
+    mcmc=mcmc_ions(observ,obsinfo, args.grid, **kwargs)
+                   #logUconstraint=args.logUconstraint, logUmean=args.logUmean, logUsigma=args.logUsigma,
+                   #UVB=args.UVB,
+                   #nwalkers=(args.nwalkers),
+                   #nsamp=(args.nsamp), optim=optim, threads=args.nthread,
+                   #outsave=args.outsave, testing=args.testing)
 
     print('All done with this batch')
     
@@ -314,14 +322,15 @@ def run_mcmc(args, obsinfo=None):
 ################################################
 
 
-def main(args=None):
+def parser(options=None):
     import argparse
     #get the call
+
     parser = argparse.ArgumentParser(description='Running grid on shared memory system')
-    parser.add_argument('-sightline', type=str, help='Name of the System to analyze')
-    parser.add_argument('-fileinput')
-    parser.add_argument('-outsave')
-    parser.add_argument('-grid', type=str, help='Full path+basename to Cloudy grid. E.g., "/afs/crc.nd.edu/group/CGMND/Cloudy_grids/grid_cgm_extensive" (this is the default). Do NOT include UVB, carbalpha, or .pkl extension; you specify these with the other options, on a per-absorber basis.')
+    parser.add_argument('sightline', type=str, help='Name of the System to analyze')
+    parser.add_argument('fileinput')
+    parser.add_argument('outsave')
+    parser.add_argument('--grid', type=str, help='Full path+basename to Cloudy grid. E.g., "/afs/crc.nd.edu/group/CGMND/Cloudy_grids/grid_cgm_extensive" (this is the default). Do NOT include UVB, carbalpha, or .pkl extension; you specify these with the other options, on a per-absorber basis.')
     parser.add_argument('-logUconstraint', type=str, help='Should we use logU constraint on density? Can be: "True", "False", or comma-separated values for logUmean and logUsigma (e.g., "-3.1,0.2"), which assumes "True". Note: This final (CSV) format overrides -logUmean and -logUsigma options!')
     parser.add_argument('-logUmean', type=str, help='If we use logUconstraint, what is the mean for the Gaussian? Note: This may be overridden by -logUconstraint option!')
     parser.add_argument('-logUsigma', type=str, help='If we use logUconstraint, what is the sigma for the Gaussian? Note: This may be overridden by -logUconstraint option!')
@@ -339,13 +348,16 @@ def main(args=None):
     parser.add_argument("-row", type=str, help="Row (sightline) in the guesses file to run, one-indexed (not zero-indexed)")
     pargs = parser.parse_args()
 
+    return pargs
 
+def main(args=None):
+
+    pargs = parser(options=args)
     # Run
     if pargs.wotta == True:
         run_mcmc_wotta(pargs)
     else:
         run_mcmc(pargs)
-
 
 
 if __name__ == '__main__':

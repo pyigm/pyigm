@@ -198,7 +198,10 @@ def logU_to_dens(logU, redshift, UVB="HM05logU", spectrum=None):
     #now compute the ionization parameter
     # den=result['tags'].index('dens')
     # Uparam=np.log10(phi)-result['pdfs'][:,den]-np.log10(const.c.to('cm/s').value)
-    dens=np.log10(phi)-np.log10(const.c.to('cm/s').value)-logU
+    try:
+        dens=np.log10(phi)-np.log10(const.c.to('cm/s').value)-logU
+    except:
+        pdb.set_trace()
     
     return dens
     
@@ -267,7 +270,8 @@ class Emceebones(object):
     This is a class that does all the fun stuff like bookkeeping, plots, driver for emcee etc..
     """
 
-    def __init__(self,data,infodata,model,nwalkers,nsamp,threads,outsave,optim,effnhi,logUconstraint=False,logUmean=-2.968,logUsigma=0.481,UVB='HM05'):
+    def __init__(self,data,infodata,model,nwalkers,nsamp,threads,outsave,optim,effnhi,logUconstraint=False,
+                 logUmean=-2.968,logUsigma=0.481,UVB='HM05'):
         """ First, do some bookkeeping like finding ions and preparing the grid
         Parameters
         ----------
@@ -1194,7 +1198,8 @@ class Emceeutils():
             return lh + lp
 
 
-def mcmc_ions(data,infodata,model,logUconstraint=False, logUmean=-2.968, logUsigma=0.481, UVB='HM05', nwalkers=400,nsamp=400,threads=12,
+def mcmc_ions(data,infodata,model,logUconstraint=False, logUmean=-2.968, logUsigma=0.481, UVB='HM05',
+              nwalkers=400,nsamp=400,threads=12,
               outsave='emceeout', optim=False, effnhi=True, testing=False, nwalkers_min=400, nsamp_min=400):
     """ This is the main, which does not do much
 
