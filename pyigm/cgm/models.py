@@ -446,6 +446,23 @@ class SMC(ModifiedNFW):
         self.coord = SkyCoord('J005238.0-724801', unit=(u.hourangle, u.deg),
                               distance=self.distance)
 
+class M33(ModifiedNFW):
+    """
+    Preferred model for SMC
+
+    Taking data from D'Onghia & Fox ARAA 2016
+
+    """
+    def __init__(self, log_Mhalo=np.log10(5e10), c=7.67, f_hot=0.75, alpha=2, y0=2, **kwargs):
+
+        # Init ModifiedNFW
+        ModifiedNFW.__init__(self, log_Mhalo=log_Mhalo, c=c, f_hot=f_hot,
+                             alpha=alpha, y0=y0, **kwargs)
+        # Position from Sun
+        self.distance = 840 * u.kpc
+        self.coord = SkyCoord(ra=23.4621, dec=30.6600, unit='deg',
+                              distance=self.distance)
+
 class ICM(ModifiedNFW):
     """
     ICM model following Vikhilnin et al. 2006
