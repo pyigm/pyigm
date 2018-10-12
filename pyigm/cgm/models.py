@@ -121,7 +121,7 @@ class ModifiedNFW(CGMPhase):
     y0 : float, optional
       Parameter to modify NFW profile position
     """
-    def __init__(self, log_Mhalo=12.2, c=7.67, f_hot=0.75, alpha=0., y0=1., **kwargs):
+    def __init__(self, log_Mhalo=12.2, c=7.67, f_hot=0.75, alpha=0., y0=1., z=0., **kwargs):
         # Init
         CGMPhase.__init__(self, 'hot')
         # Param
@@ -130,19 +130,23 @@ class ModifiedNFW(CGMPhase):
         self.c = c
         self.alpha = alpha
         self.y0 = y0
+        self.z = z
         self.f_hot = f_hot
         self.zero_inner_ne = 0. # kpc
 
         # Init more
         self.setup_param()
 
-    def setup_param(self):
+    def setup_param(self, cosmo=None):
         """ Setup key parameters of the model
         """
         # Cosmology
         self.H0 = 70. *u.km/u.s/ u.Mpc
         self.fb = 0.16       # Baryon fraction
-        self.rhoc = 9.2e-30 * u.g / u.cm**3
+        if cosmo is None:
+            self.rhoc = 9.2e-30 * u.g / u.cm**3
+        else:
+            self.rhoc = cosmo.critical_density(self.z)
         # Dark Matter
         self.r200 = (((3*self.M_halo) / (4*np.pi*200*self.rhoc))**(1/3)).to('kpc')
         self.rho0 = 200*self.rhoc/3 * self.c**3 / self.fy_DM(self.c)   # Central density
@@ -249,7 +253,7 @@ class ModifiedNFW(CGMPhase):
         # Return
         return rho
 
-    def Ne_Rperp(self, Rperp, step_size=0.1*u.kpc, rmax=1.):
+    def Ne_Rperp(self, Rperp, step_size=0.1*u.kpc, rmax=1., add_units=True):
         """ Calculate N_H at an input impact parameter Rperp
         Just a simple sum in steps of step_size
 
@@ -261,6 +265,8 @@ class ModifiedNFW(CGMPhase):
           Step size used for numerical integration (sum)
         rmax : float
           Maximum radius for integration in units of r200
+        add_units : bool, optional
+          Speed up calculations by avoiding units
 
         Returns
         -------
@@ -271,7 +277,10 @@ class ModifiedNFW(CGMPhase):
 
         # Cut at rmax*rvir
         if Rperp > rmax*self.r200:
-            return 0. / u.cm**2
+            if add_units:
+                return 0. / u.cm**2
+            else:
+                return 0.
         # Generate a sightline to rvir
         zmax = np.sqrt((rmax*self.r200) ** 2 - Rperp ** 2).to('kpc')
         zval = np.arange(-zmax.value, zmax.value+dz, dz)  # kpc
@@ -285,7 +294,10 @@ class ModifiedNFW(CGMPhase):
         Ne = np.sum(ne) * dz * 1000  # pc cm**-3
 
         # Return
-        return Ne * u.pc / u.cm**3
+        if add_units:
+            return Ne * u.pc / u.cm**3
+        else:
+            return Ne
 
 class MB04(ModifiedNFW):
     def __init__(self, Rc=167*u.kpc, log_Mhalo=12.2, c=7.67, f_hot=0.75, **kwargs):
@@ -450,18 +462,17 @@ class M33(ModifiedNFW):
     """
     Preferred model for SMC
 
-    Taking data from D'Onghia & Fox ARAA 2016
+    Taking data from Corbelli 2006
 
     """
-    def __init__(self, log_Mhalo=np.log10(5e10), c=7.67, f_hot=0.75, alpha=2, y0=2, **kwargs):
+    def __init__(self, log_Mhalo=np.log10(5e11), c=7.67, f_hot=0.75, alpha=2, y0=2, **kwargs):
 
         # Init ModifiedNFW
         ModifiedNFW.__init__(self, log_Mhalo=log_Mhalo, c=c, f_hot=f_hot,
                              alpha=alpha, y0=y0, **kwargs)
         # Position from Sun
         self.distance = 840 * u.kpc
-        self.coord = SkyCoord(ra=23.4621, dec=30.6600, unit='deg',
-                              distance=self.distance)
+        self.coord = SkyCoord(ra=23.4621*u.deg, dec=30.6600*u.deg, distance=self.distance)
 
 class ICM(ModifiedNFW):
     """
