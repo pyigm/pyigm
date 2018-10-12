@@ -118,8 +118,12 @@ class GalaxyCGM(CGM):
                 # Fill linear
                 _, _ = linear_clm(aline.attrib)
                 alines.append(aline)
+            if row['Name'] == 'ESO-031--G-008':
+                debug=True
+            else:
+                debug=False
             # Generate components from abslines
-            comps = ltiu.build_components_from_abslines(alines, chk_sep=False, chk_vel=False)
+            comps = ltiu.build_components_from_abslines(alines, chk_sep=False, chk_vel=False, debug=debug)
             # Limits
             vmin = np.min([icomp.limits.vmin.value for icomp in comps])
             vmax = np.max([icomp.limits.vmax.value for icomp in comps])
