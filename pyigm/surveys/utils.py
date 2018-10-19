@@ -58,7 +58,6 @@ def load_sys_files(inp, type, ref=None, sys_path=False, build_abs_sys=False, **k
             survey._abs_sys.append(abssys)
     else:  # tarball
         print('Loading systems from {:s}'.format(inp))
-        print('Loading systems from {:s}'.format(inp))
         tar = tarfile.open(inp,'r:gz')
         for member in tar.getmembers():
             if '.' not in member.name:
