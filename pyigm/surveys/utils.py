@@ -58,14 +58,18 @@ def load_sys_files(inp, type, ref=None, sys_path=False, build_abs_sys=False, **k
             survey._abs_sys.append(abssys)
     else:  # tarball
         print('Loading systems from {:s}'.format(inp))
-        tar = tarfile.open(inp)
+        print('Loading systems from {:s}'.format(inp))
+        tar = tarfile.open(inp,'r:gz')
         for member in tar.getmembers():
             if '.' not in member.name:
                 print('Skipping a likely folder: {:s}'.format(member.name))
                 continue
             # Extract
             f = tar.extractfile(member)
-            tdict = json.load(f)
+            f = f.read()
+            f = f.decode('utf-8')
+
+            tdict = json.loads(f)
             # Add keys (for backwards compatability)
             if ('NHI' in tdict.keys()) and ('flag_NHI' not in tdict.keys()):
                 tdict['flag_NHI'] = 1
