@@ -292,10 +292,10 @@ class XFitLLSGUI(QMainWindow):
             self.Nwidget.set_text(40.)
         # z
         try:
-            self.abssys_widg.all_abssys[idx].zabs = (
+            self.abssys_widg.all_abssys[idx].limits._z = (
                 float(self.zwidget.box.text()))
         except:
-            self.abssys_widg.all_abssys[idx].zabs = 2.
+            self.abssys_widg.all_abssys[idx].limits._z = 2.
         # b-value
         try:
             self.abssys_widg.all_abssys[idx].bval = (float(self.bwidget.box.text()))*u.km/u.s
