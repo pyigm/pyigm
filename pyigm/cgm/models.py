@@ -480,7 +480,7 @@ class ICM(ModifiedNFW):
 
 
     """
-    def __init__(self, log_Mhalo=np.log10(5e14), c=3.5, f_hot=0.75, **kwargs):
+    def __init__(self, log_Mhalo=np.log10(5e14), c=3.5, f_hot=0.7, **kwargs):
         # Init ModifiedNFW
         ModifiedNFW.__init__(self, log_Mhalo=log_Mhalo, c=c, f_hot=f_hot, **kwargs)
 
