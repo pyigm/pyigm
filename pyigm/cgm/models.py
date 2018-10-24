@@ -149,15 +149,15 @@ class ModifiedNFW(CGMPhase):
             self.rhoc = cosmo.critical_density(self.z)
         # Dark Matter
         self.r200 = (((3*self.M_halo) / (4*np.pi*200*self.rhoc))**(1/3)).to('kpc')
-        self.rho0 = 200*self.rhoc/3 * self.c**3 / self.fy_DM(self.c)   # Central density
+        self.rho0 = 200*self.rhoc/3 * self.c**3 / self.fy_dm(self.c)   # Central density
         # Baryons
         self.M_b = self.M_halo * self.fb
         self.rho0_b = (self.M_b / (4*np.pi) * (self.c/self.r200)**3 / self.fy_b(self.c)).cgs
         # Misc
         self.mu = 1.33   # Reduced mass correction for Helium
 
-    def fy_DM(self, y):
-        """ Enclosed mass function for the DM
+    def fy_dm(self, y):
+        """ Enclosed mass function for the Dark Matter
         NFW
 
         Parameters
@@ -480,7 +480,7 @@ class ICM(ModifiedNFW):
 
 
     """
-    def __init__(self, log_Mhalo=np.log10(5e14), c=3.5, f_hot=0.7, **kwargs):
+    def __init__(self, log_Mhalo=np.log10(5e14), c=3.5, f_hot=0.70, **kwargs):
         # Init ModifiedNFW
         ModifiedNFW.__init__(self, log_Mhalo=log_Mhalo, c=c, f_hot=f_hot, **kwargs)
 
