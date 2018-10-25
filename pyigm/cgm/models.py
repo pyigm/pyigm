@@ -120,6 +120,8 @@ class ModifiedNFW(CGMPhase):
       Parameter to modify NFW profile power-law
     y0 : float, optional
       Parameter to modify NFW profile position
+    z : float, optional
+      Redshift of the halo
     """
     def __init__(self, log_Mhalo=12.2, c=7.67, f_hot=0.75, alpha=0., y0=1., z=0., **kwargs):
         # Init
