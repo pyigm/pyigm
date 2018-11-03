@@ -467,7 +467,7 @@ class M33(ModifiedNFW):
     Taking data from Corbelli 2006
 
     """
-    def __init__(self, log_Mhalo=np.log10(5e11), c=7.67, f_hot=0.75, alpha=2, y0=2, **kwargs):
+    def __init__(self, log_Mhalo=np.log10(5e11), c=8.36, f_hot=0.75, alpha=2, y0=2, **kwargs):
 
         # Init ModifiedNFW
         ModifiedNFW.__init__(self, log_Mhalo=log_Mhalo, c=c, f_hot=f_hot,
