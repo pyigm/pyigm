@@ -197,7 +197,7 @@ class ModifiedNFW(CGMPhase):
 
         Parameters
         ----------
-        xyz : ndarray
+        xyz : ndarray (3, npoints)
           Coordinate(s) in kpc
 
         Returns
@@ -208,11 +208,9 @@ class ModifiedNFW(CGMPhase):
         """
         ne = self.nH(xyz) * 1.1667
         if self.zero_inner_ne > 0.:
-            if np.sum(xyz**2) < self.zero_inner_ne**2:
-                if isiterable(ne):
-                    return np.zeros_like(ne)
-                else:
-                    return 0.
+            rad = np.sum(xyz**2, axis=0)
+            inner = rad < self.zero_inner_ne**2
+            ne[inner] = 0.
         # Return
         return ne
 
