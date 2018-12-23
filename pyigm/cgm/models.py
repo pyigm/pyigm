@@ -210,7 +210,11 @@ class ModifiedNFW(CGMPhase):
         if self.zero_inner_ne > 0.:
             rad = np.sum(xyz**2, axis=0)
             inner = rad < self.zero_inner_ne**2
-            ne[inner] = 0.
+            if np.any(inner):
+                if len(xyz.shape) == 1:
+                    ne = 0.
+                else:
+                    ne[inner] = 0.
         # Return
         return ne
 
@@ -253,7 +257,7 @@ class ModifiedNFW(CGMPhase):
         # Return
         return rho
 
-    def Ne_Rperp(self, Rperp, step_size=0.1*u.kpc, rmax=1., add_units=True):
+    def Ne_Rperp(self, Rperp, step_size=0.1*u.kpc, rmax=1., add_units=True, cumul=False):
         """ Calculate N_H at an input impact parameter Rperp
         Just a simple sum in steps of step_size
 
@@ -267,11 +271,18 @@ class ModifiedNFW(CGMPhase):
           Maximum radius for integration in units of r200
         add_units : bool, optional
           Speed up calculations by avoiding units
+        cumul: bool, optional
 
         Returns
         -------
-        Ne : Quantity
-          Column density of total electrons
+        if cumul:
+          zval: ndarray (kpc)
+             z-values where z=0 is the midplane
+          Ne_cumul: ndarray
+             Cumulative Ne values (pc cm**-3)
+        else:
+          Ne: Quantity
+             Column density of total electrons
         """
         dz = step_size.to('kpc').value
 
@@ -291,6 +302,9 @@ class ModifiedNFW(CGMPhase):
 
         # Integrate
         ne = self.ne(xyz) # cm**-3
+        if cumul:
+            Ne_cumul = np.cumsum(ne) * dz * 1000  # pc cm**-3
+            return zval, Ne_cumul
         Ne = np.sum(ne) * dz * 1000  # pc cm**-3
 
         # Return
