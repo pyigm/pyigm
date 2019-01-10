@@ -363,7 +363,7 @@ class ClusteringField(IgmGalaxyField):
     def XYZ_proper(self):
         """From co-moving coordinates goes to physical coordinates
         (dividing by 1+z). It is only meaningful at small distances
-        (<~100 kpc)"""
+        (<~200 kpc)"""
         self.yg = self.yg / (1. + self.galreal.ZGAL)
         self.zg = self.zg / (1. + self.galreal.ZGAL)
         self.ygr = self.ygr / (1. + self.galrand.ZGAL)
