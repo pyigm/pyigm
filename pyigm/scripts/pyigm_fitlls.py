@@ -50,12 +50,18 @@ def main(args=None):
     pargs = parser(options=args)
 
     spec_kwargs = {}
-    spec_kwargs['masking'] = args.masking
+    if hasattr(args, 'masking'):
+        spec_kwargs['masking'] = args.masking
+
+    if hasattr(args, 'norm'):
+        inorm = args.norm
+    else:
+        inorm = False
 
     # Run
     app = QApplication(sys.argv)
     gui = XFitLLSGUI(pargs.in_file, pargs.zqso, outfil=pargs.out_file,smooth=pargs.smooth,
-                     lls_fit_file=pargs.lls_fit_file, norm=args.norm, rsp_kwargs=spec_kwargs)
+                     lls_fit_file=pargs.lls_fit_file, norm=inorm, rsp_kwargs=spec_kwargs)
     gui.show()
     app.exec_()
 
