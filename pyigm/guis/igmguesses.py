@@ -529,7 +529,7 @@ E         : toggle displaying/hiding the external absorption model
 
 
         # Write components out
-        # We need a deep copy here because ._abslines will be modified before writting
+        # We need a deep copy here because ._abslines will be modified before writing
         # but we want to keep the original ._abslines list in case column density
         # increases and the lines that were masked out because of EW should reappear.
         comps_aux = [cp.copy() for cp in self.comps_widg.all_comp]
@@ -2049,7 +2049,10 @@ def from_igmguesses_to_complist(infile):
         # QtCore.pyqtRemoveInputHook()
         # pdb.set_trace()
         # QtCore.pyqtRestoreInputHook()
-        comp = AbsComponent.from_dict(igmg_dict['cmps'][key], chk_sep=False, chk_data=False, chk_vel=False)
+        # import pdb;pdb.set_trace()
+        idict = igmg_dict['cmps'][key]
+
+        comp = AbsComponent.from_dict(idict, skip_abslines=False, chk_sep=False, chk_data=False, chk_vel=False)
         comp_list += [comp]
     return comp_list
 
