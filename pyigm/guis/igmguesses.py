@@ -2103,7 +2103,6 @@ def from_igmguesses_to_complist(infile):
     # Read the JSON file
     with open(infile) as data_file:
         igmg_dict = json.load(data_file)
-
     # Components
     comp_list = []
     for ii, key in enumerate(igmg_dict['cmps'].keys()):
@@ -2112,7 +2111,6 @@ def from_igmguesses_to_complist(infile):
         # QtCore.pyqtRestoreInputHook()
         # import pdb; pdb.set_trace()
         idict = igmg_dict['cmps'][key]
-        idict['logN'] = idict['attrib']['logN']
         comp = AbsComponent.from_dict(idict, skip_abslines=False, chk_sep=False, chk_data=False, chk_vel=False)
         comp_list += [comp]
     return comp_list
