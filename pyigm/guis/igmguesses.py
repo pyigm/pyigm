@@ -2093,7 +2093,7 @@ def from_igmguesses_to_complist(infile):
         idict = igmg_dict['cmps'][key]
         try:
             comp = AbsComponent.from_dict(idict, skip_abslines=False, chk_sep=False, chk_data=False, chk_vel=False, linelist="ISM")
-        except ValueError:  # if name is not in LineList ISM
+        except ValueError:  # if ion species not in LineList ISM
             print("Warning: Transition not in the ISM LineList. Will try others...")
             comp = None
             for linelist in ['H2']:
