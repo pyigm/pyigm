@@ -2094,7 +2094,18 @@ def from_igmguesses_to_complist(infile):
         try:
             comp = AbsComponent.from_dict(idict, skip_abslines=False, chk_sep=False, chk_data=False, chk_vel=False, linelist="ISM")
         except ValueError:  # if name is not in LineList ISM
-            comp = AbsComponent.from_dict(idict, skip_abslines=False, chk_sep=False, chk_data=False, chk_vel=False, linelist="H2")
+            print("Warning: Transition not in the ISM LineList. Will try others...")
+            comp = None
+            for linelist in ['H2']:
+                try:
+                    comp = AbsComponent.from_dict(idict, skip_abslines=False, chk_sep=False, chk_data=False, chk_vel=False, linelist=linelist)
+                except ValueError:
+                    print("Warning: Transition not in the {} LineList.".format(linelist))
+                    pass
+                if comp is not None:
+                    break
+            if comp is None:
+                print("Component could not be defined, appending a `None` object to the AbsComponent list.")
         comp_list += [comp]
     return comp_list
 
