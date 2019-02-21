@@ -2091,7 +2091,10 @@ def from_igmguesses_to_complist(infile):
         # QtCore.pyqtRestoreInputHook()
         # import pdb; pdb.set_trace()
         idict = igmg_dict['cmps'][key]
-        comp = AbsComponent.from_dict(idict, skip_abslines=False, chk_sep=False, chk_data=False, chk_vel=False)
+        try:
+            comp = AbsComponent.from_dict(idict, skip_abslines=False, chk_sep=False, chk_data=False, chk_vel=False, linelist="ISM")
+        except ValueError:  # if name is not in LineList ISM
+            comp = AbsComponent.from_dict(idict, skip_abslines=False, chk_sep=False, chk_data=False, chk_vel=False, linelist="H2")
         comp_list += [comp]
     return comp_list
 
