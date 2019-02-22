@@ -1902,8 +1902,8 @@ def set_fontsize(ax,fsz):
         item.set_fontsize(fsz)
 
 
-# Some info about the blending between components
-def blending_info(components, specfile, min_vlim=100*u.km/u.s, min_ew=0.005*u.AA, ask_user=True):
+# Some info about the blending between components  (jsr change min_ew=0.005*u.AA to 0.030, ask_user=True to False)
+def blending_info(components, specfile, min_vlim=100*u.km/u.s, min_ew=0.030*u.AA, ask_user=False):
     """Computes blending info, and store the components in files that group them together
     depending on overlapping in wobs space. Very useful for speeding up automatic Voigt
     profile fitting
