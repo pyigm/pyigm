@@ -617,7 +617,13 @@ class IGGVelPlotWidget(QWidget):
         self.parent = parent
         self.spec = ispec
         self.spec_fil = self.spec.filename
-        self.orig_spec = ispec  # For smoothing
+        self.orig_spec = ispec.copy()  # For smoothing
+        if self.orig_spec.co_is_set:
+            self.orig_spec.flux = self.orig_spec.flux / self.orig_spec.co
+        else:
+            raise ValueError("Please provide a spectrum with a continuum estimation. "
+                             "You can do this using linetool's `lt_continuumfit` script.")
+        self.orig_spec.bad_pixels = self.spec.bad_pixels.copy()
 
         self.scale = screen_scale
 
@@ -989,7 +995,8 @@ class IGGVelPlotWidget(QWidget):
                 flg = 1
             elif event.key == '/':
                 print('Unsmoothing spectrum')
-                self.spec = self.orig_spec
+                self.spec = self.orig_spec.copy()
+                self.spec.bad_pixels = self.orig_spec.bad_pixels.copy()
                 flg = 1
 
             elif event.key == 'R': # Refit
