@@ -151,8 +151,12 @@ class IGMSightline(AbsSightline):
         if 'cmps' in idict.keys():
             idict['components'] = idict['cmps'].copy()
         # Instantiate
-        slf = cls(SkyCoord(ra=meta['RA'], dec=meta['DEC'], unit='deg'),
+        try:
+            slf = cls(SkyCoord(ra=meta['RA'], dec=meta['DEC'], unit='deg'),
                   zem=meta['zem'], name=meta['JNAME'], **kwargs)
+        except KeyError:
+            slf = cls(SkyCoord(ra=meta['RA'], dec=meta['DEC'], unit='deg'),
+                      zem=meta['zem'], name=meta['name'], **kwargs)
         # Other
         for key in idict.keys():
             if key in ['RA', 'DEC', 'zem', 'name', 'components', 'meta', 'cmps']:
