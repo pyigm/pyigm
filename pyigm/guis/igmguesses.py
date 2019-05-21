@@ -127,6 +127,7 @@ y         : guess y limits
 t,b       : set y top/bottom limit
 l,r       : set left/right x limit
 [,]       : pan left/right
+*,/       : smooth/unsmooth spectrum
 C,c       : add/remove column
 K,k       : add/remove row
 (         : toggle between many/few (15 or 6) panels per page
@@ -618,6 +619,13 @@ class IGGVelPlotWidget(QWidget):
         self.parent = parent
         self.spec = ispec
         self.spec_fil = self.spec.filename
+        self.orig_spec = ispec.copy()  # For smoothing
+        if self.orig_spec.co_is_set:
+            self.orig_spec.flux = self.orig_spec.flux / self.orig_spec.co
+        else:
+            raise ValueError("Please provide a spectrum with a continuum estimation. "
+                             "You can do this using linetool's `lt_continuumfit` script.")
+        self.orig_spec.bad_pixels = self.spec.bad_pixels.copy()
 
         self.scale = screen_scale
 
@@ -963,7 +971,7 @@ class IGGVelPlotWidget(QWidget):
             pass
 
         ## Fiddle with a Component
-        if event.key in ['N','n','v','V','<','>','R','1','2']:
+        if event.key in ['N','n','v','V','<','>','R','1','2', '*','/']:
             if self.parent.fiddle_widg.component is None:
                 print('Need to generate a component first!')
                 return
@@ -980,6 +988,18 @@ class IGGVelPlotWidget(QWidget):
                 self.parent.fiddle_widg.component.attrib['z'] -= 4e-5  # should be a fraction of pixel size
             elif event.key == '>':
                 self.parent.fiddle_widg.component.attrib['z'] += 4e-5
+
+            elif event.key == '*':
+                print('Smoothing spectrum')
+                badpix = self.spec.bad_pixels
+                self.spec = self.spec.box_smooth(2)
+                self.spec.bad_pixels = badpix
+                flg = 1
+            elif event.key == '/':
+                print('Unsmoothing spectrum')
+                self.spec = self.orig_spec.copy()
+                self.spec.bad_pixels = self.orig_spec.bad_pixels.copy()
+                flg = 1
 
             elif event.key == 'R': # Refit
                 self.fit_component(self.parent.fiddle_widg.component)
