@@ -61,7 +61,7 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import matplotlib as mpl
 
 #The next line works on queue systems for DISPLAY issues
-# mpl.use('Agg')    #  Commented out by X to avoid test failures
+# mpl.use('Agg')
 
 import warnings
 import pdb
@@ -267,7 +267,9 @@ class Emceebones(object):
     This is a class that does all the fun stuff like bookkeeping, plots, driver for emcee etc..
     """
 
-    def __init__(self,data,infodata,model,nwalkers,nsamp,threads,outsave,optim,effnhi,logUconstraint=False,logUmean=-2.968,logUsigma=0.481,UVB='HM05'):
+    def __init__(self,data,infodata,model,nwalkers,nsamp,threads,outsave,optim,effnhi,
+                carbalphaconstraint=False,carbalphamean=0.0,carbalphasigma=0.5,
+                logUconstraint=False,logUmean=-2.968,logUsigma=0.481,UVB='HM05'):
         """ First, do some bookkeeping like finding ions and preparing the grid
         Parameters
         ----------
@@ -301,6 +303,9 @@ class Emceebones(object):
         self.final=0
         self.optim=optim      #flag to switch type of optimisation
         self.effnhi=effnhi    #flag to use effective NHI
+        self.carbalphaconstraint=str(carbalphaconstraint)
+        self.carbalphamean=carbalphamean
+        self.carbalphasigma=carbalphasigma
         self.logUconstraint=str(logUconstraint)
         self.logUmean=logUmean
         self.logUsigma=logUsigma
@@ -476,7 +481,14 @@ class Emceebones(object):
         else:
             lutext = "False"
         
-        plot_title = "{}\nUVB={}, log U prior={}".format(self.info['name'], self.UVB, lutext)
+        if self.carbalphaconstraint.lower() == 'true':
+            catext = ", carbalpha prior = {} +/- {}".format(self.carbalphamean, self.carbalphasigma)
+        # elif self.carbalphaconstraint.lower() == 'flat':
+        #     catext = ", carbalpha prior = flat")
+        else:
+            catext = ""
+        
+        plot_title = "{}\nUVB={}, log U prior={}{}".format(self.info['name'], self.UVB, lutext, catext)
         # plot_title = "{}".format(self.info['name'])
 
         
@@ -600,7 +612,10 @@ class Emceebones(object):
         ##We do this here so we only have to do it ONCE for each sightline
         ##  rather than every time lnprior() is called
         emc.logUconstraint=str(self.logUconstraint)
-        
+        emc.carbalphaconstraint=str(self.carbalphaconstraint)
+        emc.carbalphamean=self.carbalphamean
+        emc.carbalphasigma=self.carbalphasigma
+
         # logUGaussx = np.arange(-6.0,0.0+buff,0.10)
         # logUGauss  = np.array(1/(np.sqrt(2*np.pi*logUsigma**2))*np.exp(-(logUGaussx-logUmean)**2/(2*logUsigma**2)))
 
@@ -785,9 +800,15 @@ class Emceebones(object):
         
         if self.logUconstraint.lower() == 'true':
             print('Using constraint on logU (and therefore on dens), assuming a '+self.UVB+' UVB')
-        
         else:
             print('Not using constraint on logU (and therefore on dens)')
+        
+        if self.carbalphaconstraint.lower() == 'true':
+            print('Using constraint on carbalpha')
+        elif self.carbalphaconstraint.lower() == 'flat':
+            print('Using a flat prior on carbalpha')
+        else:
+            print('Not using constraint on carbalpha')
 
         print('Running {} chains for {} steps on {} processors'.format(self.nwalkers,self.nsamp,self.threads))
 
@@ -878,6 +899,10 @@ class Emceeutils():
         self.logUconstraint=str(False)
         self.densGaussMean=0
         self.densGaussSig=0
+        ##CBW
+        self.carbalphaconstraint=str(False)
+        self.carbalphamean=0
+        self.carbalphasigma=0
 
         return
 
@@ -946,10 +971,20 @@ class Emceeutils():
             else:
                 pri_dens=0
 
+            #now compute prior with carbalpha
+            if self.carbalphaconstraint.lower() == 'true':
+                # print("Using logU constraint")
+                carbalphaindex=self.mod_axistag.index('carbalpha')
+                ##compute the prior
+                pri_carbalpha=-1*np.log(np.sqrt(2*np.pi)*self.carbalphasigma)-\
+                    (self.carbalphamean-param[carbalphaindex])**2/(2*self.carbalphasigma**2)
+            else:
+                pri_carbalpha=0
+
 
             ##CBW
             #add together [log product]
-            prior=pri_red+pri_nhi+pri_dens
+            prior=pri_red+pri_nhi+pri_dens+pri_carbalpha
 
         else:
             #if outside return -inf
@@ -1194,7 +1229,9 @@ class Emceeutils():
             return lh + lp
 
 
-def mcmc_ions(data,infodata,model,logUconstraint=False, logUmean=-2.968, logUsigma=0.481, UVB='HM05', nwalkers=400,nsamp=400,threads=12,
+def mcmc_ions(data,infodata,model,logUconstraint=False, logUmean=-2.968, logUsigma=0.481, UVB='HM05',
+              carbalphaconstraint=False, carbalphamean=0.0, carbalphasigma=0.5,
+              nwalkers=400,nsamp=400,threads=12,
               outsave='emceeout', optim=False, effnhi=True, testing=False, nwalkers_min=400, nsamp_min=400):
     """ This is the main, which does not do much
 
@@ -1231,7 +1268,8 @@ def mcmc_ions(data,infodata,model,logUconstraint=False, logUmean=-2.968, logUsig
     # load the observations and the model
     mcmc=Emceebones(data,infodata,model,nwalkers,
                     nsamp,threads,outsave,optim,effnhi,
-                    logUconstraint=logUconstraint,logUmean=logUmean,logUsigma=logUsigma,UVB=UVB)
+                    logUconstraint=logUconstraint,logUmean=logUmean,logUsigma=logUsigma,UVB=UVB,
+                    carbalphaconstraint=carbalphaconstraint,carbalphamean=carbalphamean,carbalphasigma=carbalphasigma)
 
     # make space for output if needed
     if not os.path.isdir(outsave):
