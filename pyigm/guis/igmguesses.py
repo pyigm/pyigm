@@ -140,6 +140,8 @@ F         : update available transitions at current redshift from the
             full `ISM` LineList
 H         : update to HI Lyman series LineList at current redshift
             (type `T` or `F` to get metals back)
+9         : update to H2 LineList at current redshift
+            (type `F` to get the full `ISM` LineList back)
 U         : restrict to subset of available lines from the parent LineList
             at current redshift
 A         : set limits for fitting an absorption component
