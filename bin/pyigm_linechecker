@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+#
+# See top-level LICENSE file for Copyright information
+#
+# -*- coding: utf-8 -*-
+
+
+"""
+Wrapper for the pyigm_linechecker script
+"""
+
+from pyigm.scripts import pyigm_linechecker
+
+if __name__ == '__main__':
+    args = pyigm_linechecker.parser()
+    pyigm_linechecker.main(args)
