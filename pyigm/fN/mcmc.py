@@ -3,11 +3,13 @@ using a Markov chain Monte Carlo (MCMC) approach.
 """
 from __future__ import print_function, absolute_import, division, unicode_literals
 
-import os, imp
+import os
 import numpy as np
 import warnings
 import pdb
-import pymc
+
+from matplotlib import pyplot as plt
+
 #import MCMC_errors
 
 from pkg_resources import resource_filename
@@ -18,6 +20,7 @@ from pyigm.fN import plots
 from pyigm.fN.fnmodel import FNModel
 from pyigm.fN.constraints import FNConstraint
 from pyigm.fN import tau_eff
+from pyigm.surveys import llssurvey
 
 from time import gmtime, strftime
 
@@ -65,8 +68,26 @@ def set_fn_model(flg=0, use_p14=False):
     #
     return sfN_model
 
+def load_becker13(zmnx, sigteff_boost=1.):
+    # tau_eff (Becker+13)
+    b13_tab2 = Table.read(resource_filename('pyigm','/data/teff/becker13_tab2.dat'), format='ascii')
+    fN_teff = []
+    gdrow = (b13_tab2['z'] > zmnx[0]) & (b13_tab2['z'] < zmnx[1])
+    for row in b13_tab2[gdrow]:
+        # calculate
+        teff = -1*np.log(row['F'])
+        sigteff = row['s(F)']/row['F']*sigteff_boost
+        # Generate
+        fN = FNConstraint('teff', row['z'], ref='Becker+13', flavor='\\tlya',
+                          data=dict(Z_TEFF=row['z'], TEFF=teff, SIG_TEFF=sigteff,
+                                    COSM='N/A', NHI_MNX=[11.,22.]))
+        # Append
+        fN_teff.append(fN)
+    # Return
+    return fN_teff
 
-def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1.):
+def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1., orig=False,
+                cosmo=None):
     """ Load up f(N) data
 
     Parameters
@@ -79,6 +100,8 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1.):
     extra_fNc : list, optional
     sigteff_boost : float, optional
       Boost the error in teff by this factor (it can be *too* constraining)
+    orig : bool, optional
+      Use the original list of P14
 
     Returns
     -------
@@ -88,6 +111,9 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1.):
     if flg == 2:
         if sources is None:
             sources = ['OPB07', 'OPW12', 'OPW13', 'K05', 'K13R13', 'N12']
+            if not orig:
+                sources += ['F13', 'B13']
+
 
         fn_file = resource_filename('pyigm', '/data/fN/fN_constraints_z2.5_vanilla.fits')
         k13r13_file = resource_filename('pyigm', '/data/fN/fN_constraints_K13R13_vanilla.fits')
@@ -112,11 +138,52 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1.):
                 sources.pop(idx)
 
         # Check that all the desired sources were used
+        add_source = []
         if len(sources) > 0:
+            for source in sources:
+                if source == 'F13':
+                    fN_LLS = FNConstraint('LLS', 2.8, ref='Fumagalli+13', flavor='\\tlox',
+                                          data=dict(LX=0.33,SIG_LX=0.08, TAU_LIM=2., COSM='VANILLA'))
+                    fN_cs.append(fN_LLS)
+                    #
+                    fN_MFP = FNConstraint('MFP', 3.0, ref='Fumagalli+13', flavor='\\lmfp',
+                                          data=dict(MFP=100.,SIG_MFP=29, COSM='VANILLA'))
+                    fN_cs.append(fN_MFP)
+                    #
+                    add_source.append(source)
+                elif source == 'B13':
+                    fN_teff = load_becker13([2., 3.]) # Redshift range is somewhat arbitrary
+                    fN_cs += fN_teff
+                    add_source.append(source)
+
+        if len(sources) != len(add_source):
             pdb.set_trace()
+    elif flg == 4:
+        if sources is None:
+            sources = ['P10', 'B13']
+        add_source = []
+        for source in sources:
+            if source == 'P10':
+                sdss = llssurvey.LLSSurvey.load_SDSS_DR7()
+                sdss.cosmo = cosmo
+                #
+                z_bins = np.array([3.5, 3.65, 3.9])
+                lX, sig_lX_low, sig_lX_up = sdss.binned_lox(z_bins, NHI_mnx=(17.49,23.))
+                for ii in range(len(lX)):
+                    zeval = np.mean(z_bins[ii:ii+2])
+                    fN_LLS = FNConstraint('LLS', zeval, ref='Prochaska+10', flavor='\\tlox',
+                                      data=dict(LX=lX[ii],
+                                                SIG_LX=np.mean([sig_lX_low[ii],sig_lX_up[ii]]),
+                                                TAU_LIM=2., COSM='VANILLA'))
+                    fN_cs.append(fN_LLS)
+                add_source.append(source)
+            elif source == 'B13':
+                fN_teff = load_becker13([3., 4.]) # Redshift range is somewhat arbitrary
+                fN_cs += fN_teff
+                add_source.append(source)
     elif flg == 5:
         if sources is None:
-            sources = ['Worseck+14', 'Crighton+15', 'Crighton+17', 'Becker+13']
+            sources = ['Worseck+14', 'Crighton+15', 'Crighton+18', 'Becker+13']
         chk_sources = sources[:]
 
         #all_fN_cs = FNConstraint.from_fitsfile([fn_file,k13r13_file,n12_file])
@@ -126,41 +193,30 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1.):
         fN_MFPb = FNConstraint('MFP', 4.86, ref='Worseck+14', flavor='\\lmfp', data=dict(MFP=15.1,SIG_MFP=1.8, COSM='VANILLA'))
         fN_MFPc = FNConstraint('MFP', 5.16, ref='Worseck+14', flavor='\\lmfp', data=dict(MFP=10.3,SIG_MFP=1.6, COSM='VANILLA'))
         fN_MFP = [fN_MFPa, fN_MFPb, fN_MFPc]
-        # LLS (Crighton+17)
-        fN_LLSa = FNConstraint('LLS', np.mean([3.75,4.40]), ref='Crighton+17', flavor='\\tlox', data=dict(LX=0.529,SIG_LX=0.073, TAU_LIM=2., COSM='VANILLA'))
-        fN_LLSb = FNConstraint('LLS', np.mean([4.40,4.70]), ref='Crighton+17', flavor='\\tlox', data=dict(LX=0.576,SIG_LX=0.090, TAU_LIM=2., COSM='VANILLA'))
-        fN_LLSc = FNConstraint('LLS', np.mean([4.70, 5.40]), ref='Crighton+17', flavor='\\tlox', data=dict(LX=0.637,SIG_LX=0.089, TAU_LIM=2., COSM='VANILLA'))
+        # LLS (Crighton+18)
+        fN_LLSa = FNConstraint('LLS', np.mean([3.75,4.40]), ref='Crighton+18', flavor='\\tlox', data=dict(LX=0.54,SIG_LX=0.10, TAU_LIM=2., COSM='VANILLA'))
+        fN_LLSb = FNConstraint('LLS', np.mean([4.40,4.70]), ref='Crighton+18', flavor='\\tlox', data=dict(LX=0.52,SIG_LX=0.11, TAU_LIM=2., COSM='VANILLA'))
+        fN_LLSc = FNConstraint('LLS', np.mean([4.70, 5.40]), ref='Crighton+18', flavor='\\tlox', data=dict(LX=0.67,SIG_LX=0.12, TAU_LIM=2., COSM='VANILLA'))
         fN_LLS = [fN_LLSa, fN_LLSb, fN_LLSc]
         # DLA (Crighton+15)
-        tau_lim = 10.**(20.3-17.19)
-        fN_DLAa = FNConstraint('DLA', np.mean([3.56,4.45]), ref='Crighton+15', flavor='\\tdlox',
-                               data=dict(LX=0.059, SIG_LX=0.018, COSM='VANILLA', TAU_LIM=tau_lim))
-        fN_DLAb = FNConstraint('DLA', np.mean([4.45,5.31]), ref='Crighton+15', flavor='\\tdlox',
-                               data=dict(LX=0.095, SIG_LX=0.022, COSM='VANILLA', TAU_LIM=tau_lim))
+        #  THE FOLLOWING TWO ARE REDUNDANT
+        #tau_lim = 10.**(20.3-17.19)
+        #fN_DLAa = FNConstraint('DLA', np.mean([3.56,4.45]), ref='Crighton+15', flavor='\\tdlox',
+        #                       data=dict(LX=0.059, SIG_LX=0.018, COSM='VANILLA', TAU_LIM=tau_lim))
+        #fN_DLAb = FNConstraint('DLA', np.mean([4.45,5.31]), ref='Crighton+15', flavor='\\tdlox',
+        #                       data=dict(LX=0.095, SIG_LX=0.022, COSM='VANILLA', TAU_LIM=tau_lim))
         fN_DLAc = FNConstraint('fN', np.mean([3.6,5.2]), ref='Crighton+15', flavor='f(N)',
                                data=dict(COSM='VANILLA', NPT=5,
                                          FN=np.array([-22.1247392 , -22.12588672, -22.51361414, -22.7732822 , -23.76709909]),
                                          SIG_FN=np.array([[ 0.24127323,  0.17599877,  0.17613792,  0.14095363,  0.30129492],
                                                         [ 0.21437162,  0.15275017,  0.12551036,  0.12963855,  0.17654378]]),
-                                         BINS=np.array([[ 20.175,  20.425,  20.675,  20.925,  21.05 ],
-                                                        [ 20.675,  20.925,  21.175,  21.425,  22.05 ]])))
+                                         BINS=np.array([[20.3,  20.425,  20.675,  21.075,  21.30],
+                                                        [20.425,  20.675,  21.075,  21.30,  21.8]])))
 
-        fN_DLA = [fN_DLAa, fN_DLAb, fN_DLAc]
-        # tau_eff (Becker+13)
-        b13_tab2 = Table.read(resource_filename('pyigm','/data/teff/becker13_tab2.dat'), format='ascii')
-        fN_teff = []
-        for row in b13_tab2:
-            if row['z'] < 4.:
-                continue
-            # calculate
-            teff = -1*np.log(row['F'])
-            sigteff = row['s(F)']/row['F']*sigteff_boost
-            # Generate
-            fN = FNConstraint('teff', row['z'], ref='Becker+13', flavor='\\tlya',
-                              data=dict(Z_TEFF=row['z'], TEFF=teff, SIG_TEFF=sigteff,
-                                        COSM='N/A', NHI_MNX=[11.,22.]))
-            # Append
-            fN_teff.append(fN)
+        #fN_DLA = [fN_DLAa, fN_DLAb, fN_DLAc]
+        fN_DLA = [fN_DLAc]
+        # teff
+        fN_teff = load_becker13([4., 99.], sigteff_boost=sigteff_boost)
         # Collate
         all_fN_cs = fN_MFP + fN_DLA + fN_teff + fN_LLS
 
@@ -188,6 +244,24 @@ def set_fn_data(flg=2, sources=None, extra_fNc=[], sigteff_boost=1.):
 ##########################################
 #   Prepare the variables and their limits
 ##########################################
+
+def set_pymc3_var(fN_model, sd=0.5):
+    iparm = []
+    if fN_model.fN_mtype != 'Hspline':
+        raise ValueError("Not setup for anything but HSpline")
+    # Loop on parameters to create an array of pymc Stochatsic variable objects
+    nparm = len(fN_model.param['sply'])
+    #pdb.set_trace()
+    for ii in range(nparm):
+        nm = str('p')+str(ii)
+        #doc = str('SplinePointNHI_')+str(fN_model.pivots[ii])
+        #iparm = np.append(iparm, pymc.Uniform(nm, lower=fN_model.param[ii]-lim,
+        #                                    upper=fN_model.param[ii]+lim, doc=doc))
+        #iparm = np.append(iparm, pymc.Normal(nm, mu=fN_model.param['sply'][ii]*(1+rand[ii]), tau=1./0.025, doc=doc))
+        iparm.append(pm.Normal(nm, mu=fN_model.param['sply'][ii], sd=sd))
+    # Return
+    return iparm
+
 def set_pymc_var(fN_model,lim=2., tauv=0.025):
     """ Generate pymc variables
 
@@ -236,9 +310,9 @@ def set_pymc_var(fN_model,lim=2., tauv=0.025):
     return iparm
 
 
-def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
+def run_pymc(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
         outfile=None, **kwargs):
-    """ Run the MCMC
+    """ Run the MCMC with good-old pymc
 
     Parameters
     ----------
@@ -256,6 +330,7 @@ def run(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=400,
     -------
 
     """
+    import pymc
     if outfile is not None:
         ext = outfile.split('.')[-1]
         if ext != 'hdf5':
