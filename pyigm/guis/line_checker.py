@@ -34,6 +34,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 # Matplotlib Figure object
 from matplotlib.figure import Figure
 import matplotlib.gridspec as gridspec
+from matplotlib import pyplot as plt
 
 from astropy.units import Quantity
 from astropy import units as u
@@ -267,16 +268,18 @@ E         : toggle displaying/hiding the external absorption model
         '''
 
         # Define initial redshift
-        z = 0.0
+        z = 0.0159
+        '''
         self.llist['z'] = z
         if redsh is not None:
             z=redsh
             self.llist['z'] = z
             print("Redshift set to",z,redsh)
-        
+        '''
+
         # Grab the pieces and tie together
-        self.slines_widg = ltgl.SelectedLinesWidget(
-            self.llist[self.llist['List']], parent=self, init_select='All')
+        #self.slines_widg = ltgl.SelectedLinesWidget(
+        #    self.llist[self.llist['List']], parent=self, init_select='All')
         self.fiddle_widg = FiddleComponentWidget(parent=self)
         self.comps_widg = ComponentListWidget([], parent=self)
         self.velplot_widg = InspectionWidget(spec, (1+z)*1215.67, screen_scale=self.scale,
@@ -306,7 +309,7 @@ E         : toggle displaying/hiding the external absorption model
         vbox = QVBoxLayout()
         vbox.addWidget(self.fiddle_widg)
         vbox.addWidget(self.comps_widg)
-        vbox.addWidget(self.slines_widg)
+        #vbox.addWidget(self.slines_widg)
         vbox.addWidget(self.wq_widg)
         anly_widg.setLayout(vbox)
 
@@ -317,14 +320,15 @@ E         : toggle displaying/hiding the external absorption model
         self.main_widget.setLayout(hbox)
 
         # Attempt to initialize
-        self.update_available_lines(linelist=self.llist[self.llist['List']])
-        self.velplot_widg.init_lines()
-        self.velplot_widg.on_draw(rescale=True, fig_clear=True)
-        self.slines_widg.selected = self.llist['show_line']
+        #self.update_available_lines(linelist=self.llist[self.llist['List']])
+        #self.velplot_widg.init_lines()
+        self.velplot_widg.on_draw(rescale=True, fig_clear=True, replot=True)
+
+        #self.slines_widg.selected = self.llist['show_line']
         #QtCore.pyqtRemoveInputHook()
         #pdb.set_trace()
         #QtCore.pyqtRestoreInputHook()
-        self.slines_widg.on_list_change(self.llist[self.llist['List']])
+        #self.slines_widg.on_list_change(self.llist[self.llist['List']])
 
         # Point MainWindow
         self.setCentralWidget(self.main_widget)
@@ -644,6 +648,7 @@ class InspectionWidget(QWidget):
         self.flag_plotmodel = True
         self.flag_plotextmodel = False
         self.flag_colorful = False
+        self.llist = llist
 
         self.wrest = 0.
         self.avmnx = np.array([0.,0.])*u.km/u.s
@@ -664,7 +669,9 @@ class InspectionWidget(QWidget):
 
         self.psdict = {} # Dict for spectra plotting
         self.psdict['x_minmax'] = [1231., 1258.]
-        self.psdict['y_minmax'] = [-0.1, 1.1]
+        self.psdict['y_minmax'] = [-0.1, 1.1] # Main window
+        self.psdict['v_minmax'] = [-200., 200.]
+        self.psdict['vy_minmax'] = [-0.1, 1.1] # Sub plots
         self.psdict['sv_xy_minmax'] = self.psdict['x_minmax'] + self.psdict['y_minmax']
         self.psdict['nav'] = ltgu.navigate(0,0,init=True)
 
@@ -673,12 +680,14 @@ class InspectionWidget(QWidget):
         #if not status is None:
         #    self.statusBar = status
 
+        '''
         # Line List
         if llist is None:
             self.llist = ltgu.set_llist(['HI 1215', 'HI 1025'])
         else:
             self.llist = llist
         self.llist['z'] = self.z
+        '''
         # QtCore.pyqtRemoveInputHook()
         # pdb.set_trace()
         # QtCore.pyqtRestoreInputHook()
@@ -686,7 +695,7 @@ class InspectionWidget(QWidget):
         # Indexing for line plotting
         self.idx_line = 0
 
-        self.init_lines()
+       # self.init_lines()
         
         # Create the mpl Figure and FigCanvas objects. 
         #
@@ -701,7 +710,7 @@ class InspectionWidget(QWidget):
         self.canvas.mpl_connect('button_press_event', self.on_click)
 
         # Sub_plots
-        self.sub_xy = [4,3]  # row, column
+        self.sub_xy = [5,3]  # row, column
         self.subxy_state = 'In'
 
         self.fig.subplots_adjust(hspace=0.0, wspace=0.1, left=0.04,
@@ -715,6 +724,7 @@ class InspectionWidget(QWidget):
         # Draw on init
         self.on_draw(replot=False) # False only for init
 
+    '''
     # Load them up for display
     def init_lines(self):
         wvmin = self.spec.wvmin
@@ -734,6 +744,7 @@ class InspectionWidget(QWidget):
         self.parent.slines_widg.selected = self.llist['show_line']
         self.parent.slines_widg.on_list_change(
             self.llist[self.llist['List']])
+    '''
 
 
     # Update model
@@ -952,6 +963,7 @@ class InspectionWidget(QWidget):
         ## NAVIGATING
         if event.key in self.psdict['nav']:
             flg = ltgu.navigate(self.psdict,event)
+            fig_clear = True
         if event.key == '-':  # previous page
             self.idx_line = max(0, self.idx_line-self.sub_xy[0]*self.sub_xy[1]) # Min=0
             if self.idx_line == sv_idx:
@@ -971,7 +983,7 @@ class InspectionWidget(QWidget):
         except AttributeError:
             return
         else:
-            wvobs = wrest*(1+self.z)
+            #wvobs = wrest*(1+self.z)
             pass
 
         ## Fiddle with a Component
@@ -1298,16 +1310,27 @@ class InspectionWidget(QWidget):
                 event.button, event.x, event.y, event.xdata, event.ydata))
         except (ValueError, TypeError):
             return
+        # Update Lya
         if event.button == 1: # Draw line
-            # remove this ugly green line
-            # self.ax.plot( [event.xdata,event.xdata], self.psdict['y_minmax'], ':', color='green')
-            # self.on_draw(replot=False)
-    
+            self.z_lya = event.xdata/1215.67 - 1.
+            self.on_draw(fig_clear=True)
             # Print values
             try:
                 self.statusBar().showMessage('x,y = {:f}, {:f}'.format(event.xdata,event.ydata))
             except AttributeError:
                 return
+        elif event.button == 3: # Draw line
+            self.select_line_widg = ltgl.SelectLineWidget(self.llist._data)
+            self.select_line_widg.exec_()
+            line = self.select_line_widg.line
+            if line.strip() == 'None':
+                return
+            #
+            quant = line.split('::')[1].lstrip()
+            spltw = quant.split(' ')
+            wrest = Quantity(float(spltw[0]), unit=spltw[1])
+            # Generate a line
+            print("You chose", wrest)
 
     def on_draw(self, replot=True, in_wrest=None, rescale=True, fig_clear=False):
         """ Redraws the figure
@@ -1316,13 +1339,13 @@ class InspectionWidget(QWidget):
         if replot is True:
             if fig_clear:
                 self.fig.clf()
-            gs = gridspec.GridSpec(self.sub_xy[0], self.sub_xy[1])
+            gs = self.fig.add_gridspec(self.sub_xy[0], self.sub_xy[1])
             # Title by filename + zem + redshift
             zem = self.parent.meta['zem']
-            self.fig.suptitle('{} (zem={:.3f})\nz={:.5f}'.format(self.spec.filename, zem, self.z_lya), fontsize='medium',
-                              ha='center')
+            self.fig.suptitle('{} (zem={:.3f})\n[zLya={:.5f}]'.format(self.spec.filename, zem, self.z_lya),
+                              fontsize='medium', ha='center')
 
-                '''
+            '''
             if (self.flag_idlbl) or (self.flag_colorful):
                 line_wvobs = []
                 line_lbl = []
@@ -1360,10 +1383,77 @@ class InspectionWidget(QWidget):
                 # QtCore.pyqtRestoreInputHook()
             '''
 
-            # Main window
-            self.ax = plt.subplot(gs[0])
-            self.ax = self.fig.add_subplot(self.sub_xy[0],self.sub_xy[1], subp_idx[jj])
+            # Main Spectrum
+            self.ax= self.fig.add_subplot(gs[0:2,0:2])
+            self.ax.cla()
 
+            self.ax.plot(self.spec.wavelength, self.spec.flux, 'k-', drawstyle='steps-mid')
+            self.ax.set_xlabel('Observed Wavelength')
+            self.ax.set_xlim(self.psdict['x_minmax'])
+            self.ax.set_ylim(self.psdict['y_minmax'])
+            self.ax.set_gid('Spec')
+            # Proposed as Lya
+            self.ax.plot( [(1+self.z_lya)*1215.67]*2, [-1e9, 1e9], '--', color='blue', lw=0.5)
+
+            #QtCore.pyqtRemoveInputHook()
+            #pdb.set_trace()
+            #QtCore.pyqtRestoreInputHook()
+
+            lsz = 11.
+            # Lya + SiIII
+            for kk, iwrest, lbl in zip([0,1], [1215.67, 1206.5], ['Lya', 'SiIII']):
+                wrest = iwrest * u.AA
+                self.ax = self.fig.add_subplot(gs[kk,2])
+                # Velocity
+                # velo = (self.spec.wavelength/wvobs - 1.) * c_kms * u.km/u.s
+                velo = ltu.dv_from_z(self.spec.wavelength/wrest - 1., self.z_lya)
+                # Data
+                self.ax.plot(velo, self.spec.flux, '-', color='k', drawstyle='steps-mid', lw=0.5)
+                self.ax.plot(velo, self.spec.sig, ':', color='r', lw=0.5)
+                # Zero line
+                self.ax.plot( [0., 0.], [-1e9, 1e9], ':', color='gray')
+                self.ax.plot([-1e9, 1e9], [1]*2, '--', color='green', lw=0.5)
+                if kk == 0:
+                    self.ax.get_xaxis().set_ticks([])
+                else:
+                    self.ax.set_xlabel('Relative Velocity (km/s)')
+                #
+                self.ax.text(0.05, 0.05, lbl, transform=self.ax.transAxes,
+                   fontsize=lsz, ha='left', color='black')
+                self.ax.set_xlim(self.psdict['v_minmax'])
+                self.ax.set_ylim(self.psdict['vy_minmax'])
+                self.ax.set_gid(lbl)
+
+            # Propose Lyb
+            for col, kk, iwrest, lbl in zip(
+                    [0, 0, 1, 1, 2, 2],
+                    [3, 4, 3, 4, 3, 4],
+                    [1025.722, 1215.67, 1031.9261, 1215.67, 1239.9253, 1215.67],
+                    ['Lyb','Lya-Lyb']+['OVI 1031','Lya-OVI']+['NV 1239','Lya-NV']):
+                if kk == 3:
+                    z_propose = (self.z_lya+1) * 1215.67 / iwrest - 1.
+                wrest = iwrest * u.AA
+                self.ax = self.fig.add_subplot(gs[kk, col])
+                # Velocity
+                # velo = (self.spec.wavelength/wvobs - 1.) * c_kms * u.km/u.s
+                velo = ltu.dv_from_z(self.spec.wavelength / wrest - 1., z_propose)
+                # Data
+                self.ax.plot(velo, self.spec.flux, '-', color='k', drawstyle='steps-mid', lw=0.5)
+                self.ax.plot(velo, self.spec.sig, ':', color='r', lw=0.5)
+                # Zero line
+                self.ax.plot([0., 0.], [-1e9, 1e9], ':', color='gray')
+                self.ax.plot([-1e9, 1e9], [1]*2, '--', color='green', lw=0.5)
+                if kk == 3:
+                    self.ax.get_xaxis().set_ticks([])
+                else:
+                    self.ax.set_xlabel('Relative Velocity (km/s)')
+                #
+                self.ax.text(0.05, 0.05, lbl, transform=self.ax.transAxes,
+                             fontsize=lsz, ha='left', color='black')
+                self.ax.set_xlim(self.psdict['v_minmax'])
+                self.ax.set_ylim(self.psdict['vy_minmax'])
+                self.ax.set_gid(lbl)
+            '''
             # Subplots
             nplt = self.sub_xy[0]*self.sub_xy[1]
             if len(all_idx) <= nplt:
@@ -1532,8 +1622,10 @@ class InspectionWidget(QWidget):
 
                 # Fonts
                 set_fontsize(self.ax,6.)
+            '''
         # Draw
         self.canvas.draw()
+
 ############        
 class FiddleComponentWidget(QWidget):
     ''' Widget to fiddle with a given component
