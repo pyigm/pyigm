@@ -182,6 +182,8 @@ def cgmsurvey_from_sightlines_fields(fields, sightlines, rho_max=300*u.kpc,
     if dummysys is True:
         from linetools.spectralline import AbsLine
         ismlist = LineList('ISM')
+    else:
+        ismlist = None
 
     from pyigm.cgm.cgmsurvey import CGMAbsSurvey
     cgmsys = []
