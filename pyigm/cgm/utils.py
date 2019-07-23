@@ -207,10 +207,12 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
     galaxy : Galaxy
     igmsystems : list
       list of IGMSystems
-    rho_max : Quantity
+    rho_max : Quantity, optional
       Maximum projected separation from sightline to galaxy
-    dv_max
+    dv_max : Quantity, optional
       Maximum velocity offset between system and galaxy
+    cosmo : astropy.cosmology
+      Cosmological model for distances, etc.
     dummysys: bool, optional
         If True, instantiate CGMAbsSys even if no match is found in igmsystems
     dummyspec : XSpectrum1D, optional
@@ -271,6 +273,7 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
             dummycomp = AbsComponent(dummycoords,(1,1),galaxy.z,[-100.,100.]*u.km/u.s)
             dummycomp.flag_N = 3
             dummyline = AbsLine('HI 1215',**kwargs)  # Need an actual transition for comp check
+            dummyline.limits = dummycomp.limits
             dummyline.analy['spec'] = dummyspec
             dummyline.attrib['coord'] = dummycoords
             dummycomp.add_absline(dummyline,chk_vel=False,chk_sep=False)
