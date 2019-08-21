@@ -451,7 +451,7 @@ class CGMAbsSurvey(object):
         return
 
 
-    def ion_tbl(self, Zion, fill_ion=True, vrange=None,**kwargs):
+    def ion_tbl(self, Zion, fill_ion=True, vrange=None, extra_galaxy_attr=[], **kwargs):
         """ Generate a Table of Ionic column densities for an input ion
 
         Parameters
@@ -475,6 +475,10 @@ class CGMAbsSurvey(object):
         dumb = GenericIGMSurvey()
         names = []
         rhos = []
+        gal_dict = dict(gal_ra=[], gal_dec=[])
+        for gattr in extra_galaxy_attr:
+            gal_dict[gattr] = []
+
         for cgmabs in self.cgm_abs:
             if fill_ion:
                 cgmabs.igm_sys.fill_ionN(vrange=vrange,summed_ion=True)
@@ -484,6 +488,11 @@ class CGMAbsSurvey(object):
                 names.append(cgmabs.name)
                 # Impact parameters
                 rhos.append(cgmabs.rho.to(u.kpc).value)
+                # Galaxy info
+                gal_dict['gal_ra'].append(cgmabs.galaxy.coord.ra.value)
+                gal_dict['gal_dec'].append(cgmabs.galaxy.coord.dec.value)
+                for gattr in extra_galaxy_attr:
+                    gal_dict[gattr].append(getattr(cgmabs.galaxy, gattr))
         # Run ions
         tbl = dumb.ions(Zion,skip_null=False,**kwargs)
         if tbl is None:
@@ -491,6 +500,9 @@ class CGMAbsSurvey(object):
         tbl.add_column(Column(names, name='cgm_name'))
         # Add impact parameter
         tbl.add_column(Column(rhos*u.kpc, name='rho_impact'))
+        # Galaxy info
+        for key in gal_dict:
+            tbl[key] = gal_dict[key]
         # Return
         return tbl
 
