@@ -306,7 +306,7 @@ def mk_mock(wave, zem, fN_model, out_spec=None, add_conti=True,
     sub_mock = XSpectrum1D.from_tuple( (sub_wave,sub_flux) )
 
     # Smooth
-    smooth_mock = sub_mock.gauss_smooth(fwhm=fwhm*(dwv/dwv_sub))
+    smooth_mock = sub_mock.gauss_smooth(fwhm=fwhm*(dwv/dwv_sub).value)
 
     # Rebin
     mock = smooth_mock.rebin(wave)

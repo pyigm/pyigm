@@ -69,7 +69,7 @@ def test_z3mage():
 
 def test_load_ribaudo11():
     ribaudo11 = LLSSurvey.load_ribaudo()
-    z, gz = ribaudo13.calculate_gz()
+    z, gz = ribaudo11.calculate_gz()
     assert gz[0] == 1
     assert gz[-1] == 3
     assert ribaudo11.nsys == 50

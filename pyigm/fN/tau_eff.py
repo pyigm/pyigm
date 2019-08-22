@@ -1,8 +1,9 @@
 """ Module for tau_eff calculations
 """
+import os
 import pdb
 import yaml
-import imp
+from pkg_resources import resource_filename
 
 import numpy as np
 from scipy import interpolate
@@ -17,7 +18,6 @@ from linetools.lists.linelist import LineList
 from pyigm.fN.fnmodel import FNModel
 from pyigm import utils as pyigmu
 
-pyigm_path = imp.find_module('pyigm')[1]
 
 def DM(z, cosmo=None):
     """ Dispersion Measure from the IGM
@@ -184,9 +184,9 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0,
     # Read in EW spline (if needed)
     if EW_spline is None:
         if int(bval) == 24:
-            EW_FIL = pyigm_path+'/data/fN/EW_SPLINE_b24.yml'
+            EW_FIL = os.path.join(resource_filename('pyigm', 'data'), 'fN', 'EW_SPLINE_b24.yml')
             with open(EW_FIL, 'r') as infile:
-                EW_spline = yaml.load(infile)  # dict from mk_ew_lyman_spline
+                EW_spline = yaml.safe_load(infile)  # dict from mk_ew_lyman_spline
         else:
             raise ValueError('tau_eff: Not ready for this bvalue %g' % bval)
         # dict me for speed
