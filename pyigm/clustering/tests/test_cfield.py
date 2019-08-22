@@ -4,7 +4,6 @@
 
 import pytest
 import numpy as np
-import pdb
 
 from astropy.coordinates import SkyCoord
 
