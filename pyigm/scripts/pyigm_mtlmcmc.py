@@ -129,7 +129,11 @@ def run_mcmc_wotta(args):
         args.logUmean=-2.968
     if not args.logUsigma:
         args.logUsigma=0.481
-    
+    if not args.carbalphamean:
+        args.carbalphamean=0.0
+    if not args.carbalphasigma:
+        args.carbalphasigma=0.5
+
     ##Re-index the row number
     row_index = int(args.row) - 1
     
@@ -187,10 +191,20 @@ def run_mcmc_wotta(args):
     if str(carbalpha_use).lower() == 'false':
         ##Do NOT use the carbalpha parameter
         ca_text = ""
+        args.carbalphaconstraint = 'False'
     else:
         ##Use the carbalpha parameter
         ca_text = "_carbalpha"
-    
+        try:
+            cam, cas = carbalpha_use.split(',')
+            args.carbalphamean = float(cam)
+            args.carbalphasigma = float(cas)
+            args.carbalphaconstraint = 'True'
+        except:
+            args.carbalphaconstraint = 'Flat'
+            # args.carbalphamean = 'Flat'
+            # args.carbalphasigma = 'Flat'
+
     args.grid = "{}_{}{}.pkl".format(args.grid, args.UVB, ca_text)
 
 
@@ -212,7 +226,9 @@ def run_mcmc_wotta(args):
     ##Add our own info to the saved information
     obsinfo = {}
     obsinfo['UVB'] = args.UVB
-    obsinfo['carbalpha'] = carbalpha_use
+    obsinfo['carbalphaconstraint'] = args.carbalphaconstraint
+    obsinfo['carbalphamean'] = args.carbalphamean
+    obsinfo['carbalphasigma'] = args.carbalphasigma
     obsinfo['logUconstraint'] = args.logUconstraint
     obsinfo['logUmean'] = args.logUmean
     obsinfo['logUsigma'] = args.logUsigma
@@ -300,6 +316,7 @@ def run_mcmc(args, obsinfo=None):
     #pick optimised values for 12 processors - cosma (proc*NN walkers, proc*YY samples)
     mcmc=mcmc_ions(observ,obsinfo, args.grid, 
                    logUconstraint=args.logUconstraint, logUmean=args.logUmean, logUsigma=args.logUsigma,
+                   carbalphaconstraint=args.carbalphaconstraint, carbalphamean=args.carbalphamean, carbalphasigma=args.carbalphasigma,
                    UVB=args.UVB,
                    nwalkers=(args.nwalkers),
                    nsamp=(args.nsamp), optim=optim, threads=args.nthread,
@@ -332,7 +349,9 @@ def main(args=None):
     parser.add_argument('-optim', type=str, help='Optimization method')
     parser.add_argument('-dens', type=float, help='Guess at density (optim=guess); if "False", then optim=False')
     parser.add_argument('-met', type=float, help='Guess at metallicity (optim=guess); if "False", then optim=False')
-    parser.add_argument('-carbalpha', type=float, help='Guess at carbalpha; if "True", uses carbalpha grid; if "False", does not use carbalpha grid')
+    parser.add_argument('-carbalpha', type=float, help='Guess at carbalpha; if "True", uses carbalpha grid. If comma-separated values for carbalphamean and carbalphasigma (e.g., "0.1,0.4"), which assumes "True". If "False", does not use carbalpha grid')
+    parser.add_argument('-carbalphamean', type=float, help='Guess at carbalpha; if "True", uses carbalpha grid. If comma-separated values for carbalphamean and carbalphasigma (e.g., "0.1,0.4"), which assumes "True". If "False", does not use carbalpha grid')
+    parser.add_argument('-carbalphasigma', type=float, help='Guess at carbalpha; if "True", uses carbalpha grid. If comma-separated values for carbalphamean and carbalphasigma (e.g., "0.1,0.4"), which assumes "True". If "False", does not use carbalpha grid')
     parser.add_argument("--testing", help="Set to test (over-rides minimum nwalkers)", action="store_true")
     parser.add_argument("--wotta", help="If used, reads in files using Wotta's file format (there is a guesses file, and each sightline has separate input file). If specified, the guesses file contains: dummy column at the front (not used here); the sightline name; metallicity initial guess; density initial guess; carbon/alpha ratio (carbalpha) initial guess (required, even if you don't want to use carbalpha); whether or not to allow carbalpha to vary; whether to use the Wotta+16 logUconstraint as a prior on the density; the UVB to use; ions to comment out (not used here);  and any additional notes (not used here). Then, all that needs to be specified here is: -guessesfile=__; -row=__ (in the guessesfile, usually automatically done by the supercomputer submission script); -nthread=__ (also done by the submission script); -nwalkers=__; and -nsamp=__.", action="store_true")
     parser.add_argument('-guessesfile')

@@ -88,9 +88,10 @@ def monte_HIcomp(zmnx, fN_model, NHI_mnx=(12., 22.), bfix=None, dz=0.001, cosmo=
             seed = 12345
         rstate = np.random.RandomState(seed)
 
+    ### Method handles powerlaws just fine also
     # Check fN_model type
-    if fN_model.fN_mtype != 'Hspline':
-        raise ValueError('monte_HIlines: Can only handle Hspline so far.')
+    #if fN_model.fN_mtype != 'Hspline':
+    #    raise ValueError('monte_HIlines: Can only handle Hspline so far.')
 
     # Calculate lX at pivot
     lX, cum_lX, lX_NHI = fN_model.calculate_lox(fN_model.zpivot,

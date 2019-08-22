@@ -326,7 +326,7 @@ class CGMAbsSys(object):
             lines2plot=[]  # Master list of lines to plot
             for i, tp in enumerate(to_plot):
                 if isinstance(tp, AbsComponent):
-                    comp = to_plot
+                    lines2plot.extend(tp._abslines)
                 else: # Pick components in system closest to z_cgm
                     thesecomps = pu.get_components(self,tp)
                     if len(thesecomps)==0:

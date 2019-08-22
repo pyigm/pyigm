@@ -40,6 +40,8 @@ script `pyigm_fitdla`.  Here is the usage::
                             Input DLA Fit file
       --conti_file CONTI_FILE
                             Input continuum spectrum
+                            Option 'from_spectrum': continuum data will be used from the original (in_file) spectrum.
+                            100 spline points will be added uniformly along the input continuum.
       --zdla ZDLA           Input DLA redshift
       --NHI NHI             Input DLA NHI
 
