@@ -40,7 +40,8 @@ class IGMSightline(AbsSightline):
         return slf
 
     @classmethod
-    def from_igmguesses(cls, igmgfile, name=None, radec=None, zem=None, **kwargs):
+    def from_igmguesses(cls, igmgfile, name=None, radec=None, zem=None,
+                        buildsys = False, **kwargs):
         """ Instantiate from a JSON file from IGMGuesses
 
         Parameters
@@ -55,6 +56,8 @@ class IGMSightline(AbsSightline):
         zem : float, optional
           Emission redshift of sightline
           If given, it will overwrite the zem in IGMGuesses file (if any)
+        buildsys : bool, optional
+          If True, instantiate AbsSystem objects
 
         Returns
         -------
@@ -114,6 +117,9 @@ class IGMSightline(AbsSightline):
         for key in ['spec_file', 'meta', 'fwhm']:
             slf.igmg_dict[key] = jdict[key]
         # Return
+
+        if buildsys:
+            slf.make_igmsystems()
         return slf
 
     @classmethod
@@ -151,8 +157,12 @@ class IGMSightline(AbsSightline):
         if 'cmps' in idict.keys():
             idict['components'] = idict['cmps'].copy()
         # Instantiate
-        slf = cls(SkyCoord(ra=meta['RA'], dec=meta['DEC'], unit='deg'),
+        try:
+            slf = cls(SkyCoord(ra=meta['RA'], dec=meta['DEC'], unit='deg'),
                   zem=meta['zem'], name=meta['JNAME'], **kwargs)
+        except KeyError:
+            slf = cls(SkyCoord(ra=meta['RA'], dec=meta['DEC'], unit='deg'),
+                      zem=meta['zem'], name=meta['name'], **kwargs)
         # Other
         for key in idict.keys():
             if key in ['RA', 'DEC', 'zem', 'name', 'components', 'meta', 'cmps']:
@@ -192,6 +202,7 @@ class IGMSightline(AbsSightline):
         # Main call
         igm_sys = build_systems_from_components(self._components, systype=igmsystem, **kwargs)
         # Return
+        self._abssystems = igm_sys
         return igm_sys
 
     def write_to_json(self, outfile):

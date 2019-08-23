@@ -88,9 +88,10 @@ def monte_HIcomp(zmnx, fN_model, NHI_mnx=(12., 22.), bfix=None, dz=0.001, cosmo=
             seed = 12345
         rstate = np.random.RandomState(seed)
 
+    ### Method handles powerlaws just fine also
     # Check fN_model type
-    if fN_model.fN_mtype != 'Hspline':
-        raise ValueError('monte_HIlines: Can only handle Hspline so far.')
+    #if fN_model.fN_mtype != 'Hspline':
+    #    raise ValueError('monte_HIlines: Can only handle Hspline so far.')
 
     # Calculate lX at pivot
     lX, cum_lX, lX_NHI = fN_model.calculate_lox(fN_model.zpivot,
@@ -305,7 +306,7 @@ def mk_mock(wave, zem, fN_model, out_spec=None, add_conti=True,
     sub_mock = XSpectrum1D.from_tuple( (sub_wave,sub_flux) )
 
     # Smooth
-    smooth_mock = sub_mock.gauss_smooth(fwhm=fwhm*(dwv/dwv_sub))
+    smooth_mock = sub_mock.gauss_smooth(fwhm=fwhm*(dwv/dwv_sub).value)
 
     # Rebin
     mock = smooth_mock.rebin(wave)

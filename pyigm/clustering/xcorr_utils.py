@@ -4,7 +4,6 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import time
 import numpy as np
 import pdb
-import numba as nb
 
 from scipy.ndimage import gaussian_filter as gf
 from scipy.interpolate import CubicSpline

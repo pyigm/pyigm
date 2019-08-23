@@ -34,6 +34,7 @@ def parser(options=None):
     parser.add_argument("--smooth", type=float, default=3., help="Smoothing (pixels)")
     parser.add_argument("--lls_fit_file", type=str, help="Input LLS Fit file")
     parser.add_argument("--norm", help="Use normalized spectrum", action="store_true")
+    parser.add_argument("--masking", default='none', type=str, help="Input LLS Fit file")
 
     if options is None:
         args = parser.parse_args()
@@ -48,10 +49,19 @@ def main(args=None):
     from pyigm.guis.fitlls import XFitLLSGUI
     pargs = parser(options=args)
 
+    spec_kwargs = {}
+    if hasattr(args, 'masking'):
+        spec_kwargs['masking'] = args.masking
+
+    if hasattr(args, 'norm'):
+        inorm = args.norm
+    else:
+        inorm = False
+
     # Run
     app = QApplication(sys.argv)
     gui = XFitLLSGUI(pargs.in_file, pargs.zqso, outfil=pargs.out_file,smooth=pargs.smooth,
-                     lls_fit_file=pargs.lls_fit_file, norm=args.norm)
+                     lls_fit_file=pargs.lls_fit_file, norm=inorm, rsp_kwargs=spec_kwargs)
     gui.show()
     app.exec_()
 

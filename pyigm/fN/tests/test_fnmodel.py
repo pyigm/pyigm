@@ -41,7 +41,7 @@ def test_mfp():
     mfp = fN_default.mfp(z)
     # Test
     assert mfp.unit == u.Mpc
-    np.testing.assert_allclose(mfp.value, 257.10258545808983, rtol=1e-3)
+    np.testing.assert_allclose(mfp.value, 252.6, rtol=1e-3)
 
 
 def test_rhoHI():

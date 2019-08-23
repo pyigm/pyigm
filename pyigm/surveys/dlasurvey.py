@@ -215,7 +215,6 @@ class DLASurvey(IGMSurvey):
             dla_survey._abs_sys[mt[0]].kin['trans'] = tbl2['trans'][ii]
             dla_survey._abs_sys[mt[0]].selection = tbl2['Select'][ii]
 
-
         spath = pyigm_path+"/data/DLA/H100/Spectra/"
         for dla in dla_survey._abs_sys:
             dla.spec_path = spath

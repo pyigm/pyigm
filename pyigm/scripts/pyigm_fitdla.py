@@ -50,11 +50,16 @@ def main(args=None):
     from pyigm.guis.fitdla import XFitDLAGUI
     pargs = parser(options=args)
 
+    if hasattr(args, 'norm'):
+        inorm = args.norm
+    else:
+        inorm = False
+
     # Run
     app = QApplication(sys.argv)
     gui = XFitDLAGUI(pargs.in_file,outfil=pargs.out_file,smooth=pargs.smooth,
         dla_fit_file=pargs.dla_fit_file, zqso=pargs.zqso, conti_file=pargs.conti_file,
-                     zdla=pargs.zdla, NHI=pargs.NHI, norm=args.norm)
+                     zdla=pargs.zdla, NHI=pargs.NHI, norm=inorm)
     gui.show()
     app.exec_()
 
