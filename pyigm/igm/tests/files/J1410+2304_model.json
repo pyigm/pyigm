@@ -15,7 +15,7 @@
             "attrib": {
                 "N": {
                     "unit": "1 / cm2",
-                    "value": 0.0
+                    "value": 95499258602143.69
                 },
                 "Nsig": {
                     "unit": "1 / cm2",
@@ -50,7 +50,8 @@
                         "flag_kin": 0,
                         "flg_eye": 0,
                         "flg_limit": 0,
-                        "name": "CIV 1548"
+                        "name": "CIV 1548",
+                        "spec_file": ""
                     },
                     "attrib": {
                         "DEC": 23.079772,
@@ -120,7 +121,7 @@
                         "f": 0.1899,
                         "gamma": {
                             "unit": "1 / s",
-                            "value": 264200000.0
+                            "value": 264300000.0
                         },
                         "gj": 2,
                         "gk": 4,
@@ -173,7 +174,8 @@
                         "flag_kin": 0,
                         "flg_eye": 0,
                         "flg_limit": 0,
-                        "name": "CIV 1550"
+                        "name": "CIV 1550",
+                        "spec_file": ""
                     },
                     "attrib": {
                         "DEC": 23.079772,
@@ -317,7 +319,7 @@
             "attrib": {
                 "N": {
                     "unit": "1 / cm2",
-                    "value": 0.0
+                    "value": 23988329190194.95
                 },
                 "Nsig": {
                     "unit": "1 / cm2",
@@ -352,7 +354,8 @@
                         "flag_kin": 0,
                         "flg_eye": 0,
                         "flg_limit": 0,
-                        "name": "SiIV 1393"
+                        "name": "SiIV 1393",
+                        "spec_file": ""
                     },
                     "attrib": {
                         "DEC": 23.079772,
@@ -422,7 +425,7 @@
                         "f": 0.513,
                         "gamma": {
                             "unit": "1 / s",
-                            "value": 881000000.0
+                            "value": 880000000.0
                         },
                         "gj": 2,
                         "gk": 4,
@@ -475,7 +478,8 @@
                         "flag_kin": 0,
                         "flg_eye": 0,
                         "flg_limit": 0,
-                        "name": "SiIV 1402"
+                        "name": "SiIV 1402",
+                        "spec_file": ""
                     },
                     "attrib": {
                         "DEC": 23.079772,
@@ -545,7 +549,7 @@
                         "f": 0.254,
                         "gamma": {
                             "unit": "1 / s",
-                            "value": 861000000.0
+                            "value": 862000000.0
                         },
                         "gj": 2,
                         "gk": 2,

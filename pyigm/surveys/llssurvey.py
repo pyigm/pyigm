@@ -338,6 +338,7 @@ class LLSSurvey(IGMSurvey):
     @classmethod
     def load_ribaudo(cls, tau_LL=2, sample='stat'):
         """
+        Load survey data from Ribaudo+2011
 
         Parameters
         ----------
