@@ -91,8 +91,16 @@ class IGMSightline(AbsSightline):
                 coord.icrs.ra.to_string(unit=u.hour, sep='', pad=True)[0:4],
                 coord.icrs.dec.to_string(sep='', pad=True, alwayssign=True)[0:5], zem_name)
         jdict['name'] = name
+
         # Components
-        jdict['components'] = jdict.pop('cmps')
+        jdict['components'] = {}
+        # Deal with swapped names
+        for key in jdict['cmps']:
+            items = key.split('_')
+            newkey = items[1]+'_'+items[0]
+            jdict['components'][newkey] = jdict['cmps'][key]
+            jdict['components'][newkey]['Name'] = newkey
+        jdict.pop('cmps')
 
         kwargs['use_coord'] = True
         slf = cls.from_dict(jdict, **kwargs)

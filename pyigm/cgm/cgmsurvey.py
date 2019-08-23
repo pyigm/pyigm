@@ -5,7 +5,7 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import numpy as np
 import os
 import warnings
-import pdb
+from IPython import embed
 import json, io
 
 from pkg_resources import resource_filename
@@ -327,7 +327,7 @@ class CGMAbsSurvey(object):
         import subprocess
         warnings.warn("This method is likely to be Deprecated", DeprecationWarning)
         print("Continue at your own peril...")
-        pdb.set_trace()
+        embed(header='330')
 
         tmpdir = 'CGM_JSON'
         try:
@@ -603,7 +603,7 @@ class CGMAbsSurvey(object):
                 except AttributeError:
                     clms[jj].append(kdict[key])
                 except KeyError:
-                    pdb.set_trace()
+                    embed(header='606')
 
         # Table me
         t = Table(clms, names=keys)
@@ -652,7 +652,7 @@ class CGMAbsSurvey(object):
                     lst = [getattr(cgm_abs.igm_sys, k) for cgm_abs in self.cgm_abs]
                 except AttributeError:
                     print('cgm.core: Attribute not found!')
-                    pdb.set_trace()
+                    embed(header='655')
         # Special cases
         if k == 'coord':
             ra = [coord.icrs.ra.value for coord in lst]
