@@ -266,7 +266,7 @@ def cgm_from_galaxy_igmsystems(galaxy, igmsystems, rho_max=300*u.kpc, dv_max=400
             return []
         else:
             if verbose:
-                print("No IGMSystem match found. Attaching dummy IGMSystem.")
+                print("No IGMSystem match found. Attaching dummy IGMSystem at z={}.".format(galaxy.z))
             dummysystem = IGMSystem(dummycoords,galaxy.z,vlim=None)
             dummycomp = AbsComponent(dummycoords,(10,6),galaxy.z,[-100.,100.]*u.km/u.s)
             dummycomp.flag_N = 0
