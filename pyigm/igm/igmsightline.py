@@ -97,7 +97,10 @@ class IGMSightline(AbsSightline):
         # Deal with swapped names
         for key in jdict['cmps']:
             items = key.split('_')
-            newkey = items[1]+'_'+items[0]
+            if key[0] == 'z':
+                newkey = items[1]+'_'+items[0]
+            else:
+                newkey = key
             jdict['components'][newkey] = jdict['cmps'][key]
             jdict['components'][newkey]['Name'] = newkey
         jdict.pop('cmps')
