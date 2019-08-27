@@ -39,6 +39,8 @@ def parser(options=None):
     parser.add_argument("--external_model", type=str, help="An external model spectrum (.fits)")
     parser.add_argument("--scale", type=float, help="Scaling of screen [default=1.]")
     parser.add_argument("-redsh","--redsh",type=float,help="Redshift") # added line
+    parser.add_argument("-wmin", "--wmin", type=float, help="Wmin")  # added line
+    parser.add_argument("-wmax", "--wmax", type=float, help="Wmax")  # added line
 
     if options is None:
         args = parser.parse_args()
@@ -75,7 +77,9 @@ def main(args=None):
                         screen_scale=scale,
                         vlim_disp=vlim_disp,
                         external_model=pargs.external_model,
-                        redsh=pargs.redsh)
+                        redsh=pargs.redsh,
+                        spwvmin=pargs.wmin, spwvmax=pargs.wmax)
+                        # spwvmin=None, spwvmax=None)
     gui.show()
     app.exec_()
 

@@ -85,7 +85,8 @@ class IGMGuessesGui(QMainWindow):
     def __init__(self, ispec, parent=None, previous_file=None, 
         srch_id=True, outfil=None, fwhm=None, screen_scale=1.,
         plot_residuals=True,n_max_tuple=None, min_strength=None,
-                 min_ew=None, vlim_disp=None, external_model=None, redsh=None): #added redsh=None
+                 min_ew=None, vlim_disp=None, external_model=None, redsh=None,
+                 spwvmin=None,spwvmax=None): #added redsh=None
         QMainWindow.__init__(self, parent)
         """
         ispec : str
@@ -206,11 +207,24 @@ E         : toggle displaying/hiding the external absorption model
             vlim_disp = [-500.,500.] * u.km/u.s
         self.vlim_disp = vlim_disp
 
+        #####################
+        #self.wvmin = 1383. *u.AA
+        #self.wvmax = 3691. *u.AA
 
 
         # Load spectrum
         # spec, spec_fil = ltgu.read_spec(ispec, masking='edges')
         spec = readspec(ispec, masking='edges')
+
+        if spwvmin is not None:
+            self.wvmin = spwvmin *u.AA
+        else:
+            self.wvmin = np.min(spec.wavelength)
+        #
+        if spwvmax is not None:
+            self.wvmax = spwvmax *u.AA
+        else:
+            self.wvmax = np.max(spec.wavelength)
 
 
         # Normalize
@@ -467,6 +481,7 @@ E         : toggle displaying/hiding the external absorption model
                 # QtCore.pyqtRemoveInputHook()
                 # pdb.set_trace()
                 # QtCore.pyqtRestoreInputHook()
+                #pdb.set_trace()
                 comp_init_attrib(comp)
                 comp.init_wrest = igmg_dict['cmps'][key]['wrest']*u.AA
                 try:
@@ -474,6 +489,7 @@ E         : toggle displaying/hiding the external absorption model
                 except KeyError:  # For compatibility
                     warnings.warn("Setting all abslines to 2")
                     comp.mask_abslines = 2*np.ones(len(comp._abslines)).astype(int)
+                #pdb.set_trace()
                 self.velplot_widg.add_component(comp, update_model=False)
 
             else:  # for compatibility, should be deprecated
@@ -483,6 +499,9 @@ E         : toggle displaying/hiding the external absorption model
                         vlim=igmg_dict['cmps'][key]['vlim']*u.km/u.s,
                         update_model=False)
 
+
+            if self.velplot_widg.current_comp is None:
+                continue
 
             # Name
             self.velplot_widg.current_comp.name = key
@@ -517,7 +536,9 @@ E         : toggle displaying/hiding the external absorption model
 
         # Updates
         self.velplot_widg.update_model()
-        self.fiddle_widg.init_component(self.velplot_widg.current_comp)
+        #self.fiddle_widg.init_component(self.velplot_widg.current_comp)
+        if self.velplot_widg.current_comp is not None:
+            self.fiddle_widg.init_component(self.velplot_widg.current_comp)
 
 
     @pyqtSlot()
@@ -598,7 +619,8 @@ class IGGVelPlotWidget(QWidget):
         14-Aug-2015 by JXP
     """
     def __init__(self, ispec, z, parent=None, llist=None, norm=True, screen_scale=1.,
-    vmnx=[-500., 500.]*u.km/u.s, fwhm=0., plot_residuals=True, external_model=None):
+    vmnx=[-500., 500.]*u.km/u.s, fwhm=0., plot_residuals=True, external_model=None,
+                 wvmin=None,wvmax=None):
         '''
         spec = Spectrum1D
         Norm: Bool (False)
@@ -640,6 +662,9 @@ class IGGVelPlotWidget(QWidget):
         self.flag_plotmodel = True
         self.flag_plotextmodel = False
         self.flag_colorful = False
+
+        self.wvmin = wvmin
+        self.wvmax = wvmax
 
         self.wrest = 0.
         self.avmnx = np.array([0.,0.])*u.km/u.s
@@ -733,7 +758,7 @@ class IGGVelPlotWidget(QWidget):
 
 
     # Update model
-    def update_model(self):
+    def update_model(self): #,spwvmin=None,spwvmax=None):
         if self.parent is None:
             return
         all_comp = self.parent.comps_widg.all_comp # selected_components()
@@ -742,6 +767,14 @@ class IGGVelPlotWidget(QWidget):
             return
         # Setup lines
         wvmin, wvmax = np.min(self.spec.wavelength), np.max(self.spec.wavelength)
+        spwvmin = self.parent.wvmin
+        spwvmax = self.parent.wvmax
+        if spwvmin is not None:
+            wvmin = spwvmin
+        if spwvmax is not None:
+            wvmax = spwvmax
+
+        #wvmin, wvmax = spwvmin, spwvmax # self.wvmin, self.wvmax # test
         gdlin = []
         for comp in all_comp:
             for ii, line in enumerate(comp._abslines):
@@ -778,18 +811,31 @@ class IGGVelPlotWidget(QWidget):
           False when reading the previous file to increase speed.
         """
         # this is mostly from reading previous IGM_model
+
+        #pdb.set_trace()
+
         if isinstance(inp, AbsComponent):
+
+            #pdb.set_trace()
 
             # get rid of lines outside spectral coverage, if any
             # Todo: one may want to reconsider this, specially if more spectral coverage is obtained
             new_abslines = []
             for absline in inp._abslines:
                 wobs = absline.wrest * (1 + absline.z)
-                if (wobs > self.spec.wvmin) and (wobs < self.spec.wvmax):
+                #if (wobs > self.spec.wvmin) and (wobs < self.spec.wvmax): # commented for the test below
+                #pdb.set_trace()
+                if (wobs > self.parent.wvmin) and (wobs < self.parent.wvmax): # test # self.spwvmnx
                     new_abslines += [absline]
+
+            if len(new_abslines) == 0:
+                self.current_comp = None ####
+                return
 
             inp._abslines = new_abslines
             new_comp = inp
+
+            #pdb.set_trace()
 
             # compatibility with older versions
             try:
@@ -827,7 +873,8 @@ class IGGVelPlotWidget(QWidget):
                 linelist_aux = self.llist[current_parent_linelist]
 
             # add the component
-            new_comp = create_component(zcomp, inp, linelist_aux, vlim=vlim, spec=self.spec)
+            new_comp = create_component(zcomp, inp, linelist_aux, vlim=vlim, spec=self.spec,
+                                        spwvmin=self.parent.wvmin, spwvmax=self.parent.wvmax)
 
         # Fit
         #print('doing fit for {:g}'.format(wrest))
@@ -911,8 +958,10 @@ class IGGVelPlotWidget(QWidget):
         '''Check for out of bounds
         '''
         # Default is x
-        if ((coord < np.min(self.spec.wavelength))
-            or (coord > np.max(self.spec.wavelength))):
+        #if ((coord < np.min(self.spec.wavelength))
+        #    or (coord > np.max(self.spec.wavelength))):
+        if ((coord < self.parent.wvmin)
+            or (coord > self.parent.wvmax)):
             print('Out of bounds!')
             return True
         else:
@@ -1777,7 +1826,7 @@ class ComponentListWidget(QWidget):
 
 
 def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
-                     spec=None):
+                     spec=None, spwvmin= None, spwvmax=None):
     """
     Parameters
     ----------
@@ -1803,6 +1852,11 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
     abslines = []
     if spec is not None:
         wvmin, wvmax = spec.wvmin, spec.wvmax
+        #wvmin, wvmax = 1383.*u.AA, 3691.*u.AA
+        if spwvmin is not None:
+            wvmin = spwvmin
+        if spwvmax is not None:
+            wvmax = spwvmax
     else:
         wvmin, wvmax = 0.*u.AA, 1e9*u.AA
     for iwrest in all_wrest:
@@ -1858,7 +1912,7 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
 
 def comp_init_attrib(comp):
     # Attributes
-    comp.attrib = {'N': 0./u.cm**2, 'Nsig': 0./u.cm**2, 'flagN': 0,  # Column
+    comp.attrib = {'N': 0./u.cm**2, 'Nsig': 0./u.cm**2, 'flag_N': 0,  # Column
                'logN': 0., 'sig_logN': 0.,
                'b': 0.*u.km/u.s, 'bsig': 0.*u.km/u.s,  # Doppler
                'z': comp.zcomp, 'zsig': 0.,
