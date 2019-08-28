@@ -677,3 +677,31 @@ class CGMAbsSurvey(object):
     def __repr__(self):
         str1 = '<CGM_Survey: {:s} nsys={:d}, ref={:s}>\n'.format(self.survey, self.nsys, self.ref)
         return str1
+
+    def __add__(self, cgmsurvey2, only_overlapping=True):
+        # add a label so you know which dict the data is coming from?
+        for ii, key in enumerate(cgmsurvey2._dict.keys()):
+            cgmsurvey2._dict[key]['survey'] = cgmsurvey2.survey
+
+        # add a label so you know which dict the data is coming from?
+        for ii, key in enumerate(self._dict.keys()):
+            if self.survey is not None:
+                self._dict[key]['survey'] = self.survey
+            else:
+                warnings.warn('You really should name your survey')
+
+        # Merge the dicts
+        combined_dict = {**self._dict, **cgmsurvey2._dict}
+
+        # Instantiate a new CGMSurvey and give it a name
+        combined_survey = CGMAbsSurvey()
+        combined_survey.survey = "{0} + {1}".format(self.survey, cgmsurvey2.survey)
+
+        # fill the new survey with a dict
+        combined_survey._dict = combined_dict
+
+        # Generate the data table
+        combined_survey.build_data_from_dict()
+
+        # return the new object
+        return combined_survey
