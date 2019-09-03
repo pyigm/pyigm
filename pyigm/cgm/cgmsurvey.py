@@ -679,11 +679,45 @@ class CGMAbsSurvey(object):
         return str1
 
     def __add__(self, cgmsurvey2, only_overlapping=True):
-        # add a label so you know which dict the data is coming from?
+
+        if len(cgmsurvey2._dict) == 0:
+            warnings.warn("You're second survey doesn't have a '._dict'. You need this to combine surveys.")
+            warnings.warn("exiting")
+            assert len(cgmsurvey2._dict) != 0
+
+        if only_overlapping:
+            print('Careful. The order of the objects matters here. Acts like a "LEFT JOIN"')
+            # We only want to keep the cgm objects in the second survey that are in the fields of the first survey
+            c = cgmsurvey2.coords
+            catalog = self.coords
+
+            # match on sky position
+            idxc, idxcatalog, d2d, d3d = catalog.search_around_sky(c, 15 * u.arcmin)
+
+            # get the names of the matched systems
+            names = np.unique(cgmsurvey2._data[idxc]['Name'].data)
+
+            # make a new dict where we only keep the matches
+            newhalos_dict = OrderedDict()
+            for kk in cgmsurvey2._dict.keys():
+                if cgmsurvey2._dict[kk]['Name'] in names:
+                    newhalos_dict[kk] = cgmsurvey2._dict[kk]
+
+            matched_survey = CGMAbsSurvey()
+            matched_survey._dict = newhalos_dict
+
+            # inherit
+            matched_survey.survey = cgmsurvey2.survey
+            matched_survey.ref = cgmsurvey2.ref
+
+            # rename so the rest follows the same conventions
+            cgmsurvey2 = matched_survey
+
+        # add a label so you know which dict the data is coming from
         for ii, key in enumerate(cgmsurvey2._dict.keys()):
             cgmsurvey2._dict[key]['survey'] = cgmsurvey2.survey
 
-        # add a label so you know which dict the data is coming from?
+        # add a label so you know which dict the data is coming from
         for ii, key in enumerate(self._dict.keys()):
             if self.survey is not None:
                 self._dict[key]['survey'] = self.survey
