@@ -966,14 +966,21 @@ class COSDwarfs(COSHalos):
 
         # Tar file
         if tfile is None:
-            tarfiles = glob.glob(self.cdir + 'cos-dwarfs_systems.v*.tar.gz')
-            tarfiles.sort()
-            tfile = tarfiles[-1]
+            try:
+                tarfiles = glob.glob(self.cdir + 'cos-dwarfs_systems.v*.tar.gz')
+                tarfiles.sort()
+                tfile = tarfiles[-1]
+            except IndexError:
+                tarfiles = glob.glob(self.cdir + 'Targets/cos-dwarfs_systems.v*.tar.gz')
+                tarfiles.sort()
+                tfile = tarfiles[-1]
         print("Be patient, using {:s} to load".format(tfile))
         # Empty
         if empty:
             self.cgm_abs = []
         # Load
+        self.load_tarball(tfile, llist=llist, build_sys=True)
+        '''# Load
         tar = tarfile.open(tfile)
         for kk, member in enumerate(tar.getmembers()):
             if '.' not in member.name:
@@ -990,7 +997,7 @@ class COSDwarfs(COSHalos):
                                          use_coord=True, use_angrho=True,
                                          linelist=llist, **kwargs)
             self.cgm_abs.append(cgmsys)
-        tar.close()
+        tar.close()'''
 
 
 def mtl_quality(cgm_abs, verbose=True):
