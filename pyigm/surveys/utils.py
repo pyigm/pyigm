@@ -7,6 +7,7 @@ import glob
 import json
 import pdb
 
+import numpy as np
 from astropy.coordinates import SkyCoord
 
 from linetools import utils as ltu
