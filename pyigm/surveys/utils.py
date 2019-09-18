@@ -128,15 +128,16 @@ def is_not_HILya(wvobs, comps):
 
     Parameters
     ----------
-    wobs : Quantity array
+    wvobs : Quantity array
         Observed wavelength
     comp : list of AbsComponent objects
         List of abscomponent objects identified
 
     Returns
     -------
-    answer : bool
-        True if there is a identified line that is not HI Lya, otherwise False
+    answer : boolean array
+        Same shape as `wvobs`. True if there is a identified line  that is not HI Lya at
+        the corresponding wavelength, otherwise False
 
     """
 
