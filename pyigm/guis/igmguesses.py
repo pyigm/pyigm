@@ -86,7 +86,7 @@ class IGMGuessesGui(QMainWindow):
         srch_id=True, outfil=None, fwhm=None, screen_scale=1.,
         plot_residuals=True,n_max_tuple=None, min_strength=None,
                  min_ew=None, vlim_disp=None, external_model=None, redsh=None,
-                 spwvmin=None,spwvmax=None): #added redsh=None
+                 spwvmin=None,spwvmax=None):
         QMainWindow.__init__(self, parent)
         """
         ispec : str
@@ -207,9 +207,6 @@ E         : toggle displaying/hiding the external absorption model
             vlim_disp = [-500.,500.] * u.km/u.s
         self.vlim_disp = vlim_disp
 
-        #####################
-        #self.wvmin = 1383. *u.AA
-        #self.wvmax = 3691. *u.AA
 
 
         # Load spectrum
@@ -220,7 +217,6 @@ E         : toggle displaying/hiding the external absorption model
             self.wvmin = spwvmin *u.AA
         else:
             self.wvmin = np.min(spec.wavelength)
-        #
         if spwvmax is not None:
             self.wvmax = spwvmax *u.AA
         else:
@@ -481,7 +477,6 @@ E         : toggle displaying/hiding the external absorption model
                 # QtCore.pyqtRemoveInputHook()
                 # pdb.set_trace()
                 # QtCore.pyqtRestoreInputHook()
-                #pdb.set_trace()
                 comp_init_attrib(comp)
                 comp.init_wrest = igmg_dict['cmps'][key]['wrest']*u.AA
                 try:
@@ -489,7 +484,6 @@ E         : toggle displaying/hiding the external absorption model
                 except KeyError:  # For compatibility
                     warnings.warn("Setting all abslines to 2")
                     comp.mask_abslines = 2*np.ones(len(comp._abslines)).astype(int)
-                #pdb.set_trace()
                 self.velplot_widg.add_component(comp, update_model=False)
 
             else:  # for compatibility, should be deprecated
@@ -758,7 +752,7 @@ class IGGVelPlotWidget(QWidget):
 
 
     # Update model
-    def update_model(self): #,spwvmin=None,spwvmax=None):
+    def update_model(self):
         if self.parent is None:
             return
         all_comp = self.parent.comps_widg.all_comp # selected_components()
@@ -774,7 +768,6 @@ class IGGVelPlotWidget(QWidget):
         if spwvmax is not None:
             wvmax = spwvmax
 
-        #wvmin, wvmax = spwvmin, spwvmax # self.wvmin, self.wvmax # test
         gdlin = []
         for comp in all_comp:
             for ii, line in enumerate(comp._abslines):
@@ -812,30 +805,23 @@ class IGGVelPlotWidget(QWidget):
         """
         # this is mostly from reading previous IGM_model
 
-        #pdb.set_trace()
-
         if isinstance(inp, AbsComponent):
-
-            #pdb.set_trace()
 
             # get rid of lines outside spectral coverage, if any
             # Todo: one may want to reconsider this, specially if more spectral coverage is obtained
             new_abslines = []
             for absline in inp._abslines:
                 wobs = absline.wrest * (1 + absline.z)
-                #if (wobs > self.spec.wvmin) and (wobs < self.spec.wvmax): # commented for the test below
-                #pdb.set_trace()
-                if (wobs > self.parent.wvmin) and (wobs < self.parent.wvmax): # test # self.spwvmnx
+                if (wobs > self.parent.wvmin) and (wobs < self.parent.wvmax):
                     new_abslines += [absline]
 
             if len(new_abslines) == 0:
-                self.current_comp = None ####
+                self.current_comp = None
                 return
 
             inp._abslines = new_abslines
             new_comp = inp
 
-            #pdb.set_trace()
 
             # compatibility with older versions
             try:
@@ -958,8 +944,6 @@ class IGGVelPlotWidget(QWidget):
         '''Check for out of bounds
         '''
         # Default is x
-        #if ((coord < np.min(self.spec.wavelength))
-        #    or (coord > np.max(self.spec.wavelength))):
         if ((coord < self.parent.wvmin)
             or (coord > self.parent.wvmax)):
             print('Out of bounds!')
@@ -1852,7 +1836,6 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
     abslines = []
     if spec is not None:
         wvmin, wvmax = spec.wvmin, spec.wvmax
-        #wvmin, wvmax = 1383.*u.AA, 3691.*u.AA
         if spwvmin is not None:
             wvmin = spwvmin
         if spwvmax is not None:
