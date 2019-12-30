@@ -111,6 +111,12 @@ class IGMGuessesGui(QMainWindow):
             Minimum and maximum velocity limit for the display; e.g. [-500.,500.]*u.km/u.s
         external_model : str
             Name of an external model to load.
+        redsh : float, optional
+            Redshift at which transitions are initially plotted
+        spwvmin : float, optional
+            Minimum wavelength for which line transitions are calculated
+        spwvmax : float, optional
+            Maximum wavelength for which line transitions are calculated
 
         """
         # TODO

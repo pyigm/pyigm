@@ -38,9 +38,9 @@ def parser(options=None):
     parser.add_argument("--vlim", type=float, help="Velocity limit (in km/s) for the display. This limit will apply to both sides")
     parser.add_argument("--external_model", type=str, help="An external model spectrum (.fits)")
     parser.add_argument("--scale", type=float, help="Scaling of screen [default=1.]")
-    parser.add_argument("-redsh","--redsh",type=float,help="Redshift")
-    parser.add_argument("-wmin", "--wmin", type=float, help="Wmin")
-    parser.add_argument("-wmax", "--wmax", type=float, help="Wmax")
+    parser.add_argument("-redsh","--redsh",type=float,help="Redshift at which transitions are initially plotted")
+    parser.add_argument("-wmin", "--wmin", type=float, help="Minimum wavelenght for which line transitions are calculated")
+    parser.add_argument("-wmax", "--wmax", type=float, help="Maximum wavelenght for which line transitions are calculated")
 
     if options is None:
         args = parser.parse_args()
