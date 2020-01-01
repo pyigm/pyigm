@@ -7,6 +7,7 @@ import glob
 import json
 import pdb
 
+import numpy as np
 from astropy.coordinates import SkyCoord
 
 from linetools import utils as ltu
@@ -118,4 +119,35 @@ def class_by_type(type):
         raise IOError("Bad survey type!")
     # Return
     return survey
+
+
+def is_not_HILya(wvobs, comps):
+    """Given an array of wavelengths, this function returns a boolean array of same shape as
+    `wvobs` with True for pixels known to be contaminated by non HI Lya absorption given a list
+    of AbsComponent objects
+
+    Parameters
+    ----------
+    wvobs : Quantity array
+        Observed wavelength
+    comp : list of AbsComponent objects
+        List of abscomponent objects identified
+
+    Returns
+    -------
+    answer : boolean array
+        Same shape as `wvobs`. True if there is a identified line  that is not HI Lya at
+        the corresponding wavelength, otherwise False
+
+    """
+
+    # loop over component and abslines
+    cond = False * len(wvobs)
+    for comp in comps:
+        for line in comp._abslines:
+            if line.name != 'HI 1215':
+                wvlims = line.limits.wvlim
+                cond_aux = (wvobs >= wvlims[0]) & (wvobs <= wvlims[1])
+                cond = cond_aux | cond
+    return np.array(cond).astype(bool)
 

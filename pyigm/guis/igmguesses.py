@@ -2102,6 +2102,7 @@ def from_igmguesses_to_complist(infile):
 
     """
     import json
+    ism = LineList('ISM')
     # Read the JSON file
     with open(infile) as data_file:
         igmg_dict = json.load(data_file)
@@ -2114,7 +2115,7 @@ def from_igmguesses_to_complist(infile):
         # import pdb; pdb.set_trace()
         idict = igmg_dict['cmps'][key]
         try:
-            comp = AbsComponent.from_dict(idict, skip_abslines=False, chk_sep=False, chk_data=False, chk_vel=False, linelist="ISM")
+            comp = AbsComponent.from_dict(idict, skip_abslines=False, chk_sep=False, chk_data=False, chk_vel=False, linelist=ism)
         except ValueError:  # if ion species not in LineList ISM
             print("Warning: Transition not in the ISM LineList. Will try others...")
             comp = None
