@@ -146,8 +146,6 @@ class IGMSightline(AbsSightline):
             ism = LineList('ISM')
             kwargs['linelist'] = ism
         from pyigm.abssys.utils import class_by_type
-        ism = LineList('ISM')
-        kwargs['linelist'] = ism
         # Load ISM to speed things up
         if 'meta' in idict.keys():
             meta = idict['meta']
