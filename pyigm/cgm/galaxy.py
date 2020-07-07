@@ -65,7 +65,7 @@ class GalaxyCGM(CGM):
         r17_a2_file = resource_filename('pyigm','/data/CGM/Galaxy/richter17_A2.fits')
         r17_a2 = Table.read(r17_a2_file)
         # Coords
-        coords = SkyCoord(ra=r17_a1['_RAJ2000'], dec=r17_a1['_DEJ2000'], unit='deg')
+        coords = SkyCoord(ra=r17_a1['Simbad_RA(ICRS)'], dec=r17_a1['Simbad_DEC(ICRS)'], unit='deg')
         gc = coords.transform_to('galactic')
         ra = np.zeros((len(r17_a2)))
         dec = np.zeros((len(r17_a2)))
@@ -77,8 +77,8 @@ class GalaxyCGM(CGM):
             a2_idx = np.where(r17_a2['Name'] == row['Name'])[0]
             if len(a2_idx) == 0:
                 continue
-            ra[a2_idx] = row['_RAJ2000']
-            dec[a2_idx] = row['_DEJ2000']
+            ra[a2_idx] = row['Simbad_RA(ICRS)']
+            dec[a2_idx] = row['Simbad_DEC(ICRS)']
             # Generate the components
             icoord = gc[kk]
             alines = []
@@ -118,8 +118,12 @@ class GalaxyCGM(CGM):
                 # Fill linear
                 _, _ = linear_clm(aline.attrib)
                 alines.append(aline)
+            #if row['Name'] == 'ESO-031--G-008':
+            #    debug=True
+            #else:
+            #    debug=False
             # Generate components from abslines
-            comps = ltiu.build_components_from_abslines(alines, chk_sep=False, chk_vel=False)
+            comps = ltiu.build_components_from_abslines(alines, chk_sep=False, chk_vel=False)#, debug=debug)
             # Limits
             vmin = np.min([icomp.limits.vmin.value for icomp in comps])
             vmax = np.max([icomp.limits.vmax.value for icomp in comps])
@@ -189,14 +193,18 @@ class GalaxyCGM(CGM):
                 # N_OVII
                 aline.attrib['flag_N'] = 1
                 aline.attrib['logN'] = row['logNO']
-                aline.attrib['sig_logN'] = np.array([row['e_logNO'], row['E_logNO']])
+                #aline.attrib['sig_logN'] = np.array([row['e_logNO'], row['E_logNO']])
+                # Not ready for 2-sided sig_logN yet
+                aline.attrib['sig_logN'] = np.mean([row['e_logNO'], row['E_logNO']])
                 # Fill linear
                 _,_ = linear_clm(aline.attrib)
+
             # OVII
             aline.limits.set(vlim)
             # Generate component and add
             comp = AbsComponent.from_abslines([aline])
             if aline.attrib['flag_N'] == 0: # Hack to merge later
+                # Must be 2-sided
                 comp.attrib['sig_logN'] = np.array([0., 0.])
             else:
                 pass
@@ -206,7 +214,8 @@ class GalaxyCGM(CGM):
                 idx = np.argmin(comp.coord.separation(scoord).to('arcsec'))
                 if self.verbose:
                     print("Adding OVII system to {}".format(self.abs.cgm_abs[idx].igm_sys))
-                self.abs.cgm_abs[idx].igm_sys.add_component(comp, chk_sep=False, debug=True)
+                self.abs.cgm_abs[idx].igm_sys.add_component(comp, chk_sep=False, chk_z=False)#debug=True)
+                self.abs.cgm_abs[idx].igm_sys.update_vlim()
             else: # Instantiate
                 abssys = IGMSystem(gc, z, vlim, name=row['Name']+'_z0', zem=row['z'])
                 abssys.add_component(comp, chk_sep=False)
