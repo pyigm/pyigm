@@ -457,6 +457,9 @@ E         : toggle displaying/hiding the external absorption model
         for ii, key in enumerate(igmg_dict['cmps'].keys()):
 
             if 'lines' in igmg_dict['cmps'][key].keys():
+                # If errant component is added without AbsLines, skip!
+                if igmg_dict['cmps'][key]['lines']=={}:
+                    continue
                 try:
                     comp = AbsComponent.from_dict(igmg_dict['cmps'][key], linelist=self.llist['ISM'], coord=self.coord,
                                                   chk_sep=False, chk_data=False, chk_vel=False)
@@ -474,6 +477,7 @@ E         : toggle displaying/hiding the external absorption model
                 except KeyError:  # For compatibility
                     warnings.warn("Setting all abslines to 2")
                     comp.mask_abslines = 2*np.ones(len(comp._abslines)).astype(int)
+
                 self.velplot_widg.add_component(comp, update_model=False)
 
             else:  # for compatibility, should be deprecated
