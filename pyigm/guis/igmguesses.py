@@ -641,6 +641,11 @@ class IGGVelPlotWidget(QWidget):
         self.flag_plotextmodel = False
         self.flag_colorful = False
 
+        # Axes
+        self.ax = None
+        self.axes = []
+        self.axes_lbls = []
+
         self.wrest = 0.
         self.avmnx = np.array([0.,0.])*u.km/u.s
         self.model = XSpectrum1D.from_tuple(
@@ -1382,6 +1387,8 @@ class IGGVelPlotWidget(QWidget):
                     idx = all_idx[jj+self.idx_line]
                 except IndexError:
                     continue # Likely too few lines
+
+                lbl = '{}_{}_{}'.format(self.sub_xy[0],self.sub_xy[1], subp_idx[jj])
                 #print('jj={:d}, idx={:d}'.format(jj,idx))
                 # Grab line
                 wrest = self.llist[self.llist['List']].wrest[idx]
@@ -1399,9 +1406,18 @@ class IGGVelPlotWidget(QWidget):
                 #if in_wrest is not None:
                 #    if np.abs(wrest-in_wrest) > (1e-3*u.AA):
                 #        continue
+
                 # Generate plot
-                self.ax = self.fig.add_subplot(self.sub_xy[0],self.sub_xy[1], subp_idx[jj])
-                self.ax.clear()        
+                try:
+                    i_lbl = self.axes_lbls.index(lbl)
+                except:
+                    self.ax = self.fig.add_subplot(self.sub_xy[0],self.sub_xy[1], subp_idx[jj], label=str(jj))
+                    self.axes.append(self.ax)
+                    self.axes_lbls.append(lbl)
+                else:
+                    self.ax = self.axes[i_lbl]
+                # Clear
+                self.ax.clear()
 
                 # GID for referencing
                 self.ax.set_gid(wrest)
