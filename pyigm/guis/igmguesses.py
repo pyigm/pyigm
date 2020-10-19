@@ -1408,14 +1408,7 @@ class IGGVelPlotWidget(QWidget):
                 #        continue
 
                 # Generate plot
-                try:
-                    i_lbl = self.axes_lbls.index(lbl)
-                except:
-                    self.ax = self.fig.add_subplot(self.sub_xy[0],self.sub_xy[1], subp_idx[jj], label=str(jj))
-                    self.axes.append(self.ax)
-                    self.axes_lbls.append(lbl)
-                else:
-                    self.ax = self.axes[i_lbl]
+                self.ax = self.fig.add_subplot(self.sub_xy[0],self.sub_xy[1], subp_idx[jj], label=str(jj))
                 # Clear
                 self.ax.clear()
 
