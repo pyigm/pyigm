@@ -966,14 +966,9 @@ class COSDwarfs(COSHalos):
 
         # Tar file
         if tfile is None:
-            try:
-                tarfiles = glob.glob(self.cdir + 'cos-dwarfs_systems.v*.tar.gz')
-                tarfiles.sort()
-                tfile = tarfiles[-1]
-            except IndexError:
-                tarfiles = glob.glob(self.cdir + 'Targets/cos-dwarfs_systems.v*.tar.gz')
-                tarfiles.sort()
-                tfile = tarfiles[-1]
+            tarfiles = glob.glob(self.cdir + 'cos-dwarfs_systems.v*.tar.gz')
+            tarfiles.sort()
+            tfile = tarfiles[-1]
         print("Be patient, using {:s} to load".format(tfile))
         # Empty
         if empty:
