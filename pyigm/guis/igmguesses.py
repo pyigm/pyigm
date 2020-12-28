@@ -798,7 +798,10 @@ class IGGVelPlotWidget(QWidget):
                 try:
                     cond = new_comp._abslines[0].limits.wvlim == [0,0]*u.AA
                 except:
-                    print('IGMGuesses: Please contact N.Tejos (ntejos@gmail.com) for solving this problem.')
+                    print('IGMGuesses: This usually happens when you have a AbsComponent with no lines in it, defined in the .json file of the model.\
+                    You can try identify the problematic components in the .json by searching for AbsComponent with empty "lines" dictionaries, \
+                    e.g. search for `"lines": {}` in the .json file, and delete (by hand) such AbsComponent.')
+                    print('IGMGuesses: If the previous solution does not work, please contact N.Tejos (ntejos@gmail.com) for further support.')
                     QtCore.pyqtRemoveInputHook()
                     pdb.set_trace()
                     QtCore.pyqtRestoreInputHook()
