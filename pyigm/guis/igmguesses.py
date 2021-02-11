@@ -766,13 +766,11 @@ class IGGVelPlotWidget(QWidget):
             self.model.flux[:] = 1.
             return
         # Setup lines
-        wvmin, wvmax = np.min(self.spec.wavelength), np.max(self.spec.wavelength)
+        #wvmin, wvmax = np.min(self.spec.wavelength), np.max(self.spec.wavelength)
         spwvmin = self.parent.wvmin
         spwvmax = self.parent.wvmax
-        if spwvmin is not None:
-            wvmin = spwvmin
-        if spwvmax is not None:
-            wvmax = spwvmax
+        wvmin = spwvmin
+        wvmax = spwvmax
 
         gdlin = []
         for comp in all_comp:
@@ -1901,7 +1899,7 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
 
 def comp_init_attrib(comp):
     # Attributes
-    comp.attrib = {'N': 0./u.cm**2, 'Nsig': 0./u.cm**2, 'flag_N': 0,  # Column
+    comp.attrib = {'N': 0./u.cm**2, 'Nsig': 0./u.cm**2, 'flagN': 0,  # Column
                'logN': 0., 'sig_logN': 0.,
                'b': 0.*u.km/u.s, 'bsig': 0.*u.km/u.s,  # Doppler
                'z': comp.zcomp, 'zsig': 0.,
