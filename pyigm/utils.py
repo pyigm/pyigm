@@ -437,7 +437,10 @@ def confintervals(hits,totals,sig=1,confidence=None):
     """
     fracs=np.zeros(len(hits)) ; uplims=np.zeros(len(hits)) ; lolims=np.zeros(len(hits))
     for i,tt in enumerate(totals):
-        fracs[i],lolims[i],uplims[i]=confinterval(hits[i],totals[i],sig,confidence)
+        if tt > 0:
+            fracs[i],lolims[i],uplims[i]=confinterval(hits[i],totals[i],sig,confidence)
+        else:
+            fracs[i],lolims[i],uplims[i]= (0,0,0)
     return fracs,lolims,uplims
 
 def confinterval(hits,total,sig=1,confidence=None):
