@@ -210,7 +210,7 @@ class FNModel(object):
           l(X) value
         """
         # Initial
-        if NHI_max == None:
+        if NHI_max is None:
             NHI_max = 23.
             infinity=True
         else:
