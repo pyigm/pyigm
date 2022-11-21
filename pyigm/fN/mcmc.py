@@ -429,7 +429,7 @@ def run_pymc(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=
         from linetools.lists.linelist import LineList
         EW_FIL = resource_filename('pyigm', '/data/fN/EW_SPLINE_b24.yml')
         with open(EW_FIL, 'r') as infile:
-            EW_spline = yaml.load(infile)  # dict from mk_ew_lyman_spline
+            EW_spline = yaml.load(infile, Loader=yaml.Loader)# dict from mk_ew_lyman_spline
         # More
         HI = LineList('HI')
         wrest = u.Quantity(HI._data['wrest'])

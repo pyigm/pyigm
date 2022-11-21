@@ -68,9 +68,6 @@ def get_telfer_spec(zqso=0., igm=False, fN_gamma=None,
         if fN_gamma is not None:
             fN_model.gamma = fN_gamma
         # Setup inputs
-        #EW_FIL = pyigm_path+'/data/fN/EW_SPLINE_b24.yml'
-        #with open(EW_FIL, 'r') as infile:
-        #    EW_spline = yaml.load(infile)  # dict from mk_ew_lyman_spline
         HI = LineList('HI')
         twrest = u.Quantity(HI._data['wrest'])
         # Parallel
