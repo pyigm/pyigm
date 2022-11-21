@@ -1,7 +1,6 @@
 """ Utilities for IGM calculations
 """
 import numpy as np
-import pdb
 
 from astropy import constants as const
 from astropy import units as u
@@ -10,6 +9,8 @@ from astropy import cosmology
 from astropy.coordinates import SkyCoord
 
 from pyigm.field.galaxy import Galaxy
+
+from IPython import embed
 
 def calc_rho(coords1, coords2, z2, cosmo, ang_sep=None, correct_lowz=True,
              z_low=0.05, comoving=False,**kwargs):
@@ -187,7 +188,7 @@ def mk_ew_lyman_spline(bval, ew_fil=None, chk=False):
     wrest = HI._data['wrest']
 
     # Output
-    owrest = [row['wrest'].value for row in HI._data]
+    owrest = HI._data['wrest'].data
     outp = {'wrest': owrest, 'tck': []}
 
     # Setup
@@ -197,18 +198,19 @@ def mk_ew_lyman_spline(bval, ew_fil=None, chk=False):
     uval = velo / bval
 
     # Loop
+    wr_unit = HI._data['wrest'].unit
     for cnt, line in enumerate(HI._data):
 
         # Wave array
-        dwv = dvel.to(u.cm/u.s) * line['wrest'] / const.c.cgs  # Ang
+        dwv = dvel.to(u.cm/u.s) * (line['wrest']*wr_unit) / const.c.cgs  # Ang
 
         # Voigt
-        vd = (bval/line['wrest']).to(u.Hz)  # Frequency
-        a = line['gamma'].value / (12.56637 * vd.value)
+        vd = (bval/(line['wrest']*wr_unit)).to(u.Hz)  # Frequency
+        a = line['gamma'] / (12.56637 * vd.value)
         vgt = lav.voigt_wofz(uval.value, a)
 
         # tau
-        tau = 0.014971475*line['f']*vgt/vd  # Normalized to N_HI = 1 cm^-2
+        tau = 0.014971475*line['f']*vgt/vd.value  # Normalized to N_HI = 1 cm^-2
 
         # Flux
         tau_array = np.outer(tau, 10.**log_NHI)
