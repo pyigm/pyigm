@@ -106,7 +106,7 @@ def lyman_limit(fN_model, z912, zem, N_eval=5000, N_zeval=100, cosmo=None, debug
     teff_engy = (const.Ryd.to(u.eV, equivalencies=u.spectral()) /
                  ((1+zval)/(1+zem)))
     sigma_z = ltaa.photo_cross(1, 1, teff_engy)
-    tau_zN = np.outer(Nval, sigma_z)
+    tau_zN = np.outer(Nval, sigma_z.value)
 
     # Integrand
     intg = 10.**(log_fnz) * (1. - np.exp(-1.*tau_zN))
@@ -184,9 +184,11 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0,
     # Read in EW spline (if needed)
     if EW_spline is None:
         if int(bval) == 24:
-            EW_FIL = os.path.join(resource_filename('pyigm', 'data'), 'fN', 'EW_SPLINE_b24.yml')
+            EW_FIL = os.path.join(resource_filename('pyigm', 'data'), 'fN', 
+                                  'EW_SPLINE_b24.yml')
             with open(EW_FIL, 'r') as infile:
-                EW_spline = yaml.safe_load(infile)  # dict from mk_ew_lyman_spline
+                EW_spline = yaml.load(infile, Loader=yaml.Loader)# dict from mk_ew_lyman_spline
+                #EW_spline = yaml.safe_load(infile, Loader=yaml.Loader)# dict from mk_ew_lyman_spline
         else:
             raise ValueError('tau_eff: Not ready for this bvalue %g' % bval)
         # dict me for speed
