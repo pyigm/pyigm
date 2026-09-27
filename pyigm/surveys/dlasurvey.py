@@ -1,25 +1,21 @@
 """ Class for DLA Surveys
 """
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
 import os
-import imp, glob
+import glob
 import pdb
 import warnings
 
-try:
-    from urllib2 import urlopen # Python 2.7
-except ImportError:
-    from urllib.request import urlopen
+from urllib.request import urlopen
 
-from pkg_resources import resource_filename
+from pyigm.resources import resource_filename
 
 from astropy.table import Column, Table, vstack
 from astropy import units as u
 from astropy.stats import poisson_conf_interval as aspci
 from astropy import constants as const
-from astropy.cosmology import core as acc
+from astropy.cosmology import FlatLambdaCDM
 from astropy.coordinates import SkyCoord, match_coordinates_sky
 
 from linetools import utils as ltu
@@ -28,7 +24,7 @@ from pyigm.surveys.igmsurvey import IGMSurvey
 from pyigm.surveys import utils as pyisu
 from pyigm import utils as pyigmu
 
-pyigm_path = imp.find_module('pyigm')[1]
+from pyigm.resources import pyigm_path
 
 lz_boot_file = resource_filename('pyigm', 'data/DLA/dla_lz_boot.fits.gz')
 
@@ -538,7 +534,7 @@ class DLASurvey(IGMSurvey):
         try:
             _ = self.cosmo
         except ValueError:
-            self.cosmo = acc.FlatLambdaCDM(70., 0.3)
+            self.cosmo = FlatLambdaCDM(70., 0.3)
         # Load fits
         self.load_fitted()
 

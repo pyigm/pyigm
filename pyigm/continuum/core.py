@@ -1,6 +1,5 @@
 """ Module for core continuum codes
 """
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 
 def init_conti_dict(Norm=0., tilt=0., tilt2=0.,

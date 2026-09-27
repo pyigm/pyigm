@@ -1,6 +1,5 @@
 """ Script to generate output files from IGM Surveys
 """
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 # Execute with:  python mk_files -h
 

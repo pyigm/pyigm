@@ -3,7 +3,6 @@
 Generate a PDF of a given quantity also accounting for boostrap errors
 
 """
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 #some global staff first
 import glob
@@ -17,7 +16,6 @@ import h5py
 
 from astropy.table import Table
 
-from xastropy.xutils import xdebug as xdb
 
 mblue='#1E90FF'
 mred='#DC143C'
@@ -155,7 +153,7 @@ def work_generate_pdf(modelsdir, quantity, data_fil, outh5):
             
             #populate histo
             #qnt=result['tags'].index(quantity)
-            qnt= np.where(fh5['outputs']['tags'].value == quantity)[0][0]
+            qnt= np.where(fh5['outputs']['tags'][()] == quantity)[0][0]
             #hist,edge=np.histogram(result['pdfs'][:,qnt],bins=base_hist)
             hist,edge=np.histogram(fh5['outputs']['pdfs'][:,qnt],bins=base_hist)
 
@@ -174,7 +172,7 @@ def work_generate_pdf(modelsdir, quantity, data_fil, outh5):
                 pass
             else:
                 for key in fh5['inputs']:
-                    outh5['inputs'][fh5['inputs'].attrs['name']][key] = fh5['inputs'][key].value
+                    outh5['inputs'][fh5['inputs'].attrs['name']][key] = fh5['inputs'][key][()]
     else:
         print("Work with precomputed quantity")
         nsys=len(pdfcom['name'])
@@ -247,10 +245,10 @@ def work_generate_pdf(modelsdir, quantity, data_fil, outh5):
         for trial in range(nsample):
 
             #now generate random indexes with repetition
-            try:
-                thisindex=np.random.random_integers(0,high=nstat-1,size=nstat)
-            except ValueError:
-                xdb.set_trace()
+            if nstat < 1:
+                raise ValueError(
+                    'Cannot bootstrap {:d} samples from nstat={:d}'.format(nsample, nstat))
+            thisindex = np.random.randint(0, high=nstat, size=nstat)
 
             #fill the pdf
             pdf_thisset=np.zeros(base_hist.size-1)

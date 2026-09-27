@@ -1,7 +1,6 @@
 # Module to run tests on CGMAbsSurvey
 #  Uses COSHalos for testing
 
-# TEST_UNICODE_LITERALS
 
 import numpy as np
 import os, pdb
@@ -19,16 +18,23 @@ def data_path(filename):
     return os.path.join(data_dir, filename)
 
 
-def test_write_to_json():
-    cos_halos = COSHalos()
-    cos_halos.to_json(data_path('cos_halos.json'))
+@pytest.fixture(scope='module')
+def cos_halos_json(tmp_path_factory):
+    """ COSHalos written out once, outside the source tree """
+    outfil = str(tmp_path_factory.mktemp('cgmsurvey') / 'cos_halos.json')
+    COSHalos().to_json(outfil)
+    return outfil
 
-def test_from_json():
+
+def test_write_to_json(cos_halos_json):
+    assert os.path.exists(cos_halos_json)
+
+def test_from_json(cos_halos_json):
     # Without building systems
-    cos_halos = CGMAbsSurvey.from_json(data_path('cos_halos.json'))
+    cos_halos = CGMAbsSurvey.from_json(cos_halos_json)
     assert len(cos_halos.cgm_abs) == 0
     # Build the systems too
-    cos_halos2 = CGMAbsSurvey.from_json(data_path('cos_halos.json'), build_sys=True)
+    cos_halos2 = CGMAbsSurvey.from_json(cos_halos_json, build_sys=True)
     assert len(cos_halos2.cgm_abs) == 44
 
 def test_data_for_survey():

@@ -13,7 +13,6 @@
 #;- NT: New version with enhancements
 #;------------------------------------------------------------------------------
 """
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 # Import libraries
 import numpy as np
@@ -21,6 +20,8 @@ import warnings
 import copy
 import datetime
 import pdb
+
+from pyigm.guis.utils import comp_init_attrib  # noqa: F401 (re-exported)
 
 #from PyQt4 import QtGui
 #from PyQt4 import QtCore
@@ -1863,13 +1864,6 @@ def create_component(z, wrest, linelist, vlim=[-300.,300]*u.km/u.s,
     return comp
 
 
-def comp_init_attrib(comp):
-    # Attributes
-    comp.attrib = {'N': 0./u.cm**2, 'Nsig': 0./u.cm**2, 'flagN': 0,  # Column
-               'logN': 0., 'sig_logN': 0.,
-               'b': 0.*u.km/u.s, 'bsig': 0.*u.km/u.s,  # Doppler
-               'z': comp.zcomp, 'zsig': 0.,
-               'reliability': 'none'}
 
 
 def sync_comp_lines(comp, only_lims=False):

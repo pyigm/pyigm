@@ -1,6 +1,5 @@
 """ Module for simple calculations with MCMC outputs
 """
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 import warnings
 
@@ -8,7 +7,7 @@ import numpy as np
 import os
 import pdb
 
-from pkg_resources import resource_filename
+from pyigm.resources import resource_filename
 
 
 def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpol=False,
@@ -87,8 +86,8 @@ def calc_logNH(hdf_file, modl=None, sys_error=0., NH_interpol=None, init_interpo
 
     # PDFs
     fh5 = h5py.File(hdf_file, 'r')
-    pdfs = fh5['outputs']['pdfs'].value
-    tags = fh5['outputs/tags'].value
+    pdfs = fh5['outputs']['pdfs'][()]
+    tags = fh5['outputs/tags'][()]
     try:
         tags = np.array([itag.decode() for itag in tags])
     except:

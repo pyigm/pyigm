@@ -1,6 +1,5 @@
 # Module to run tests on initializing IGMGalaxyField
 
-# TEST_UNICODE_LITERALS
 
 import numpy as np
 import pdb

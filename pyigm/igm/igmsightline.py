@@ -1,7 +1,6 @@
 """ Class for IGM Absorption sightline
  Uses AbsSightline from linetools
 """
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 import pdb
 import warnings
@@ -245,7 +244,7 @@ class IGMSightline(AbsSightline):
         """
         import datetime
         # Slurp IGMGuesses component attributes
-        from pyigm.guis.igmguesses import comp_init_attrib
+        from pyigm.guis.utils import comp_init_attrib
         from linetools.isgm.abscomponent import AbsComponent
         tmp = AbsComponent((10.0*u.deg, 45*u.deg), (14,2), 1.0, [-300,300]*u.km/u.s)
         comp_init_attrib(tmp)

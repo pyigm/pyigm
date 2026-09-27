@@ -10,9 +10,8 @@
 #;   29-Jun-2015 by JXP
 """
 
-from __future__ import print_function, absolute_import, division, unicode_literals
 
-import imp, glob
+import glob
 import numpy as np
 import pdb
 
@@ -27,12 +26,9 @@ from pyigm.abssys.igmsys import AbsSubSystem
 from pyigm.abssys import utils as pyiau
 from pyigm.abssys.lls import LLSSystem
 from .llssurvey import LLSSurvey
-try:
-    from urllib2 import urlopen # Python 2.7
-except ImportError:
-    from urllib.request import urlopen
+from urllib.request import urlopen
 
-pyigm_path = imp.find_module('pyigm')[1]
+from pyigm.resources import pyigm_path
 
 
 def zonak2004():
@@ -408,7 +404,7 @@ def meiring07():
     # Grab RA/DEC
     qso_dict = {}
     for iline in flines1:
-        if iline[0:2] in ['QS','\h','$\\', 'J2']:
+        if iline[0:2] in ['QS','\\h','$\\', 'J2']:
             continue
         # Parse
         isplit = iline.split('&')
@@ -433,7 +429,7 @@ def meiring07():
         flines11 = f.readlines()
     #
     for iline in flines11:
-        if iline[0:2] in ['\h','  ']:
+        if iline[0:2] in ['\\h','  ']:
             continue
         # Parse
         isplit = iline.split('&')
@@ -509,7 +505,7 @@ def meiring08():
     # Grab RA/DEC
     qso_dict = {}
     for iline in flines1:
-        if iline[0:2] in ['QS','\h','$\\', 'J2', '  ']:
+        if iline[0:2] in ['QS','\\h','$\\', 'J2', '  ']:
             continue
         # Parse
         isplit = iline.split('&')
@@ -528,7 +524,7 @@ def meiring08():
         flines3 = f.readlines()
     #
     for iline in flines3:
-        if iline[0:2] in ['\h','  ']:
+        if iline[0:2] in ['\\h','  ']:
             continue
         # Parse
         isplit = iline.split('&')
@@ -632,7 +628,7 @@ def meiring09():
     # Grab RA/DEC
     qso_dict = {}
     for iline in flines1:
-        if iline[0:3] in [' QS','\hl','$\\c', ' J2', '   ']:
+        if iline[0:3] in [' QS','\\hl','$\\c', ' J2', '   ']:
             continue
         # Parse
         isplit = iline.split('&')
@@ -654,7 +650,7 @@ def meiring09():
         flines3 = f.readlines()
     #
     for iline in flines3:
-        if iline[0:2] in ['\h','  ']:
+        if iline[0:2] in ['\\h','  ']:
             continue
         # Parse
         isplit = iline.split('&')

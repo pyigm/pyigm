@@ -1,15 +1,15 @@
 # Module to run tests on initializing AbsSurvey
 
-# TEST_UNICODE_LITERALS
 
 import numpy as np
-import glob, os, imp, pdb
+import glob, os, pdb
 import pytest
 
 from pyigm.surveys.llssurvey import LLSSurvey
 from pyigm.surveys.igmsurvey import IGMSurvey
 
-lt_path = imp.find_module('linetools')[1]
+from pyigm.resources import package_path
+lt_path = package_path('linetools')
 
 '''
 def data_path(filename):

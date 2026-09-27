@@ -1,7 +1,6 @@
 """ This module will fit f(N) data
 using a Markov chain Monte Carlo (MCMC) approach.
 """
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 import os
 import numpy as np
@@ -12,7 +11,7 @@ from matplotlib import pyplot as plt
 
 #import MCMC_errors
 
-from pkg_resources import resource_filename
+from pyigm.resources import resource_filename
 
 from astropy.table import Table
 
@@ -427,7 +426,7 @@ def run_pymc(fN_cs, fN_model, parm, debug=False, ntune=200, nsample=2000, nburn=
         import yaml
         from astropy import units as u
         from linetools.lists.linelist import LineList
-        EW_FIL = resource_filename('pyigm', '/data/fN/EW_SPLINE_b24.yml')
+        EW_FIL = resource_filename('pyigm', '/data/fN/EW_SPLINE_b24_2017.yml')
         with open(EW_FIL, 'r') as infile:
             EW_spline = yaml.load(infile, Loader=yaml.Loader)# dict from mk_ew_lyman_spline
         # More

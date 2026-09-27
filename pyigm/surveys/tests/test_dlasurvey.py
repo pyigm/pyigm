@@ -1,6 +1,5 @@
 # Module to run tests on initializing DLASurvey
 
-# TEST_UNICODE_LITERALS
 
 import numpy as np
 import os
@@ -62,13 +61,6 @@ def test_dla_fitted():
     assert np.isclose(nenH, -3.12739999999999999)
 
 
-def test_fit_atan_lz():
-    surveys = load_dla_surveys()
-    difts, boot_tbl = fit_atan_dla_lz(surveys, nproc=1)
-    for key in ['A','B','C']:
-        assert key in boot_tbl.keys()
-
-
 def test_read_h100_nosys():
     h100 = DLASurvey.load_H100()
     assert h100.nsys == 100
@@ -95,9 +87,11 @@ def test_dla_fitted():
     assert np.isclose(nenH, -3.12739999999999999)
 
 
-def test_fit_atan_lz():
+def test_fit_atan_lz(tmp_path):
     surveys = load_dla_surveys()
-    difts, boot_tbl = fit_atan_dla_lz(surveys, nproc=1)
+    difts, boot_tbl = fit_atan_dla_lz(surveys, nproc=1,
+                                      boot_out=str(tmp_path / 'lz_boot.fits.gz'),
+                                      fit_out=str(tmp_path / 'lz_fit.json'))
     for key in ['A','B','C']:
         assert key in boot_tbl.keys()
 

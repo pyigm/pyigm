@@ -1,6 +1,5 @@
 # Module to run tests on initializing AbsSurvey
 
-# TEST_UNICODE_LITERALS
 
 import numpy as np
 import pdb

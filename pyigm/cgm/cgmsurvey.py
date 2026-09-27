@@ -1,6 +1,5 @@
 """ Classes for CGM Surveys
 """
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
 import os
@@ -8,7 +7,7 @@ import warnings
 import pdb
 import json, io
 
-from pkg_resources import resource_filename
+from pyigm.resources import resource_filename
 
 from collections import OrderedDict
 
@@ -23,10 +22,6 @@ from pyigm.utils import lst_to_array
 from pyigm.surveys.igmsurvey import GenericIGMSurvey
 from pyigm.cgm.cgm import CGMAbsSys
 
-try:
-    basestring
-except NameError:  # For Python 3
-    basestring = str
 
 class CGMAbsSurvey(object):
     """A CGM Survey class in absorption
@@ -468,7 +463,7 @@ class CGMAbsSurvey(object):
            Returns None if there are no matches to input Zion
         """
         from linetools.abund.ions import name_to_ion
-        if isinstance(Zion, basestring):
+        if isinstance(Zion, str):
             Zion = name_to_ion(Zion)
 
         # Generate dummy IGMSurvey
@@ -511,7 +506,7 @@ class CGMAbsSurvey(object):
         from linetools.isgm import utils as ltiu
         from astropy.table import Table, vstack, Column
 
-        if isinstance(Zion, basestring):
+        if isinstance(Zion, str):
             Zion = name_to_ion(Zion)
         newcomptab = Table()
         rhos = []

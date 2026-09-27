@@ -68,7 +68,7 @@ def wiki(targs, keys, fndr_pth=None, dbx_pth=None, outfil=None, skip_finder=Fals
         # Get name tag
         name_tag = get_name_tag(targs.dtype.names)
         # Type
-        #if isinstance(targs['RA'][0], basestring):
+        #if isinstance(targs['RA'][0], str):
         #    radec = 1 # : separated strings
         #else:
         #    radec = 2 # decimal degrees

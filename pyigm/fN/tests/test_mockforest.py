@@ -1,6 +1,5 @@
 # Module to run tests on Mocks of the Forest
 
-# TEST_UNICODE_LITERALS
 
 import numpy as np
 import os, pdb

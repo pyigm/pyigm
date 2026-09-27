@@ -1,7 +1,6 @@
 """ Class for IGMSurvey
 """
 
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
 import json
@@ -471,7 +470,10 @@ class IGMSurvey(object):
             zmin = np.min(self.sightlines[key_ZS])
         if zmax is None:
             zmax = np.max(self.sightlines['Z_END'])
-        zeval = np.arange(zmin, zmax, step=zstep)
+        # float() matters: these come off a table column that is often float32,
+        # and np.arange seeded with a float32 start silently loses ~4e-4 in
+        # zeval by the 4000th step.
+        zeval = np.arange(float(zmin), float(zmax), step=zstep)
         gz = np.zeros_like(zeval).astype(int)
         # Evaluate
         for row in self.sightlines:
@@ -645,8 +647,10 @@ class IGMSurvey(object):
         # Stack me
         try:
             tbl = vstack(tbls)
-        except:
-            pdb.set_trace()
+        except Exception as exc:
+            raise ValueError(
+                'Could not stack the {:d} ion tables; they probably do not share '
+                'columns'.format(len(tbls))) from exc
         tbl['abssys_name'] = names
         # Mask
         tbl = Table(tbl, masked=True)

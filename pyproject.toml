@@ -1,0 +1,91 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyigm"
+description = "IGM/CGM and more!"
+readme = "README.md"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+authors = [
+    {name = "IGM Community", email = "xavier@ucolick.org"},
+]
+requires-python = ">=3.11"
+dynamic = ["version"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Astronomy",
+]
+dependencies = [
+    # numpy 2.0 is a hard floor: pyigm uses np.trapezoid, which does not exist
+    # before it.
+    "numpy>=2.0",
+    # scipy 1.10 is the oldest with Python 3.11 wheels; simpson's keyword-only
+    # x has been available since 1.6.
+    "scipy>=1.10",
+    "astropy>=5.3",
+    "matplotlib>=3.7",
+    "h5py>=3.8",
+    "PyYAML>=6.0",
+    "linetools>=0.3.2",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-remotedata>=0.4",
+]
+# Metallicity MCMC (Fumagalli+16 and friends)
+mcmc = [
+    "corner>=2.2",
+    "mpmath>=1.3",
+]
+gui = [
+    "qtpy>=2.3",
+    "PyQt5>=5.15",
+]
+docs = [
+    "sphinx>=7.0",
+    "sphinx-rtd-theme>=2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/pyigm/pyigm"
+Documentation = "https://pyigm.readthedocs.io/"
+
+[project.scripts]
+pyigm_fitdla = "pyigm.scripts.pyigm_fitdla:main"
+pyigm_fitlls = "pyigm.scripts.pyigm_fitlls:main"
+pyigm_igmguesses = "pyigm.scripts.pyigm_igmguesses:main"
+pyigm_mkigmsys = "pyigm.scripts.pyigm_mkigmsys:main"
+pyigm_mtlmcmc = "pyigm.scripts.pyigm_mtlmcmc:main"
+pyigm_showjson = "pyigm.scripts.pyigm_showjson:main"
+
+[tool.setuptools_scm]
+version_file = "pyigm/version.py"
+
+[tool.setuptools.packages.find]
+include = ["pyigm*"]
+
+[tool.setuptools.package-data]
+pyigm = ["data/**/*"]
+"*" = ["*.rst", "*.txt", "*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["pyigm"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "except ImportError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]

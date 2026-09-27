@@ -3,7 +3,7 @@
 import os
 import pdb
 import yaml
-from pkg_resources import resource_filename
+from pyigm.resources import resource_filename
 
 import numpy as np
 from scipy import interpolate
@@ -184,8 +184,8 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0,
     # Read in EW spline (if needed)
     if EW_spline is None:
         if int(bval) == 24:
-            EW_FIL = os.path.join(resource_filename('pyigm', 'data'), 'fN', 
-                                  'EW_SPLINE_b24.yml')
+            EW_FIL = os.path.join(resource_filename('pyigm', 'data'), 'fN',
+                                  'EW_SPLINE_b24_2017.yml')
             with open(EW_FIL, 'r') as infile:
                 EW_spline = yaml.load(infile, Loader=yaml.Loader)# dict from mk_ew_lyman_spline
                 #EW_spline = yaml.safe_load(infile, Loader=yaml.Loader)# dict from mk_ew_lyman_spline
@@ -199,13 +199,17 @@ def lyman_ew(ilambda, zem, fN_model, NHI_MIN=11.5, NHI_MAX=22.0,
     # Lines
     if wrest is None:
         HI = LineList('HI')
-        wrest = u.Quantity(HI._data['wrest']).to('AA').value
+        wrest = u.Quantity(HI._data['wrest'])
+    # Everything below indexes EW_spline by int(100*line) and divides Lambda by
+    # it, so wrest has to be bare Angstrom numbers.  Callers pass either, so
+    # normalize here rather than failing deep inside the loop.
+    if isinstance(wrest, u.Quantity):
+        wrest = wrest.to('AA').value
+    else:
+        wrest = np.asarray(wrest)
 
     # Find the lines
-    try:
-        gd_Lyman = wrest[(Lambda/(1+zem)) < wrest]
-    except:
-        pdb.set_trace()
+    gd_Lyman = wrest[(Lambda/(1+zem)) < wrest]
     nlyman = len(gd_Lyman)
     if nlyman == 0:
         if verbose:

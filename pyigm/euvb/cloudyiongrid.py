@@ -33,7 +33,7 @@ from scipy.interpolate import interp1d
 import os
 import re
 
-from pkg_resources import resource_filename
+from pyigm.resources import resource_filename
 
 class Cldyion():
 

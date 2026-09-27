@@ -1,6 +1,5 @@
 # Module to run tests on initializing AbslineSystem
 
-# TEST_UNICODE_LITERALS
 
 import numpy as np
 import os, pdb
@@ -45,7 +44,7 @@ def test_load_sngl():
     # Load
     cos_halos.load_single_fits(('J0950+4831', '177_27'))
 
-def test_write_sngl():
+def test_write_sngl(tmp_path):
     import io, json
     from linetools import utils as ltu
     # Class
@@ -54,7 +53,7 @@ def test_write_sngl():
     cos_halos.load_single_fits(('J0950+4831', '177_27'))
     # Write to JSON
     cdict = cos_halos.cgm_abs[0].to_dict()
-    ltu.savejson('tmp.json', cdict, overwrite=True)
+    ltu.savejson(str(tmp_path / 'tmp.json'), cdict, overwrite=True)
 
 """
 def test_load_sngl_dwarf():

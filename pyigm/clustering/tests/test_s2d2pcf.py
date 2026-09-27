@@ -1,6 +1,5 @@
 # Module to run tests on initializing Survey2D2PCF
 
-# TEST_UNICODE_LITERALS
 
 import pytest
 import numpy as np

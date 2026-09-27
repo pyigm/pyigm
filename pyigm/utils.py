@@ -138,8 +138,8 @@ def cosm_xz(z, cosmo=None, flg_return=0):
 
     # Cosmology
     if cosmo is None:
-        from astropy.cosmology import core as acc
-        cosmo = acc.FlatLambdaCDM(H0=70., Om0=0.3)
+        from astropy.cosmology import FlatLambdaCDM
+        cosmo = FlatLambdaCDM(H0=70., Om0=0.3)
 
     # Flat?
     if flg_return == 0:  # X(z)

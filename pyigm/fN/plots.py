@@ -1,10 +1,8 @@
 """ Class for f(N) constraints
 """
 
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
-import imp
 import pdb
 
 from pyigm.fN.fnmodel import FNModel
@@ -12,7 +10,7 @@ from pyigm.fN.constraints import FNConstraint
 from pyigm.fN import tau_eff
 
 # Path for pyigm
-pyigm_path = imp.find_module('pyigm')[1]
+from pyigm.resources import pyigm_path
 
 
 def tst_fn_data(fN_model=None, model_two=None, data_list=None, outfil=None):

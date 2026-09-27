@@ -1,10 +1,8 @@
 """ Module for Soneira-Peebles algorithm
 """
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 import pdb
 import yaml
-import imp
 
 import numpy as np
 import matplotlib.pyplot as plt

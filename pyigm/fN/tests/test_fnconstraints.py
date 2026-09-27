@@ -1,9 +1,8 @@
 # Module to run tests on FNConstaint
 
-# TEST_UNICODE_LITERALS
 
 import numpy as np
-import imp, pdb
+import pdb
 
 from pyigm.fN.constraints import FNConstraint
 

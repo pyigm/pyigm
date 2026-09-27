@@ -3,7 +3,6 @@
 import matplotlib
 matplotlib.use('agg')  # For Travis
 
-# TEST_UNICODE_LITERALS
 
 import pytest
 import os
@@ -19,8 +18,8 @@ def data_path(filename):
     return os.path.join(data_dir, filename)
 
 
-def test_mkigmsys():
-    outfile = 'tmp.json'
+def test_mkigmsys(tmp_path):
+    outfile = str(tmp_path / 'tmp.json')
     pargs = pyigm_mkigmsys.parser(['dla','3.0',outfile,'--NHI=20.5', '--zem=4.','--vlim=-232,300'])
     pyigm_mkigmsys.main(args=pargs)
     # Read as JSON

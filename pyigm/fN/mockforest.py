@@ -2,7 +2,6 @@
 """
 import pdb
 import yaml
-import imp
 
 import numpy as np
 from scipy import interpolate
@@ -23,7 +22,7 @@ from pyigm.fN.fnmodel import FNModel
 from pyigm import utils as pyigmu
 from pyigm.continuum import quasar as pycq
 
-pyigm_path = imp.find_module('pyigm')[1]
+from pyigm.resources import pyigm_path
 
 
 def dopp_val(x,bsig=24*u.km/u.s,bmnx=(15.,80)*u.km/u.s):
@@ -107,7 +106,7 @@ def monte_HIcomp(zmnx, fN_model, NHI_mnx=(12., 22.), bfix=None, dz=0.001, cosmo=
     # Cosmology
     if cosmo is None:
         print('Using a Flat LCDM cosmology: h=0.7, Om=0.3')
-        cosmo = cosmology.core.FlatLambdaCDM(70., 0.3)
+        cosmo = cosmology.FlatLambdaCDM(70., 0.3)
 
     # dXdz
     dXdz = pyigmu.cosm_xz(zeval, cosmo=cosmo, flg_return=1)
@@ -123,7 +122,7 @@ def monte_HIcomp(zmnx, fN_model, NHI_mnx=(12., 22.), bfix=None, dz=0.001, cosmo=
     invz = interpolate.interp1d(sum_loz/sum_loz[-1],zeval, bounds_error=False, fill_value=zeval[0])
 
     # Assume Gaussian stats for number of lines
-    nlines = int(np.round(sum_loz[-1] + np.sqrt(sum_loz[-1])*rstate.randn(1)))
+    nlines = int(np.round(sum_loz[-1] + np.sqrt(sum_loz[-1])*rstate.randn()))
 
     # NHI values
     randNHI = rstate.random_sample(nlines)
@@ -221,7 +220,7 @@ def mock_HIlines(HI_comps, wvmnx, tau0_min=5e-3):
     # All tau0
     # Grids
     grid_NHI = np.outer(10.**HI_comps['lgNHI'], np.ones(len(wrest)))
-    grid_b = np.outer(HI_comps['bval'].to('cm/s'), np.ones(len(wrest)))
+    grid_b = np.outer(HI_comps['bval'].to('cm/s').value, np.ones(len(wrest)))
     grid_f = np.outer(np.ones(len(HI_comps)), HIlines._data['f'])
     # tau0 (Spitzer 1979)
     grid_tau0 = 1.497e-2 * grid_wr * 1e-8 * grid_f * grid_NHI / grid_b

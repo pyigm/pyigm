@@ -1,7 +1,6 @@
 """  Module for the COS-Halos survey
 """
 
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
 import os, glob
@@ -10,7 +9,7 @@ import warnings
 import h5py
 import json, yaml
 
-from pkg_resources import resource_filename
+from pyigm.resources import resource_filename
 
 from astropy.io import fits, ascii
 from astropy import units as u 
@@ -30,10 +29,6 @@ from .cgm import CGMAbsSys
 from pyigm.abssys.igmsys import IGMSystem
 import pyigm
 
-try:
-    basestring
-except NameError:  # For Python 3
-    basestring = str
 
 class COSHalos(CGMAbsSurvey):
     """Inherits CGM Abs Survey
@@ -92,7 +87,7 @@ class COSHalos(CGMAbsSurvey):
         verbose : bool, optional
         """
         # Parse input
-        if isinstance(inp, basestring):
+        if isinstance(inp, str):
             fil = inp
         elif isinstance(inp, tuple):
             field, gal_id = inp
@@ -165,8 +160,11 @@ class COSHalos(CGMAbsSurvey):
             else:
                 try:
                     dat_tab.add_row(Table(iont)[0])
-                except:
-                    pdb.set_trace()
+                except Exception as exc:
+                    raise ValueError(
+                        'Could not append ion row Z={}, ion={} -- column mismatch '
+                        'with the table built so far?'.format(
+                            iont['ZION'][0][0], iont['ZION'][0][1])) from exc
             all_Z.append(iont['ZION'][0][0])
             all_ion.append(iont['ZION'][0][1])
             # AbsLines
@@ -437,8 +435,10 @@ class COSHalos(CGMAbsSurvey):
             # Histogram
             try:
                 hist, edges = np.histogram(NH_values[finite], bins=NH_bins)
-            except:
-                pdb.set_trace()
+            except Exception as exc:
+                raise ValueError(
+                    'Could not histogram N_H chain for {:s} ({:d} finite values)'.format(
+                        cgm_abs.name, int(np.sum(finite)))) from exc
             x = (edges + np.roll(edges, 1)) / 2.
             x = x[1:]
             cgm_abs.igm_sys.NH_PDF = GenericPDF(x, hist.astype(float))
@@ -492,7 +492,7 @@ class COSHalos(CGMAbsSurvey):
             cgm_abs.igm_sys.metallicity.inputs = {}
             for key in fh5['inputs'][cgm_abs.name]:
                 # Warning the inputs here are goofy hdf5 bytes..
-                cgm_abs.igm_sys.metallicity.inputs[key] = fh5['inputs'][cgm_abs.name][key].value
+                cgm_abs.igm_sys.metallicity.inputs[key] = fh5['inputs'][cgm_abs.name][key][()]
 
             # Check mtl quality
             qual = mtl_quality(cgm_abs, verbose=verbose)
@@ -748,13 +748,13 @@ class COSHalos(CGMAbsSurvey):
         if isinstance(inp,int):
             return self.cgm_abs[inp]
         elif isinstance(inp,tuple):
-            if not isinstance(inp[0], basestring):
+            if not isinstance(inp[0], str):
                 raise IOError("Bad input")
-            if not isinstance(inp[1], basestring):
+            if not isinstance(inp[1], str):
                 raise IOError("Bad input")
             field = inp[0]
             galid = inp[1]
-        elif isinstance(inp, basestring):
+        elif isinstance(inp, str):
             # Split at the first _
             under = inp.find('_')
             field = inp[:under]
@@ -890,10 +890,10 @@ def update_cos_halos(v10=False, v11=False, v12=True):
         for kk, mega_cgm_abs in enumerate(cos_halos_mega.cgm_abs):
             # Check
             cgm_abs = cos_halos_v11.cgm_abs[kk]
-            try:
-                assert mega_cgm_abs.name == cgm_abs.name
-            except:
-                pdb.set_trace()
+            if mega_cgm_abs.name != cgm_abs.name:
+                raise ValueError(
+                    'COS-Halos v1.1 is out of step with the mega table at index '
+                    '{:d}: {:s} != {:s}'.format(kk, mega_cgm_abs.name, cgm_abs.name))
             # Fill
             for filter in ['u', 'g', 'r', 'i', 'z']:
                 # Value

@@ -1,8 +1,6 @@
 # Module to run tests on pyigm.utils
 
-from __future__ import print_function, absolute_import, division, unicode_literals
 
-# TEST_UNICODE_LITERALS
 
 import pytest
 import numpy as np
@@ -73,7 +71,6 @@ def test_calc_Galactic_rho():
     assert np.isclose(rho3.value, 6.928203230275509)
 # Module to run tests on initializing AbslineSystem
 
-# TEST_UNICODE_LITERALS
 
 import numpy as np
 import copy

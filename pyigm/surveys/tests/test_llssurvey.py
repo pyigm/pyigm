@@ -1,19 +1,18 @@
 # Module to run tests on initializing AbsSurvey
 
-# TEST_UNICODE_LITERALS
 
 import numpy as np
 import glob, os, pdb
 import pytest
 
-from pkg_resources import resource_filename
+from pyigm.resources import package_path
 
 from pyigm.surveys.llssurvey import LLSSurvey
 from pyigm.surveys.lls_literature import load_lls_lit
 
 remote_data = pytest.mark.remote_data
 
-lt_path = resource_filename('linetools', './')
+lt_path = package_path('linetools')
 
 '''
 def data_path(filename):

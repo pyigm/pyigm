@@ -1,20 +1,19 @@
 """ Class for working with CUBA
 """
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
-import os, imp
+import os
 import warnings as warn
 import pdb
 
-from scipy.integrate import simps
+from scipy.integrate import simpson
 from scipy.interpolate import interp1d
 
 from astropy import units as u
 from astropy import constants as const
 
 # Path
-pyigm_path = imp.find_module('pyigm')[1]
+from pyigm.resources import pyigm_path
 Ryd = const.Ryd.to('eV', equivalencies=u.spectral())
 
 class CUBA(object):
@@ -112,7 +111,7 @@ class CUBA(object):
         integrand = 4*np.pi*jnu.cgs/const.h.cgs # Note the factor of 4 pi
         integrand[~blue_energy] = 0.0
         # Integrate
-        phi = np.log(10.)*simps(integrand.value, log_energy)
+        phi = np.log(10.)*simpson(integrand.value, x=log_energy)
         # Return with Units
         return phi / u.s / u.cm**2
 

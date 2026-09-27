@@ -3,7 +3,6 @@ arbitrary (discrete) distribution, mostly taken from Neil Crighton's
 old astro package.  Taken from pyntejos on GitHub
 
 """
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
 
@@ -33,7 +32,7 @@ class RanDist(object):
         """
 
         # normalise such that area under pdf is 1.
-        self.pdf = dist / np.trapz(dist, x=x)
+        self.pdf = dist / np.trapezoid(dist, x=x)
         # cumulative probability distribution
         self.cdf = dist.cumsum()
         self.cdf = self.cdf / float(self.cdf[-1])

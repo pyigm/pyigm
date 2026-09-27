@@ -1,11 +1,10 @@
 """  Module for the QPQ survey
 """
 
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
 import pdb
-from pkg_resources import resource_filename
+from pyigm.resources import resource_filename
 
 from astropy.table import Table
 from astropy.coordinates import SkyCoord
@@ -22,10 +21,6 @@ from pyigm.field.galaxy import Galaxy
 from .cgm import CGMAbsSys
 from pyigm.abssys.igmsys import IGMSystem
 
-try:
-    basestring
-except NameError:  # For Python 3
-    basestring = str
 
 ism = LineList('ISM')
 

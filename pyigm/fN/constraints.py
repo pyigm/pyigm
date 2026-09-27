@@ -1,13 +1,11 @@
 """ Class for f(N) constraints
 """
 
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
-import imp
 import pdb
 
-from pkg_resources import resource_filename
+from pyigm.resources import resource_filename
 
 from astropy.io import fits
 from astropy import cosmology
@@ -64,7 +62,7 @@ class FNConstraint(object):
         common = ['REF','COSM','TYPE','COMMENT']
         slf.ref = row['REF']
         if row['COSM'] in ['VANILLA', '', 'h=0.7, Om=0.3, OL=0.7']:
-            cosmo = cosmology.core.FlatLambdaCDM(70., 0.3, Ob0=0.0455)
+            cosmo = cosmology.FlatLambdaCDM(70., 0.3, Ob0=0.0455)
             #sigma_8 = 0.80
         else:
             pdb.set_trace()

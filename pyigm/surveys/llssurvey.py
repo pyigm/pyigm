@@ -1,18 +1,14 @@
 """ Class for LLS Surveys
 """
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
-import imp, glob
+import glob
 import pdb
 import h5py
 
-try:
-    from urllib2 import urlopen # Python 2.7
-except ImportError:
-    from urllib.request import urlopen
+from urllib.request import urlopen
 
-from pkg_resources import resource_filename
+from pyigm.resources import resource_filename
 
 from astropy.table import Column, Table
 from astropy import units as u
@@ -25,7 +21,7 @@ from pyigm.metallicity.pdf import MetallicityPDF
 from pyigm.surveys import utils as pyisu
 
 
-pyigm_path = imp.find_module('pyigm')[1]
+from pyigm.resources import pyigm_path
 
 class LLSSurvey(IGMSurvey):
     """
@@ -608,10 +604,10 @@ def lls_stat(LLSs, maxdz=99.99, zem_min=0., NHI_cut=17.5,
 
     # Match em
     qidx, d2d, _ = match_coordinates_sky(lls_coord, qsos_coord, nthneighbor=1)
-    try:
-        assert np.min(d2d) < 3.6*u.arcsec  # Not sure why this value..
-    except:
-        pdb.set_trace()
+    if np.min(d2d) >= 3.6*u.arcsec:  # Not sure why this value..
+        raise ValueError(
+            'Closest LLS/QSO match is {:g}, beyond the 3.6 arcsec tolerance'.format(
+                np.min(d2d).to('arcsec')))
 
     for qq, zabs, zem, NHI in zip(range(LLSs.nsys), LLSs.zabs, LLSs.zem, LLSs.NHI):
         idx = qidx[qq]
@@ -631,10 +627,10 @@ def lls_stat(LLSs, maxdz=99.99, zem_min=0., NHI_cut=17.5,
             continue
 
         # Match to QSO RA, DEC
-        try:
-            assert np.abs(qsos['ZEM'][idx]-zem) < 0.03
-        except:
-            pdb.set_trace()
+        if np.abs(qsos['ZEM'][idx]-zem) >= 0.03:
+            raise ValueError(
+                'LLS z_em {:g} disagrees with the matched QSO z_em {:g} by more '
+                'than 0.03'.format(zem, qsos['ZEM'][idx]))
 
         # Query redshift
         if (zabs > max(qsos['Z_START'][idx], qsos['Z_END'][idx] - maxdz) - 1e-4) & (

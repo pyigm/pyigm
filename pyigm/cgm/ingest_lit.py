@@ -1,12 +1,11 @@
 """ Module to Ingest CGM samples
 """
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 
 import numpy as np
 import pdb
 
-from pkg_resources import resource_filename
+from pyigm.resources import resource_filename
 
 from astropy import units as u
 from astropy.table import Table

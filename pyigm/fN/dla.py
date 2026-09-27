@@ -1,10 +1,8 @@
 """ Methods specific to DLAs, e.g. l(X)
 """
 
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
-import imp
 import pdb
 
 from scipy.signal import medfilt
@@ -16,7 +14,7 @@ from astropy.table import Table
 from pyigm import utils as pyigmu
 
 # Path for pyigm
-pyigm_path = imp.find_module('pyigm')[1]
+from pyigm.resources import pyigm_path
 
 
 def lX(z, extrap=False, calc_lz=False):
@@ -46,7 +44,7 @@ def lX(z, extrap=False, calc_lz=False):
         flg_float = False
 
     # Sanchez-Ramirez et al. 2016 (Vanilla cosmology:  0.3, 0.7, 70)
-    cosmo = cosmology.core.FlatLambdaCDM(70., 0.3)
+    cosmo = cosmology.FlatLambdaCDM(70., 0.3)
     tab7_fil = pyigm_path+'/data/DLA/XQ-100/sramirez16_table7.dat'
     sr16_tab7 = Table.read(tab7_fil, format='ascii')
 

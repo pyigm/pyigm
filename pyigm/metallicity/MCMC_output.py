@@ -916,7 +916,7 @@ class MCMC_output(object):
         infiles_is_list = False
         try:
             ##Python2
-            if not isinstance(self.infiles, basestring):
+            if not isinstance(self.infiles, str):
                 infiles_is_list = True
         except:
             ##Python3

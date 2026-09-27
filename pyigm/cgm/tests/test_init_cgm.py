@@ -1,8 +1,6 @@
 # Module to run tests on generating IGMSystem
 
-from __future__ import print_function, absolute_import, division, unicode_literals
 
-# TEST_UNICODE_LITERALS
 
 import pytest
 import numpy as np
@@ -22,7 +20,7 @@ from pyigm.igm.igmsightline import IGMSightline
 import pyigm
 
 import pdb
-from pkg_resources import resource_filename
+from pyigm.resources import resource_filename
 
 def simple_cgmabssys():
     radec = (125.0*u.deg, 45.2*u.deg)
@@ -85,12 +83,13 @@ def test_to_dict():
     for key in ['Name', 'z', 'rho', 'cosmo', 'galaxy', 'igm_sys']:
         assert key in cdict.keys()
 
-def test_read_write_json():
+def test_read_write_json(tmp_path):
     cgmabs = simple_cgmabssys()
+    outfil = str(tmp_path / 'tmp.json')
     # Write
-    cgmabs.write_json('tmp.json')
+    cgmabs.write_json(outfil)
     # Read
-    cgmabs2 = CGMAbsSys.from_json('tmp.json')
+    cgmabs2 = CGMAbsSys.from_json(outfil)
     np.testing.assert_allclose(cgmabs2.rho.value, 49.6141071, rtol=1e-5)
 
 def test_cgm_from_igmsystems():

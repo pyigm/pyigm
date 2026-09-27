@@ -12,10 +12,6 @@ from astropy.modeling import FittableModel, Parameter
 
 from pyigm.fN import tau_eff as pyteff
 
-try:
-    basestring
-except NameError:  # For Python 3
-    basestring = str
 
 
 def fit_forest(wave, flux, sigma, zqso, wavemin=3200., normfac=None,
@@ -76,7 +72,7 @@ def fit_forest(wave, flux, sigma, zqso, wavemin=3200., normfac=None,
         if coord is None:
             raise IOError("Must input coord to mask DLAs")
         # Load DLAs, as needed
-        if isinstance(mask_dlas, basestring):
+        if isinstance(mask_dlas, str):
             dlas = Table.read(mask_dlas)
         elif isinstance(mask_dlas, Table):
             dlas = mask_dlas

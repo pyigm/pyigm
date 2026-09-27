@@ -1,15 +1,13 @@
 """ Class for f(N) modeling
 """
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
-import os, imp
+import os
 from scipy import interpolate as scii
 import warnings
 import pdb
 
 from astropy.io import fits
-from astropy.utils.misc import isiterable
 from astropy import units as u
 from astropy import constants as const
 from astropy import cosmology
@@ -17,7 +15,7 @@ from astropy import cosmology
 from pyigm import utils as pyigmu
 
 # Path for pyigm
-pyigm_path = imp.find_module('pyigm')[1]
+from pyigm.resources import pyigm_path
 
 
 class FNModel(object):
@@ -161,6 +159,26 @@ class FNModel(object):
         self.gamma = gamma
         self.cosmo = cosmo
 
+    def __getstate__(self):
+        """ Drop the spline before pickling
+
+        scipy's PchipInterpolator keeps a reference to an array-namespace
+        *module* in its ``_xp`` attribute, which cannot be pickled (scipy
+        1.18).  That made an FNModel impossible to hand to a multiprocessing
+        worker, which is how tau_eff evaluates in parallel.  The spline is
+        cheap to rebuild from ``pivots`` and ``param['sply']``, so drop it
+        here and restore it in :meth:`__setstate__`.
+        """
+        state = self.__dict__.copy()
+        state.pop('model', None)
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if self.mtype == 'Hspline':
+            self.model = scii.PchipInterpolator(self.pivots, self.param['sply'],
+                                                extrapolate=True)
+
     def update_parameters(self, parm):
         """ Update parameters (mainly used in the MCMC)
 
@@ -286,7 +304,7 @@ class FNModel(object):
         """
         # Cosmology
         if cosmo is None:
-            cosmo = cosmology.core.FlatLambdaCDM(70., 0.3)
+            cosmo = cosmology.FlatLambdaCDM(70., 0.3)
 
         # Initial
         NHI_min=NHI_mnx[0]
@@ -357,7 +375,7 @@ class FNModel(object):
             flg_1D = 0
 
         # NHI
-        if isiterable(NHI):
+        if np.iterable(NHI):
             NHI = np.array(NHI)  # Insist on array
         else:
             NHI = np.array([NHI])
@@ -369,7 +387,7 @@ class FNModel(object):
         else:
             z_val = z
 
-        if isiterable(z_val):
+        if np.iterable(z_val):
             z_val = np.array(z_val)
         else:
             z_val = np.array([z_val])
@@ -389,7 +407,7 @@ class FNModel(object):
             log_fNX = self.model.__call__(NHI)
 
             # Evaluate
-            if (not isiterable(z_val)) | (flg_1D == 1):  # scalar or 1D array wanted
+            if (not np.iterable(z_val)) | (flg_1D == 1):  # scalar or 1D array wanted
                 log_fNX += self.gamma * np.log10((1+z_val)/(1+self.zpivot))
             else:
                 # Matrix algebra to speed things up
@@ -460,7 +478,7 @@ class FNModel(object):
         elif self.mtype == 'PowerLaw':
             log_fNX = self.param['B'] + self.param['beta'] * NHI
             #
-            if (not isiterable(z_val)) | (flg_1D == 1):  # scalar or 1D array wanted
+            if (not np.iterable(z_val)) | (flg_1D == 1):  # scalar or 1D array wanted
                 log_fNX += self.gamma * np.log10((1+z_val)/(1+self.zpivot))
             else:
                 lgNHI_grid = np.outer(log_fNX, np.ones(len(z_val)))
@@ -505,7 +523,7 @@ class FNModel(object):
 
         # Cosmology
         if cosmo is None:
-            cosmo = cosmology.core.FlatLambdaCDM(70., 0.3)
+            cosmo = cosmology.FlatLambdaCDM(70., 0.3)
 
         # Calculate teff
         zval, teff_LL = pyteff.lyman_limit(self, max(zmin,0.), zem, N_eval=neval, N_zeval=nzeval, cosmo=cosmo)

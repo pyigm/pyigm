@@ -9,21 +9,25 @@ Dependencies
 
 pyigm depends on these packages:
 
-* `python <http://www.python.org/>`_ versions 2.7, or 3.3 or later
-* `numpy <http://www.numpy.org/>`_ version 1.13 or later
-* `astropy <http://www.astropy.org>`_ version 1.3 or later
-* `scipy <http://www.scipy.org/>`_ version 0.18 or later
-* `matplotlib <http://matplotlib.org/>`_  version 1.4 or later
-* `specutils <https://github.com/astropy/specutils>`_ version 0.2 or later
-* `linetools <https://github.com/linetools/linetools>`_ version 0.2 or later
-* `h5py <http://www.h5py.org/>`_ version 2.5 or later
-*  PyQt5 -- Now the default in conda
+* `python <http://www.python.org/>`_ version 3.11 or later
+* `numpy <http://www.numpy.org/>`_ version 2.0 or later
+* `astropy <http://www.astropy.org>`_ version 5.3 or later
+* `scipy <http://www.scipy.org/>`_ version 1.10 or later
+* `matplotlib <http://matplotlib.org/>`_ version 3.7 or later
+* `h5py <http://www.h5py.org/>`_ version 3.8 or later
+* `PyYAML <https://pyyaml.org/>`_ version 6.0 or later
+* `linetools <https://github.com/linetools/linetools>`_ version 0.3.2 or later
+
+These are declared in ``pyproject.toml`` and installed for you by ``pip``;
+that file is the authoritative list, and this one is a convenience copy.
+
+PyQt5 is needed only for the GUIs, and is installed by the ``gui`` extra.
 
 We strongly recommend that you use `Anaconda
 <https://www.continuum.io/downloads>`_ to install them. With Anaconda
 you can check for the presence and versions of the dependencies with::
 
-  conda list "^python$|numpy|astropy$|scipy$|matplotlib|pyyaml|specutils"
+  conda list "^python$|numpy|astropy$|scipy$|matplotlib|pyyaml|h5py"
 
 If you're missing any, install them with (for example)::
 
@@ -33,21 +37,16 @@ If their versions are too old, update them with (for example)::
 
   conda update astropy
 
-Specutils can't be installed with conda; instead it needs to be
-installed using `pip <https://pip.pypa.io/en/latest/>`_::
-  
-  pip install --no-deps specutils
-
-This is also true for linetools.
 If you aren't using Anaconda then all of the dependencies can also be
 installed with pip.
 
 The following packages are required only for MCMC analysis of
 metallicity PDFs (e.g. Fumagalli+16):
 
-* `corner <https://github.com/dfm/corner.py>`_ v0.3 or later
-* `mpmath <http://www.mpmath.org/>`_ version 0.19 or later
-* `emcee <http://http://dan.iel.fm/emcee/current/>`_ version 2.1 or later
+* `corner <https://github.com/dfm/corner.py>`_ version 2.2 or later
+* `mpmath <http://www.mpmath.org/>`_ version 1.3 or later
+
+Install them with ``pip install "pyigm[mcmc]"``.
 
 Installing pyigm
 ================

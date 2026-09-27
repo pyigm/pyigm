@@ -1,12 +1,11 @@
 """  Module for CGM of the Milky Way
 """
 
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 import numpy as np
 import pdb
 
-from pkg_resources import resource_filename
+from pyigm.resources import resource_filename
 
 from astropy import units as u
 from astropy import constants as const
@@ -106,15 +105,21 @@ class GalaxyCGM(CGM):
                 aline.attrib['sig_EW'] = r17_a2['e_W'][idx] / 1e3 * u.AA
                 # Column
 
-                if np.isnan(r17_a2['logN'][idx]):  # Odd that some lines had an error but no value
+                # Odd that some lines had an error but no value.  The table
+                # reads back masked rather than NaN, and np.isnan() of a masked
+                # element is itself masked (falsy), so test for both or the
+                # no-value rows silently get flag_N=1 and a column of zero.
+                logN = r17_a2['logN'][idx]
+                if np.ma.is_masked(logN) or np.isnan(logN):
                     aline.attrib['flag_N'] = 0
+                    logN = np.nan
                 elif r17_a2['l_logN'][idx] == '>':
                     aline.attrib['flag_N'] = 2
                     aline.attrib['sig_logN'] = 99.99
                 else:
                     aline.attrib['flag_N'] = 1
                     aline.attrib['sig_logN'] = r17_a2['e_logN'][idx]
-                aline.attrib['logN'] = r17_a2['logN'][idx]
+                aline.attrib['logN'] = logN
                 # Fill linear
                 _, _ = linear_clm(aline.attrib)
                 alines.append(aline)
@@ -305,13 +310,13 @@ class GalaxyCGM(CGM):
         if isinstance(inp,int):
             return self.cgm_abs[inp]
         elif isinstance(inp,tuple):
-            if not isinstance(inp[0], basestring):
+            if not isinstance(inp[0], str):
                 raise IOError("Bad input")
-            if not isinstance(inp[1], basestring):
+            if not isinstance(inp[1], str):
                 raise IOError("Bad input")
             field = inp[0]
             galid = inp[1]
-        elif isinstance(inp, basestring):
+        elif isinstance(inp, str):
             # Split at the first _
             under = inp.find('_')
             field = inp[:under]

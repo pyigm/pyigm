@@ -1,5 +1,4 @@
 """Utilities for xcorr calculations"""
-from __future__ import print_function, absolute_import, division, unicode_literals
 
 import time
 import numpy as np
@@ -616,10 +615,12 @@ def random_gal(galreal, Nrand, magbins, SPL, debug=False):
         else:
             # And this is ugly expensive
             #ind_mag = np.where(np.fabs(galreal.MAG[i] - magbins) == np.min(np.fabs(galreal.MAG[i] - magbins)))[0][0]
-            try:
-                ind_mag = np.where((galreal.MAG[i] > magbins) & (galreal.MAG[i] < np.roll(magbins,-1)))[0][0]
-            except:  # We get here if there are *none* in the set
-                pdb.set_trace()
+            hit = np.where((galreal.MAG[i] > magbins) & (galreal.MAG[i] < np.roll(magbins, -1)))[0]
+            if len(hit) == 0:  # We get here if there are *none* in the set
+                raise ValueError(
+                    'Galaxy magnitude {:g} falls outside every magnitude bin '
+                    '({:g} to {:g})'.format(galreal.MAG[i], magbins[0], magbins[-1]))
+            ind_mag = hit[0]
             mag = magbins[ind_mag]
             #if i % 50 == 0:
             #    print(mag)
